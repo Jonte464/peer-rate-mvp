@@ -1,0 +1,86 @@
+/* pr-theme.css — PeerRate look & feel */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+:root{
+  --pr-bg: #FFB85C;        /* varm orange bakgrund */
+  --pr-cream: #F8F5EF;     /* ljus “kort”-bakgrund */
+  --pr-purple: #1E1633;    /* mörk primär (rubriker/knapp) */
+  --pr-purple-900:#140F26;
+  --pr-teal: #2EC5B6;      /* accent */
+  --pr-text: #1A1430;      /* mörk text */
+  --pr-muted: #6A6780;     /* sekundär text */
+  --pr-shadow: 0 10px 30px rgba(0,0,0,.12);
+  --radius: 16px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--pr-text);
+  background: var(--pr-bg);
+}
+
+/* Header lik hemsidan */
+.pr-header{
+  max-width:1200px; margin:0 auto; padding:24px 20px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.pr-brand{display:flex; align-items:center; gap:10px; text-decoration:none}
+.pr-logo{
+  width:34px; height:34px; border-radius:10px; background: var(--pr-teal);
+}
+.pr-title{font-weight:700; font-size:22px; color:var(--pr-purple)}
+.pr-nav a{color:var(--pr-purple); text-decoration:none; margin-left:18px; font-weight:600}
+
+/* Hero layout med formulär-kort till höger (på stor skärm) */
+.pr-hero{
+  max-width:1200px; margin:0 auto; padding:30px 20px 60px;
+  display:grid; grid-template-columns: 1.2fr 1fr; gap:40px;
+}
+@media (max-width: 900px){ .pr-hero{grid-template-columns:1fr; gap:24px} }
+
+.pr-hero-title{
+  font-size:54px; line-height:1.05; font-weight:700; color:var(--pr-purple);
+  margin:16px 0 12px;
+}
+.pr-hero-sub{font-size:18px; color:var(--pr-purple-900); opacity:.95; max-width:600px}
+.pr-badges{display:flex; flex-wrap:wrap; gap:12px; margin-top:22px}
+.pr-badge{
+  display:inline-flex; align-items:center; gap:8px;
+  background: rgba(255,255,255,.45); padding:10px 14px; border-radius:12px;
+  font-size:14px; color:var(--pr-purple-900);
+}
+
+/* Kort (formulär) */
+.pr-card{
+  background: var(--pr-cream); border-radius: var(--radius); box-shadow: var(--pr-shadow);
+  padding:24px; border:1px solid rgba(0,0,0,.05);
+}
+.pr-card h2{margin:0 0 14px; font-size:22px; color:var(--pr-purple)}
+
+.pr-field{margin-bottom:14px}
+.pr-label{display:block; font-weight:600; margin-bottom:6px; color:var(--pr-purple)}
+.pr-input, .pr-textarea, .pr-select{
+  width:100%; padding:12px 14px; border-radius:12px; border:1px solid #DDD;
+  background:#fff; color:var(--pr-text); outline: none;
+}
+.pr-input:focus, .pr-textarea:focus, .pr-select:focus{border-color: var(--pr-purple)}
+
+.pr-textarea{min-height:110px; resize:vertical}
+
+.pr-actions{display:flex; gap:10px; align-items:center; margin-top:6px}
+
+.pr-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  padding:12px 18px; border-radius:12px; border:none; cursor:pointer;
+  font-weight:700; text-decoration:none;
+}
+.pr-btn-primary{ background: var(--pr-purple); color:#fff }
+.pr-btn-primary:hover{ filter: brightness(0.95) }
+.pr-btn-ghost{ background: transparent; color: var(--pr-purple); font-weight:600 }
+
+.pr-section{
+  max-width:1200px; margin:0 auto 40px; padding:0 20px;
+}

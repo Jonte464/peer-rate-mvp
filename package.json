@@ -1,0 +1,17 @@
+{
+  "name": "peer-rate-mvp",
+  "version": "0.1.0",
+  "description": "PeerRate MVP - simple rating module (Node + Express + vanilla JS)",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

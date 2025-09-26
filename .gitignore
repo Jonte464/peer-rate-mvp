@@ -1,0 +1,10 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-store/
+.DS_Store
+
+# Local data file (keep it locally; don't commit ratings in production)
+backend/ratings.json

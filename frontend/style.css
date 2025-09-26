@@ -1,0 +1,83 @@
+/* ====== TEMA (justera gärna färger för att matcha er sida) ====== */
+:root{
+  --bg: #0f1222;          /* bakgrund */
+  --card: #171a2b;        /* kortbakgrund */
+  --text: #eef1ff;        /* vanlig text */
+  --muted: #b9c0d9;       /* sekundär text */
+  --primary: #6ae6c1;     /* primär accent (knappar) */
+  --primary-ink: #0a1a15; /* text på primär knapp */
+  --ring: #7ed5ff;        /* fokusring */
+  --danger: #ff6b6b;      /* fel */
+  --success: #4be08a;     /* bekräftelse */
+  --radius: 16px;
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+  --font: ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial;
+}
+
+/* ====== BAS ====== */
+*{ box-sizing: border-box; }
+html, body { height:100%; }
+body{
+  margin:0; padding:24px;
+  background: radial-gradient(1200px 800px at 20% -10%, #1d2140 0%, transparent 60%) , var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+h1,h2{ margin:0 0 12px; }
+h1{ font-size: 28px; }
+h2{ font-size: 20px; }
+
+.container{ max-width: 860px; margin:0 auto; }
+.card{
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin: 18px 0;
+}
+
+label{ display:block; font-size:14px; color:var(--muted); margin:14px 0 6px; }
+input, textarea{
+  width:100%; background:#0f1326; border:1px solid #252a49; color:var(--text);
+  border-radius: 12px; padding:12px 14px; outline:none;
+}
+input:focus, textarea:focus{
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 35%, transparent);
+}
+
+button{
+  background: var(--primary);
+  color: var(--primary-ink);
+  border:none; border-radius: 12px;
+  padding: 12px 16px; font-weight:600; cursor:pointer;
+  transition: transform .05s ease, filter .2s ease;
+}
+button:hover{ filter: brightness(1.05); }
+button:active{ transform: translateY(1px); }
+button:disabled{ opacity:.6; cursor:not-allowed; }
+
+.actions{ display:flex; align-items:center; gap:12px; margin-top:14px; }
+
+.spinner{
+  width:16px; height:16px; border-radius:50%;
+  border: 2px solid rgba(255,255,255,.25);
+  border-top-color: var(--text);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg); } }
+
+.notice{
+  margin-top:12px; padding:12px 14px; border-radius:12px; font-size:14px;
+  background:#0f1326; border:1px solid #252a49; color:var(--text);
+}
+.notice.success{ border-color: color-mix(in srgb, var(--success) 45%, transparent); color: var(--success); }
+.notice.error  { border-color: color-mix(in srgb, var(--danger) 45%, transparent);  color: var(--danger); }
+
+.row{ display:flex; gap:10px; }
+.row > input{ flex:1; }
+.muted{ color: var(--muted); }
+.list .rating-row{ padding:10px 0; border-bottom:1px dashed #2a3053; }
+.list .rating-row:last-child{ border-bottom:none; }
+
+header{ margin: 0 0 10px; }

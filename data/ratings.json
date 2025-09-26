@@ -1,0 +1,24 @@
+[
+  {
+    "id": "f5aee880-f4c8-4369-9d8d-6640801de4b9",
+    "subject": "eva@example.com",
+    "rating": 1,
+    "comment": "urusel",
+    "hasProof": false,
+    "proofHash": null,
+    "raterMasked": "jo***@example.se",
+    "raterKey": "3c9f2fc7d8d197ba9e4556ac4ad45c3b6ba362e1b1db194b966b80f915c3e3dc",
+    "createdAt": "2025-09-26T07:23:02.014Z"
+  },
+  {
+    "id": "68ba87a9-32f0-436a-944b-9325850dbd90",
+    "subject": "anna@example.com",
+    "rating": 5,
+    "comment": "Snabb betalning",
+    "hasProof": true,
+    "proofHash": "ca6d7f7edbfeffc1152467d4b7585fd7e93fbbda95153fed6a2088bac8a7fda9",
+    "raterMasked": "jo***@example.com",
+    "raterKey": "4ca83ff4e65d8253d7159c9af00ba0f70da54e64ae0561b21321421ae89fda7f",
+    "createdAt": "2025-09-25T13:37:29.858Z"
+  }
+]
