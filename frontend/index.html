@@ -5,40 +5,84 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PeerRate – MVP</title>
   <style>
-    :root { --bg:#f9f4ea; --card:#f2e6d2; --ink:#1e1b16; --ink-dim:#47423a; --accent:#1f1bff; }
+    :root{
+      /* Färgtema matchat till hemsidan */
+      --brand-orange: #f6a94b;   /* hero-bakgrund */
+      --brand-cream:  #f9f4ec;   /* ljus bakgrund */
+      --brand-card:   #fbf2e6;   /* kort/sektioner */
+      --brand-ink:    #1e1830;   /* mörk text */
+      --brand-ink-d:  #4a425e;   /* dämpad text */
+      --brand-purple: #1b1533;   /* primär knapp */
+      --brand-accent: #bfe9e6;   /* ljus mint/blå del */
+      --brand-border: #eadfce;   /* linjer */
+    }
+
     *{box-sizing:border-box}
     body{
-      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
-      background: linear-gradient(120deg,#ffedd5 0%, #fde68a 100%);
-      color:var(--ink);
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      color:var(--brand-ink);
+      /* Orange överdel + mint nedre del för hemside-känslan */
+      background:
+        linear-gradient(180deg, var(--brand-orange) 0 56vh, var(--brand-accent) 56vh 100%);
     }
-    .wrap{max-width:960px;margin-inline:auto;padding:24px}
+    .wrap{max-width:960px;margin-inline:auto;padding:28px 24px}
     h1{margin:0 0 12px 0}
     .grid{display:grid;gap:20px}
     @media(min-width:900px){ .grid{grid-template-columns:1fr 1fr} }
+
     .card{
-      background:var(--card); border:1px solid #e8dac5; border-radius:16px; padding:18px;
-      box-shadow:0 6px 18px rgba(0,0,0,.06);
+      background:var(--brand-card);
+      border:1px solid var(--brand-border);
+      border-radius:18px;
+      padding:18px;
+      box-shadow:0 8px 22px rgba(0,0,0,.06);
     }
-    label{display:block;font-weight:600;margin:12px 0 6px 0}
+
+    label{display:block;font-weight:700;margin:12px 0 6px 0}
     input,select,textarea,button{
-      width:100%; padding:12px 14px; border-radius:10px; border:1px solid #d6c5ad; background:#fff; color:var(--ink);
+      width:100%;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid #d9cbb7;
+      background:#fff;
+      color:var(--brand-ink);
       font:inherit;
     }
-    textarea{min-height:110px; resize:vertical}
+    input::placeholder, textarea::placeholder{color:#9b8f87}
+    textarea{min-height:110px;resize:vertical}
+
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .row > *{flex:1}
+
     button.primary{
-      background:#111827; color:#fff; border:0; cursor:pointer; font-weight:700;
+      background:var(--brand-purple);
+      color:#fff;
+      border:0;
+      cursor:pointer;
+      font-weight:800;
     }
-    button.secondary{background:#fff}
-    .muted{color:var(--ink-dim);font-size:14px}
+    button.primary:hover{filter:brightness(1.05)}
+    button.secondary{
+      background:#fff;
+      color:var(--brand-ink);
+      border:1px solid var(--brand-border);
+    }
+
+    .muted{color:var(--brand-ink-d);font-size:14px}
+
     pre{
-      margin:12px 0 0 0; background:#111827; color:#e5e7eb; padding:14px; border-radius:10px; overflow:auto; max-height:220px;
+      margin:12px 0 0 0;
+      background:var(--brand-ink);
+      color:#e6e7ea;
+      padding:14px;
+      border-radius:12px;
+      overflow:auto;
+      max-height:220px;
     }
     ul.clean{list-style:none;padding:0;margin:10px 0}
-    ul.clean li{padding:10px;border-bottom:1px solid #eadfce}
-    .ok{color:#065f46;font-weight:700}
+    ul.clean li{padding:10px;border-bottom:1px solid var(--brand-border)}
+    .ok{color:#0b7a65;font-weight:700}
     .err{color:#991b1b;font-weight:700}
     .tiny{font-size:12px}
   </style>
@@ -92,7 +136,7 @@
         <p class="muted">Visar snitt och senaste betyg för vald mottagare.</p>
         <div id="avg-box" class="muted"></div>
         <ul id="list-box" class="clean"></ul>
-        <hr style="margin:14px 0;border:0;border-top:1px solid #eadfce" />
+        <hr style="margin:14px 0;border:0;border-top:1px solid var(--brand-border)" />
         <div class="row">
           <button id="btn-recent" class="secondary" type="button">Visa senaste 20 (alla)</button>
         </div>
