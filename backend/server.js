@@ -12,6 +12,8 @@ const app = express();
 
 // --- Config ---
 const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
+
 const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -181,6 +183,6 @@ app.get('*', (_req, res) => {
 });
 
 // --- Start ---
-app.listen(PORT, () => {
-  console.log(`PeerRate MVP running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`PeerRate MVP running on ${HOST}:${PORT}`);
 });
