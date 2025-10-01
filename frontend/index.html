@@ -1,111 +1,195 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sv">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PeerRate MVP</title>
-
-  <!-- (valfritt) behåll din gamla style.css om du vill, men låt den ligga FÖRE pr-theme.css -->
-  <link rel="stylesheet" href="style.css" />
-
-  <!-- NYTT TEMA: MÅSTE ligga sist så att det vinner över allt annat -->
-  <link rel="stylesheet" href="/css/pr-theme.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PeerRate – MVP</title>
+  <style>
+    :root { --bg:#f9f4ea; --card:#f2e6d2; --ink:#1e1b16; --ink-dim:#47423a; --accent:#1f1bff; }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      background: linear-gradient(120deg,#ffedd5 0%, #fde68a 100%);
+      color:var(--ink);
+    }
+    .wrap{max-width:960px;margin-inline:auto;padding:24px}
+    h1{margin:0 0 12px 0}
+    .grid{display:grid;gap:20px}
+    @media(min-width:900px){ .grid{grid-template-columns:1fr 1fr} }
+    .card{
+      background:var(--card); border:1px solid #e8dac5; border-radius:16px; padding:18px;
+      box-shadow:0 6px 18px rgba(0,0,0,.06);
+    }
+    label{display:block;font-weight:600;margin:12px 0 6px 0}
+    input,select,textarea,button{
+      width:100%; padding:12px 14px; border-radius:10px; border:1px solid #d6c5ad; background:#fff; color:var(--ink);
+      font:inherit;
+    }
+    textarea{min-height:110px; resize:vertical}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row > *{flex:1}
+    button.primary{
+      background:#111827; color:#fff; border:0; cursor:pointer; font-weight:700;
+    }
+    button.secondary{background:#fff}
+    .muted{color:var(--ink-dim);font-size:14px}
+    pre{
+      margin:12px 0 0 0; background:#111827; color:#e5e7eb; padding:14px; border-radius:10px; overflow:auto; max-height:220px;
+    }
+    ul.clean{list-style:none;padding:0;margin:10px 0}
+    ul.clean li{padding:10px;border-bottom:1px solid #eadfce}
+    .ok{color:#065f46;font-weight:700}
+    .err{color:#991b1b;font-weight:700}
+    .tiny{font-size:12px}
+  </style>
 </head>
 <body>
-  <!-- HEADER -->
-  <header class="pr-header">
-    <a class="pr-brand" href="/">
-      <div class="pr-logo" aria-hidden="true"></div>
-      <div class="pr-title">PeerRate</div>
-    </a>
-    <nav class="pr-nav">
-  <a href="https://www.peerrate.ai">Hem</a>
-  <a href="https://www.peerrate.ai/#losning">Lösning</a>
-  <a href="https://www.peerrate.ai/#hur">Hur det fungerar?</a>
-  <a href="https://www.peerrate.ai/#kontakt">Kontakt</a>
-</nav>
+  <div class="wrap">
+    <h1>PeerRate – MVP</h1>
+    <p class="muted">Testa att lämna ett betyg och läs sedan upp det direkt här nedanför.</p>
 
-  </header>
+    <div class="grid">
+      <!-- LÄMNA BETYG -->
+      <section class="card">
+        <h2>Lämna ett betyg</h2>
+        <form id="rate-form" autocomplete="off">
+          <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
+          <input id="subject" type="text" placeholder="erik@example.com" required />
 
-  <!-- HERO + FORM -->
-  <section class="pr-hero">
-    <!-- Vänster: text/badges -->
-    <div>
-      <h1 class="pr-hero-title">Din åsikt räknas. Alltid.</h1>
-      <p class="pr-hero-sub">
-        Ett betyg du faktiskt kan styra själv… och som betalar tillbaka.
-      </p>
+          <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt)</span></label>
+          <input id="rater" type="text" placeholder="Jonathan" />
 
-      <div class="pr-badges">
-        <span class="pr-badge">🔒 Säker och snabb</span>
-        <span class="pr-badge">⚙️ Flexibel &amp; dynamisk</span>
-        <span class="pr-badge">💳 Transaktionsbaserad score</span>
-      </div>
-    </div>
-
-    <!-- Höger: formulärkort -->
-    <div class="pr-card">
-      <h2>Lämna ett betyg</h2>
-      <form id="ratingForm" method="post" action="/api/ratings">
-        <div class="pr-field">
-          <label class="pr-label" for="target">Vem betygsätter du? (användarnamn eller mejl)</label>
-          <input class="pr-input" id="target" name="target" placeholder="t.ex. anna@example.com" required />
-        </div>
-
-        <div class="pr-field">
-          <label class="pr-label" for="author">Ditt namn/mejl (valfritt)</label>
-          <input class="pr-input" id="author" name="author" placeholder="t.ex. jonathan@example.com" />
-        </div>
-
-        <div class="pr-field">
-          <label class="pr-label" for="score">Betyg (1–5)</label>
-          <select class="pr-select" id="score" name="score" required>
-            <option value="">Välj…</option>
-            <option>1</option><option>2</option><option>3</option><option>4</option><option>5</option>
+          <label for="rating">Betyg (1–5)</label>
+          <select id="rating" required>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
           </select>
-        </div>
 
-        <div class="pr-field">
-          <label class="pr-label" for="comment">Kommentar (valfritt)</label>
-          <textarea class="pr-textarea" id="comment" name="comment" placeholder="Skriv en kort kommentar…"></textarea>
-        </div>
+          <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
+          <textarea id="comment" placeholder="Bra kille!"></textarea>
 
-        <div class="pr-field">
-          <label class="pr-label" for="verificationId">Verifierings-ID (valfritt, t.ex. ordernr)</label>
-          <input class="pr-input" id="verificationId" name="verificationId" placeholder="ORDER-123" />
-        </div>
+          <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
+          <input id="proofRef" type="text" placeholder="ORDER-123" />
 
-        <div class="pr-actions">
-          <button class="pr-btn pr-btn-primary" type="submit">Skicka betyg</button>
-          <a class="pr-btn pr-btn-ghost" href="/">Avbryt</a>
+          <div class="row" style="margin-top:12px">
+            <button class="primary" type="submit">Skicka betyg</button>
+            <button class="secondary" type="button" id="reset-form">Avbryt</button>
+          </div>
+        </form>
+        <pre id="rate-result" class="muted">// svar visas här</pre>
+      </section>
+
+      <!-- LÄS BETYG -->
+      <section class="card">
+        <h2>Läs betyg</h2>
+        <div class="row">
+          <input id="lookup-subject" type="text" placeholder="erik@example.com" />
+          <button class="primary" id="btn-lookup" type="button">Sök</button>
         </div>
-      </form>
+        <p class="muted">Visar snitt och senaste betyg för vald mottagare.</p>
+        <div id="avg-box" class="muted"></div>
+        <ul id="list-box" class="clean"></ul>
+        <hr style="margin:14px 0;border:0;border-top:1px solid #eadfce" />
+        <div class="row">
+          <button id="btn-recent" class="secondary" type="button">Visa senaste 20 (alla)</button>
+        </div>
+        <ul id="recent-box" class="clean"></ul>
+      </section>
     </div>
-  </section>
+  </div>
 
-  <!-- Sektion: Snitt och senaste betyg -->
-  <section class="pr-section">
-    <div class="pr-card">
-      <h2>Snittbetyg för användare</h2>
-      <form id="avgForm" onsubmit="return false;">
-        <div class="pr-field" style="display:flex; gap:10px;">
-          <input class="pr-input" id="avgTarget" placeholder="Ange användarnamn/mejl" />
-          <button class="pr-btn pr-btn-primary" id="avgBtn" type="button">Visa snitt</button>
-        </div>
-        <div id="avgResult" class="pr-muted">—</div>
-      </form>
-    </div>
-  </section>
+  <script>
+    // --- helpers ---
+    const el = (id) => document.getElementById(id);
+    const api = {
+      create: (payload) => fetch('/api/ratings', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      }).then(r => r.json()),
+      list: (subject) => fetch('/api/ratings?subject=' + encodeURIComponent(subject)).then(r => r.json()),
+      avg: (subject) => fetch('/api/ratings/average?subject=' + encodeURIComponent(subject)).then(r => r.json()),
+      recent: () => fetch('/api/ratings/recent').then(r => r.json())
+    };
 
-  <section class="pr-section">
-    <div class="pr-card">
-      <h2>Senaste betyg</h2>
-      <div id="latestList">Laddar…</div>
-    </div>
-  </section>
+    // --- LÄMNA BETYG ---
+    el('rate-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const subject = el('subject').value.trim();
+      const rater   = el('rater').value.trim();
+      const rating  = parseInt(el('rating').value, 10);
+      const comment = el('comment').value.trim();
+      const proofRef= el('proofRef').value.trim();
 
-  <!-- Viktigt: om du hade <script>-taggar tidigare längst ned här, behåll dem under denna rad -->
-  <!-- Exempel: <script src="/js/app.js"></script> -->
+      if (!subject) return showRate({ ok:false, error:'Fyll i vem du betygsätter (subject).' });
+      if (!Number.isInteger(rating) || rating < 1 || rating > 5)
+        return showRate({ ok:false, error:'Välj betyg 1–5.' });
+
+      try {
+        const res = await api.create({ subject, rating, comment, rater, proofRef });
+        showRate(res);
+        if (res.ok) {
+          e.target.reset();
+          el('rating').value = '3';
+          // uppdatera ev. läsvyn om samma subject
+          if (el('lookup-subject').value.trim().toLowerCase() === subject.toLowerCase()) {
+            doLookup();
+          }
+        }
+      } catch {
+        showRate({ ok:false, error:'Nätverksfel. Försök igen.' });
+      }
+    });
+
+    el('reset-form').addEventListener('click', () => {
+      el('rate-form').reset();
+      el('rating').value = '3';
+      el('rate-result').textContent = '// svar visas här';
+    });
+
+    function showRate(data){
+      el('rate-result').textContent = JSON.stringify(data, null, 2);
+      el('rate-result').className = data.ok ? 'ok' : 'err';
+    }
+
+    // --- LÄS BETYG ---
+    el('btn-lookup').addEventListener('click', doLookup);
+    async function doLookup(){
+      const s = el('lookup-subject').value.trim();
+      if (!s) { el('avg-box').textContent=''; el('list-box').innerHTML=''; return; }
+      const [avg, list] = await Promise.all([ api.avg(s), api.list(s) ]);
+      el('avg-box').innerHTML = avg.ok
+        ? `<strong>Snitt:</strong> ${avg.average} (${avg.count} st)`
+        : `<span class="err">${avg.error || 'Fel'}</span>`;
+
+      if (list.ok){
+        el('list-box').innerHTML = list.ratings.map(it =>
+          `<li><strong>${it.rating}/5</strong> – ${escapeHtml(it.comment || '')}
+           <div class="tiny muted">ID: ${it.id} • ${new Date(it.createdAt).toLocaleString()}${it.raterMasked ? ' • ' + it.raterMasked : ''}</div></li>`
+        ).join('') || '<li class="muted">Inga betyg ännu.</li>';
+      } else {
+        el('list-box').innerHTML = `<li class="err">${list.error || 'Fel'}</li>`;
+      }
+    }
+
+    el('btn-recent').addEventListener('click', async () => {
+      const r = await api.recent();
+      el('recent-box').innerHTML = r.ok
+        ? r.ratings.map(it =>
+            `<li><strong>${it.rating}/5</strong> – ${escapeHtml(it.comment || '')}
+               <div class="tiny muted">${escapeHtml(it.subject)} • ${new Date(it.createdAt).toLocaleString()}</div></li>`
+          ).join('') || '<li class="muted">Inget ännu.</li>'
+        : `<li class="err">${r.error || 'Fel'}</li>`;
+    });
+
+    function escapeHtml(s){
+      return s.replace(/[&<>"']/g, ch => (
+        { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]
+      ));
+    }
+  </script>
 </body>
-
 </html>
