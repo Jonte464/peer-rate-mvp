@@ -1,3 +1,4 @@
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,6 +8,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/**
+ * Kunder/mottagare som kan betygsättas eller rapporteras.
+ */
 model Customer {
   id         String   @id @default(uuid())
   subjectRef String   @unique // Vem som betygsätts (t.ex. e-post/username)
@@ -22,6 +26,9 @@ model Customer {
   transactions Transaction[]
 }
 
+/**
+ * Transaktioner kopplade till kund (valfritt att koppla rating/rapport hit).
+ */
 model Transaction {
   id          String    @id @default(uuid())
   customerId  String
@@ -30,6 +37,7 @@ model Transaction {
   occurredAt  DateTime?
   externalRef String?
   evidenceUrl String?
+
   ratings     Rating[]
   reports     Report[]
   customer    Customer  @relation(fields: [customerId], references: [id])
@@ -37,6 +45,9 @@ model Transaction {
   @@index([customerId])
 }
 
+/**
+ * Enskilt betyg.
+ */
 model Rating {
   id            String  @id @default(uuid())
   customerId    String
@@ -50,16 +61,16 @@ model Rating {
 
   // Ditt namn/e-post (från "Ditt namn/mejl")
   raterName  String?
-  raterEmail String? // NYTT: Om användaren skriver in e-post
+  raterEmail String? // Om användaren skriver in e-post
 
   // Verifierings-ID (t.ex. ORDER-123)
-  verificationId String? // NYTT
+  verificationId String?
 
-  // Historiskt fält du hade – lämnas kvar för bakåtkomp.
+  // Historiskt fält – lämnas kvar för bakåtkomp.
   proofRef String?
 
   // Om kryssrutan "Rapportera misstänkt bedrägeri" var ikryssad
-  reportedSuspectedFraud Boolean @default(false) // NYTT
+  reportedSuspectedFraud Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -67,12 +78,17 @@ model Rating {
   customer    Customer     @relation(fields: [customerId], references: [id])
   transaction Transaction? @relation(fields: [transactionId], references: [id])
 
+  // En rating kan ha 0..n rapporter kopplade
   reports Report[]
 
   @@index([customerId])
   @@index([transactionId])
+  @@index([createdAt])
 }
 
+/**
+ * Sammanvägd poäng (framtida).
+ */
 model Score {
   customerId String   @id
   trustScore Int
@@ -81,6 +97,11 @@ model Score {
   customer   Customer @relation(fields: [customerId], references: [id])
 }
 
+/**
+ * Rapport om misstänkt bedrägeri/avvikelse.
+ * Här lagras samtliga fält från "Rapportera misstänkt bedrägeri",
+ * inkl. tidpunkt, belopp, valfri länk, samtycke och bilagor.
+ */
 model Report {
   id String @id @default(uuid())
 
@@ -100,8 +121,21 @@ model Report {
   // Bevislänk (från "Bevislänk")
   evidenceUrl String?
 
-  // Verifierings-ID speglat även på rapportnivå vid behov
-  verificationId String? // NYTT
+  // Verifierings-ID (kan speglas från rating vid behov)
+  verificationId String?
+
+  // NYTT: Tidpunkt då händelsen inträffade (från datetime-local)
+  occurredAt DateTime?
+
+  // NYTT: Belopp + valuta (default SEK)
+  amount   Decimal? @db.Decimal(12, 2)
+  currency String?  @default("SEK")
+
+  // NYTT: Länk till motpart/annons/profil
+  counterpartyLink String?
+
+  // NYTT: Samtycke att uppgifterna är korrekta
+  reporterConsent Boolean? @default(false)
 
   status    ReportStatus @default(OPEN)
   createdAt DateTime     @default(now())
@@ -111,17 +145,46 @@ model Report {
   reportedCustomer Customer     @relation("CustomerReports", fields: [reportedCustomerId], references: [id])
   transaction      Transaction? @relation(fields: [transactionId], references: [id])
 
+  // Bilagor (0–3 st rekommenderas i frontend)
+  files ReportFile[]
+
   @@index([reportedCustomerId])
   @@index([transactionId])
   @@index([ratingId])
+  @@index([createdAt])
 }
 
+/**
+ * Bilagor som hör till en Report.
+ * Lagrar fil i databasen (Bytes) för enklare drift på Render.
+ * Kan senare bytas mot extern lagring (S3/R2) och URL-fält.
+ */
+model ReportFile {
+  id        String   @id @default(uuid())
+  reportId  String
+  name      String
+  mimeType  String
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
+/**
+ * Enkel användarmodell (admin).
+ */
 model User {
   id    String @id @default(uuid())
   email String @unique
   role  String @default("admin")
 }
 
+/**
+ * Enum-typer
+ */
 enum ReportReason {
   FRAUD
   IMPERSONATION

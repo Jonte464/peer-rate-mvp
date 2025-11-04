@@ -6,30 +6,27 @@
   <title>PeerRate</title>
   <style>
     :root{
-      /* Färgtema matchat till hemsidan */
-      --brand-orange: #f6a94b;   /* hero-bakgrund */
-      --brand-cream:  #f9f4ec;   /* ljus bakgrund */
-      --brand-card:   #fbf2e6;   /* kort/sektioner */
-      --brand-ink:    #1e1830;   /* mörk text */
-      --brand-ink-d:  #4a425e;   /* dämpad text */
-      --brand-purple: #1b1533;   /* primär knapp */
-      --brand-accent: #bfe9e6;   /* ljus mint/blå del */
-      --brand-border: #eadfce;   /* linjer */
+      --brand-orange:#f6a94b;
+      --brand-card:#fbf2e6;
+      --brand-accent:#bfe9e6;
+      --brand-border:#eadfce;
+      --brand-ink:#1e1830;
+      --brand-ink-d:#4a425e;
+      --brand-purple:#1b1533;
+      --ok:#0b7a65;
+      --err:#9b1c1c;
     }
-
     *{box-sizing:border-box}
     body{
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
       color:var(--brand-ink);
-      /* Orange överdel + mint nedre del för hemside-känslan */
-      background:
-        linear-gradient(180deg, var(--brand-orange) 0 56vh, var(--brand-accent) 56vh 100%);
+      background:linear-gradient(180deg,var(--brand-orange) 0 56vh,var(--brand-accent) 56vh 100%);
     }
     .wrap{max-width:960px;margin-inline:auto;padding:28px 24px}
-    h1{margin:0 0 12px 0}
+    h1{margin:0 0 12px}
     .grid{display:grid;gap:20px}
-    @media(min-width:900px){ .grid{grid-template-columns:1fr 1fr} }
+    @media (min-width:900px){.grid{grid-template-columns:1fr 1fr}}
 
     .card{
       background:var(--brand-card);
@@ -38,63 +35,35 @@
       padding:18px;
       box-shadow:0 8px 22px rgba(0,0,0,.06);
     }
-
-    label{display:block;font-weight:700;margin:12px 0 6px 0}
+    label{display:block;font-weight:700;margin:12px 0 6px}
     input,select,textarea,button{
-      width:100%;
-      padding:12px 14px;
-      border-radius:12px;
-      border:1px solid #d9cbb7;
-      background:#fff;
-      color:var(--brand-ink);
-      font:inherit;
+      width:100%;padding:12px 14px;border-radius:12px;border:1px solid #d9cbb7;background:#fff;color:var(--brand-ink);font:inherit;
     }
-    input::placeholder, textarea::placeholder{color:#9b8f87}
+    input::placeholder,textarea::placeholder{color:#9b8f87}
     textarea{min-height:110px;resize:vertical}
-
     .row{display:flex;gap:10px;flex-wrap:wrap}
-    .row > *{flex:1}
-
-    button.primary{
-      background:var(--brand-purple);
-      color:#fff;
-      border:0;
-      cursor:pointer;
-      font-weight:800;
-    }
-    button.primary:hover{filter:brightness(1.05)}
-    button.secondary{
-      background:#fff;
-      color:var(--brand-ink);
-      border:1px solid var(--brand-border);
-    }
-
+    .row>*{flex:1}
     .muted{color:var(--brand-ink-d);font-size:14px}
     .help{color:var(--brand-ink-d);font-size:12px;margin-top:6px}
 
-    pre{
-      margin:12px 0 0 0;
-      background:var(--brand-ink);
-      color:#e6e7ea;
-      padding:14px;
-      border-radius:12px;
-      overflow:auto;
-      max-height:220px;
-    }
-    ul.clean{list-style:none;padding:0;margin:10px 0}
-    ul.clean li{padding:10px;border-bottom:1px solid var(--brand-border)}
-    .ok{color:#0b7a65;font-weight:700}
-    .err{color:#991b1b;font-weight:700}
-    .tiny{font-size:12px}
+    button.primary{background:var(--brand-purple);color:#fff;border:0;cursor:pointer;font-weight:800}
+    button.primary:hover{filter:brightness(1.05)}
+    button.secondary{background:#fff;color:var(--brand-ink);border:1px solid var(--brand-border)}
 
-    .report-box{
-      display:none;
-      border:1px solid var(--brand-border);
-      background:#fff;
-      padding:12px;
-      border-radius:12px;
-      margin-top:8px;
+    /* Notis/feedback */
+    .notice{
+      display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-weight:600;
+      border:1px solid transparent;
     }
+    .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok)}
+    .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err)}
+
+    /* Rapport-sektion */
+    .report-box{display:none;border:1px solid var(--brand-border);background:#fff;padding:12px;border-radius:12px;margin-top:8px}
+    .tiny{font-size:12px}
+    .files-note{font-size:12px;color:var(--brand-ink-d);margin-top:6px}
+    .file-list{margin:6px 0 0;padding:0;list-style:none}
+    .file-list li{font-size:12px;color:var(--brand-ink-d)}
   </style>
 </head>
 <body>
@@ -110,7 +79,7 @@
           <input id="subject" type="text" placeholder="erik@example.com" required />
 
           <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt)</span></label>
-          <input id="rater" type="text" placeholder="" />
+          <input id="rater" type="text" placeholder="Anders" />
 
           <label for="rating">Betyg (1–5)</label>
           <select id="rating" required>
@@ -134,26 +103,45 @@
               <input type="checkbox" id="reportFlag" />
               Rapportera misstänkt bedrägeri
             </label>
-            <div class="help">Markera om du anser att händelsen rör bedrägeri eller allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig för förtydliganden.</div>
+            <div class="help">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
           </div>
 
           <div id="reportDetails" class="report-box">
             <label for="reportReason">Typ av problem</label>
-            <select id="reportReason" disabled>
+            <select id="reportReason" disabled required>
               <option value="">Välj...</option>
               <option>Misstänkt bedrägeri</option>
               <option>Vilseledande identitet</option>
               <option>Obetald/utebliven leverans</option>
-              <option>Falsk eller felaktigt beskriven vara/tjänst</option>
-              <option>Otillåten betalningsmetod/”chargeback abuse”</option>
-              <option>Annat (specificera)</option>
+              <option>Falsk/felaktigt beskriven vara/tjänst</option>
+              <option>Otillåten betalningsmetod/chargeback-abuse</option>
+              <option>Annan oegentlighet</option>
             </select>
 
-            <label for="reportText" style="margin-top:8px">Beskrivning</label>
-            <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum och belopp om möjligt." disabled></textarea>
+            <label for="reportWhen" style="margin-top:8px">Tidpunkt</label>
+            <input id="reportWhen" type="datetime-local" disabled />
 
-            <label for="evidenceUrl" style="margin-top:8px">Bevislänk (valfritt)</label>
-            <input type="url" id="evidenceUrl" placeholder="https://... (kvitto, order, chatt, e-post)" disabled />
+            <div class="row" style="margin-top:8px">
+              <div>
+                <label for="reportAmount">Belopp (SEK) <span class="tiny">(valfritt)</span></label>
+                <input id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" disabled />
+              </div>
+              <div>
+                <label for="reportLink">Motpart/annonslänk <span class="tiny">(valfritt)</span></label>
+                <input id="reportLink" type="url" placeholder="https://annons-eller-profil" disabled />
+              </div>
+            </div>
+
+            <label for="reportText" style="margin-top:8px">Beskrivning</label>
+            <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp." disabled required></textarea>
+
+            <label for="evidenceUrl" style="margin-top:8px">Bevislänk <span class="tiny">(valfritt)</span></label>
+            <input type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" disabled />
+
+            <label for="reportFiles" style="margin-top:8px">Ladda upp bevis <span class="tiny">(valfritt)</span></label>
+            <input id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple disabled />
+            <div class="files-note">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
+            <ul id="fileList" class="file-list"></ul>
 
             <label style="margin-top:8px;font-weight:600">
               <input type="checkbox" id="reportConsent" disabled />
@@ -166,8 +154,10 @@
             <button class="primary" type="submit">Skicka betyg</button>
             <button class="secondary" type="button" id="reset-form">Avbryt</button>
           </div>
+
+          <!-- Ny, användarvänlig feedback-notis -->
+          <div id="notice" class="notice"></div>
         </form>
-        <pre id="rate-result" class="muted">// svar visas här</pre>
       </section>
 
       <!-- LÄS BETYG -->
@@ -179,12 +169,12 @@
         </div>
         <p class="muted">Visar snitt och senaste betyg för vald mottagare.</p>
         <div id="avg-box" class="muted"></div>
-        <ul id="list-box" class="clean"></ul>
+        <ul id="list-box" class="clean" style="list-style:none;padding:0;margin:10px 0"></ul>
         <hr style="margin:14px 0;border:0;border-top:1px solid var(--brand-border)" />
         <div class="row">
           <button id="btn-recent" class="secondary" type="button">Visa senaste 20 (alla)</button>
         </div>
-        <ul id="recent-box" class="clean"></ul>
+        <ul id="recent-box" class="clean" style="list-style:none;padding:0;margin:10px 0"></ul>
       </section>
     </div>
   </div>
@@ -203,43 +193,74 @@
       recent: () => fetch('/api/ratings/recent').then(r => r.json())
     };
 
-    // --- Rapportera: UI toggling ---
+    // --- Notis ---
+    let noticeTimer=null;
+    function showNotice(ok, msg){
+      const box = el('notice');
+      box.className = 'notice ' + (ok ? 'ok' : 'err');
+      box.textContent = msg;
+      clearTimeout(noticeTimer);
+      noticeTimer = setTimeout(() => { box.className='notice'; box.textContent=''; }, 6000);
+    }
+    function clearNotice(){
+      const box = el('notice');
+      clearTimeout(noticeTimer);
+      box.className = 'notice';
+      box.textContent = '';
+    }
+
+    // --- Rapportera: UI & filer ---
     const flag = el('reportFlag');
     const details = el('reportDetails');
     const reason = el('reportReason');
+    const when   = el('reportWhen');
+    const amount = el('reportAmount');
+    const link   = el('reportLink');
     const rtext  = el('reportText');
     const evid   = el('evidenceUrl');
     const cons   = el('reportConsent');
+    const filesInput = el('reportFiles');
+    const fileList = el('fileList');
 
     flag.addEventListener('change', () => {
       const on = flag.checked;
       details.style.display = on ? 'block' : 'none';
-      [reason, rtext, evid, cons].forEach(x => x.disabled = !on);
-      reason.required = on;
-      rtext.required  = on;
-      cons.required   = on;
+      [reason, when, amount, link, rtext, evid, cons, filesInput].forEach(x => x.disabled = !on);
       if (!on){
-        reason.value = '';
-        rtext.value  = '';
-        evid.value   = '';
-        cons.checked = false;
+        reason.value=''; when.value=''; amount.value=''; link.value=''; rtext.value=''; evid.value='';
+        cons.checked=false; filesInput.value=''; fileList.innerHTML='';
       }
     });
 
-    function collectReportPayload(){
-      if (!flag.checked) return null;
-      return {
-        report_flag: true,
-        report_reason: reason.value,
-        report_text: rtext.value.trim(),
-        evidence_url: evid.value.trim() || null,
-        report_consent: !!cons.checked
-      };
+    // Läs in filer (max 3 st, 2 MB/st) och lista dem
+    function readFiles(){
+      fileList.innerHTML='';
+      const files = Array.from(filesInput.files||[]);
+      const limited = files.slice(0,3);
+      const over = files.length>3;
+      if (over) showNotice(false,'Max tre filer – övriga ignoreras.');
+      limited.forEach(f=>{
+        const li = document.createElement('li');
+        li.textContent = `${f.name} (${Math.round(f.size/1024)} kB)`;
+        fileList.appendChild(li);
+      });
+      return Promise.all(limited.map(f => new Promise((resolve,reject)=>{
+        if (f.size > 2*1024*1024){ // 2 MB
+          showNotice(false, `${f.name} är större än 2 MB och ignoreras.`);
+          return resolve(null);
+        }
+        const reader = new FileReader();
+        reader.onload = () => resolve({name:f.name,type:f.type,size:f.size,data:String(reader.result).split(',')[1]});
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(f);
+      }))).then(arr => arr.filter(Boolean));
     }
 
     // --- LÄMNA BETYG ---
     el('rate-form').addEventListener('submit', async (e) => {
       e.preventDefault();
+      clearNotice();
+
       const subject = el('subject').value.trim();
       const rater   = el('rater').value.trim();
       const ratingRaw = el('rating').value;
@@ -247,63 +268,75 @@
       const comment = el('comment').value.trim();
       const proofRef= el('proofRef').value.trim();
 
-      if (!subject) return showRate({ ok:false, error:'Fyll i vem du betygsätter (subject).' });
+      if (!subject) return showNotice(false,'Fyll i vem du betygsätter.');
       if (!ratingRaw || !Number.isInteger(rating) || rating < 1 || rating > 5)
-        return showRate({ ok:false, error:'Välj betyg 1–5.' });
+        return showNotice(false,'Välj betyg 1–5.');
 
-      // Om rapport-läge är aktivt, kräver vi samtycke
-      if (flag.checked && !cons.checked){
-        return showRate({ ok:false, error:'Bocka i intygandet under rapportering.' });
+      // Om rapport-läge är aktivt, kräver vi vissa fält
+      let reportPayload = null;
+      let filesPayload = [];
+      if (flag.checked){
+        if (!cons.checked) return showNotice(false,'Bocka i intygandet under rapportering.');
+        if (!reason.value) return showNotice(false,'Välj typ av problem.');
+        if (!rtext.value.trim()) return showNotice(false,'Beskriv händelsen kort.');
+
+        filesPayload = await readFiles();
+
+        reportPayload = {
+          report_flag: true,
+          report_reason: reason.value,
+          report_when: when.value || null,
+          report_amount_sek: amount.value ? Number(amount.value) : null,
+          report_link: link.value.trim() || null,
+          report_text: rtext.value.trim(),
+          evidence_url: evid.value.trim() || null,
+          report_consent: !!cons.checked,
+          report_files: filesPayload // [{name,type,size,data(base64)}, ...]
+        };
       }
-
-      const reportPayload = collectReportPayload();
 
       try {
         const res = await api.create({
           subject, rating, comment, rater, proofRef,
           ...(reportPayload ? { report: reportPayload } : {})
         });
-        showRate(res);
-        if (res.ok) {
+
+        if (res && res.ok){
+          showNotice(true,'Tack för ditt omdöme – det har skickats.');
           e.target.reset();
           el('rating').value = ''; // återställ till "Välj betyg"
-          // Återställ rapportsektionen
           flag.checked = false;
           flag.dispatchEvent(new Event('change'));
 
-          // uppdatera ev. läsvyn om samma subject
+          // uppdatera läsvyn om samma subject
           if (el('lookup-subject').value.trim().toLowerCase() === subject.toLowerCase()) {
             doLookup();
           }
+        } else {
+          showNotice(false, res?.error || 'Något gick fel. Försök igen.');
         }
       } catch {
-        showRate({ ok:false, error:'Nätverksfel. Försök igen.' });
+        showNotice(false,'Nätverksfel. Försök igen.');
       }
     });
 
     el('reset-form').addEventListener('click', () => {
       el('rate-form').reset();
-      el('rating').value = ''; // inget förvalt
+      el('rating').value = '';
       flag.checked = false;
       flag.dispatchEvent(new Event('change'));
-      el('rate-result').textContent = '// svar visas här';
-      el('rate-result').className = 'muted';
+      clearNotice();
     });
-
-    function showRate(data){
-      el('rate-result').textContent = JSON.stringify(data, null, 2);
-      el('rate-result').className = data.ok ? 'ok' : 'err';
-    }
 
     // --- LÄS BETYG ---
     el('btn-lookup').addEventListener('click', doLookup);
     async function doLookup(){
       const s = el('lookup-subject').value.trim();
-      if (!s) { el('avg-box').textContent=''; el('list-box').innerHTML=''; return; }
+      if (!s){ el('avg-box').textContent=''; el('list-box').innerHTML=''; return; }
       const [avg, list] = await Promise.all([ api.avg(s), api.list(s) ]);
       el('avg-box').innerHTML = avg.ok
         ? `<strong>Snitt:</strong> ${avg.average} (${avg.count} st)`
-        : `<span class="err">${avg.error || 'Fel'}</span>`;
+        : `<span style="color:var(--err);font-weight:700">${avg.error || 'Fel'}</span>`;
 
       if (list.ok){
         el('list-box').innerHTML = list.ratings.map(it =>
@@ -311,7 +344,7 @@
            <div class="tiny muted">ID: ${it.id} • ${new Date(it.createdAt).toLocaleString()}${it.raterMasked ? ' • ' + it.raterMasked : ''}</div></li>`
         ).join('') || '<li class="muted">Inga betyg ännu.</li>';
       } else {
-        el('list-box').innerHTML = `<li class="err">${list.error || 'Fel'}</li>`;
+        el('list-box').innerHTML = `<li style="color:var(--err);font-weight:700">${list.error || 'Fel'}</li>`;
       }
     }
 
@@ -322,13 +355,11 @@
             `<li><strong>${it.rating}/5</strong> – ${escapeHtml(it.comment || '')}
                <div class="tiny muted">${escapeHtml(it.subject)} • ${new Date(it.createdAt).toLocaleString()}</div></li>`
           ).join('') || '<li class="muted">Inget ännu.</li>'
-        : `<li class="err">${r.error || 'Fel'}</li>`;
+        : `<li style="color:var(--err);font-weight:700">${r.error || 'Fel'}</li>`;
     });
 
     function escapeHtml(s){
-      return s.replace(/[&<>"']/g, ch => (
-        { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]
-      ));
+      return s.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
     }
   </script>
 </body>
