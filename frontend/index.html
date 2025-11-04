@@ -100,7 +100,8 @@
           <!-- RAPPORTERA BEDRÄGERI -->
           <div class="field" style="margin-top:12px">
             <label style="font-weight:600">
-              <input type="checkbox" id="reportFlag" />
+              <!-- Inline onchange som alltid funkar -->
+              <input type="checkbox" id="reportFlag" onchange="toggleReport(this.checked)" />
               Rapportera misstänkt bedrägeri
             </label>
             <div class="help">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
@@ -155,7 +156,7 @@
             <button class="secondary" type="button" id="reset-form">Avbryt</button>
           </div>
 
-          <!-- Ny, användarvänlig feedback-notis -->
+          <!-- Användarvänlig feedback-notis -->
           <div id="notice" class="notice"></div>
         </form>
       </section>
@@ -180,7 +181,38 @@
   </div>
 
   <script>
-    // --- helpers ---
+    // Gör toggle robust via inline onchange OCH fallback-listener
+    function toggleReport(on){
+      const details = document.getElementById('reportDetails');
+      const fields = [
+        'reportReason','reportWhen','reportAmount','reportLink',
+        'reportText','evidenceUrl','reportConsent','reportFiles'
+      ].map(id => document.getElementById(id));
+      if (!details) return;
+      details.style.display = on ? 'block' : 'none';
+      fields.forEach(x => { if (x) x.disabled = !on; });
+      if (!on){
+        const rr = document.getElementById('reportReason');
+        const rw = document.getElementById('reportWhen');
+        const ra = document.getElementById('reportAmount');
+        const rl = document.getElementById('reportLink');
+        const rt = document.getElementById('reportText');
+        const eu = document.getElementById('evidenceUrl');
+        const rc = document.getElementById('reportConsent');
+        const rf = document.getElementById('reportFiles');
+        const fl = document.getElementById('fileList');
+        if (rr) rr.value = '';
+        if (rw) rw.value = '';
+        if (ra) ra.value = '';
+        if (rl) rl.value = '';
+        if (rt) rt.value = '';
+        if (eu) eu.value = '';
+        if (rc) rc.checked = false;
+        if (rf) rf.value = '';
+        if (fl) fl.innerHTML = '';
+      }
+    }
+
     const el = (id) => document.getElementById(id);
     const api = {
       create: (payload) => fetch('/api/ratings', {
@@ -193,7 +225,6 @@
       recent: () => fetch('/api/ratings/recent').then(r => r.json())
     };
 
-    // --- Notis ---
     let noticeTimer=null;
     function showNotice(ok, msg){
       const box = el('notice');
@@ -209,31 +240,11 @@
       box.textContent = '';
     }
 
-    // --- Rapportera: UI & filer ---
-    const flag = el('reportFlag');
-    const details = el('reportDetails');
-    const reason = el('reportReason');
-    const when   = el('reportWhen');
-    const amount = el('reportAmount');
-    const link   = el('reportLink');
-    const rtext  = el('reportText');
-    const evid   = el('evidenceUrl');
-    const cons   = el('reportConsent');
-    const filesInput = el('reportFiles');
-    const fileList = el('fileList');
-
-    flag.addEventListener('change', () => {
-      const on = flag.checked;
-      details.style.display = on ? 'block' : 'none';
-      [reason, when, amount, link, rtext, evid, cons, filesInput].forEach(x => x.disabled = !on);
-      if (!on){
-        reason.value=''; when.value=''; amount.value=''; link.value=''; rtext.value=''; evid.value='';
-        cons.checked=false; filesInput.value=''; fileList.innerHTML='';
-      }
-    });
-
-    // Läs in filer (max 3 st, 2 MB/st) och lista dem
+    // Filer
+    const filesInput = document.getElementById('reportFiles');
+    const fileList = document.getElementById('fileList');
     function readFiles(){
+      if (!filesInput || !fileList) return Promise.resolve([]);
       fileList.innerHTML='';
       const files = Array.from(filesInput.files||[]);
       const limited = files.slice(0,3);
@@ -244,7 +255,7 @@
         li.textContent = `${f.name} (${Math.round(f.size/1024)} kB)`;
         fileList.appendChild(li);
       });
-      return Promise.all(limited.map(f => new Promise((resolve,reject)=>{
+      return Promise.all(limited.map(f => new Promise((resolve)=>{
         if (f.size > 2*1024*1024){ // 2 MB
           showNotice(false, `${f.name} är större än 2 MB och ignoreras.`);
           return resolve(null);
@@ -256,7 +267,15 @@
       }))).then(arr => arr.filter(Boolean));
     }
 
-    // --- LÄMNA BETYG ---
+    // Fallback-listener om inline av någon anledning inte körs
+    document.addEventListener('DOMContentLoaded', () => {
+      const flag = el('reportFlag');
+      if (flag) {
+        flag.addEventListener('change', () => toggleReport(flag.checked));
+      }
+    });
+
+    // Skicka betyg
     el('rate-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearNotice();
@@ -272,26 +291,34 @@
       if (!ratingRaw || !Number.isInteger(rating) || rating < 1 || rating > 5)
         return showNotice(false,'Välj betyg 1–5.');
 
-      // Om rapport-läge är aktivt, kräver vi vissa fält
+      const flag = el('reportFlag');
       let reportPayload = null;
-      let filesPayload = [];
-      if (flag.checked){
-        if (!cons.checked) return showNotice(false,'Bocka i intygandet under rapportering.');
-        if (!reason.value) return showNotice(false,'Välj typ av problem.');
-        if (!rtext.value.trim()) return showNotice(false,'Beskriv händelsen kort.');
 
-        filesPayload = await readFiles();
+      if (flag && flag.checked){
+        const reason = el('reportReason').value;
+        const when   = el('reportWhen').value;
+        const amount = el('reportAmount').value;
+        const link   = el('reportLink').value.trim();
+        const rtext  = el('reportText').value.trim();
+        const evid   = el('evidenceUrl').value.trim();
+        const cons   = el('reportConsent').checked;
+
+        if (!cons) return showNotice(false,'Bocka i intygandet under rapportering.');
+        if (!reason) return showNotice(false,'Välj typ av problem.');
+        if (!rtext)  return showNotice(false,'Beskriv händelsen kort.');
+
+        const filesPayload = await readFiles();
 
         reportPayload = {
           report_flag: true,
-          report_reason: reason.value,
-          report_when: when.value || null,
-          report_amount_sek: amount.value ? Number(amount.value) : null,
-          report_link: link.value.trim() || null,
-          report_text: rtext.value.trim(),
-          evidence_url: evid.value.trim() || null,
-          report_consent: !!cons.checked,
-          report_files: filesPayload // [{name,type,size,data(base64)}, ...]
+          report_reason: reason,
+          report_when: when || null,
+          report_amount_sek: amount ? Number(amount) : null,
+          report_link: link || null,
+          report_text: rtext,
+          evidence_url: evid || null,
+          report_consent: !!cons,
+          report_files: filesPayload
         };
       }
 
@@ -305,10 +332,8 @@
           showNotice(true,'Tack för ditt omdöme – det har skickats.');
           e.target.reset();
           el('rating').value = ''; // återställ till "Välj betyg"
-          flag.checked = false;
-          flag.dispatchEvent(new Event('change'));
+          toggleReport(false);
 
-          // uppdatera läsvyn om samma subject
           if (el('lookup-subject').value.trim().toLowerCase() === subject.toLowerCase()) {
             doLookup();
           }
@@ -323,17 +348,18 @@
     el('reset-form').addEventListener('click', () => {
       el('rate-form').reset();
       el('rating').value = '';
-      flag.checked = false;
-      flag.dispatchEvent(new Event('change'));
+      toggleReport(false);
       clearNotice();
     });
 
-    // --- LÄS BETYG ---
-    el('btn-lookup').addEventListener('click', doLookup);
-    async function doLookup(){
+    // Läs betyg
+    const doLookup = async () => {
       const s = el('lookup-subject').value.trim();
       if (!s){ el('avg-box').textContent=''; el('list-box').innerHTML=''; return; }
-      const [avg, list] = await Promise.all([ api.avg(s), api.list(s) ]);
+      const [avg, list] = await Promise.all([ 
+        fetch('/api/ratings/average?subject=' + encodeURIComponent(s)).then(r=>r.json()),
+        fetch('/api/ratings?subject=' + encodeURIComponent(s)).then(r=>r.json())
+      ]);
       el('avg-box').innerHTML = avg.ok
         ? `<strong>Snitt:</strong> ${avg.average} (${avg.count} st)`
         : `<span style="color:var(--err);font-weight:700">${avg.error || 'Fel'}</span>`;
@@ -346,11 +372,13 @@
       } else {
         el('list-box').innerHTML = `<li style="color:var(--err);font-weight:700">${list.error || 'Fel'}</li>`;
       }
-    }
+    };
+    document.getElementById('btn-lookup').addEventListener('click', doLookup);
 
-    el('btn-recent').addEventListener('click', async () => {
-      const r = await api.recent();
-      el('recent-box').innerHTML = r.ok
+    document.getElementById('btn-recent').addEventListener('click', async () => {
+      const r = await fetch('/api/ratings/recent').then(x=>x.json());
+      const box = document.getElementById('recent-box');
+      box.innerHTML = r.ok
         ? r.ratings.map(it =>
             `<li><strong>${it.rating}/5</strong> – ${escapeHtml(it.comment || '')}
                <div class="tiny muted">${escapeHtml(it.subject)} • ${new Date(it.createdAt).toLocaleString()}</div></li>`
