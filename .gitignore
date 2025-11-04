@@ -3,8 +3,31 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 .pnpm-store/
 .DS_Store
 
-# Local data file (keep it locally; don't commit ratings in production)
+# Environment files (keep secrets out of git)
+.env
+frontend/.env
+backend/.env
+
+# Local data files (keep it locally; don't commit ratings in production)
 backend/ratings.json
+
+# Logs
+logs/
+*.log
+logs/*.log
+
+# Output builds
+dist/
+build/
+tmp/
+
+# Prisma – allow schema & migrations (DO NOT ignore these)
+# (these lines ensure prisma/schema.prisma and prisma/migrations are tracked)
+# DO NOT add 'prisma/' here
+
+# OS/system files
+Thumbs.db
