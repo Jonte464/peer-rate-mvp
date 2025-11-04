@@ -3,34 +3,42 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const crypto = require('crypto');
 const Joi = require('joi');
 const path = require('path');
-const { readAll, writeAll } = require('./storage');
+const helmet = require('helmet');
+const compression = require('compression');
+
+const {
+  createRating,
+  createReport,
+  listRatingsBySubjectRef,
+  averageForSubjectRef,
+  listRecentRatings,
+} = require('./storage');
 
 const app = express();
 
 // --- Config ---
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001; // default 3001 (Render sätter PORT i prod)
 const HOST = '0.0.0.0';
-
 const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
-const dayMs = 24 * 60 * 60 * 1000;
 
-// Lita på proxy för korrekt IP (Render/Vercel/NGINX m.m.)
+// Lita på proxy (Render/Vercel/NGINX m.m.)
 app.set('trust proxy', 1);
 
 // --- Middleware ---
 app.use(express.json({ limit: '200kb' }));
+app.use(helmet());
+app.use(compression());
 
-// CORS: strikt i prod om CORS_ORIGIN finns, annars öppet (dev)
+// CORS
 const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({ origin: corsOrigin }));
 
-// Servera frontend (statik)
+// Statik (frontend)
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// Rate limiting (endast API)
+// Rate limit för API
 app.use(
   '/api/',
   rateLimit({
@@ -42,142 +50,165 @@ app.use(
 );
 
 // --- Helpers ---
-function sha256(s) {
-  return crypto.createHash('sha256').update(s, 'utf8').digest('hex');
-}
 function nowIso() {
   return new Date().toISOString();
 }
 function normSubject(s) {
   return String(s || '').trim().toLowerCase();
 }
-function raterKeyFrom(rater, ip) {
-  const base = (rater && String(rater).trim())
-    ? String(rater).trim().toLowerCase()
-    : ip;
-  return sha256(`rater:${base}`);
-}
-function maskRater(r) {
-  const s = r.toLowerCase();
-  if (!s.includes('@')) return s;
-  const [name, domain] = s.split('@');
-  const shown = name.length <= 2 ? name[0] : name.slice(0, 2);
-  return `${shown}***@${domain}`;
+
+/** Mappa svenska/engelska etiketter -> enum ReportReason */
+function mapReportReason(input) {
+  if (!input) return null;
+  const v = String(input).trim().toLowerCase();
+
+  // Tillåt redan korrekta enum-värden
+  const direct = ['fraud','impersonation','non_delivery','counterfeit','payment_abuse','other'];
+  const directClean = v.replace('-', '_');
+  if (direct.includes(directClean)) {
+    return directClean.toUpperCase();
+  }
+
+  // Svenska/vanliga etiketter
+  if (v.includes('bedrägeri') || v.includes('fraud')) return 'FRAUD';
+  if (v.includes('identitets') || v.includes('imitation') || v.includes('impersonation')) return 'IMPERSONATION';
+  if (v.includes('utebliven') || v.includes('leverans') || v.includes('non') ) return 'NON_DELIVERY';
+  if (v.includes('förfalsk') || v.includes('counterfeit')) return 'COUNTERFEIT';
+  if (v.includes('betalning') || v.includes('missbruk') || v.includes('payment')) return 'PAYMENT_ABUSE';
+  return 'OTHER';
 }
 
-// --- Health (läggs före catch-all) ---
+// --- Health (båda vägarna) ---
 app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }));
+app.get('/health', (_req, res) => {
+  res.status(200).json({
+    ok: true,
+    time: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development',
+    port: PORT,
+    corsOrigin,
+    uptimeSec: Math.round(process.uptime()),
+  });
+});
 
 // --- Validation ---
+const reportSchema = Joi.object({
+  report_flag: Joi.boolean().optional(),
+  report_reason: Joi.string().allow('', null),
+  report_text: Joi.string().allow('', null),
+  evidence_url: Joi.string().uri().allow('', null),
+  report_consent: Joi.boolean().optional(),
+}).unknown(false);
+
 const createRatingSchema = Joi.object({
   subject: Joi.string().min(2).max(200).required(),
   rater: Joi.string().min(2).max(200).optional(),
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().max(1000).allow('', null),
   proofRef: Joi.string().max(200).allow('', null),
+
+  // Valfri rapportdel
+  report: reportSchema.optional(),
 });
 
-// --- API: skapa betyg ---
+// --- API: skapa betyg (+ ev. rapport) ---
 app.post('/api/ratings', async (req, res) => {
   const { error, value } = createRatingSchema.validate(req.body);
-  if (error)
+  if (error) {
     return res
       .status(400)
       .json({ ok: false, error: 'Ogiltig inmatning', details: error.details });
-
-  const subject = normSubject(value.subject);
-  const rating = value.rating;
-  const comment = (value.comment || '').toString().trim();
-  const rater = (value.rater || '').toString().trim();
-
-  // IP från proxy-header eller req.ip
-  const ip =
-    req.headers['x-forwarded-for']?.toString().split(',')[0]?.trim() || req.ip;
-
-  const raterKey = raterKeyFrom(rater, ip);
-
-  const items = await readAll();
-  const now = Date.now();
-
-  // Dubblettspärr 24h
-  const dup = items.find(
-    (it) =>
-      it.subject === subject &&
-      it.raterKey === raterKey &&
-      now - new Date(it.createdAt).getTime() < dayMs
-  );
-  if (dup) {
-    return res.status(409).json({
-      ok: false,
-      error: 'Du har redan lämnat betyg för denna mottagare senaste 24 timmarna.',
-    });
   }
 
-  // Hasha ev. verifikationsreferens
-  const proofRef = (value.proofRef || '').toString().trim();
-  const proofHash = proofRef ? sha256(`${subject}|${proofRef}`) : null;
+  const subjectRef = normSubject(value.subject);
+  const rating = value.rating;
+  const comment = (value.comment || '').toString().trim();
+  const raterName = (value.rater || '').toString().trim() || null;
+  const proofRef = (value.proofRef || '').toString().trim() || null;
 
-  const ratingItem = {
-    id: crypto.randomUUID(),
-    subject,
-    rating,
-    comment,
-    hasProof: !!proofHash,
-    proofHash,
-    raterMasked: rater ? maskRater(rater) : null,
-    raterKey,
-    createdAt: nowIso(),
-  };
+  try {
+    // 1) Skapa rating
+    const { customerId, ratingId } = await createRating({
+      subjectRef,
+      rating,
+      comment,
+      raterName,
+      proofRef,
+      createdAt: nowIso(),
+    });
 
-  items.push(ratingItem);
-  items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  await writeAll(items);
+    // 2) Skapa ev. rapport
+    const r = value.report || null;
+    if (r) {
+      const flagged = r.report_flag === true || !!r.report_reason || !!r.report_text;
+      const consentOk = (r.report_consent === undefined) ? true : !!r.report_consent;
+      if (flagged && consentOk) {
+        const reasonEnum = mapReportReason(r.report_reason);
+        await createReport({
+          reportedCustomerId: customerId,
+          ratingId,
+          reason: reasonEnum || 'OTHER',
+          details: r.report_text || null,
+          evidenceUrl: r.evidence_url || null,
+        });
+      }
+    }
 
-  res.status(201).json({ ok: true, id: ratingItem.id });
+    return res.status(201).json({ ok: true });
+  } catch (e) {
+    if (e && e.code === 'DUP_24H') {
+      return res.status(409).json({
+        ok: false,
+        error: 'Du har redan lämnat betyg för denna mottagare senaste 24 timmarna.',
+      });
+    }
+    console.error('[POST /api/ratings] error:', e);
+    return res.status(500).json({ ok: false, error: 'Kunde inte spara betyg' });
+  }
 });
 
 // --- API: lista betyg för subject ---
 app.get('/api/ratings', async (req, res) => {
   const subject = normSubject(req.query.subject || '');
-  if (!subject)
+  if (!subject) {
     return res.status(400).json({ ok: false, error: 'Ange subject i querystring.' });
-
-  const items = await readAll();
-  const list = items
-    .filter((it) => it.subject === subject)
-    .map(({ raterKey, proofHash, ...safe }) => safe);
-
-  res.json({ ok: true, count: list.length, ratings: list });
+  }
+  try {
+    const list = await listRatingsBySubjectRef(subject);
+    res.json({ ok: true, count: list.length, ratings: list });
+  } catch (e) {
+    console.error('[GET /api/ratings] error:', e);
+    res.status(500).json({ ok: false, error: 'Kunde inte hämta betyg' });
+  }
 });
 
 // --- API: snitt ---
 app.get('/api/ratings/average', async (req, res) => {
   const subject = normSubject(req.query.subject || '');
-  if (!subject)
+  if (!subject) {
     return res.status(400).json({ ok: false, error: 'Ange subject i querystring.' });
-
-  const items = await readAll();
-  const mine = items.filter((it) => it.subject === subject);
-  const avg = mine.length
-    ? mine.reduce((s, it) => s + it.rating, 0) / mine.length
-    : 0;
-
-  res.json({
-    ok: true,
-    subject,
-    count: mine.length,
-    average: Number(avg.toFixed(2)),
-  });
+  }
+  try {
+    const { count, average } = await averageForSubjectRef(subject);
+    res.json({ ok: true, subject, count, average });
+  } catch (e) {
+    console.error('[GET /api/ratings/average] error:', e);
+    res.status(500).json({ ok: false, error: 'Kunde inte beräkna snitt' });
+  }
 });
 
 // --- API: senaste ---
 app.get('/api/ratings/recent', async (_req, res) => {
-  const items = await readAll();
-  const list = items.slice(0, 20).map(({ raterKey, proofHash, ...safe }) => safe);
-  res.json({ ok: true, ratings: list });
+  try {
+    const list = await listRecentRatings(20);
+    res.json({ ok: true, ratings: list });
+  } catch (e) {
+    console.error('[GET /api/ratings/recent] error:', e);
+    res.status(500).json({ ok: false, error: 'Kunde inte hämta senaste' });
+  }
 });
 
-// --- Fallback: servera index.html för övriga paths (SPA) ---
+// --- Fallback: Single Page App ---
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });

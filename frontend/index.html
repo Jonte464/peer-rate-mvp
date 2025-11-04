@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PeerRate – MVP</title>
+  <title>PeerRate</title>
   <style>
     :root{
       /* Färgtema matchat till hemsidan */
@@ -70,6 +70,7 @@
     }
 
     .muted{color:var(--brand-ink-d);font-size:14px}
+    .help{color:var(--brand-ink-d);font-size:12px;margin-top:6px}
 
     pre{
       margin:12px 0 0 0;
@@ -85,12 +86,20 @@
     .ok{color:#0b7a65;font-weight:700}
     .err{color:#991b1b;font-weight:700}
     .tiny{font-size:12px}
+
+    .report-box{
+      display:none;
+      border:1px solid var(--brand-border);
+      background:#fff;
+      padding:12px;
+      border-radius:12px;
+      margin-top:8px;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>PeerRate – MVP</h1>
-    <p class="muted">Testa att lämna ett betyg och läs sedan upp det direkt här nedanför.</p>
+    <h1>PeerRate</h1>
 
     <div class="grid">
       <!-- LÄMNA BETYG -->
@@ -101,22 +110,57 @@
           <input id="subject" type="text" placeholder="erik@example.com" required />
 
           <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt)</span></label>
-          <input id="rater" type="text" placeholder="Jonathan" />
+          <input id="rater" type="text" placeholder="" />
 
           <label for="rating">Betyg (1–5)</label>
           <select id="rating" required>
+            <option value="">Välj betyg</option>
             <option value="1">1</option>
             <option value="2">2</option>
-            <option value="3" selected>3</option>
+            <option value="3">3</option>
             <option value="4">4</option>
             <option value="5">5</option>
           </select>
 
           <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
-          <textarea id="comment" placeholder="Bra kille!"></textarea>
+          <textarea id="comment" placeholder=""></textarea>
 
           <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
           <input id="proofRef" type="text" placeholder="ORDER-123" />
+
+          <!-- RAPPORTERA BEDRÄGERI -->
+          <div class="field" style="margin-top:12px">
+            <label style="font-weight:600">
+              <input type="checkbox" id="reportFlag" />
+              Rapportera misstänkt bedrägeri
+            </label>
+            <div class="help">Markera om du anser att händelsen rör bedrägeri eller allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig för förtydliganden.</div>
+          </div>
+
+          <div id="reportDetails" class="report-box">
+            <label for="reportReason">Typ av problem</label>
+            <select id="reportReason" disabled>
+              <option value="">Välj...</option>
+              <option>Misstänkt bedrägeri</option>
+              <option>Vilseledande identitet</option>
+              <option>Obetald/utebliven leverans</option>
+              <option>Falsk eller felaktigt beskriven vara/tjänst</option>
+              <option>Otillåten betalningsmetod/”chargeback abuse”</option>
+              <option>Annat (specificera)</option>
+            </select>
+
+            <label for="reportText" style="margin-top:8px">Beskrivning</label>
+            <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum och belopp om möjligt." disabled></textarea>
+
+            <label for="evidenceUrl" style="margin-top:8px">Bevislänk (valfritt)</label>
+            <input type="url" id="evidenceUrl" placeholder="https://... (kvitto, order, chatt, e-post)" disabled />
+
+            <label style="margin-top:8px;font-weight:600">
+              <input type="checkbox" id="reportConsent" disabled />
+              Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
+            </label>
+          </div>
+          <!-- /RAPPORTERA BEDRÄGERI -->
 
           <div class="row" style="margin-top:12px">
             <button class="primary" type="submit">Skicka betyg</button>
@@ -159,25 +203,74 @@
       recent: () => fetch('/api/ratings/recent').then(r => r.json())
     };
 
+    // --- Rapportera: UI toggling ---
+    const flag = el('reportFlag');
+    const details = el('reportDetails');
+    const reason = el('reportReason');
+    const rtext  = el('reportText');
+    const evid   = el('evidenceUrl');
+    const cons   = el('reportConsent');
+
+    flag.addEventListener('change', () => {
+      const on = flag.checked;
+      details.style.display = on ? 'block' : 'none';
+      [reason, rtext, evid, cons].forEach(x => x.disabled = !on);
+      reason.required = on;
+      rtext.required  = on;
+      cons.required   = on;
+      if (!on){
+        reason.value = '';
+        rtext.value  = '';
+        evid.value   = '';
+        cons.checked = false;
+      }
+    });
+
+    function collectReportPayload(){
+      if (!flag.checked) return null;
+      return {
+        report_flag: true,
+        report_reason: reason.value,
+        report_text: rtext.value.trim(),
+        evidence_url: evid.value.trim() || null,
+        report_consent: !!cons.checked
+      };
+    }
+
     // --- LÄMNA BETYG ---
     el('rate-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const subject = el('subject').value.trim();
       const rater   = el('rater').value.trim();
-      const rating  = parseInt(el('rating').value, 10);
+      const ratingRaw = el('rating').value;
+      const rating  = parseInt(ratingRaw, 10);
       const comment = el('comment').value.trim();
       const proofRef= el('proofRef').value.trim();
 
       if (!subject) return showRate({ ok:false, error:'Fyll i vem du betygsätter (subject).' });
-      if (!Number.isInteger(rating) || rating < 1 || rating > 5)
+      if (!ratingRaw || !Number.isInteger(rating) || rating < 1 || rating > 5)
         return showRate({ ok:false, error:'Välj betyg 1–5.' });
 
+      // Om rapport-läge är aktivt, kräver vi samtycke
+      if (flag.checked && !cons.checked){
+        return showRate({ ok:false, error:'Bocka i intygandet under rapportering.' });
+      }
+
+      const reportPayload = collectReportPayload();
+
       try {
-        const res = await api.create({ subject, rating, comment, rater, proofRef });
+        const res = await api.create({
+          subject, rating, comment, rater, proofRef,
+          ...(reportPayload ? { report: reportPayload } : {})
+        });
         showRate(res);
         if (res.ok) {
           e.target.reset();
-          el('rating').value = '3';
+          el('rating').value = ''; // återställ till "Välj betyg"
+          // Återställ rapportsektionen
+          flag.checked = false;
+          flag.dispatchEvent(new Event('change'));
+
           // uppdatera ev. läsvyn om samma subject
           if (el('lookup-subject').value.trim().toLowerCase() === subject.toLowerCase()) {
             doLookup();
@@ -190,8 +283,11 @@
 
     el('reset-form').addEventListener('click', () => {
       el('rate-form').reset();
-      el('rating').value = '3';
+      el('rating').value = ''; // inget förvalt
+      flag.checked = false;
+      flag.dispatchEvent(new Event('change'));
       el('rate-result').textContent = '// svar visas här';
+      el('rate-result').className = 'muted';
     });
 
     function showRate(data){
