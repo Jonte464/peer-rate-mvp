@@ -55,6 +55,10 @@
     .files-note{font-size:12px;color:var(--brand-ink-d);margin-top:6px}
     .file-list{margin:6px 0 0;padding:0;list-style:none}
     .file-list li{font-size:12px;color:var(--brand-ink-d)}
+
+    /* ✅ CSS-toggle: visa report-box när checkboxen är ikryssad (ingen JS behövs) */
+    .report-container #reportDetails{display:none;}
+    .report-container:has(#reportFlag:checked) #reportDetails{display:block;}
   </style>
 </head>
 <body>
@@ -89,55 +93,57 @@
           <input id="proofRef" type="text" placeholder="ORDER-123" />
 
           <!-- RAPPORTERA BEDRÄGERI -->
-          <div class="field" style="margin-top:12px">
-            <label style="font-weight:600">
-              <input type="checkbox" id="reportFlag" />
-              Rapportera misstänkt bedrägeri
-            </label>
-            <div class="help">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
-          </div>
-
-          <div id="reportDetails" class="report-box">
-            <label for="reportReason">Typ av problem</label>
-            <select id="reportReason" disabled required>
-              <option value="">Välj...</option>
-              <option>Misstänkt bedrägeri</option>
-              <option>Vilseledande identitet</option>
-              <option>Obetald/utebliven leverans</option>
-              <option>Falsk/felaktigt beskriven vara/tjänst</option>
-              <option>Otillåten betalningsmetod/chargeback-abuse</option>
-              <option>Annan oegentlighet</option>
-            </select>
-
-            <label for="reportWhen" style="margin-top:8px">Tidpunkt</label>
-            <input id="reportWhen" type="datetime-local" disabled />
-
-            <div class="row" style="margin-top:8px">
-              <div>
-                <label for="reportAmount">Belopp (SEK) <span class="tiny">(valfritt)</span></label>
-                <input id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" disabled />
-              </div>
-              <div>
-                <label for="reportLink">Motpart/annonslänk <span class="tiny">(valfritt)</span></label>
-                <input id="reportLink" type="url" placeholder="https://annons-eller-profil" disabled />
-              </div>
+          <div class="report-container">
+            <div class="field" style="margin-top:12px">
+              <label style="font-weight:600">
+                <input type="checkbox" id="reportFlag" />
+                Rapportera misstänkt bedrägeri
+              </label>
+              <div class="help">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
             </div>
 
-            <label for="reportText" style="margin-top:8px">Beskrivning</label>
-            <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp." disabled required></textarea>
+            <div id="reportDetails" class="report-box">
+              <label for="reportReason">Typ av problem</label>
+              <select id="reportReason" required>
+                <option value="">Välj...</option>
+                <option>Misstänkt bedrägeri</option>
+                <option>Vilseledande identitet</option>
+                <option>Obetald/utebliven leverans</option>
+                <option>Falsk/felaktigt beskriven vara/tjänst</option>
+                <option>Otillåten betalningsmetod/chargeback-abuse</option>
+                <option>Annan oegentlighet</option>
+              </select>
 
-            <label for="evidenceUrl" style="margin-top:8px">Bevislänk <span class="tiny">(valfritt)</span></label>
-            <input type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" disabled />
+              <label for="reportWhen" style="margin-top:8px">Tidpunkt</label>
+              <input id="reportWhen" type="datetime-local" />
 
-            <label for="reportFiles" style="margin-top:8px">Ladda upp bevis <span class="tiny">(valfritt)</span></label>
-            <input id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple disabled />
-            <div class="files-note">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
-            <ul id="fileList" class="file-list"></ul>
+              <div class="row" style="margin-top:8px">
+                <div>
+                  <label for="reportAmount">Belopp (SEK) <span class="tiny">(valfritt)</span></label>
+                  <input id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
+                </div>
+                <div>
+                  <label for="reportLink">Motpart/annonslänk <span class="tiny">(valfritt)</span></label>
+                  <input id="reportLink" type="url" placeholder="https://annons-eller-profil" />
+                </div>
+              </div>
 
-            <label style="margin-top:8px;font-weight:600">
-              <input type="checkbox" id="reportConsent" disabled />
-              Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
-            </label>
+              <label for="reportText" style="margin-top:8px">Beskrivning</label>
+              <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp." required></textarea>
+
+              <label for="evidenceUrl" style="margin-top:8px">Bevislänk <span class="tiny">(valfritt)</span></label>
+              <input type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
+
+              <label for="reportFiles" style="margin-top:8px">Ladda upp bevis <span class="tiny">(valfritt)</span></label>
+              <input id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
+              <div class="files-note">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
+              <ul id="fileList" class="file-list"></ul>
+
+              <label style="margin-top:8px;font-weight:600">
+                <input type="checkbox" id="reportConsent" />
+                Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
+              </label>
+            </div>
           </div>
           <!-- /RAPPORTERA BEDRÄGERI -->
 
@@ -170,7 +176,6 @@
   </div>
 
   <script>
-    // --- helpers ---
     const el = (id) => document.getElementById(id);
     const api = {
       create: (payload) => fetch('/api/ratings', {
@@ -183,7 +188,7 @@
       recent: () => fetch('/api/ratings/recent').then(r => r.json())
     };
 
-    // --- Notice ---
+    // Notis
     let noticeTimer=null;
     function showNotice(ok, msg){
       const box = el('notice');
@@ -199,45 +204,7 @@
       box.textContent = '';
     }
 
-    // --- Report toggle (ROBUST) ---
-    // 1) Exponera i global scope så inline/lookups alltid hittar den:
-    window.toggleReport = function(on){
-      const details = el('reportDetails');
-      if (!details) return;
-      const fields = [
-        'reportReason','reportWhen','reportAmount','reportLink',
-        'reportText','evidenceUrl','reportConsent','reportFiles'
-      ].map(el);
-
-      details.style.display = on ? 'block' : 'none';
-      fields.forEach(x => { if (x) x.disabled = !on; });
-
-      if (!on){
-        if (el('reportReason')) el('reportReason').value = '';
-        if (el('reportWhen')) el('reportWhen').value = '';
-        if (el('reportAmount')) el('reportAmount').value = '';
-        if (el('reportLink')) el('reportLink').value = '';
-        if (el('reportText')) el('reportText').value = '';
-        if (el('evidenceUrl')) el('evidenceUrl').value = '';
-        if (el('reportConsent')) el('reportConsent').checked = false;
-        if (el('reportFiles')) el('reportFiles').value = '';
-        const fl = el('fileList'); if (fl) fl.innerHTML='';
-      }
-    };
-
-    // 2) Bind extra lyssnare som fallback (även om inline skulle blockas)
-    document.addEventListener('DOMContentLoaded', () => {
-      const flag = el('reportFlag');
-      if (flag){
-        const sync = () => window.toggleReport(!!flag.checked);
-        flag.addEventListener('change', sync);
-        flag.addEventListener('click', sync, true); // fångar även edge-cases
-        // Initial sync (om rutan är förkryssad via autofyll/cachad state)
-        sync();
-      }
-    });
-
-    // --- Files ---
+    // Läs filer och skicka som base64 (valfritt)
     const filesInput = document.getElementById('reportFiles');
     const fileList = document.getElementById('fileList');
     function readFiles(){
@@ -264,8 +231,8 @@
       }))).then(arr => arr.filter(Boolean));
     }
 
-    // --- Submit rating ---
-    el('rate-form').addEventListener('submit', async (e) => {
+    // Skicka betyg
+    document.getElementById('rate-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearNotice();
 
@@ -275,21 +242,20 @@
       const rating  = parseInt(ratingRaw, 10);
       const comment = el('comment').value.trim();
       const proofRef= el('proofRef').value.trim();
+      const flag    = document.getElementById('reportFlag').checked;
 
       if (!subject) return showNotice(false,'Fyll i vem du betygsätter.');
       if (!ratingRaw || !Number.isInteger(rating) || rating < 1 || rating > 5)
         return showNotice(false,'Välj betyg 1–5.');
 
-      const flag = el('reportFlag');
       let reportPayload = null;
-
-      if (flag && flag.checked){
+      if (flag){
         const reason = el('reportReason').value;
-        const when   = el('reportWhen').value;
-        const amount = el('reportAmount').value;
-        const link   = el('reportLink').value.trim();
+        const when   = el('reportWhen').value || null;
+        const amount = el('reportAmount').value ? Number(el('reportAmount').value) : null;
+        const link   = el('reportLink').value.trim() || null;
         const rtext  = el('reportText').value.trim();
-        const evid   = el('evidenceUrl').value.trim();
+        const evid   = el('evidenceUrl').value.trim() || null;
         const cons   = el('reportConsent').checked;
 
         if (!cons) return showNotice(false,'Bocka i intygandet under rapportering.');
@@ -301,11 +267,11 @@
         reportPayload = {
           report_flag: true,
           report_reason: reason,
-          report_when: when || null,
-          report_amount_sek: amount ? Number(amount) : null,
-          report_link: link || null,
+          report_when: when,
+          report_amount_sek: amount,
+          report_link: link,
           report_text: rtext,
-          evidence_url: evid || null,
+          evidence_url: evid,
           report_consent: !!cons,
           report_files: filesPayload
         };
@@ -321,7 +287,7 @@
           showNotice(true,'Tack för ditt omdöme – det har skickats.');
           e.target.reset();
           el('rating').value = '';
-          window.toggleReport(false);
+          fileList.innerHTML = '';
 
           if (el('lookup-subject').value.trim().toLowerCase() === subject.toLowerCase()) {
             doLookup();
@@ -334,14 +300,14 @@
       }
     });
 
-    el('reset-form').addEventListener('click', () => {
-      el('rate-form').reset();
+    document.getElementById('reset-form').addEventListener('click', () => {
+      document.getElementById('rate-form').reset();
       el('rating').value = '';
-      window.toggleReport(false);
+      fileList.innerHTML = '';
       clearNotice();
     });
 
-    // --- Läs betyg ---
+    // Läs betyg
     const doLookup = async () => {
       const s = el('lookup-subject').value.trim();
       if (!s){ el('avg-box').textContent=''; el('list-box').innerHTML=''; return; }
