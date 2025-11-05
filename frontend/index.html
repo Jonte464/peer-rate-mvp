@@ -21,12 +21,26 @@
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
       color:var(--brand-ink);
-      background:linear-gradient(180deg,var(--brand-orange) 0 56vh,var(--brand-accent) 56vh 100%);
+      /* mjuk hero + turkos underdel */
+      background:
+        linear-gradient(180deg,var(--brand-orange) 0 56vh,var(--brand-accent) 56vh 100%);
+      position:relative;
+      min-height:100dvh;
     }
-    .wrap{max-width:960px;margin-inline:auto;padding:28px 24px}
+    /* hörnillustration (inline SVG, responsiv) */
+    .hero-art{
+      position:fixed;
+      right:0;
+      top:0;
+      width:min(38vw,520px);
+      height:auto;
+      pointer-events:none;
+      opacity:.9;
+      filter:drop-shadow(0 6px 24px rgba(0,0,0,.08));
+    }
+
+    .wrap{max-width:720px;margin-inline:auto;padding:28px 24px}
     h1{margin:0 0 12px}
-    .grid{display:grid;gap:20px}
-    @media (min-width:900px){.grid{grid-template-columns:1fr 1fr}}
     .card{
       background:var(--brand-card);
       border:1px solid var(--brand-border);
@@ -44,135 +58,150 @@
     .row>*{flex:1}
     .muted{color:var(--brand-ink-d);font-size:14px}
     .help{color:var(--brand-ink-d);font-size:12px;margin-top:6px}
+
     button.primary{background:var(--brand-purple);color:#fff;border:0;cursor:pointer;font-weight:800}
     button.primary:hover{filter:brightness(1.05)}
     button.secondary{background:#fff;color:var(--brand-ink);border:1px solid var(--brand-border)}
+
     .notice{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-weight:600;border:1px solid transparent;}
     .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok)}
     .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err)}
+
     .report-box{display:none;border:1px solid var(--brand-border);background:#fff;padding:12px;border-radius:12px;margin-top:8px}
     .tiny{font-size:12px}
     .files-note{font-size:12px;color:var(--brand-ink-d);margin-top:6px}
     .file-list{margin:6px 0 0;padding:0;list-style:none}
     .file-list li{font-size:12px;color:var(--brand-ink-d)}
 
-    /* ✅ CSS-toggle: visa report-box när checkboxen är ikryssad (ingen JS behövs) */
+    /* ✅ CSS-toggle: visa rapport-fälten när checkboxen är ikryssad */
     .report-container #reportDetails{display:none;}
     .report-container:has(#reportFlag:checked) #reportDetails{display:block;}
   </style>
 </head>
 <body>
+  <!-- Enkel, inbyggd illustration -->
+  <svg class="hero-art" viewBox="0 0 600 600" aria-hidden="true">
+    <defs>
+      <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+        <stop offset="0" stop-color="#1b1533"/>
+        <stop offset="1" stop-color="#2b2052"/>
+      </linearGradient>
+      <linearGradient id="g2" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0" stop-color="#bfe9e6"/>
+        <stop offset="1" stop-color="#8fd2cc"/>
+      </linearGradient>
+    </defs>
+    <g transform="translate(40,40)">
+      <rect x="180" y="40" rx="22" ry="22" width="300" height="180" fill="url(#g1)"/>
+      <rect x="180" y="240" rx="22" ry="22" width="140" height="120" fill="#fff2" stroke="#fff5"/>
+      <rect x="340" y="240" rx="22" ry="22" width="140" height="120" fill="#fff2" stroke="#fff5"/>
+      <rect x="180" y="380" rx="22" ry="22" width="300" height="120" fill="url(#g2)"/>
+      <circle cx="120" cy="140" r="60" fill="url(#g2)"/>
+      <circle cx="90" cy="310" r="70" fill="#2b2052" opacity=".12"/>
+    </g>
+  </svg>
+
   <div class="wrap">
     <h1>PeerRate</h1>
 
-    <div class="grid">
-      <!-- LÄMNA BETYG -->
-      <section class="card">
-        <h2>Lämna ett betyg</h2>
-        <form id="rate-form" autocomplete="off">
-          <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
-          <input id="subject" type="text" placeholder="erik@example.com" required />
+    <!-- ENDA FORMULÄRET: Lämna betyg -->
+    <section class="card">
+      <h2>Lämna ett betyg</h2>
+      <form id="rate-form" autocomplete="off">
+        <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
+        <input id="subject" type="text" placeholder="erik@example.com" required />
 
-          <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt)</span></label>
-          <input id="rater" type="text" placeholder="Anders" />
+        <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt)</span></label>
+        <input id="rater" type="text" placeholder="Anders" />
 
-          <label for="rating">Betyg (1–5)</label>
-          <select id="rating" required>
-            <option value="">Välj betyg</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-          </select>
+        <label for="rating">Betyg (1–5)</label>
+        <select id="rating" required>
+          <option value="">Välj betyg</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
 
-          <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
-          <textarea id="comment" placeholder=""></textarea>
+        <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
+        <textarea id="comment" placeholder=""></textarea>
 
-          <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
-          <input id="proofRef" type="text" placeholder="ORDER-123" />
+        <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
+        <input id="proofRef" type="text" placeholder="ORDER-123" />
 
-          <!-- RAPPORTERA BEDRÄGERI -->
-          <div class="report-container">
-            <div class="field" style="margin-top:12px">
-              <label style="font-weight:600">
-                <input type="checkbox" id="reportFlag" />
-                Rapportera misstänkt bedrägeri
-              </label>
-              <div class="help">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
-            </div>
+        <!-- RAPPORTERA BEDRÄGERI -->
+        <div class="report-container">
+          <div class="field" style="margin-top:12px">
+            <label style="font-weight:600">
+              <input type="checkbox" id="reportFlag" />
+              Rapportera misstänkt bedrägeri
+            </label>
+            <div class="help">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
+          </div>
 
-            <div id="reportDetails" class="report-box">
-              <label for="reportReason">Typ av problem</label>
-              <select id="reportReason" required>
-                <option value="">Välj...</option>
-                <option>Misstänkt bedrägeri</option>
-                <option>Vilseledande identitet</option>
-                <option>Obetald/utebliven leverans</option>
-                <option>Falsk/felaktigt beskriven vara/tjänst</option>
-                <option>Otillåten betalningsmetod/chargeback-abuse</option>
-                <option>Annan oegentlighet</option>
-              </select>
+          <div id="reportDetails" class="report-box">
+            <label for="reportReason">Typ av problem</label>
+            <select id="reportReason" required>
+              <option value="">Välj...</option>
+              <option>Misstänkt bedrägeri</option>
+              <option>Vilseledande identitet</option>
+              <option>Obetald/utebliven leverans</option>
+              <option>Falsk/felaktigt beskriven vara/tjänst</option>
+              <option>Otillåten betalningsmetod/chargeback-abuse</option>
+              <option>Annan oegentlighet</option>
+            </select>
 
-              <label for="reportWhen" style="margin-top:8px">Tidpunkt</label>
-              <input id="reportWhen" type="datetime-local" />
-
-              <div class="row" style="margin-top:8px">
-                <div>
-                  <label for="reportAmount">Belopp (SEK) <span class="tiny">(valfritt)</span></label>
-                  <input id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
-                </div>
-                <div>
-                  <label for="reportLink">Motpart/annonslänk <span class="tiny">(valfritt)</span></label>
-                  <input id="reportLink" type="url" placeholder="https://annons-eller-profil" />
-                </div>
+            <!-- NYTT: stabila pickers -->
+            <div class="row" style="margin-top:8px">
+              <div>
+                <label for="reportDate">Datum</label>
+                <input id="reportDate" type="date" />
               </div>
-
-              <label for="reportText" style="margin-top:8px">Beskrivning</label>
-              <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp." required></textarea>
-
-              <label for="evidenceUrl" style="margin-top:8px">Bevislänk <span class="tiny">(valfritt)</span></label>
-              <input type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
-
-              <label for="reportFiles" style="margin-top:8px">Ladda upp bevis <span class="tiny">(valfritt)</span></label>
-              <input id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
-              <div class="files-note">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
-              <ul id="fileList" class="file-list"></ul>
-
-              <label style="margin-top:8px;font-weight:600">
-                <input type="checkbox" id="reportConsent" />
-                Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
-              </label>
+              <div>
+                <label for="reportTime">Tid</label>
+                <input id="reportTime" type="time" />
+              </div>
             </div>
+
+            <div class="row" style="margin-top:8px">
+              <div>
+                <label for="reportAmount">Belopp (SEK) <span class="tiny">(valfritt)</span></label>
+                <input id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
+              </div>
+              <div>
+                <label for="reportLink">Motpart/annonslänk <span class="tiny">(valfritt)</span></label>
+                <input id="reportLink" type="url" placeholder="https://annons-eller-profil" />
+              </div>
+            </div>
+
+            <label for="reportText" style="margin-top:8px">Beskrivning</label>
+            <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp." required></textarea>
+
+            <label for="evidenceUrl" style="margin-top:8px">Bevislänk <span class="tiny">(valfritt)</span></label>
+            <input type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
+
+            <label for="reportFiles" style="margin-top:8px">Ladda upp bevis <span class="tiny">(valfritt)</span></label>
+            <input id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
+            <div class="files-note">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
+            <ul id="fileList" class="file-list"></ul>
+
+            <label style="margin-top:8px;font-weight:600">
+              <input type="checkbox" id="reportConsent" />
+              Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
+            </label>
           </div>
-          <!-- /RAPPORTERA BEDRÄGERI -->
-
-          <div class="row" style="margin-top:12px">
-            <button class="primary" type="submit">Skicka betyg</button>
-            <button class="secondary" type="button" id="reset-form">Avbryt</button>
-          </div>
-
-          <div id="notice" class="notice"></div>
-        </form>
-      </section>
-
-      <!-- LÄS BETYG -->
-      <section class="card">
-        <h2>Läs betyg</h2>
-        <div class="row">
-          <input id="lookup-subject" type="text" placeholder="erik@example.com" />
-          <button class="primary" id="btn-lookup" type="button">Sök</button>
         </div>
-        <p class="muted">Visar snitt och senaste betyg för vald mottagare.</p>
-        <div id="avg-box" class="muted"></div>
-        <ul id="list-box" class="clean" style="list-style:none;padding:0;margin:10px 0"></ul>
-        <hr style="margin:14px 0;border:0;border-top:1px solid var(--brand-border)" />
-        <div class="row">
-          <button id="btn-recent" class="secondary" type="button">Visa senaste 20 (alla)</button>
+        <!-- /RAPPORTERA BEDRÄGERI -->
+
+        <div class="row" style="margin-top:12px">
+          <button class="primary" type="submit">Skicka betyg</button>
+          <button class="secondary" type="button" id="reset-form">Avbryt</button>
         </div>
-        <ul id="recent-box" class="clean" style="list-style:none;padding:0;margin:10px 0"></ul>
-      </section>
-    </div>
+
+        <div id="notice" class="notice"></div>
+      </form>
+    </section>
   </div>
 
   <script>
@@ -183,9 +212,6 @@
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify(payload)
       }).then(r => r.json()),
-      list: (subject) => fetch('/api/ratings?subject=' + encodeURIComponent(subject)).then(r => r.json()),
-      avg: (subject) => fetch('/api/ratings/average?subject=' + encodeURIComponent(subject)).then(r => r.json()),
-      recent: () => fetch('/api/ratings/recent').then(r => r.json())
     };
 
     // Notis
@@ -204,7 +230,7 @@
       box.textContent = '';
     }
 
-    // Läs filer och skicka som base64 (valfritt)
+    // Filer → base64 (valfritt)
     const filesInput = document.getElementById('reportFiles');
     const fileList = document.getElementById('fileList');
     function readFiles(){
@@ -231,6 +257,15 @@
       }))).then(arr => arr.filter(Boolean));
     }
 
+    // Kombinera datum + tid → ISO (lokal)
+    function getReportWhenISO(dateStr, timeStr){
+      if(!dateStr && !timeStr) return null;
+      const d = dateStr || new Date().toISOString().slice(0,10); // fallback dagens datum
+      const t = timeStr || "00:00";
+      const iso = new Date(`${d}T${t}`);
+      return isNaN(iso.getTime()) ? null : iso.toISOString();
+    }
+
     // Skicka betyg
     document.getElementById('rate-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -251,7 +286,9 @@
       let reportPayload = null;
       if (flag){
         const reason = el('reportReason').value;
-        const when   = el('reportWhen').value || null;
+        const dateS  = el('reportDate').value;
+        const timeS  = el('reportTime').value;
+        const whenISO= getReportWhenISO(dateS,timeS);
         const amount = el('reportAmount').value ? Number(el('reportAmount').value) : null;
         const link   = el('reportLink').value.trim() || null;
         const rtext  = el('reportText').value.trim();
@@ -267,7 +304,7 @@
         reportPayload = {
           report_flag: true,
           report_reason: reason,
-          report_when: when,
+          report_when: whenISO,
           report_amount_sek: amount,
           report_link: link,
           report_text: rtext,
@@ -287,11 +324,7 @@
           showNotice(true,'Tack för ditt omdöme – det har skickats.');
           e.target.reset();
           el('rating').value = '';
-          fileList.innerHTML = '';
-
-          if (el('lookup-subject').value.trim().toLowerCase() === subject.toLowerCase()) {
-            doLookup();
-          }
+          if (fileList) fileList.innerHTML = '';
         } else {
           showNotice(false, res?.error || 'Något gick fel. Försök igen.');
         }
@@ -303,47 +336,9 @@
     document.getElementById('reset-form').addEventListener('click', () => {
       document.getElementById('rate-form').reset();
       el('rating').value = '';
-      fileList.innerHTML = '';
+      if (fileList) fileList.innerHTML = '';
       clearNotice();
     });
-
-    // Läs betyg
-    const doLookup = async () => {
-      const s = el('lookup-subject').value.trim();
-      if (!s){ el('avg-box').textContent=''; el('list-box').innerHTML=''; return; }
-      const [avg, list] = await Promise.all([
-        fetch('/api/ratings/average?subject=' + encodeURIComponent(s)).then(r=>r.json()),
-        fetch('/api/ratings?subject=' + encodeURIComponent(s)).then(r=>r.json())
-      ]);
-      el('avg-box').innerHTML = avg.ok
-        ? `<strong>Snitt:</strong> ${avg.average} (${avg.count} st)`
-        : `<span style="color:var(--err);font-weight:700">${avg.error || 'Fel'}</span>`;
-
-      if (list.ok){
-        el('list-box').innerHTML = list.ratings.map(it =>
-          `<li><strong>${it.rating}/5</strong> – ${escapeHtml(it.comment || '')}
-           <div class="tiny muted">ID: ${it.id} • ${new Date(it.createdAt).toLocaleString()}${it.raterMasked ? ' • ' + it.raterMasked : ''}</div></li>`
-        ).join('') || '<li class="muted">Inga betyg ännu.</li>';
-      } else {
-        el('list-box').innerHTML = `<li style="color:var(--err);font-weight:700">${list.error || 'Fel'}</li>`;
-      }
-    };
-    document.getElementById('btn-lookup').addEventListener('click', doLookup);
-
-    document.getElementById('btn-recent').addEventListener('click', async () => {
-      const r = await fetch('/api/ratings/recent').then(x=>x.json());
-      const box = document.getElementById('recent-box');
-      box.innerHTML = r.ok
-        ? r.ratings.map(it =>
-            `<li><strong>${it.rating}/5</strong> – ${escapeHtml(it.comment || '')}
-               <div class="tiny muted">${escapeHtml(it.subject)} • ${new Date(it.createdAt).toLocaleString()}</div></li>`
-          ).join('') || '<li class="muted">Inget ännu.</li>'
-        : `<li style="color:var(--err);font-weight:700">${r.error || 'Fel'}</li>`;
-    });
-
-    function escapeHtml(s){
-      return s.replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
-    }
   </script>
 </body>
 </html>
