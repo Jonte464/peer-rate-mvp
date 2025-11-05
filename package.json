@@ -17,7 +17,7 @@
     "prisma:generate": "prisma generate"
   },
   "dependencies": {
-    "@prisma/client": "6.18.0",
+    "@prisma/client": "^6.18.0",
     "compression": "1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
@@ -28,6 +28,6 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.0",
-    "prisma": "6.18.0"
+    "prisma": "^6.18.0"
   }
 }
