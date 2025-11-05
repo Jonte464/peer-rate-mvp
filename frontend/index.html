@@ -27,7 +27,6 @@
     h1{margin:0 0 12px}
     .grid{display:grid;gap:20px}
     @media (min-width:900px){.grid{grid-template-columns:1fr 1fr}}
-
     .card{
       background:var(--brand-card);
       border:1px solid var(--brand-border);
@@ -45,20 +44,12 @@
     .row>*{flex:1}
     .muted{color:var(--brand-ink-d);font-size:14px}
     .help{color:var(--brand-ink-d);font-size:12px;margin-top:6px}
-
     button.primary{background:var(--brand-purple);color:#fff;border:0;cursor:pointer;font-weight:800}
     button.primary:hover{filter:brightness(1.05)}
     button.secondary{background:#fff;color:var(--brand-ink);border:1px solid var(--brand-border)}
-
-    /* Notis/feedback */
-    .notice{
-      display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-weight:600;
-      border:1px solid transparent;
-    }
+    .notice{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-weight:600;border:1px solid transparent;}
     .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok)}
     .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err)}
-
-    /* Rapport-sektion */
     .report-box{display:none;border:1px solid var(--brand-border);background:#fff;padding:12px;border-radius:12px;margin-top:8px}
     .tiny{font-size:12px}
     .files-note{font-size:12px;color:var(--brand-ink-d);margin-top:6px}
@@ -100,8 +91,7 @@
           <!-- RAPPORTERA BEDRÄGERI -->
           <div class="field" style="margin-top:12px">
             <label style="font-weight:600">
-              <!-- Inline onchange som alltid funkar -->
-              <input type="checkbox" id="reportFlag" onchange="toggleReport(this.checked)" />
+              <input type="checkbox" id="reportFlag" />
               Rapportera misstänkt bedrägeri
             </label>
             <div class="help">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
@@ -156,7 +146,6 @@
             <button class="secondary" type="button" id="reset-form">Avbryt</button>
           </div>
 
-          <!-- Användarvänlig feedback-notis -->
           <div id="notice" class="notice"></div>
         </form>
       </section>
@@ -181,38 +170,7 @@
   </div>
 
   <script>
-    // Gör toggle robust via inline onchange OCH fallback-listener
-    function toggleReport(on){
-      const details = document.getElementById('reportDetails');
-      const fields = [
-        'reportReason','reportWhen','reportAmount','reportLink',
-        'reportText','evidenceUrl','reportConsent','reportFiles'
-      ].map(id => document.getElementById(id));
-      if (!details) return;
-      details.style.display = on ? 'block' : 'none';
-      fields.forEach(x => { if (x) x.disabled = !on; });
-      if (!on){
-        const rr = document.getElementById('reportReason');
-        const rw = document.getElementById('reportWhen');
-        const ra = document.getElementById('reportAmount');
-        const rl = document.getElementById('reportLink');
-        const rt = document.getElementById('reportText');
-        const eu = document.getElementById('evidenceUrl');
-        const rc = document.getElementById('reportConsent');
-        const rf = document.getElementById('reportFiles');
-        const fl = document.getElementById('fileList');
-        if (rr) rr.value = '';
-        if (rw) rw.value = '';
-        if (ra) ra.value = '';
-        if (rl) rl.value = '';
-        if (rt) rt.value = '';
-        if (eu) eu.value = '';
-        if (rc) rc.checked = false;
-        if (rf) rf.value = '';
-        if (fl) fl.innerHTML = '';
-      }
-    }
-
+    // --- helpers ---
     const el = (id) => document.getElementById(id);
     const api = {
       create: (payload) => fetch('/api/ratings', {
@@ -225,6 +183,7 @@
       recent: () => fetch('/api/ratings/recent').then(r => r.json())
     };
 
+    // --- Notice ---
     let noticeTimer=null;
     function showNotice(ok, msg){
       const box = el('notice');
@@ -240,7 +199,45 @@
       box.textContent = '';
     }
 
-    // Filer
+    // --- Report toggle (ROBUST) ---
+    // 1) Exponera i global scope så inline/lookups alltid hittar den:
+    window.toggleReport = function(on){
+      const details = el('reportDetails');
+      if (!details) return;
+      const fields = [
+        'reportReason','reportWhen','reportAmount','reportLink',
+        'reportText','evidenceUrl','reportConsent','reportFiles'
+      ].map(el);
+
+      details.style.display = on ? 'block' : 'none';
+      fields.forEach(x => { if (x) x.disabled = !on; });
+
+      if (!on){
+        if (el('reportReason')) el('reportReason').value = '';
+        if (el('reportWhen')) el('reportWhen').value = '';
+        if (el('reportAmount')) el('reportAmount').value = '';
+        if (el('reportLink')) el('reportLink').value = '';
+        if (el('reportText')) el('reportText').value = '';
+        if (el('evidenceUrl')) el('evidenceUrl').value = '';
+        if (el('reportConsent')) el('reportConsent').checked = false;
+        if (el('reportFiles')) el('reportFiles').value = '';
+        const fl = el('fileList'); if (fl) fl.innerHTML='';
+      }
+    };
+
+    // 2) Bind extra lyssnare som fallback (även om inline skulle blockas)
+    document.addEventListener('DOMContentLoaded', () => {
+      const flag = el('reportFlag');
+      if (flag){
+        const sync = () => window.toggleReport(!!flag.checked);
+        flag.addEventListener('change', sync);
+        flag.addEventListener('click', sync, true); // fångar även edge-cases
+        // Initial sync (om rutan är förkryssad via autofyll/cachad state)
+        sync();
+      }
+    });
+
+    // --- Files ---
     const filesInput = document.getElementById('reportFiles');
     const fileList = document.getElementById('fileList');
     function readFiles(){
@@ -256,7 +253,7 @@
         fileList.appendChild(li);
       });
       return Promise.all(limited.map(f => new Promise((resolve)=>{
-        if (f.size > 2*1024*1024){ // 2 MB
+        if (f.size > 2*1024*1024){
           showNotice(false, `${f.name} är större än 2 MB och ignoreras.`);
           return resolve(null);
         }
@@ -267,15 +264,7 @@
       }))).then(arr => arr.filter(Boolean));
     }
 
-    // Fallback-listener om inline av någon anledning inte körs
-    document.addEventListener('DOMContentLoaded', () => {
-      const flag = el('reportFlag');
-      if (flag) {
-        flag.addEventListener('change', () => toggleReport(flag.checked));
-      }
-    });
-
-    // Skicka betyg
+    // --- Submit rating ---
     el('rate-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearNotice();
@@ -331,8 +320,8 @@
         if (res && res.ok){
           showNotice(true,'Tack för ditt omdöme – det har skickats.');
           e.target.reset();
-          el('rating').value = ''; // återställ till "Välj betyg"
-          toggleReport(false);
+          el('rating').value = '';
+          window.toggleReport(false);
 
           if (el('lookup-subject').value.trim().toLowerCase() === subject.toLowerCase()) {
             doLookup();
@@ -348,15 +337,15 @@
     el('reset-form').addEventListener('click', () => {
       el('rate-form').reset();
       el('rating').value = '';
-      toggleReport(false);
+      window.toggleReport(false);
       clearNotice();
     });
 
-    // Läs betyg
+    // --- Läs betyg ---
     const doLookup = async () => {
       const s = el('lookup-subject').value.trim();
       if (!s){ el('avg-box').textContent=''; el('list-box').innerHTML=''; return; }
-      const [avg, list] = await Promise.all([ 
+      const [avg, list] = await Promise.all([
         fetch('/api/ratings/average?subject=' + encodeURIComponent(s)).then(r=>r.json()),
         fetch('/api/ratings?subject=' + encodeURIComponent(s)).then(r=>r.json())
       ]);
