@@ -4,19 +4,33 @@ window.addEventListener('DOMContentLoaded', () => {
   console.log('DOM ready');
 
   const el = (id) => document.getElementById(id);
+
+  // ---- API helper: tål även icke-JSON svar (för debugging) ----
   const api = {
-    create: (payload) =>
-      fetch('/api/ratings', {
+    create: (payload) => {
+      console.log('About to fetch /api/ratings with payload:', payload);
+      return fetch('/api/ratings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
-      }).then(r => r.json()),
+      }).then(async (r) => {
+        const raw = await r.text();
+        try {
+          const json = JSON.parse(raw);
+          return json;
+        } catch {
+          console.warn('Non-JSON response:', raw);
+          return { ok: r.ok, status: r.status, raw };
+        }
+      });
+    },
   };
 
-  // Notis
+  // ---- Notiser ----
   let noticeTimer = null;
   function showNotice(ok, msg) {
     const box = el('notice');
+    if (!box) return console.warn('notice box saknas');
     box.className = 'notice ' + (ok ? 'ok' : 'err');
     box.textContent = msg;
     clearTimeout(noticeTimer);
@@ -24,12 +38,13 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function clearNotice() {
     const box = el('notice');
+    if (!box) return;
     clearTimeout(noticeTimer);
     box.className = 'notice';
     box.textContent = '';
   }
 
-  // Filer → base64 (valfritt)
+  // ---- Filer (valfritt) ----
   const filesInput = document.getElementById('reportFiles');
   const fileList = document.getElementById('fileList');
   function readFiles() {
@@ -56,16 +71,16 @@ window.addEventListener('DOMContentLoaded', () => {
     }))).then(arr => arr.filter(Boolean));
   }
 
-  // Kombinera datum + tid → ISO (lokal)
+  // ---- Datum+tid till ISO ----
   function getReportWhenISO(dateStr, timeStr) {
     if (!dateStr && !timeStr) return null;
-    const d = dateStr || new Date().toISOString().slice(0, 10); // fallback dagens datum
-    const t = timeStr || "00:00";
+    const d = dateStr || new Date().toISOString().slice(0, 10);
+    const t = timeStr || '00:00';
     const iso = new Date(`${d}T${t}`);
     return isNaN(iso.getTime()) ? null : iso.toISOString();
   }
 
-  // Skicka betyg
+  // ---- Form submit ----
   const form = document.getElementById('rate-form');
   if (!form) {
     console.error('rate-form saknas i DOM');
@@ -78,13 +93,15 @@ window.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     clearNotice();
 
-    const subject = el('subject').value.trim();
-    const rater   = el('rater').value.trim();
-    const ratingRaw = el('rating').value;
+    const subject = el('subject')?.value?.trim() || '';
+    const rater   = el('rater')?.value?.trim() || '';
+    const ratingRaw = el('rating')?.value || '';
     const rating  = parseInt(ratingRaw, 10);
-    const comment = el('comment').value.trim();
-    const proofRef= el('proofRef').value.trim();
-    const flag    = document.getElementById('reportFlag').checked;
+    const comment = el('comment')?.value?.trim() || '';
+    const proofRef= el('proofRef')?.value?.trim() || '';
+    const flag    = document.getElementById('reportFlag')?.checked || false;
+
+    console.log('Form values:', { subject, ratingRaw, rating, rater, comment, proofRef, flag });
 
     if (!subject) return showNotice(false, 'Fyll i vem du betygsätter.');
     if (!ratingRaw || !Number.isInteger(rating) || rating < 1 || rating > 5)
@@ -92,15 +109,15 @@ window.addEventListener('DOMContentLoaded', () => {
 
     let reportPayload = null;
     if (flag) {
-      const reason = el('reportReason').value;
-      const dateS  = el('reportDate').value;
-      const timeS  = el('reportTime').value;
+      const reason = el('reportReason')?.value || '';
+      const dateS  = el('reportDate')?.value || '';
+      const timeS  = el('reportTime')?.value || '';
       const whenISO= getReportWhenISO(dateS, timeS);
-      const amount = el('reportAmount').value ? Number(el('reportAmount').value) : null;
-      const link   = el('reportLink').value.trim() || null;
-      const rtext  = el('reportText').value.trim();
-      const evid   = el('evidenceUrl').value.trim() || null;
-      const cons   = el('reportConsent').checked;
+      const amount = el('reportAmount')?.value ? Number(el('reportAmount').value) : null;
+      const link   = el('reportLink')?.value?.trim() || null;
+      const rtext  = el('reportText')?.value?.trim() || '';
+      const evid   = el('evidenceUrl')?.value?.trim() || null;
+      const cons   = !!document.getElementById('reportConsent')?.checked;
 
       if (!cons) return showNotice(false, 'Bocka i intygandet under rapportering.');
       if (!reason) return showNotice(false, 'Välj typ av problem.');
@@ -116,7 +133,7 @@ window.addEventListener('DOMContentLoaded', () => {
         report_link: link,
         report_text: rtext,
         evidence_url: evid,
-        report_consent: !!cons,
+        report_consent: cons,
         report_files: filesPayload
       };
     }
@@ -135,15 +152,15 @@ window.addEventListener('DOMContentLoaded', () => {
         el('rating').value = '';
         if (fileList) fileList.innerHTML = '';
       } else {
-        showNotice(false, res?.error || 'Något gick fel. Försök igen.');
+        showNotice(false, res?.error || `Något gick fel. (status: ${res?.status ?? 'ok?'})`);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Fetch error:', err);
       showNotice(false, 'Nätverksfel. Försök igen.');
     }
   });
 
-  // Reset-knapp
+  // ---- Reset-knapp ----
   const resetBtn = document.getElementById('reset-form');
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {
