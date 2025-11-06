@@ -125,34 +125,43 @@ window.addEventListener('DOMContentLoaded', () => {
 
       const filesPayload = await readFiles();
 
+      // Skicka samma nycklar som backend redan hanterar + tillåt extra (backend tillåter dem)
       reportPayload = {
         report_flag: true,
         report_reason: reason,
-        report_when: whenISO,
-        report_amount_sek: amount,
-        report_link: link,
+        report_when: whenISO,             // extra, ignoreras av backend
+        report_amount_sek: amount,        // extra, ignoreras av backend
+        report_link: link,                // extra, ignoreras av backend
         report_text: rtext,
         evidence_url: evid,
         report_consent: cons,
-        report_files: filesPayload
+        report_files: filesPayload        // extra, ignoreras av backend
       };
     }
 
     try {
-      const res = await api.create({
-        subject, rating, comment, rater, proofRef,
+      // Bygg body och skicka inte tom rater (kortare än 2 tecken)
+      const body = {
+        subject,
+        rating,
+        comment: comment || null,
+        proofRef: proofRef || null,
         ...(reportPayload ? { report: reportPayload } : {})
-      });
+      };
+      if (rater && rater.length >= 2) body.rater = rater;
+
+      const res = await api.create(body);
 
       console.log('API response:', res);
 
-      if (res && res.ok) {
+      if (res && (res.ok || res.id || res.created)) {
         showNotice(true, 'Tack för ditt omdöme – det har skickats.');
         e.target.reset();
         el('rating').value = '';
         if (fileList) fileList.innerHTML = '';
       } else {
-        showNotice(false, res?.error || `Något gick fel. (status: ${res?.status ?? 'ok?'})`);
+        const msg = res?.error || res?.message || `Något gick fel. (status: ${res?.status ?? 'ok?'})`;
+        showNotice(false, msg);
       }
     } catch (err) {
       console.error('Fetch error:', err);

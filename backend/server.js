@@ -9,6 +9,7 @@ const helmet = require('helmet');
 const compression = require('compression');
 
 const {
+  getOrCreateCustomerBySubjectRef,
   createRating,
   createReport,
   listRatingsBySubjectRef,
@@ -63,7 +64,7 @@ function mapReportReason(input) {
   const v = String(input).trim().toLowerCase();
 
   // Tillåt redan korrekta enum-värden
-  const direct = ['fraud','impersonation','non_delivery','counterfeit','payment_abuse','other'];
+  const direct = ['fraud', 'impersonation', 'non_delivery', 'counterfeit', 'payment_abuse', 'other'];
   const directClean = v.replace('-', '_');
   if (direct.includes(directClean)) {
     return directClean.toUpperCase();
@@ -72,7 +73,7 @@ function mapReportReason(input) {
   // Svenska/vanliga etiketter
   if (v.includes('bedrägeri') || v.includes('fraud')) return 'FRAUD';
   if (v.includes('identitets') || v.includes('imitation') || v.includes('impersonation')) return 'IMPERSONATION';
-  if (v.includes('utebliven') || v.includes('leverans') || v.includes('non') ) return 'NON_DELIVERY';
+  if (v.includes('utebliven') || v.includes('leverans') || v.includes('non')) return 'NON_DELIVERY';
   if (v.includes('förfalsk') || v.includes('counterfeit')) return 'COUNTERFEIT';
   if (v.includes('betalning') || v.includes('missbruk') || v.includes('payment')) return 'PAYMENT_ABUSE';
   return 'OTHER';
@@ -92,17 +93,20 @@ app.get('/health', (_req, res) => {
 });
 
 // --- Validation ---
+// Tillåt extra fält i report (t.ex. report_when, report_amount_sek, report_link, report_files)
+// så att frontendens nuvarande payload inte blockeras.
 const reportSchema = Joi.object({
   report_flag: Joi.boolean().optional(),
   report_reason: Joi.string().allow('', null),
   report_text: Joi.string().allow('', null),
   evidence_url: Joi.string().uri().allow('', null),
   report_consent: Joi.boolean().optional(),
-}).unknown(false);
+}).unknown(true); // <— VIKTIG: tillåt okända nycklar i report
 
 const createRatingSchema = Joi.object({
   subject: Joi.string().min(2).max(200).required(),
-  rater: Joi.string().min(2).max(200).optional(),
+  // gör rater “snäll” så tom/null accepteras
+  rater: Joi.string().min(2).max(200).allow('', null).optional(),
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().max(1000).allow('', null),
   proofRef: Joi.string().max(200).allow('', null),
