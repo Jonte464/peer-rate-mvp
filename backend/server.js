@@ -21,6 +21,14 @@ const {
 
 const app = express();
 
+// Tillåt inbäddning i Wix
+app.use((req, res, next) => {
+  res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://www.peer-rate.ai https://peer-rate.ai https://editor.wix.com https://www.wix.com;");
+  res.setHeader("X-Frame-Options", "ALLOW-FROM https://www.peer-rate.ai");
+  next();
+});
+
+
 // --- Config ---
 const PORT = process.env.PORT || 3001; // default 3001 (Render sätter PORT i prod)
 const HOST = '0.0.0.0';
