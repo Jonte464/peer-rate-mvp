@@ -21,14 +21,6 @@ const {
 
 const app = express();
 
-// Tillåt inbäddning i Wix
-app.use((req, res, next) => {
-  res.setHeader("Content-Security-Policy", "frame-ancestors 'self' https://www.peer-rate.ai https://peer-rate.ai https://editor.wix.com https://www.wix.com;");
-  res.setHeader("X-Frame-Options", "ALLOW-FROM https://www.peer-rate.ai");
-  next();
-});
-
-
 // --- Config ---
 const PORT = process.env.PORT || 3001; // default 3001 (Render sätter PORT i prod)
 const HOST = '0.0.0.0';
@@ -38,11 +30,33 @@ const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
 app.set('trust proxy', 1);
 
 // --- Middleware ---
+// JSON-body
 app.use(express.json({ limit: '200kb' }));
-app.use(helmet());
+
+// Helmet – men stäng av frameguard + CSP, vi sätter egna nedan
+app.use(
+  helmet({
+    frameguard: false,
+    contentSecurityPolicy: false,
+  })
+);
+
+// Komprimering
 app.use(compression());
 
-// CORS
+// Tillåt inbäddning i Wix (iframe)
+app.use((req, res, next) => {
+  // Vem får bädda in sidan?
+  res.setHeader(
+    'Content-Security-Policy',
+    "frame-ancestors 'self' https://www.peer-rate.ai https://peer-rate.ai https://editor.wix.com https://www.wix.com"
+  );
+  // X-Frame-Options används av vissa äldre webbläsare
+  res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.peer-rate.ai');
+  next();
+});
+
+// CORS (för API-anrop)
 const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({ origin: corsOrigin }));
 
@@ -143,9 +157,7 @@ const createCustomerSchema = Joi.object({
 app.post('/api/ratings', async (req, res) => {
   const { error, value } = createRatingSchema.validate(req.body);
   if (error) {
-    return res
-      .status(400)
-      .json({ ok: false, error: 'Ogiltig inmatning', details: error.details });
+    return res.status(400).json({ ok: false, error: 'Ogiltig inmatning', details: error.details });
   }
 
   const subjectRef = normSubject(value.subject);
@@ -169,7 +181,7 @@ app.post('/api/ratings', async (req, res) => {
     const r = value.report || null;
     if (r) {
       const flagged = r.report_flag === true || !!r.report_reason || !!r.report_text;
-      const consentOk = (r.report_consent === undefined) ? true : !!r.report_consent;
+      const consentOk = r.report_consent === undefined ? true : !!r.report_consent;
       if (flagged && consentOk) {
         const reasonEnum = mapReportReason(r.report_reason);
         await createReport({
@@ -237,7 +249,7 @@ app.get('/api/ratings/recent', async (_req, res) => {
 });
 
 /* -------------------------------------------------------
-   NYTT: Kundregister API
+   Kundregister API
    ------------------------------------------------------- */
 
 // Skapa kund
