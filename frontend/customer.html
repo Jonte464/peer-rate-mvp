@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PeerRate – Registrera kund</title>
+  <style>
+    :root{
+      --brand-orange:#f6a94b;
+      --brand-card:#fbf2e6;
+      --brand-accent:#bfe9e6;
+      --brand-border:#eadfce;
+      --brand-ink:#1e1830;
+      --brand-ink-d:#4a425e;
+      --brand-purple:#1b1533;
+      --ok:#0b7a65;
+      --err:#9b1c1c;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      color:var(--brand-ink);
+      background:
+        linear-gradient(180deg,var(--brand-orange) 0 56vh,var(--brand-accent) 56vh 100%);
+      position:relative;
+      min-height:100dvh;
+    }
+
+    .wrap{max-width:720px;margin-inline:auto;padding:28px 24px}
+    h1{margin:0 0 8px}
+
+    .top-nav{
+      display:flex;
+      gap:10px;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+    .top-nav a{
+      font-size:14px;
+      text-decoration:none;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--brand-border);
+      background:#fff;
+      color:var(--brand-ink-d);
+    }
+    .top-nav a.active{
+      background:var(--brand-purple);
+      color:#fff;
+      border-color:transparent;
+    }
+
+    .card{
+      background:var(--brand-card);
+      border:1px solid var(--brand-border);
+      border-radius:18px;
+      padding:18px;
+      box-shadow:0 8px 22px rgba(0,0,0,.06);
+      margin-top:8px;
+    }
+    label{display:block;font-weight:700;margin:12px 0 6px}
+    input,button{
+      width:100%;padding:12px 14px;border-radius:12px;border:1px solid #d9cbb7;background:#fff;color:var(--brand-ink);font:inherit;
+    }
+    input::placeholder{color:#9b8f87}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row>*{flex:1}
+    .muted{color:var(--brand-ink-d);font-size:14px}
+
+    button.primary{background:var(--brand-purple);color:#fff;border:0;cursor:pointer;font-weight:800}
+    button.primary:hover{filter:brightness(1.05)}
+    button.secondary{background:#fff;color:var(--brand-ink);border:1px solid var(--brand-border)}
+
+    .notice{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-weight:600;border:1px solid transparent;}
+    .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok)}
+    .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err)}
+  </style>
+</head>
+<body>
+
+  <div class="wrap">
+    <div class="top-nav">
+      <a href="/">Lämna betyg</a>
+      <a href="/customer.html" class="active">Registrera kund</a>
+    </div>
+
+    <h1>Registrera kund</h1>
+    <p class="muted">Här registrerar du en kund med fullständig information i PeerRate kundregister.</p>
+
+    <section class="card">
+      <form id="customer-form" autocomplete="off">
+        <label for="customerSubjectRef">SubjectRef / kund-ID <span class="tiny">(t.ex. användarnamn eller mejl)</span></label>
+        <input id="customerSubjectRef" type="text" placeholder="erik@example.com" required />
+
+        <label for="customerFullName">Fullständigt namn</label>
+        <input id="customerFullName" type="text" placeholder="Erik Example" required />
+
+        <label for="customerPersonalNumber">Personnummer <span class="tiny">(10–12 siffror, valfritt)</span></label>
+        <input id="customerPersonalNumber" type="text" placeholder="198001011234" />
+
+        <label for="customerEmail">E-post <span class="tiny">(valfritt)</span></label>
+        <input id="customerEmail" type="email" placeholder="erik@example.com" />
+
+        <label for="customerPhone">Telefon <span class="tiny">(valfritt)</span></label>
+        <input id="customerPhone" type="text" placeholder="+46 70 123 45 67" />
+
+        <div class="row">
+          <div>
+            <label for="customerStreet">Gatuadress</label>
+            <input id="customerStreet" type="text" placeholder="Kastanjebacken 10" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="customerZip">Postnummer</label>
+            <input id="customerZip" type="text" placeholder="185 39" />
+          </div>
+          <div>
+            <label for="customerCity">Ort</label>
+            <input id="customerCity" type="text" placeholder="Vaxholm" />
+          </div>
+        </div>
+
+        <label for="customerCountry">Land</label>
+        <input id="customerCountry" type="text" placeholder="Sverige" />
+
+        <div class="row" style="margin-top:12px">
+          <button type="submit" class="primary">Spara kund</button>
+          <button type="button" id="reset-customer-form" class="secondary">Avbryt</button>
+        </div>
+
+        <div id="customer-notice" class="notice"></div>
+      </form>
+    </section>
+  </div>
+
+  <!-- JS för kundregister -->
+  <script src="/customer.js" defer></script>
+</body>
+</html>

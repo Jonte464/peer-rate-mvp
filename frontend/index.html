@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PeerRate</title>
+  <title>PeerRate – Lämna betyg</title>
   <style>
     :root{
       --brand-orange:#f6a94b;
@@ -21,32 +21,43 @@
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
       color:var(--brand-ink);
-      /* mjuk hero + turkos underdel */
       background:
         linear-gradient(180deg,var(--brand-orange) 0 56vh,var(--brand-accent) 56vh 100%);
       position:relative;
       min-height:100dvh;
     }
-    /* hörnillustration (inline SVG, responsiv) */
-    .hero-art{
-      position:fixed;
-      right:0;
-      top:0;
-      width:min(38vw,520px);
-      height:auto;
-      pointer-events:none;
-      opacity:.9;
-      filter:drop-shadow(0 6px 24px rgba(0,0,0,.08));
-    }
 
     .wrap{max-width:720px;margin-inline:auto;padding:28px 24px}
-    h1{margin:0 0 12px}
+    h1{margin:0 0 8px}
+
+    .top-nav{
+      display:flex;
+      gap:10px;
+      margin-bottom:12px;
+      flex-wrap:wrap;
+    }
+    .top-nav a{
+      font-size:14px;
+      text-decoration:none;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--brand-border);
+      background:#fff;
+      color:var(--brand-ink-d);
+    }
+    .top-nav a.active{
+      background:var(--brand-purple);
+      color:#fff;
+      border-color:transparent;
+    }
+
     .card{
       background:var(--brand-card);
       border:1px solid var(--brand-border);
       border-radius:18px;
       padding:18px;
       box-shadow:0 8px 22px rgba(0,0,0,.06);
+      margin-top:8px;
     }
     label{display:block;font-weight:700;margin:12px 0 6px}
     input,select,textarea,button{
@@ -73,7 +84,7 @@
     .file-list{margin:6px 0 0;padding:0;list-style:none}
     .file-list li{font-size:12px;color:var(--brand-ink-d)}
 
-    /* ✅ CSS-toggle: visa rapport-fälten när checkboxen är ikryssad */
+    /* CSS-toggle: visa rapport-fälten när checkboxen är ikryssad */
     .report-container #reportDetails{display:none;}
     .report-container:has(#reportFlag:checked) #reportDetails{display:block;}
   </style>
@@ -81,9 +92,14 @@
 <body>
 
   <div class="wrap">
+    <div class="top-nav">
+      <a href="/" class="active">Lämna betyg</a>
+      <a href="/customer.html">Registrera kund</a>
+    </div>
+
     <h1>PeerRate</h1>
 
-    <!-- ENDA FORMULÄRET: Lämna betyg -->
+    <!-- FORM: Lämna betyg -->
     <section class="card">
       <h2>Lämna ett betyg</h2>
       <form id="rate-form" autocomplete="off">
@@ -182,7 +198,7 @@
     </section>
   </div>
 
-  <!-- Laddar extern JS-fil (ersätter inline-script) -->
+  <!-- Laddar JS för betyg -->
   <script src="/script.js" defer></script>
 </body>
 </html>

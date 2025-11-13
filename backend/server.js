@@ -15,6 +15,8 @@ const {
   listRatingsBySubjectRef,
   averageForSubjectRef,
   listRecentRatings,
+  createCustomer,
+  searchCustomers,
 } = require('./storage');
 
 const app = express();
@@ -94,7 +96,6 @@ app.get('/health', (_req, res) => {
 
 // --- Validation ---
 // Tillåt extra fält i report (t.ex. report_when, report_amount_sek, report_link, report_files)
-// så att frontendens nuvarande payload inte blockeras.
 const reportSchema = Joi.object({
   report_flag: Joi.boolean().optional(),
   report_reason: Joi.string().allow('', null),
@@ -113,6 +114,21 @@ const createRatingSchema = Joi.object({
 
   // Valfri rapportdel
   report: reportSchema.optional(),
+});
+
+/** Validering: skapa kund i kundregister */
+const createCustomerSchema = Joi.object({
+  subjectRef: Joi.string().min(2).max(200).required(),
+  fullName: Joi.string().min(2).max(200).required(),
+  personalNumber: Joi.string()
+    .pattern(/^\d{10,12}$/)
+    .allow('', null),
+  email: Joi.string().email().allow('', null),
+  phone: Joi.string().max(50).allow('', null),
+  addressStreet: Joi.string().max(200).allow('', null),
+  addressZip: Joi.string().max(20).allow('', null),
+  addressCity: Joi.string().max(100).allow('', null),
+  country: Joi.string().max(100).allow('', null),
 });
 
 // --- API: skapa betyg (+ ev. rapport) ---
@@ -209,6 +225,74 @@ app.get('/api/ratings/recent', async (_req, res) => {
   } catch (e) {
     console.error('[GET /api/ratings/recent] error:', e);
     res.status(500).json({ ok: false, error: 'Kunde inte hämta senaste' });
+  }
+});
+
+/* -------------------------------------------------------
+   NYTT: Kundregister API
+   ------------------------------------------------------- */
+
+// Skapa kund
+app.post('/api/customers', async (req, res) => {
+  const { error, value } = createCustomerSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Ogiltig kunddata',
+      details: error.details,
+    });
+  }
+
+  // Städa tomma strängar -> null, så databasen inte får "" i onödan
+  const clean = (s) => {
+    if (s === undefined || s === null) return null;
+    const trimmed = String(s).trim();
+    return trimmed === '' ? null : trimmed;
+  };
+
+  const payload = {
+    subjectRef: clean(value.subjectRef),
+    fullName: clean(value.fullName),
+    personalNumber: clean(value.personalNumber),
+    email: clean(value.email),
+    phone: clean(value.phone),
+    addressStreet: clean(value.addressStreet),
+    addressZip: clean(value.addressZip),
+    addressCity: clean(value.addressCity),
+    country: clean(value.country),
+  };
+
+  try {
+    const customer = await createCustomer(payload);
+    return res.status(201).json({ ok: true, customer });
+  } catch (e) {
+    console.error('[POST /api/customers] error:', e);
+
+    // Prisma unik-constraints (t.ex. subjectRef eller personalNumber)
+    if (e.code === 'P2002') {
+      return res.status(409).json({
+        ok: false,
+        error: 'Det finns redan en kund med samma subjectRef eller personnummer.',
+      });
+    }
+
+    return res.status(500).json({ ok: false, error: 'Kunde inte spara kund' });
+  }
+});
+
+// Sök kund
+app.get('/api/customers', async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) {
+    return res.status(400).json({ ok: false, error: 'Ange q i querystring.' });
+  }
+
+  try {
+    const customers = await searchCustomers(q);
+    res.json({ ok: true, count: customers.length, customers });
+  } catch (e) {
+    console.error('[GET /api/customers] error:', e);
+    res.status(500).json({ ok: false, error: 'Kunde inte hämta kunder' });
   }
 });
 

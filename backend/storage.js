@@ -1,8 +1,8 @@
-// backend/storage.js — Prisma-baserad lagring + rapportstöd
+// backend/storage.js — Prisma-baserad lagring + rapportstöd + kundregister
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-/** Hämta/Skapa kund på subjectRef (normaliserad) */
+/** Hämta/Skapa kund på subjectRef (normaliserad) – används av ratings */
 async function getOrCreateCustomerBySubjectRef(subjectRef) {
   const existing = await prisma.customer.findUnique({
     where: { subjectRef },
@@ -141,6 +141,82 @@ async function listRecentRatings(limit = 20) {
   }));
 }
 
+/* -------------------------------------------------------
+   NYTT: Kundregister-funktioner
+   ------------------------------------------------------- */
+
+/**
+ * Skapa en kund i kundregistret.
+ * Vi förutsätter att subjectRef + personalNumber är unika (enl. schema).
+ */
+async function createCustomer(data) {
+  const customer = await prisma.customer.create({
+    data: {
+      subjectRef: data.subjectRef,
+      fullName: data.fullName || null,
+      personalNumber: data.personalNumber || null,
+      email: data.email || null,
+      phone: data.phone || null,
+      addressStreet: data.addressStreet || null,
+      addressZip: data.addressZip || null,
+      addressCity: data.addressCity || null,
+      country: data.country || null,
+    },
+    select: {
+      id: true,
+      subjectRef: true,
+      fullName: true,
+      personalNumber: true,
+      email: true,
+      phone: true,
+      addressStreet: true,
+      addressZip: true,
+      addressCity: true,
+      country: true,
+      createdAt: true,
+    },
+  });
+
+  return customer;
+}
+
+/**
+ * Enkel sökning i kundregistret.
+ * Sök på namn, subjectRef, personnummer, e-post.
+ */
+async function searchCustomers(query) {
+  const q = (query || '').trim();
+  if (!q) return [];
+
+  const customers = await prisma.customer.findMany({
+    where: {
+      OR: [
+        { subjectRef: { contains: q, mode: 'insensitive' } },
+        { fullName: { contains: q, mode: 'insensitive' } },
+        { personalNumber: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } },
+      ],
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+    select: {
+      id: true,
+      subjectRef: true,
+      fullName: true,
+      personalNumber: true,
+      email: true,
+      phone: true,
+      addressStreet: true,
+      addressZip: true,
+      addressCity: true,
+      country: true,
+      createdAt: true,
+    },
+  });
+
+  return customers;
+}
+
 module.exports = {
   getOrCreateCustomerBySubjectRef,
   createRating,
@@ -148,4 +224,8 @@ module.exports = {
   listRatingsBySubjectRef,
   averageForSubjectRef,
   listRecentRatings,
+
+  // kundregister
+  createCustomer,
+  searchCustomers,
 };

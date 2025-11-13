@@ -1,13 +1,13 @@
-console.log('script.js loaded');
+console.log('script.js loaded (ratings page)');
 
 window.addEventListener('DOMContentLoaded', () => {
-  console.log('DOM ready');
+  console.log('DOM ready (ratings page)');
 
   const el = (id) => document.getElementById(id);
 
-  // ---- API helper: tål även icke-JSON svar (för debugging) ----
+  // ---- API helper: ratings ----
   const api = {
-    create: (payload) => {
+    createRating: (payload) => {
       console.log('About to fetch /api/ratings with payload:', payload);
       return fetch('/api/ratings', {
         method: 'POST',
@@ -19,14 +19,14 @@ window.addEventListener('DOMContentLoaded', () => {
           const json = JSON.parse(raw);
           return json;
         } catch {
-          console.warn('Non-JSON response:', raw);
+          console.warn('Non-JSON response (ratings):', raw);
           return { ok: r.ok, status: r.status, raw };
         }
       });
     },
   };
 
-  // ---- Notiser ----
+  // ---- Notiser (för rating) ----
   let noticeTimer = null;
   function showNotice(ok, msg) {
     const box = el('notice');
@@ -80,16 +80,19 @@ window.addEventListener('DOMContentLoaded', () => {
     return isNaN(iso.getTime()) ? null : iso.toISOString();
   }
 
-  // ---- Form submit ----
+  // ----------------------------------------------------
+  //   FORM: Skicka betyg
+  // ----------------------------------------------------
   const form = document.getElementById('rate-form');
   if (!form) {
     console.error('rate-form saknas i DOM');
     return;
   }
-  console.log('Submit listener will attach…');
+
+  console.log('Submit listener for rate-form will attach…');
 
   form.addEventListener('submit', async (e) => {
-    console.log('Submit clicked');
+    console.log('Submit clicked (rate-form)');
     e.preventDefault();
     clearNotice();
 
@@ -101,7 +104,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const proofRef= el('proofRef')?.value?.trim() || '';
     const flag    = document.getElementById('reportFlag')?.checked || false;
 
-    console.log('Form values:', { subject, ratingRaw, rating, rater, comment, proofRef, flag });
+    console.log('Form values (rating):', { subject, ratingRaw, rating, rater, comment, proofRef, flag });
 
     if (!subject) return showNotice(false, 'Fyll i vem du betygsätter.');
     if (!ratingRaw || !Number.isInteger(rating) || rating < 1 || rating > 5)
@@ -125,22 +128,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
       const filesPayload = await readFiles();
 
-      // Skicka samma nycklar som backend redan hanterar + tillåt extra (backend tillåter dem)
       reportPayload = {
         report_flag: true,
         report_reason: reason,
-        report_when: whenISO,             // extra, ignoreras av backend
-        report_amount_sek: amount,        // extra, ignoreras av backend
-        report_link: link,                // extra, ignoreras av backend
+        report_when: whenISO,
+        report_amount_sek: amount,
+        report_link: link,
         report_text: rtext,
         evidence_url: evid,
         report_consent: cons,
-        report_files: filesPayload        // extra, ignoreras av backend
+        report_files: filesPayload
       };
     }
 
     try {
-      // Bygg body och skicka inte tom rater (kortare än 2 tecken)
       const body = {
         subject,
         rating,
@@ -150,9 +151,9 @@ window.addEventListener('DOMContentLoaded', () => {
       };
       if (rater && rater.length >= 2) body.rater = rater;
 
-      const res = await api.create(body);
+      const res = await api.createRating(body);
 
-      console.log('API response:', res);
+      console.log('API response (rating):', res);
 
       if (res && (res.ok || res.id || res.created)) {
         showNotice(true, 'Tack för ditt omdöme – det har skickats.');
@@ -164,12 +165,11 @@ window.addEventListener('DOMContentLoaded', () => {
         showNotice(false, msg);
       }
     } catch (err) {
-      console.error('Fetch error:', err);
+      console.error('Fetch error (ratings):', err);
       showNotice(false, 'Nätverksfel. Försök igen.');
     }
   });
 
-  // ---- Reset-knapp ----
   const resetBtn = document.getElementById('reset-form');
   if (resetBtn) {
     resetBtn.addEventListener('click', () => {

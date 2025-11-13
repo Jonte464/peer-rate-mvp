@@ -10,13 +10,33 @@ datasource db {
 
 /**
  * Kunder/mottagare som kan betygsättas eller rapporteras.
+ * Här har vi nu även fulla kundfält för kundregister.
  */
 model Customer {
   id         String   @id @default(uuid())
   subjectRef String   @unique // Vem som betygsätts (t.ex. e-post/username)
+
+  // ----- Befintliga fält -----
   legalName  String?
   orgRef     String?
   country    String?
+
+  // ----- NYTT: fullständig kundregistrering -----
+  /// Kundens fullständiga namn (för privatperson)
+  fullName       String?
+  /// Personnummer (svenskt, 12 eller 10 siffror – vi validerar i kod senare)
+  personalNumber String? @unique
+  /// Primär e-postadress
+  email          String?
+  /// Telefonnummer
+  phone          String?
+  /// Gatuadress, t.ex. "Kastanjebacken 10"
+  addressStreet  String?
+  /// Postnummer, t.ex. "185 39"
+  addressZip     String?
+  /// Ort/stad, t.ex. "Vaxholm"
+  addressCity    String?
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -124,17 +144,17 @@ model Report {
   // Verifierings-ID (kan speglas från rating vid behov)
   verificationId String?
 
-  // NYTT: Tidpunkt då händelsen inträffade (från datetime-local)
+  // Tidpunkt då händelsen inträffade (från datetime-local)
   occurredAt DateTime?
 
-  // NYTT: Belopp + valuta (default SEK)
+  // Belopp + valuta (default SEK)
   amount   Decimal? @db.Decimal(12, 2)
   currency String?  @default("SEK")
 
-  // NYTT: Länk till motpart/annons/profil
+  // Länk till motpart/annons/profil
   counterpartyLink String?
 
-  // NYTT: Samtycke att uppgifterna är korrekta
+  // Samtycke att uppgifterna är korrekta
   reporterConsent Boolean? @default(false)
 
   status    ReportStatus @default(OPEN)
