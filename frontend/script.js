@@ -71,7 +71,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
     },
-    // Hämta kundinfo via sök (används i Min profil)
     searchCustomers: (q) => {
       return fetch(`/api/customers?q=${encodeURIComponent(q)}`, {
         method: 'GET',
@@ -85,7 +84,6 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
     },
-    // Hämta snittbetyg för ett subject (e-post)
     getRatingsAverage: (subject) => {
       return fetch(`/api/ratings/average?subject=${encodeURIComponent(subject)}`, {
         method: 'GET',
@@ -95,6 +93,19 @@ window.addEventListener('DOMContentLoaded', () => {
           return JSON.parse(raw);
         } catch {
           console.warn('Non-JSON response (ratings/average):', raw);
+          return { ok: r.ok, status: r.status, raw };
+        }
+      });
+    },
+    listRatingsForSubject: (subject) => {
+      return fetch(`/api/ratings?subject=${encodeURIComponent(subject)}`, {
+        method: 'GET',
+      }).then(async (r) => {
+        const raw = await r.text();
+        try {
+          return JSON.parse(raw);
+        } catch {
+          console.warn('Non-JSON response (ratings list):', raw);
           return { ok: r.ok, status: r.status, raw };
         }
       });
@@ -122,7 +133,7 @@ window.addEventListener('DOMContentLoaded', () => {
     box.textContent = '';
   }
 
-  // ---- Filer för rapport (används bara där fälten finns) ----
+  // ---- Filer för rapport ----
   const filesInput = document.getElementById('reportFiles');
   const fileList = document.getElementById('fileList');
   function readFiles() {
@@ -169,18 +180,115 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // ============================================================
-  // LOGIN-BLOCK (delas mellan Lämna betyg & Min profil)
+  // LOGIN-BLOCK + badge
   // ============================================================
   const loginEmail = el('login-email');
   const loginPassword = el('login-password');
   const loginBtn = el('login-btn');
   const loginStatus = el('login-status');
-  const loginHint = el('login-hint');          // finns bara på vissa sidor
-  const ratingFormWrapper = el('rating-form-wrapper'); // finns på Lämna betyg
-  const profileRoot = el('profile-root');      // finns på Min profil
-  const logoutBtn = el('logout-btn');          // finns på Min profil
+  const loginHint = el('login-hint');
+  const ratingFormWrapper = el('rating-form-wrapper');
+  const profileRoot = el('profile-root');
+  const logoutBtn = el('logout-btn');
+  const loginCard = el('login-card');
 
-  // Funktion för att fylla/mina uppgifter och snittbetyg på Min profil
+  const userBadge = el('user-badge');
+  const userBadgeName = el('user-badge-name');
+  const userBadgeAvatar = el('user-badge-avatar');
+
+  function updateUserBadge(user) {
+    if (!userBadge || !userBadgeName || !userBadgeAvatar) return;
+    if (!user) {
+      userBadge.classList.add('hidden');
+      return;
+    }
+    const fullName = user.fullName || '';
+    const firstName = fullName.split(' ')[0] || user.email || '';
+    userBadgeName.textContent = firstName;
+
+    const initials =
+      fullName
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((s) => s[0]?.toUpperCase())
+        .join('') || (user.email ? user.email[0].toUpperCase() : 'P');
+    userBadgeAvatar.textContent = initials;
+    userBadge.classList.remove('hidden');
+  }
+
+  // Ritning av “Mitt omdöme”-graf
+  async function renderRatingsGraph(subjectEmail) {
+    const graphEl = el('ratings-graph');
+    if (!graphEl || !subjectEmail) return;
+
+    graphEl.innerHTML = 'Laddar omdömen…';
+
+    try {
+      const res = await api.listRatingsForSubject(subjectEmail);
+      if (!res || !res.ok || !Array.isArray(res.ratings)) {
+        graphEl.textContent = 'Kunde inte hämta omdömen.';
+        return;
+      }
+
+      const list = res.ratings;
+      if (list.length === 0) {
+        graphEl.textContent = 'Inga omdömen ännu.';
+        return;
+      }
+
+      // Gruppera per raterMasked (användare som lämnat omdöme)
+      const groups = {};
+      for (const r of list) {
+        const key = r.raterMasked || 'Anonym';
+        if (!groups[key]) {
+          groups[key] = { count: 0, sum: 0 };
+        }
+        groups[key].count += 1;
+        groups[key].sum += r.rating;
+      }
+
+      const entries = Object.entries(groups).map(([name, data]) => ({
+        name,
+        count: data.count,
+        avg: data.sum / data.count,
+      }));
+
+      const maxAvg = entries.reduce((m, e) => Math.max(m, e.avg), 0) || 5;
+
+      graphEl.innerHTML = '';
+      entries.forEach((e) => {
+        const row = document.createElement('div');
+        row.className = 'ratings-graph-row';
+
+        const label = document.createElement('div');
+        label.className = 'ratings-graph-label';
+        label.textContent = e.name;
+
+        const bar = document.createElement('div');
+        bar.className = 'ratings-graph-bar';
+        const fill = document.createElement('div');
+        fill.className = 'ratings-graph-bar-fill';
+        const pct = Math.max(0, Math.min(100, (e.avg / maxAvg) * 100));
+        fill.style.width = pct + '%';
+        bar.appendChild(fill);
+
+        const val = document.createElement('div');
+        val.className = 'ratings-graph-value';
+        val.textContent = `${e.avg.toFixed(1)}★ (${e.count})`;
+
+        row.appendChild(label);
+        row.appendChild(bar);
+        row.appendChild(val);
+        graphEl.appendChild(row);
+      });
+    } catch (err) {
+      console.error('renderRatingsGraph error:', err);
+      graphEl.textContent = 'Kunde inte hämta omdömen.';
+    }
+  }
+
+  // Fyll “Mina uppgifter” + snittbetyg + graf
   async function refreshProfile() {
     const user = auth.getUser();
     if (!user || !profileRoot) return;
@@ -200,7 +308,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const email = user.email;
     if (!email) return;
 
-    // Hämta ev. extra kundinfo (personnummer)
     try {
       const res = await api.searchCustomers(email);
       if (res && res.ok && Array.isArray(res.customers) && res.customers.length > 0) {
@@ -211,7 +318,6 @@ window.addEventListener('DOMContentLoaded', () => {
       console.warn('Kunde inte hämta kundinfo:', err);
     }
 
-    // Hämta snittbetyg för den här e-posten
     try {
       const subject = email.trim().toLowerCase();
       const resAvg = await api.getRatingsAverage(subject);
@@ -228,15 +334,17 @@ window.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.warn('Kunde inte hämta snittbetyg:', err);
     }
+
+    await renderRatingsGraph(email);
   }
 
   function updateLoginUI() {
     const user = auth.getUser();
     if (user && loginStatus) {
-      // Inloggad
       loginStatus.textContent = `Inloggad som ${user.email || ''}${user.fullName ? ' (' + user.fullName + ')' : ''}.`;
       if (loginHint) {
-        loginHint.innerHTML = 'Du är inloggad och kan lämna betyg direkt i formuläret nedan.';
+        loginHint.innerHTML =
+          'Du är inloggad och kan lämna betyg direkt i formuläret nedan.';
       }
       if (ratingFormWrapper) {
         ratingFormWrapper.classList.remove('hidden');
@@ -251,14 +359,16 @@ window.addEventListener('DOMContentLoaded', () => {
       if (raterInput && !raterInput.value && user.email) {
         raterInput.value = user.email;
       }
+      if (loginCard) {
+        loginCard.classList.add('hidden'); // göm login-kortet helt
+      }
+      updateUserBadge(user);
     } else {
-      // Inte inloggad
       if (loginStatus) loginStatus.textContent = 'Inte inloggad.';
       if (loginHint) {
         loginHint.innerHTML =
           'Du behöver logga in för att kunna lämna betyg. ' +
-          'Logga in ovan eller ' +
-          '<a href="/customer.html" target="_blank" rel="noopener noreferrer">registrera dig här</a>.';
+          '<a href="/customer.html" target="_blank" rel="noopener noreferrer">Registrera dig här</a> om du inte redan har ett konto.';
       }
       if (ratingFormWrapper) {
         ratingFormWrapper.classList.add('hidden');
@@ -266,6 +376,10 @@ window.addEventListener('DOMContentLoaded', () => {
       if (profileRoot) {
         profileRoot.classList.add('hidden');
       }
+      if (loginCard) {
+        loginCard.classList.remove('hidden');
+      }
+      updateUserBadge(null);
     }
   }
 
@@ -294,10 +408,7 @@ window.addEventListener('DOMContentLoaded', () => {
           if (loginStatus) loginStatus.textContent = 'Inloggning lyckades.';
           updateLoginUI();
 
-          // Scrolla till profil eller formulär efter login
-          const target =
-            el('profile-root') ||
-            el('rate-form');
+          const target = el('profile-root') || el('rate-form');
           if (target) {
             target.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
@@ -312,7 +423,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Logga ut-knapp på Min profil
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       auth.clear();
@@ -326,7 +436,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // ============================================================
-  // BETYGFORMULÄR (finns på Lämna betyg och Min profil)
+  // BETYGFORMULÄR
   // ============================================================
   const form = document.getElementById('rate-form');
   if (form) {
@@ -352,7 +462,6 @@ window.addEventListener('DOMContentLoaded', () => {
       if (!ratingRaw || !Number.isInteger(rating) || rating < 1 || rating > 5)
         return showNotice(false, 'Välj betyg 1–5.');
 
-      // om inget rater angetts, sätt till inloggad email
       if (!rater && user.email) {
         rater = user.email;
       }
@@ -407,7 +516,7 @@ window.addEventListener('DOMContentLoaded', () => {
           const r = el('rating');
           if (r) r.value = '';
           if (fileList) fileList.innerHTML = '';
-          // uppdatera ditt omdöme på Min profil om du är där
+
           if (profileRoot) {
             refreshProfile();
           }

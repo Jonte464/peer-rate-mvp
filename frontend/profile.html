@@ -20,7 +20,7 @@
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
       color:var(--brand-ink);
-      background:transparent; /* Wix sköter bakgrunden */
+      background:transparent;
     }
     .wrap{
       max-width:720px;
@@ -101,7 +101,34 @@
 
     .hidden{display:none !important;}
 
-    /* Profil-lista */
+    /* Inloggningsbadge */
+    .user-badge{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      align-self:flex-end;
+      margin-bottom:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(27,21,51,.06);
+      border:1px solid rgba(27,21,51,.08);
+      font-size:12px;
+    }
+    .user-avatar{
+      width:26px;
+      height:26px;
+      border-radius:50%;
+      background:var(--brand-purple);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:12px;
+      font-weight:700;
+    }
+    .user-label{color:var(--brand-ink-d);}
+    .user-name{font-weight:700;}
+
     .profile-list{
       margin:0;
       padding:0;
@@ -117,7 +144,6 @@
     .profile-label{font-weight:600;color:var(--brand-ink-d);}
     .profile-value{font-weight:500;}
 
-    /* Enkel snygg graf för snittbetyg */
     .score-line{
       margin:4px 0 6px;
       font-size:14px;
@@ -136,6 +162,44 @@
       transition:width .3s ease-out;
     }
 
+    /* Enkelt stapeldiagram för “Mitt omdöme” */
+    .ratings-graph{
+      margin-top:12px;
+      font-size:12px;
+    }
+    .ratings-graph-row{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin-bottom:6px;
+    }
+    .ratings-graph-label{
+      min-width:90px;
+      max-width:120px;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      color:var(--brand-ink-d);
+    }
+    .ratings-graph-bar{
+      flex:1;
+      height:8px;
+      border-radius:999px;
+      background:#f1e4d5;
+      overflow:hidden;
+    }
+    .ratings-graph-bar-fill{
+      height:100%;
+      width:0;
+      background:var(--brand-purple);
+      transition:width .3s ease-out;
+    }
+    .ratings-graph-value{
+      min-width:38px;
+      text-align:right;
+      font-variant-numeric:tabular-nums;
+    }
+
     @media (max-width:600px){
       .wrap{margin:20px auto 40px;padding:0 12px 32px;}
       h1{font-size:26px;}
@@ -144,12 +208,22 @@
 </head>
 <body>
   <div class="wrap">
+
+    <!-- Inloggningsbadge -->
+    <div id="user-badge" class="user-badge hidden">
+      <div class="user-avatar" id="user-badge-avatar">PR</div>
+      <div>
+        <div class="user-label">Inloggad som</div>
+        <div class="user-name" id="user-badge-name">–</div>
+      </div>
+    </div>
+
     <h1>Min profil</h1>
     <p class="lead">
       Här kan du se dina uppgifter, ditt omdöme och lämna betyg på andra användare.
     </p>
 
-    <!-- LOGIN-KORT (används om man inte redan är inloggad) -->
+    <!-- LOGIN-KORT (visas bara om man inte är inloggad) -->
     <section class="card" id="login-card">
       <h2>Logga in</h2>
       <p class="muted">
@@ -169,7 +243,7 @@
       <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
     </section>
 
-    <!-- Allt här inne visas bara när man är inloggad -->
+    <!-- Allt här visas bara när man är inloggad -->
     <div id="profile-root" class="hidden">
 
       <!-- Mina uppgifter -->
@@ -192,9 +266,9 @@
         </ul>
       </section>
 
-      <!-- Ditt omdöme -->
+      <!-- MITT omdöme -->
       <section class="card">
-        <h2>Ditt omdöme</h2>
+        <h2>Mitt omdöme</h2>
         <p class="tiny muted">
           Sammanfattning av betyg som är kopplade till din e-postadress.
         </p>
@@ -208,9 +282,12 @@
         <div class="score-bar">
           <div class="score-bar-fill" id="profile-score-bar"></div>
         </div>
+
+        <!-- Stapeldiagram över var omdömena kommer ifrån (per användare) -->
+        <div id="ratings-graph" class="ratings-graph"></div>
       </section>
 
-      <!-- Lämna betyg – återanvänder samma API som /index.html -->
+      <!-- Lämna betyg -->
       <section class="card">
         <h2>Lämna ett betyg</h2>
         <p class="tiny muted">
