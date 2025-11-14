@@ -49,10 +49,10 @@ app.use((req, res, next) => {
   // Vem får bädda in sidan?
   res.setHeader(
     'Content-Security-Policy',
-    "frame-ancestors 'self' https://www.peer-rate.ai https://peer-rate.ai https://editor.wix.com https://www.wix.com"
+    "frame-ancestors 'self' https://www.peerrate.ai https://peerrate.ai https://editor.wix.com https://www.wix.com"
   );
   // X-Frame-Options används av vissa äldre webbläsare
-  res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.peer-rate.ai');
+  res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.peerrate.ai');
   next();
 });
 
