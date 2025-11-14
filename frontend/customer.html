@@ -21,7 +21,6 @@
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
       color:var(--brand-ink);
-      /* Låt Wix-bakgrunden synas */
       background:transparent;
     }
     .wrap{
@@ -54,12 +53,10 @@
       font:inherit;
     }
     input::placeholder,textarea::placeholder{color:#9b8f87}
-    textarea{min-height:110px;resize:vertical;}
     .row{display:flex;gap:10px;flex-wrap:wrap;}
     .row>*{flex:1;}
     .muted{color:var(--brand-ink-d);font-size:13px;}
     .tiny{font-size:12px;}
-
     .card{
       background:var(--brand-card);
       border:1px solid var(--brand-border);
@@ -67,7 +64,6 @@
       padding:18px 16px 22px;
       box-shadow:0 8px 22px rgba(0,0,0,.06);
     }
-
     button.primary{
       background:var(--brand-purple);
       color:#fff;
@@ -77,7 +73,6 @@
       margin-top:16px;
     }
     button.primary:hover{filter:brightness(1.05);}
-
     .notice{
       display:none;
       margin-top:12px;
@@ -89,7 +84,6 @@
     }
     .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok);}
     .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err);}
-
     @media (max-width:600px){
       .wrap{margin:20px auto 40px;padding:0 12px 32px;}
       h1{font-size:26px;}
@@ -131,6 +125,15 @@
 
         <label for="cust-emailConfirm">Bekräfta e-post</label>
         <input id="cust-emailConfirm" type="email" placeholder="Upprepa e-postadressen" required />
+
+        <label for="cust-password">Lösenord</label>
+        <input id="cust-password" type="password" placeholder="Minst 8 tecken" required minlength="8" />
+
+        <label for="cust-passwordConfirm">Bekräfta lösenord</label>
+        <input id="cust-passwordConfirm" type="password" placeholder="Upprepa lösenord" required minlength="8" />
+        <p class="tiny muted">
+          Spara ditt lösenord – senare kan du logga in med BankID istället, men tills dess används detta.
+        </p>
 
         <label for="cust-phone">Telefon (valfritt)</label>
         <input id="cust-phone" type="tel" placeholder="+46 70 123 45 67" />

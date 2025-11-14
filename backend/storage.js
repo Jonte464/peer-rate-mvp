@@ -2,7 +2,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-/** Hämta/Skapa kund på subjectRef (normaliserad) – används av ratings */
+/** Hämta/Skapa kund på subjectRef (normaliserad, t.ex. e-post) */
 async function getOrCreateCustomerBySubjectRef(subjectRef) {
   const existing = await prisma.customer.findUnique({
     where: { subjectRef },
@@ -62,7 +62,7 @@ async function createReport(data) {
       reportedCustomerId: data.reportedCustomerId,
       ratingId: data.ratingId || null,
       transactionId: data.transactionId || null,
-      reason: data.reason, // måste vara en giltig enum i schema (FRAUD/IMPERSONATION/...)
+      reason: data.reason,
       details: data.details || null,
       evidenceUrl: data.evidenceUrl || null,
     },
@@ -88,12 +88,13 @@ async function listRatingsBySubjectRef(subjectRef) {
       raterName: true,
       proofRef: true,
       createdAt: true,
+      customer: { select: { subjectRef: true } },
     },
   });
 
   return rows.map((r) => ({
     id: r.id,
-    subject: subjectRef,
+    subject: r.customer?.subjectRef || subjectRef,
     rating: r.score,
     comment: r.text || '',
     raterMasked: r.raterName || null,
@@ -141,18 +142,11 @@ async function listRecentRatings(limit = 20) {
   }));
 }
 
-/* -------------------------------------------------------
-   NYTT: Kundregister-funktioner
-   ------------------------------------------------------- */
-
-/**
- * Skapa en kund i kundregistret.
- * Vi förutsätter att subjectRef + personalNumber är unika (enl. schema).
- */
+/** Skapa kund i kundregistret */
 async function createCustomer(data) {
-  const customer = await prisma.customer.create({
+  const created = await prisma.customer.create({
     data: {
-      subjectRef: data.subjectRef,
+      subjectRef: data.subjectRef,       // vi sätter detta = email (lowercase)
       fullName: data.fullName || null,
       personalNumber: data.personalNumber || null,
       email: data.email || null,
@@ -161,6 +155,7 @@ async function createCustomer(data) {
       addressZip: data.addressZip || null,
       addressCity: data.addressCity || null,
       country: data.country || null,
+      passwordHash: data.passwordHash || null,
     },
     select: {
       id: true,
@@ -168,53 +163,49 @@ async function createCustomer(data) {
       fullName: true,
       personalNumber: true,
       email: true,
-      phone: true,
-      addressStreet: true,
-      addressZip: true,
-      addressCity: true,
-      country: true,
       createdAt: true,
     },
   });
-
-  return customer;
+  return created;
 }
 
-/**
- * Enkel sökning i kundregistret.
- * Sök på namn, subjectRef, personnummer, e-post.
- */
-async function searchCustomers(query) {
-  const q = (query || '').trim();
-  if (!q) return [];
-
-  const customers = await prisma.customer.findMany({
+/** Sök kunder (enkel textmatch) */
+async function searchCustomers(q) {
+  const rows = await prisma.customer.findMany({
     where: {
       OR: [
         { subjectRef: { contains: q, mode: 'insensitive' } },
         { fullName: { contains: q, mode: 'insensitive' } },
-        { personalNumber: { contains: q, mode: 'insensitive' } },
         { email: { contains: q, mode: 'insensitive' } },
+        { personalNumber: { contains: q } },
       ],
     },
     orderBy: { createdAt: 'desc' },
-    take: 20,
+    take: 50,
     select: {
       id: true,
       subjectRef: true,
       fullName: true,
       personalNumber: true,
       email: true,
-      phone: true,
-      addressStreet: true,
-      addressZip: true,
-      addressCity: true,
-      country: true,
       createdAt: true,
     },
   });
+  return rows;
+}
 
-  return customers;
+/** Hämta kund för login via subjectRef (vi använder email=subjectRef) */
+async function findCustomerBySubjectRef(subjectRef) {
+  return prisma.customer.findUnique({
+    where: { subjectRef },
+    select: {
+      id: true,
+      subjectRef: true,
+      fullName: true,
+      email: true,
+      passwordHash: true,
+    },
+  });
 }
 
 module.exports = {
@@ -224,8 +215,7 @@ module.exports = {
   listRatingsBySubjectRef,
   averageForSubjectRef,
   listRecentRatings,
-
-  // kundregister
   createCustomer,
   searchCustomers,
+  findCustomerBySubjectRef,
 };

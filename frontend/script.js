@@ -5,10 +5,28 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const el = (id) => document.getElementById(id);
 
-  // ---- API helper: tål även icke-JSON svar (för debugging) ----
+  // Enkel auth-hjälpare (lagras i localStorage på klienten)
+  const auth = {
+    key: 'peerRateUser',
+    getUser() {
+      try {
+        const raw = localStorage.getItem(this.key);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    },
+    setUser(user) {
+      localStorage.setItem(this.key, JSON.stringify(user));
+    },
+    clear() {
+      localStorage.removeItem(this.key);
+    },
+  };
+
+  // ---- API helper ----
   const api = {
     createRating: (payload) => {
-      console.log('About to fetch /api/ratings with payload:', payload);
       return fetch('/api/ratings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -16,16 +34,14 @@ window.addEventListener('DOMContentLoaded', () => {
       }).then(async (r) => {
         const raw = await r.text();
         try {
-          const json = JSON.parse(raw);
-          return json;
+          return JSON.parse(raw);
         } catch {
-          console.warn('Non-JSON response:', raw);
+          console.warn('Non-JSON response (ratings):', raw);
           return { ok: r.ok, status: r.status, raw };
         }
       });
     },
     createCustomer: (payload) => {
-      console.log('About to fetch /api/customers with payload:', payload);
       return fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -33,21 +49,35 @@ window.addEventListener('DOMContentLoaded', () => {
       }).then(async (r) => {
         const raw = await r.text();
         try {
-          const json = JSON.parse(raw);
-          return json;
+          return JSON.parse(raw);
         } catch {
           console.warn('Non-JSON response (customers):', raw);
           return { ok: r.ok, status: r.status, raw };
         }
       });
     },
+    login: (payload) => {
+      return fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(async (r) => {
+        const raw = await r.text();
+        try {
+          return JSON.parse(raw);
+        } catch {
+          console.warn('Non-JSON response (login):', raw);
+          return { ok: r.ok, status: r.status, raw };
+        }
+      });
+    },
   };
 
-  // ---- Notiser för betygsformuläret ----
+  // ---- Notiser för betyg ----
   let noticeTimer = null;
   function showNotice(ok, msg) {
     const box = el('notice');
-    if (!box) return console.warn('notice box saknas');
+    if (!box) return;
     box.className = 'notice ' + (ok ? 'ok' : 'err');
     box.textContent = msg;
     clearTimeout(noticeTimer);
@@ -64,7 +94,7 @@ window.addEventListener('DOMContentLoaded', () => {
     box.textContent = '';
   }
 
-  // ---- Filer (valfritt) för rapport ----
+  // ---- Filer för rapport ----
   const filesInput = document.getElementById('reportFiles');
   const fileList = document.getElementById('fileList');
   function readFiles() {
@@ -102,7 +132,6 @@ window.addEventListener('DOMContentLoaded', () => {
     ).then((arr) => arr.filter(Boolean));
   }
 
-  // ---- Datum+tid till ISO ----
   function getReportWhenISO(dateStr, timeStr) {
     if (!dateStr && !timeStr) return null;
     const d = dateStr || new Date().toISOString().slice(0, 10);
@@ -112,32 +141,99 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // ============================================================
-  // BETYGFORMULÄR (index.html) – bara om rate-form finns
+  // LOGIN-BLOCK (på betygssidan)
+  // ============================================================
+  const loginEmail = el('login-email');
+  const loginPassword = el('login-password');
+  const loginBtn = el('login-btn');
+  const loginStatus = el('login-status');
+  const loginHint = el('login-hint');
+
+  function updateLoginUI() {
+    const user = auth.getUser();
+    if (user && loginStatus) {
+      loginStatus.textContent = `Inloggad som ${user.email || ''}${user.fullName ? ' (' + user.fullName + ')' : ''}.`;
+      if (loginHint) loginHint.textContent = 'Du är inloggad och kan lämna betyg.';
+      if (loginEmail) loginEmail.value = user.email || '';
+      if (loginPassword) loginPassword.value = '';
+      const raterInput = el('rater');
+      if (raterInput && !raterInput.value && user.email) {
+        raterInput.value = user.email;
+      }
+    } else if (loginStatus) {
+      loginStatus.textContent = 'Inte inloggad.';
+      if (loginHint) loginHint.textContent = 'Du behöver vara inloggad för att kunna skicka ett betyg.';
+    }
+  }
+
+  if (loginBtn && loginEmail && loginPassword) {
+    loginBtn.addEventListener('click', async () => {
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value.trim();
+
+      if (!email || !password) {
+        if (loginStatus) loginStatus.textContent = 'Fyll i både e-post och lösenord.';
+        return;
+      }
+
+      if (loginStatus) loginStatus.textContent = 'Loggar in...';
+
+      try {
+        const res = await api.login({ email, password });
+        console.log('Login response:', res);
+
+        if (res && res.ok && res.customer) {
+          auth.setUser({
+            id: res.customer.id,
+            email: res.customer.email,
+            fullName: res.customer.fullName,
+          });
+          if (loginStatus) loginStatus.textContent = 'Inloggning lyckades.';
+          updateLoginUI();
+        } else {
+          const msg = res?.error || 'Inloggningen misslyckades.';
+          if (loginStatus) loginStatus.textContent = msg;
+        }
+      } catch (err) {
+        console.error('Login fetch error:', err);
+        if (loginStatus) loginStatus.textContent = 'Nätverksfel vid inloggning.';
+      }
+    });
+  }
+
+  updateLoginUI();
+
+  // ============================================================
+  // BETYGFORMULÄR
   // ============================================================
   const form = document.getElementById('rate-form');
-  if (!form) {
-    console.log('rate-form saknas – hoppar över betygslogik (t.ex. på customer.html)');
-  } else {
-    console.log('Submit listener will attach…');
-
+  if (form) {
     form.addEventListener('submit', async (e) => {
-      console.log('Submit clicked');
       e.preventDefault();
       clearNotice();
 
+      const user = auth.getUser();
+      if (!user) {
+        showNotice(false, 'Du måste vara inloggad innan du lämnar betyg.');
+        return;
+      }
+
       const subject = el('subject')?.value?.trim() || '';
-      const rater = el('rater')?.value?.trim() || '';
+      let rater = el('rater')?.value?.trim() || '';
       const ratingRaw = el('rating')?.value || '';
       const rating = parseInt(ratingRaw, 10);
       const comment = el('comment')?.value?.trim() || '';
       const proofRef = el('proofRef')?.value?.trim() || '';
       const flag = document.getElementById('reportFlag')?.checked || false;
 
-      console.log('Form values:', { subject, ratingRaw, rating, rater, comment, proofRef, flag });
-
       if (!subject) return showNotice(false, 'Fyll i vem du betygsätter.');
       if (!ratingRaw || !Number.isInteger(rating) || rating < 1 || rating > 5)
         return showNotice(false, 'Välj betyg 1–5.');
+
+      // om inget rater angetts, sätt till inloggad email
+      if (!rater && user.email) {
+        rater = user.email;
+      }
 
       let reportPayload = null;
       if (flag) {
@@ -181,8 +277,7 @@ window.addEventListener('DOMContentLoaded', () => {
         if (rater && rater.length >= 2) body.rater = rater;
 
         const res = await api.createRating(body);
-
-        console.log('API response:', res);
+        console.log('API response (rating):', res);
 
         if (res && (res.ok || res.id || res.created)) {
           showNotice(true, 'Tack för ditt omdöme – det har skickats.');
@@ -190,21 +285,22 @@ window.addEventListener('DOMContentLoaded', () => {
           el('rating').value = '';
           if (fileList) fileList.innerHTML = '';
         } else {
-          const msg = res?.error || res?.message || `Något gick fel. (status: ${res?.status ?? 'ok?'})`;
+          const msg =
+            res?.error || res?.message || `Något gick fel. (status: ${res?.status ?? 'ok?'})`;
           showNotice(false, msg);
         }
       } catch (err) {
-        console.error('Fetch error:', err);
+        console.error('Fetch error (rating):', err);
         showNotice(false, 'Nätverksfel. Försök igen.');
       }
     });
 
-    // ---- Reset-knapp ----
     const resetBtn = document.getElementById('reset-form');
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
         form.reset();
-        el('rating').value = '';
+        const r = el('rating');
+        if (r) r.value = '';
         if (fileList) fileList.innerHTML = '';
         clearNotice();
       });
@@ -216,8 +312,6 @@ window.addEventListener('DOMContentLoaded', () => {
   // ============================================================
   const customerForm = document.getElementById('customer-form');
   if (customerForm) {
-    console.log('Customer form found, attaching handlers…');
-
     let custNoticeTimer = null;
     function showCustNotice(ok, msg) {
       const box = el('cust-notice');
@@ -247,6 +341,8 @@ window.addEventListener('DOMContentLoaded', () => {
       const personalNumber = el('cust-personalNumber')?.value?.trim() || '';
       const email = el('cust-email')?.value?.trim() || '';
       const emailConfirm = el('cust-emailConfirm')?.value?.trim() || '';
+      const password = el('cust-password')?.value || '';
+      const passwordConfirm = el('cust-passwordConfirm')?.value || '';
       const phone = el('cust-phone')?.value?.trim() || '';
       const addressStreet = el('cust-addressStreet')?.value?.trim() || '';
       const addressZip = el('cust-addressZip')?.value?.trim() || '';
@@ -256,18 +352,21 @@ window.addEventListener('DOMContentLoaded', () => {
       if (!firstName || !lastName) {
         return showCustNotice(false, 'Fyll i både förnamn och efternamn.');
       }
-
       if (!personalNumber || !/^\d{10,12}$/.test(personalNumber)) {
         return showCustNotice(false, 'Fyll i ett giltigt personnummer med 10–12 siffror.');
       }
-
       if (!email || !emailConfirm) {
         return showCustNotice(false, 'Fyll i och bekräfta din e-postadress.');
       }
       if (email.toLowerCase() !== emailConfirm.toLowerCase()) {
         return showCustNotice(false, 'E-postadresserna matchar inte.');
       }
-
+      if (!password || password.length < 8) {
+        return showCustNotice(false, 'Lösenordet måste vara minst 8 tecken.');
+      }
+      if (password !== passwordConfirm) {
+        return showCustNotice(false, 'Lösenorden matchar inte.');
+      }
       if (phone && !/^[0-9+\s\-()]*$/.test(phone)) {
         return showCustNotice(false, 'Telefonnummer får bara innehålla siffror, mellanslag, +, -, ().');
       }
@@ -278,6 +377,8 @@ window.addEventListener('DOMContentLoaded', () => {
         personalNumber,
         email,
         emailConfirm,
+        password,
+        passwordConfirm,
         phone: phone || null,
         addressStreet: addressStreet || null,
         addressZip: addressZip || null,
@@ -290,7 +391,7 @@ window.addEventListener('DOMContentLoaded', () => {
         console.log('Customer API response:', res);
 
         if (res && res.ok) {
-          showCustNotice(true, 'Tack! Din registrering har sparats.');
+          showCustNotice(true, 'Tack! Din registrering har sparats. Du kan nu logga in på sidan Lämna betyg.');
           customerForm.reset();
         } else {
           const msg =

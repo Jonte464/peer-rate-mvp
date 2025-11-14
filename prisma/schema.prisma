@@ -9,36 +9,25 @@ datasource db {
 }
 
 /**
- * Kunder/mottagare som kan betygsättas eller rapporteras.
- * Här har vi nu även fulla kundfält för kundregister.
+ * Kunder/användare (registrera dig-formuläret)
  */
 model Customer {
-  id         String   @id @default(uuid())
-  subjectRef String   @unique // Vem som betygsätts (t.ex. e-post/username)
-
-  // ----- Befintliga fält -----
-  legalName  String?
-  orgRef     String?
-  country    String?
-
-  // ----- NYTT: fullständig kundregistrering -----
-  /// Kundens fullständiga namn (för privatperson)
+  id             String   @id @default(uuid())
+  subjectRef     String   @unique        // används som "konto-id", vi sätter detta = email (lowercase)
   fullName       String?
-  /// Personnummer (svenskt, 12 eller 10 siffror – vi validerar i kod senare)
-  personalNumber String? @unique
-  /// Primär e-postadress
-  email          String?
-  /// Telefonnummer
+  personalNumber String?  @unique
+  email          String?  @unique
   phone          String?
-  /// Gatuadress, t.ex. "Kastanjebacken 10"
   addressStreet  String?
-  /// Postnummer, t.ex. "185 39"
   addressZip     String?
-  /// Ort/stad, t.ex. "Vaxholm"
   addressCity    String?
+  country        String?
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  // NYTT: lösenord (hashat, aldrig klartext)
+  passwordHash   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   ratings      Rating[]
   reports      Report[]      @relation("CustomerReports")
@@ -176,8 +165,6 @@ model Report {
 
 /**
  * Bilagor som hör till en Report.
- * Lagrar fil i databasen (Bytes) för enklare drift på Render.
- * Kan senare bytas mot extern lagring (S3/R2) och URL-fält.
  */
 model ReportFile {
   id        String   @id @default(uuid())
@@ -194,7 +181,7 @@ model ReportFile {
 }
 
 /**
- * Enkel användarmodell (admin).
+ * Enkel användarmodell (admin – ej kopplad till kundlogin just nu)
  */
 model User {
   id    String @id @default(uuid())

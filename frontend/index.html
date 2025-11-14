@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PeerRate – Lämna betyg</title>
+  <title>PeerRate</title>
   <style>
     :root{
       --brand-orange:#f6a94b;
@@ -26,38 +26,15 @@
       position:relative;
       min-height:100dvh;
     }
-
     .wrap{max-width:720px;margin-inline:auto;padding:28px 24px}
-    h1{margin:0 0 8px}
-
-    .top-nav{
-      display:flex;
-      gap:10px;
-      margin-bottom:12px;
-      flex-wrap:wrap;
-    }
-    .top-nav a{
-      font-size:14px;
-      text-decoration:none;
-      padding:6px 10px;
-      border-radius:999px;
-      border:1px solid var(--brand-border);
-      background:#fff;
-      color:var(--brand-ink-d);
-    }
-    .top-nav a.active{
-      background:var(--brand-purple);
-      color:#fff;
-      border-color:transparent;
-    }
-
+    h1{margin:0 0 12px}
     .card{
       background:var(--brand-card);
       border:1px solid var(--brand-border);
       border-radius:18px;
       padding:18px;
       box-shadow:0 8px 22px rgba(0,0,0,.06);
-      margin-top:8px;
+      margin-bottom:16px;
     }
     label{display:block;font-weight:700;margin:12px 0 6px}
     input,select,textarea,button{
@@ -68,23 +45,17 @@
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .row>*{flex:1}
     .muted{color:var(--brand-ink-d);font-size:14px}
-    .help{color:var(--brand-ink-d);font-size:12px;margin-top:6px}
-
+    .tiny{font-size:12px}
     button.primary{background:var(--brand-purple);color:#fff;border:0;cursor:pointer;font-weight:800}
     button.primary:hover{filter:brightness(1.05)}
     button.secondary{background:#fff;color:var(--brand-ink);border:1px solid var(--brand-border)}
-
     .notice{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-weight:600;border:1px solid transparent;}
     .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok)}
     .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err)}
-
     .report-box{display:none;border:1px solid var(--brand-border);background:#fff;padding:12px;border-radius:12px;margin-top:8px}
-    .tiny{font-size:12px}
     .files-note{font-size:12px;color:var(--brand-ink-d);margin-top:6px}
     .file-list{margin:6px 0 0;padding:0;list-style:none}
     .file-list li{font-size:12px;color:var(--brand-ink-d)}
-
-    /* CSS-toggle: visa rapport-fälten när checkboxen är ikryssad */
     .report-container #reportDetails{display:none;}
     .report-container:has(#reportFlag:checked) #reportDetails{display:block;}
   </style>
@@ -92,22 +63,40 @@
 <body>
 
   <div class="wrap">
-    <div class="top-nav">
-      <a href="/" class="active">Lämna betyg</a>
-      <a href="/customer.html">Registrera kund</a>
-    </div>
-
     <h1>PeerRate</h1>
 
-    <!-- FORM: Lämna betyg -->
+    <!-- LOGIN-KORT – ny -->
+    <section class="card">
+      <h2>Logga in</h2>
+      <p class="muted">
+        Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.
+      </p>
+
+      <label for="login-email">E-post</label>
+      <input id="login-email" type="email" placeholder="erik@example.com" />
+
+      <label for="login-password">Lösenord</label>
+      <input id="login-password" type="password" placeholder="Ditt lösenord" />
+
+      <div class="row" style="margin-top:12px">
+        <button class="primary" type="button" id="login-btn">Logga in</button>
+      </div>
+
+      <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
+    </section>
+
+    <!-- FORMULÄR: Lämna betyg -->
     <section class="card">
       <h2>Lämna ett betyg</h2>
+      <p class="tiny muted" id="login-hint">
+        Du behöver vara inloggad för att kunna skicka ett betyg.
+      </p>
       <form id="rate-form" autocomplete="off">
         <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
         <input id="subject" type="text" placeholder="erik@example.com" required />
 
-        <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt)</span></label>
-        <input id="rater" type="text" placeholder="Anders" />
+        <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span></label>
+        <input id="rater" type="text" placeholder="" />
 
         <label for="rating">Betyg (1–5)</label>
         <select id="rating" required>
@@ -125,14 +114,14 @@
         <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
         <input id="proofRef" type="text" placeholder="ORDER-123" />
 
-        <!-- RAPPORTERA BEDRÄGERI -->
+        <!-- RAPPORTERA BEDRÄGERI (samma som tidigare) -->
         <div class="report-container">
           <div class="field" style="margin-top:12px">
             <label style="font-weight:600">
               <input type="checkbox" id="reportFlag" />
               Rapportera misstänkt bedrägeri
             </label>
-            <div class="help">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
+            <div class="muted tiny">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
           </div>
 
           <div id="reportDetails" class="report-box">
@@ -198,7 +187,6 @@
     </section>
   </div>
 
-  <!-- Laddar JS för betyg -->
   <script src="/script.js" defer></script>
 </body>
 </html>

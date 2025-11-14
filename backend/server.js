@@ -7,6 +7,7 @@ const Joi = require('joi');
 const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
+const bcrypt = require('bcryptjs');
 
 const {
   getOrCreateCustomerBySubjectRef,
@@ -17,12 +18,13 @@ const {
   listRecentRatings,
   createCustomer,
   searchCustomers,
+  findCustomerBySubjectRef,
 } = require('./storage');
 
 const app = express();
 
 // --- Config ---
-const PORT = process.env.PORT || 3001; // default 3001 (Render sätter PORT i prod)
+const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
 const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
 
@@ -30,33 +32,26 @@ const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
 app.set('trust proxy', 1);
 
 // --- Middleware ---
-// JSON-body
 app.use(express.json({ limit: '200kb' }));
-
-// Helmet – men stäng av frameguard + CSP, vi sätter egna nedan
 app.use(
   helmet({
     frameguard: false,
     contentSecurityPolicy: false,
   })
 );
-
-// Komprimering
 app.use(compression());
 
 // Tillåt inbäddning i Wix (iframe)
 app.use((req, res, next) => {
-  // Vem får bädda in sidan?
   res.setHeader(
     'Content-Security-Policy',
     "frame-ancestors 'self' https://www.peerrate.ai https://peerrate.ai https://editor.wix.com https://www.wix.com"
   );
-  // X-Frame-Options används av vissa äldre webbläsare
   res.setHeader('X-Frame-Options', 'ALLOW-FROM https://www.peerrate.ai');
   next();
 });
 
-// CORS (för API-anrop)
+// CORS
 const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({ origin: corsOrigin }));
 
@@ -82,28 +77,7 @@ function normSubject(s) {
   return String(s || '').trim().toLowerCase();
 }
 
-/** Mappa svenska/engelska etiketter -> enum ReportReason */
-function mapReportReason(input) {
-  if (!input) return null;
-  const v = String(input).trim().toLowerCase();
-
-  // Tillåt redan korrekta enum-värden
-  const direct = ['fraud', 'impersonation', 'non_delivery', 'counterfeit', 'payment_abuse', 'other'];
-  const directClean = v.replace('-', '_');
-  if (direct.includes(directClean)) {
-    return directClean.toUpperCase();
-  }
-
-  // Svenska/vanliga etiketter
-  if (v.includes('bedrägeri') || v.includes('fraud')) return 'FRAUD';
-  if (v.includes('identitets') || v.includes('imitation') || v.includes('impersonation')) return 'IMPERSONATION';
-  if (v.includes('utebliven') || v.includes('leverans') || v.includes('non')) return 'NON_DELIVERY';
-  if (v.includes('förfalsk') || v.includes('counterfeit')) return 'COUNTERFEIT';
-  if (v.includes('betalning') || v.includes('missbruk') || v.includes('payment')) return 'PAYMENT_ABUSE';
-  return 'OTHER';
-}
-
-// --- Health (båda vägarna) ---
+// --- Health ---
 app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }));
 app.get('/health', (_req, res) => {
   res.status(200).json({
@@ -116,29 +90,44 @@ app.get('/health', (_req, res) => {
   });
 });
 
+/** Mappa svenska/engelska etiketter -> enum ReportReason */
+function mapReportReason(input) {
+  if (!input) return null;
+  const v = String(input).trim().toLowerCase();
+
+  const direct = ['fraud', 'impersonation', 'non_delivery', 'counterfeit', 'payment_abuse', 'other'];
+  const directClean = v.replace('-', '_');
+  if (direct.includes(directClean)) {
+    return directClean.toUpperCase();
+  }
+
+  if (v.includes('bedrägeri') || v.includes('fraud')) return 'FRAUD';
+  if (v.includes('identitets') || v.includes('imitation') || v.includes('impersonation')) return 'IMPERSONATION';
+  if (v.includes('utebliven') || v.includes('leverans') || v.includes('non')) return 'NON_DELIVERY';
+  if (v.includes('förfalsk') || v.includes('counterfeit')) return 'COUNTERFEIT';
+  if (v.includes('betalning') || v.includes('missbruk') || v.includes('payment')) return 'PAYMENT_ABUSE';
+  return 'OTHER';
+}
+
 // --- Validation ---
-// Tillåt extra fält i report (t.ex. report_when, report_amount_sek, report_link, report_files)
 const reportSchema = Joi.object({
   report_flag: Joi.boolean().optional(),
   report_reason: Joi.string().allow('', null),
   report_text: Joi.string().allow('', null),
   evidence_url: Joi.string().uri().allow('', null),
   report_consent: Joi.boolean().optional(),
-}).unknown(true); // <— VIKTIG: tillåt okända nycklar i report
+}).unknown(true);
 
 const createRatingSchema = Joi.object({
   subject: Joi.string().min(2).max(200).required(),
-  // gör rater “snäll” så tom/null accepteras
   rater: Joi.string().min(2).max(200).allow('', null).optional(),
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().max(1000).allow('', null),
   proofRef: Joi.string().max(200).allow('', null),
-
-  // Valfri rapportdel
   report: reportSchema.optional(),
 });
 
-/** Validering: skapa kund i kundregister */
+/** Skapa kund */
 const createCustomerSchema = Joi.object({
   firstName: Joi.string().min(2).max(100).required(),
   lastName: Joi.string().min(2).max(100).required(),
@@ -147,6 +136,8 @@ const createCustomerSchema = Joi.object({
     .required(),
   email: Joi.string().email().required(),
   emailConfirm: Joi.string().email().required(),
+  password: Joi.string().min(8).max(100).required(),
+  passwordConfirm: Joi.string().min(8).max(100).required(),
   phone: Joi.string()
     .pattern(/^[0-9+\s\-()]*$/)
     .allow('', null),
@@ -156,7 +147,13 @@ const createCustomerSchema = Joi.object({
   country: Joi.string().max(100).allow('', null),
 });
 
-// --- API: skapa betyg (+ ev. rapport) ---
+/** Login */
+const loginSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().min(8).max(100).required(),
+});
+
+// --- API: skapa betyg ---
 app.post('/api/ratings', async (req, res) => {
   const { error, value } = createRatingSchema.validate(req.body);
   if (error) {
@@ -170,7 +167,6 @@ app.post('/api/ratings', async (req, res) => {
   const proofRef = (value.proofRef || '').toString().trim() || null;
 
   try {
-    // 1) Skapa rating
     const { customerId, ratingId } = await createRating({
       subjectRef,
       rating,
@@ -180,7 +176,6 @@ app.post('/api/ratings', async (req, res) => {
       createdAt: nowIso(),
     });
 
-    // 2) Skapa ev. rapport
     const r = value.report || null;
     if (r) {
       const flagged = r.report_flag === true || !!r.report_reason || !!r.report_text;
@@ -252,10 +247,8 @@ app.get('/api/ratings/recent', async (_req, res) => {
 });
 
 /* -------------------------------------------------------
-   Kundregister API
+   Kundregister: registrera dig
    ------------------------------------------------------- */
-
-// Skapa kund
 app.post('/api/customers', async (req, res) => {
   const { error, value } = createCustomerSchema.validate(req.body);
   if (error) {
@@ -266,17 +259,16 @@ app.post('/api/customers', async (req, res) => {
     });
   }
 
-  // Jämför e-post och bekräftelse (case-insensitive)
   const emailTrim = String(value.email || '').trim().toLowerCase();
   const emailConfirmTrim = String(value.emailConfirm || '').trim().toLowerCase();
   if (!emailTrim || emailTrim !== emailConfirmTrim) {
-    return res.status(400).json({
-      ok: false,
-      error: 'E-postadresserna matchar inte.',
-    });
+    return res.status(400).json({ ok: false, error: 'E-postadresserna matchar inte.' });
   }
 
-  // Städa tomma strängar -> null
+  if (value.password !== value.passwordConfirm) {
+    return res.status(400).json({ ok: false, error: 'Lösenorden matchar inte.' });
+  }
+
   const clean = (s) => {
     if (s === undefined || s === null) return null;
     const trimmed = String(s).trim();
@@ -286,15 +278,15 @@ app.post('/api/customers', async (req, res) => {
   const normalizePhone = (s) => {
     const v = clean(s);
     if (!v) return null;
-    // Behåll siffror och ett ev. plus-tecken
     const stripped = v.replace(/[^\d+]/g, '');
     return stripped || null;
   };
 
   const fullName = `${clean(value.firstName) || ''} ${clean(value.lastName) || ''}`.trim() || null;
 
+  const passwordHash = await bcrypt.hash(value.password, 10);
+
   const payload = {
-    // subjectRef = e-post i små bokstäver – unik nyckel för kunden
     subjectRef: emailTrim,
     fullName,
     personalNumber: clean(value.personalNumber),
@@ -304,19 +296,27 @@ app.post('/api/customers', async (req, res) => {
     addressZip: clean(value.addressZip),
     addressCity: clean(value.addressCity),
     country: clean(value.country),
+    passwordHash,
   };
 
   try {
     const customer = await createCustomer(payload);
-    return res.status(201).json({ ok: true, customer });
+    return res.status(201).json({
+      ok: true,
+      customer: {
+        id: customer.id,
+        fullName: customer.fullName,
+        email: customer.email,
+        subjectRef: customer.subjectRef,
+      },
+    });
   } catch (e) {
     console.error('[POST /api/customers] error:', e);
 
-    // Prisma unik-constraints (t.ex. subjectRef eller personalNumber)
     if (e.code === 'P2002') {
       return res.status(409).json({
         ok: false,
-        error: 'Det finns redan en kund med samma e-post eller personnummer.',
+        error: 'Det finns redan en användare med samma e-post eller personnummer.',
       });
     }
 
@@ -324,7 +324,43 @@ app.post('/api/customers', async (req, res) => {
   }
 });
 
-// Sök kund
+/* -------------------------------------------------------
+   Login – används av “Lämna betyg” innan omdöme
+   ------------------------------------------------------- */
+app.post('/api/auth/login', async (req, res) => {
+  const { error, value } = loginSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ ok: false, error: 'Ogiltiga inloggningsuppgifter.' });
+  }
+
+  const emailTrim = String(value.email || '').trim().toLowerCase();
+
+  try {
+    const customer = await findCustomerBySubjectRef(emailTrim);
+    if (!customer || !customer.passwordHash) {
+      return res.status(401).json({ ok: false, error: 'Fel e-post eller lösenord.' });
+    }
+
+    const match = await bcrypt.compare(value.password, customer.passwordHash);
+    if (!match) {
+      return res.status(401).json({ ok: false, error: 'Fel e-post eller lösenord.' });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      customer: {
+        id: customer.id,
+        email: customer.email,
+        fullName: customer.fullName,
+      },
+    });
+  } catch (e) {
+    console.error('[POST /api/auth/login] error:', e);
+    return res.status(500).json({ ok: false, error: 'Kunde inte logga in.' });
+  }
+});
+
+// --- Kundsök (kan användas i framtida admin-UI) ---
 app.get('/api/customers', async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) {
@@ -340,7 +376,7 @@ app.get('/api/customers', async (req, res) => {
   }
 });
 
-// --- Fallback: Single Page App ---
+// --- Fallback: SPA ---
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
