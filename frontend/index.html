@@ -58,6 +58,9 @@
     .file-list li{font-size:12px;color:var(--brand-ink-d)}
     .report-container #reportDetails{display:none;}
     .report-container:has(#reportFlag:checked) #reportDetails{display:block;}
+
+    /* Ny klass för att gömma formuläret om man inte är inloggad */
+    .hidden{display:none !important;}
   </style>
 </head>
 <body>
@@ -65,8 +68,8 @@
   <div class="wrap">
     <h1>PeerRate</h1>
 
-    <!-- LOGIN-KORT – ny -->
-    <section class="card">
+    <!-- LOGIN-KORT -->
+    <section class="card" id="login-card">
       <h2>Logga in</h2>
       <p class="muted">
         Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.
@@ -85,105 +88,111 @@
       <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
     </section>
 
-    <!-- FORMULÄR: Lämna betyg -->
-    <section class="card">
+    <!-- FORMULÄR: Lämna betyg – visas bara om inloggad -->
+    <section class="card" id="rating-card">
       <h2>Lämna ett betyg</h2>
       <p class="tiny muted" id="login-hint">
-        Du behöver vara inloggad för att kunna skicka ett betyg.
+        Du behöver logga in för att kunna lämna betyg.
+        Logga in ovan eller
+        <a href="/customer.html" target="_blank" rel="noopener noreferrer">registrera dig här</a>.
       </p>
-      <form id="rate-form" autocomplete="off">
-        <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
-        <input id="subject" type="text" placeholder="erik@example.com" required />
 
-        <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span></label>
-        <input id="rater" type="text" placeholder="" />
+      <!-- Den här wrappern göms/visas via JavaScript beroende på om man är inloggad -->
+      <div id="rating-form-wrapper" class="hidden">
+        <form id="rate-form" autocomplete="off">
+          <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
+          <input id="subject" type="text" placeholder="erik@example.com" required />
 
-        <label for="rating">Betyg (1–5)</label>
-        <select id="rating" required>
-          <option value="" disabled selected hidden>Välj betyg</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
+          <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span></label>
+          <input id="rater" type="text" placeholder="" />
 
-        <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
-        <textarea id="comment" placeholder=""></textarea>
+          <label for="rating">Betyg (1–5)</label>
+          <select id="rating" required>
+            <option value="" disabled selected hidden>Välj betyg</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
 
-        <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
-        <input id="proofRef" type="text" placeholder="ORDER-123" />
+          <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
+          <textarea id="comment" placeholder=""></textarea>
 
-        <!-- RAPPORTERA BEDRÄGERI (samma som tidigare) -->
-        <div class="report-container">
-          <div class="field" style="margin-top:12px">
-            <label style="font-weight:600">
-              <input type="checkbox" id="reportFlag" />
-              Rapportera misstänkt bedrägeri
-            </label>
-            <div class="muted tiny">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
-          </div>
+          <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
+          <input id="proofRef" type="text" placeholder="ORDER-123" />
 
-          <div id="reportDetails" class="report-box">
-            <label for="reportReason">Typ av problem</label>
-            <select id="reportReason">
-              <option value="">Välj...</option>
-              <option>Misstänkt bedrägeri</option>
-              <option>Vilseledande identitet</option>
-              <option>Obetald/utebliven leverans</option>
-              <option>Falsk/felaktigt beskriven vara/tjänst</option>
-              <option>Otillåten betalningsmetod/chargeback-abuse</option>
-              <option>Annan oegentlighet</option>
-            </select>
-
-            <div class="row" style="margin-top:8px">
-              <div>
-                <label for="reportDate">Datum</label>
-                <input id="reportDate" type="date" />
-              </div>
-              <div>
-                <label for="reportTime">Tid</label>
-                <input id="reportTime" type="time" />
-              </div>
+          <!-- RAPPORTERA BEDRÄGERI (samma som tidigare) -->
+          <div class="report-container">
+            <div class="field" style="margin-top:12px">
+              <label style="font-weight:600">
+                <input type="checkbox" id="reportFlag" />
+                Rapportera misstänkt bedrägeri
+              </label>
+              <div class="muted tiny">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
             </div>
 
-            <div class="row" style="margin-top:8px">
-              <div>
-                <label for="reportAmount">Belopp (SEK) <span class="tiny">(valfritt)</span></label>
-                <input id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
+            <div id="reportDetails" class="report-box">
+              <label for="reportReason">Typ av problem</label>
+              <select id="reportReason">
+                <option value="">Välj...</option>
+                <option>Misstänkt bedrägeri</option>
+                <option>Vilseledande identitet</option>
+                <option>Obetald/utebliven leverans</option>
+                <option>Falsk/felaktigt beskriven vara/tjänst</option>
+                <option>Otillåten betalningsmetod/chargeback-abuse</option>
+                <option>Annan oegentlighet</option>
+              </select>
+
+              <div class="row" style="margin-top:8px">
+                <div>
+                  <label for="reportDate">Datum</label>
+                  <input id="reportDate" type="date" />
+                </div>
+                <div>
+                  <label for="reportTime">Tid</label>
+                  <input id="reportTime" type="time" />
+                </div>
               </div>
-              <div>
-                <label for="reportLink">Motpart/annonslänk <span class="tiny">(valfritt)</span></label>
-                <input id="reportLink" type="url" placeholder="https://annons-eller-profil" />
+
+              <div class="row" style="margin-top:8px">
+                <div>
+                  <label for="reportAmount">Belopp (SEK) <span class="tiny">(valfritt)</span></label>
+                  <input id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
+                </div>
+                <div>
+                  <label for="reportLink">Motpart/annonslänk <span class="tiny">(valfritt)</span></label>
+                  <input id="reportLink" type="url" placeholder="https://annons-eller-profil" />
+                </div>
               </div>
+
+              <label for="reportText" style="margin-top:8px">Beskrivning</label>
+              <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp."></textarea>
+
+              <label for="evidenceUrl" style="margin-top:8px">Bevislänk <span class="tiny">(valfritt)</span></label>
+              <input type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
+
+              <label for="reportFiles" style="margin-top:8px">Ladda upp bevis <span class="tiny">(valfritt)</span></label>
+              <input id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
+              <div class="files-note">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
+              <ul id="fileList" class="file-list"></ul>
+
+              <label style="margin-top:8px;font-weight:600">
+                <input type="checkbox" id="reportConsent" />
+                Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
+              </label>
             </div>
-
-            <label for="reportText" style="margin-top:8px">Beskrivning</label>
-            <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp."></textarea>
-
-            <label for="evidenceUrl" style="margin-top:8px">Bevislänk <span class="tiny">(valfritt)</span></label>
-            <input type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
-
-            <label for="reportFiles" style="margin-top:8px">Ladda upp bevis <span class="tiny">(valfritt)</span></label>
-            <input id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
-            <div class="files-note">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
-            <ul id="fileList" class="file-list"></ul>
-
-            <label style="margin-top:8px;font-weight:600">
-              <input type="checkbox" id="reportConsent" />
-              Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
-            </label>
           </div>
-        </div>
-        <!-- /RAPPORTERA BEDRÄGERI -->
+          <!-- /RAPPORTERA BEDRÄGERI -->
 
-        <div class="row" style="margin-top:12px">
-          <button class="primary" type="submit">Skicka betyg</button>
-          <button class="secondary" type="button" id="reset-form">Avbryt</button>
-        </div>
+          <div class="row" style="margin-top:12px">
+            <button class="primary" type="submit">Skicka betyg</button>
+            <button class="secondary" type="button" id="reset-form">Avbryt</button>
+          </div>
 
-        <div id="notice" class="notice"></div>
-      </form>
+          <div id="notice" class="notice"></div>
+        </form>
+      </div>
     </section>
   </div>
 

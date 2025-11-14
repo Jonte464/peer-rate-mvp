@@ -148,21 +148,37 @@ window.addEventListener('DOMContentLoaded', () => {
   const loginBtn = el('login-btn');
   const loginStatus = el('login-status');
   const loginHint = el('login-hint');
+  const ratingFormWrapper = el('rating-form-wrapper');
 
   function updateLoginUI() {
     const user = auth.getUser();
     if (user && loginStatus) {
+      // Inloggad
       loginStatus.textContent = `Inloggad som ${user.email || ''}${user.fullName ? ' (' + user.fullName + ')' : ''}.`;
-      if (loginHint) loginHint.textContent = 'Du är inloggad och kan lämna betyg.';
+      if (loginHint) {
+        loginHint.textContent = 'Du är inloggad och kan lämna betyg direkt i formuläret nedan.';
+      }
+      if (ratingFormWrapper) {
+        ratingFormWrapper.classList.remove('hidden');
+      }
       if (loginEmail) loginEmail.value = user.email || '';
       if (loginPassword) loginPassword.value = '';
       const raterInput = el('rater');
       if (raterInput && !raterInput.value && user.email) {
         raterInput.value = user.email;
       }
-    } else if (loginStatus) {
-      loginStatus.textContent = 'Inte inloggad.';
-      if (loginHint) loginHint.textContent = 'Du behöver vara inloggad för att kunna skicka ett betyg.';
+    } else {
+      // Inte inloggad
+      if (loginStatus) loginStatus.textContent = 'Inte inloggad.';
+      if (loginHint) {
+        loginHint.innerHTML =
+          'Du behöver logga in för att kunna lämna betyg. ' +
+          'Logga in ovan eller ' +
+          '<a href="/customer.html" target="_blank" rel="noopener noreferrer">registrera dig här</a>.';
+      }
+      if (ratingFormWrapper) {
+        ratingFormWrapper.classList.add('hidden');
+      }
     }
   }
 
@@ -190,6 +206,12 @@ window.addEventListener('DOMContentLoaded', () => {
           });
           if (loginStatus) loginStatus.textContent = 'Inloggning lyckades.';
           updateLoginUI();
+
+          // Scrolla ner till betygsformuläret så det känns "direkt"
+          const formEl = el('rate-form');
+          if (formEl) {
+            formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
         } else {
           const msg = res?.error || 'Inloggningen misslyckades.';
           if (loginStatus) loginStatus.textContent = msg;
