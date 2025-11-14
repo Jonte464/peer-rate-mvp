@@ -21,7 +21,7 @@
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
       color:var(--brand-ink);
-      /* 🔸 Viktigt: ingen egen bakgrund – låt Wix-bakgrunden synas */
+      /* Låt Wix-bakgrunden synas */
       background:transparent;
     }
     .wrap{
@@ -98,8 +98,6 @@
 </head>
 <body>
   <div class="wrap">
-    <!-- Ingen flikrad här längre -->
-
     <h1>Registrera dig</h1>
     <p class="lead">
       Här registrerar du dig så att du kan komma igång och bygga upp en profil med bra omdömen samt betygsätta andra.
@@ -107,17 +105,32 @@
 
     <section class="card">
       <form id="customer-form" autocomplete="off">
-        <label for="cust-subjectRef">SubjectRef / kund-ID (t.ex. användarnamn eller mejl)</label>
-        <input id="cust-subjectRef" type="text" placeholder="erik@example.com" required />
+        <div class="row">
+          <div>
+            <label for="cust-firstName">Förnamn</label>
+            <input id="cust-firstName" type="text" placeholder="Erik" required />
+          </div>
+          <div>
+            <label for="cust-lastName">Efternamn</label>
+            <input id="cust-lastName" type="text" placeholder="Example" required />
+          </div>
+        </div>
 
-        <label for="cust-fullName">Fullständigt namn</label>
-        <input id="cust-fullName" type="text" placeholder="Erik Example" required />
+        <label for="cust-personalNumber">Personnummer (10–12 siffror)</label>
+        <input
+          id="cust-personalNumber"
+          type="text"
+          inputmode="numeric"
+          pattern="[0-9]{10,12}"
+          placeholder="198001011234"
+          required
+        />
 
-        <label for="cust-personalNumber">Personnummer (10–12 siffror, valfritt)</label>
-        <input id="cust-personalNumber" type="text" placeholder="198001011234" />
+        <label for="cust-email">E-post</label>
+        <input id="cust-email" type="email" placeholder="erik@example.com" required />
 
-        <label for="cust-email">E-post (valfritt)</label>
-        <input id="cust-email" type="email" placeholder="erik@example.com" />
+        <label for="cust-emailConfirm">Bekräfta e-post</label>
+        <input id="cust-emailConfirm" type="email" placeholder="Upprepa e-postadressen" required />
 
         <label for="cust-phone">Telefon (valfritt)</label>
         <input id="cust-phone" type="tel" placeholder="+46 70 123 45 67" />
@@ -146,7 +159,6 @@
     </section>
   </div>
 
-  <!-- Återanvänd samma script som tidigare -->
   <script src="/script.js" defer></script>
 </body>
 </html>

@@ -140,13 +140,16 @@ const createRatingSchema = Joi.object({
 
 /** Validering: skapa kund i kundregister */
 const createCustomerSchema = Joi.object({
-  subjectRef: Joi.string().min(2).max(200).required(),
-  fullName: Joi.string().min(2).max(200).required(),
+  firstName: Joi.string().min(2).max(100).required(),
+  lastName: Joi.string().min(2).max(100).required(),
   personalNumber: Joi.string()
     .pattern(/^\d{10,12}$/)
+    .required(),
+  email: Joi.string().email().required(),
+  emailConfirm: Joi.string().email().required(),
+  phone: Joi.string()
+    .pattern(/^[0-9+\s\-()]*$/)
     .allow('', null),
-  email: Joi.string().email().allow('', null),
-  phone: Joi.string().max(50).allow('', null),
   addressStreet: Joi.string().max(200).allow('', null),
   addressZip: Joi.string().max(20).allow('', null),
   addressCity: Joi.string().max(100).allow('', null),
@@ -263,19 +266,40 @@ app.post('/api/customers', async (req, res) => {
     });
   }
 
-  // Städa tomma strängar -> null, så databasen inte får "" i onödan
+  // Jämför e-post och bekräftelse (case-insensitive)
+  const emailTrim = String(value.email || '').trim().toLowerCase();
+  const emailConfirmTrim = String(value.emailConfirm || '').trim().toLowerCase();
+  if (!emailTrim || emailTrim !== emailConfirmTrim) {
+    return res.status(400).json({
+      ok: false,
+      error: 'E-postadresserna matchar inte.',
+    });
+  }
+
+  // Städa tomma strängar -> null
   const clean = (s) => {
     if (s === undefined || s === null) return null;
     const trimmed = String(s).trim();
     return trimmed === '' ? null : trimmed;
   };
 
+  const normalizePhone = (s) => {
+    const v = clean(s);
+    if (!v) return null;
+    // Behåll siffror och ett ev. plus-tecken
+    const stripped = v.replace(/[^\d+]/g, '');
+    return stripped || null;
+  };
+
+  const fullName = `${clean(value.firstName) || ''} ${clean(value.lastName) || ''}`.trim() || null;
+
   const payload = {
-    subjectRef: clean(value.subjectRef),
-    fullName: clean(value.fullName),
+    // subjectRef = e-post i små bokstäver – unik nyckel för kunden
+    subjectRef: emailTrim,
+    fullName,
     personalNumber: clean(value.personalNumber),
     email: clean(value.email),
-    phone: clean(value.phone),
+    phone: normalizePhone(value.phone),
     addressStreet: clean(value.addressStreet),
     addressZip: clean(value.addressZip),
     addressCity: clean(value.addressCity),
@@ -292,7 +316,7 @@ app.post('/api/customers', async (req, res) => {
     if (e.code === 'P2002') {
       return res.status(409).json({
         ok: false,
-        error: 'Det finns redan en kund med samma subjectRef eller personnummer.',
+        error: 'Det finns redan en kund med samma e-post eller personnummer.',
       });
     }
 
