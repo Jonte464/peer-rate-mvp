@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Min profil – PeerRate</title>
+  <style>
+    :root{
+      --brand-orange:#f6a94b;
+      --brand-card:#fbf2e6;
+      --brand-border:#eadfce;
+      --brand-ink:#1e1830;
+      --brand-ink-d:#4a425e;
+      --brand-purple:#1b1533;
+      --ok:#0b7a65;
+      --err:#9b1c1c;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      color:var(--brand-ink);
+      background:transparent; /* Wix sköter bakgrunden */
+    }
+    .wrap{
+      max-width:720px;
+      margin:40px auto 60px;
+      padding:0 16px 40px;
+    }
+    h1{
+      margin:0 0 6px;
+      font-size:32px;
+    }
+    h2{
+      margin:0 0 6px;
+      font-size:22px;
+    }
+    .lead{
+      margin:0 0 18px;
+      font-size:15px;
+      color:var(--brand-ink-d);
+    }
+    label{
+      display:block;
+      font-weight:700;
+      margin:12px 0 6px;
+      font-size:14px;
+    }
+    input,select,textarea,button{
+      width:100%;
+      padding:11px 14px;
+      border-radius:12px;
+      border:1px solid #d9cbb7;
+      background:#fff;
+      color:var(--brand-ink);
+      font:inherit;
+    }
+    input::placeholder,textarea::placeholder{color:#9b8f87}
+    textarea{min-height:110px;resize:vertical;}
+    .row{display:flex;gap:10px;flex-wrap:wrap;}
+    .row>*{flex:1;}
+    .muted{color:var(--brand-ink-d);font-size:13px;}
+    .tiny{font-size:12px;}
+
+    .card{
+      background:var(--brand-card);
+      border:1px solid var(--brand-border);
+      border-radius:18px;
+      padding:18px 16px 22px;
+      box-shadow:0 8px 22px rgba(0,0,0,.06);
+      margin-bottom:16px;
+    }
+
+    button.primary{
+      background:var(--brand-purple);
+      color:#fff;
+      border:0;
+      cursor:pointer;
+      font-weight:800;
+      margin-top:8px;
+    }
+    button.primary:hover{filter:brightness(1.05);}
+    button.secondary{
+      background:#fff;
+      color:var(--brand-ink);
+      border:1px solid var(--brand-border);
+      margin-top:8px;
+    }
+
+    .notice{
+      display:none;
+      margin-top:12px;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:600;
+      border:1px solid transparent;
+      font-size:14px;
+    }
+    .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok);}
+    .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err);}
+
+    .hidden{display:none !important;}
+
+    /* Profil-lista */
+    .profile-list{
+      margin:0;
+      padding:0;
+      list-style:none;
+      font-size:14px;
+    }
+    .profile-list li{
+      display:flex;
+      justify-content:space-between;
+      padding:6px 0;
+      border-bottom:1px solid rgba(0,0,0,.04);
+    }
+    .profile-label{font-weight:600;color:var(--brand-ink-d);}
+    .profile-value{font-weight:500;}
+
+    /* Enkel snygg graf för snittbetyg */
+    .score-line{
+      margin:4px 0 6px;
+      font-size:14px;
+    }
+    .score-bar{
+      width:100%;
+      height:10px;
+      background:#f1e4d5;
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .score-bar-fill{
+      height:100%;
+      width:0;
+      background:var(--brand-purple);
+      transition:width .3s ease-out;
+    }
+
+    @media (max-width:600px){
+      .wrap{margin:20px auto 40px;padding:0 12px 32px;}
+      h1{font-size:26px;}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Min profil</h1>
+    <p class="lead">
+      Här kan du se dina uppgifter, ditt omdöme och lämna betyg på andra användare.
+    </p>
+
+    <!-- LOGIN-KORT (används om man inte redan är inloggad) -->
+    <section class="card" id="login-card">
+      <h2>Logga in</h2>
+      <p class="muted">
+        Logga in med den e-post och det lösenord du registrerade dig med.
+      </p>
+
+      <label for="login-email">E-post</label>
+      <input id="login-email" type="email" placeholder="erik@example.com" />
+
+      <label for="login-password">Lösenord</label>
+      <input id="login-password" type="password" placeholder="Ditt lösenord" />
+
+      <div class="row" style="margin-top:12px">
+        <button class="primary" type="button" id="login-btn">Logga in</button>
+      </div>
+
+      <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
+    </section>
+
+    <!-- Allt här inne visas bara när man är inloggad -->
+    <div id="profile-root" class="hidden">
+
+      <!-- Mina uppgifter -->
+      <section class="card">
+        <h2>Mina uppgifter</h2>
+        <p class="tiny muted">Uppgifter kopplade till din profil.</p>
+        <ul class="profile-list">
+          <li>
+            <span class="profile-label">Namn</span>
+            <span class="profile-value" id="profile-name">–</span>
+          </li>
+          <li>
+            <span class="profile-label">E-post</span>
+            <span class="profile-value" id="profile-email">–</span>
+          </li>
+          <li>
+            <span class="profile-label">Personnummer</span>
+            <span class="profile-value" id="profile-personalNumber">–</span>
+          </li>
+        </ul>
+      </section>
+
+      <!-- Ditt omdöme -->
+      <section class="card">
+        <h2>Ditt omdöme</h2>
+        <p class="tiny muted">
+          Sammanfattning av betyg som är kopplade till din e-postadress.
+        </p>
+        <p class="score-line">
+          Snittbetyg:
+          <strong><span id="profile-score">–</span> / 5</strong>
+          <span class="tiny muted">
+            (baserat på <span id="profile-score-count">0</span> omdömen)
+          </span>
+        </p>
+        <div class="score-bar">
+          <div class="score-bar-fill" id="profile-score-bar"></div>
+        </div>
+      </section>
+
+      <!-- Lämna betyg – återanvänder samma API som /index.html -->
+      <section class="card">
+        <h2>Lämna ett betyg</h2>
+        <p class="tiny muted">
+          Här kan du lämna ett betyg på någon annan. Din e-post fylls i automatiskt om du vill.
+        </p>
+
+        <form id="rate-form" autocomplete="off">
+          <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
+          <input id="subject" type="text" placeholder="erik@example.com" required />
+
+          <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt)</span></label>
+          <input id="rater" type="text" placeholder="" />
+
+          <label for="rating">Betyg (1–5)</label>
+          <select id="rating" required>
+            <option value="" disabled selected hidden>Välj betyg</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+
+          <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
+          <textarea id="comment" placeholder=""></textarea>
+
+          <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
+          <input id="proofRef" type="text" placeholder="ORDER-123" />
+
+          <div class="row" style="margin-top:12px">
+            <button class="primary" type="submit">Skicka betyg</button>
+            <button class="secondary" type="button" id="reset-form">Avbryt</button>
+          </div>
+
+          <div id="notice" class="notice"></div>
+        </form>
+      </section>
+
+      <!-- Logga ut -->
+      <section class="card">
+        <button id="logout-btn" type="button" class="secondary">Logga ut</button>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="/script.js" defer></script>
+</body>
+</html>

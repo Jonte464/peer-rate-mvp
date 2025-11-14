@@ -71,6 +71,34 @@ window.addEventListener('DOMContentLoaded', () => {
         }
       });
     },
+    // Hämta kundinfo via sök (används i Min profil)
+    searchCustomers: (q) => {
+      return fetch(`/api/customers?q=${encodeURIComponent(q)}`, {
+        method: 'GET',
+      }).then(async (r) => {
+        const raw = await r.text();
+        try {
+          return JSON.parse(raw);
+        } catch {
+          console.warn('Non-JSON response (searchCustomers):', raw);
+          return { ok: r.ok, status: r.status, raw };
+        }
+      });
+    },
+    // Hämta snittbetyg för ett subject (e-post)
+    getRatingsAverage: (subject) => {
+      return fetch(`/api/ratings/average?subject=${encodeURIComponent(subject)}`, {
+        method: 'GET',
+      }).then(async (r) => {
+        const raw = await r.text();
+        try {
+          return JSON.parse(raw);
+        } catch {
+          console.warn('Non-JSON response (ratings/average):', raw);
+          return { ok: r.ok, status: r.status, raw };
+        }
+      });
+    },
   };
 
   // ---- Notiser för betyg ----
@@ -94,7 +122,7 @@ window.addEventListener('DOMContentLoaded', () => {
     box.textContent = '';
   }
 
-  // ---- Filer för rapport ----
+  // ---- Filer för rapport (används bara där fälten finns) ----
   const filesInput = document.getElementById('reportFiles');
   const fileList = document.getElementById('fileList');
   function readFiles() {
@@ -141,14 +169,66 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // ============================================================
-  // LOGIN-BLOCK (på betygssidan)
+  // LOGIN-BLOCK (delas mellan Lämna betyg & Min profil)
   // ============================================================
   const loginEmail = el('login-email');
   const loginPassword = el('login-password');
   const loginBtn = el('login-btn');
   const loginStatus = el('login-status');
-  const loginHint = el('login-hint');
-  const ratingFormWrapper = el('rating-form-wrapper');
+  const loginHint = el('login-hint');          // finns bara på vissa sidor
+  const ratingFormWrapper = el('rating-form-wrapper'); // finns på Lämna betyg
+  const profileRoot = el('profile-root');      // finns på Min profil
+  const logoutBtn = el('logout-btn');          // finns på Min profil
+
+  // Funktion för att fylla/mina uppgifter och snittbetyg på Min profil
+  async function refreshProfile() {
+    const user = auth.getUser();
+    if (!user || !profileRoot) return;
+
+    profileRoot.classList.remove('hidden');
+
+    const nameEl = el('profile-name');
+    const emailEl = el('profile-email');
+    const pnEl = el('profile-personalNumber');
+    const scoreEl = el('profile-score');
+    const countEl = el('profile-score-count');
+    const barEl = el('profile-score-bar');
+
+    if (nameEl) nameEl.textContent = user.fullName || '–';
+    if (emailEl) emailEl.textContent = user.email || '–';
+
+    const email = user.email;
+    if (!email) return;
+
+    // Hämta ev. extra kundinfo (personnummer)
+    try {
+      const res = await api.searchCustomers(email);
+      if (res && res.ok && Array.isArray(res.customers) && res.customers.length > 0) {
+        const c = res.customers[0];
+        if (pnEl) pnEl.textContent = c.personalNumber || '–';
+      }
+    } catch (err) {
+      console.warn('Kunde inte hämta kundinfo:', err);
+    }
+
+    // Hämta snittbetyg för den här e-posten
+    try {
+      const subject = email.trim().toLowerCase();
+      const resAvg = await api.getRatingsAverage(subject);
+      if (resAvg && resAvg.ok) {
+        const avg = Number(resAvg.average || 0);
+        const count = Number(resAvg.count || 0);
+        if (scoreEl) scoreEl.textContent = count > 0 ? avg.toFixed(2) : '–';
+        if (countEl) countEl.textContent = count;
+        if (barEl) {
+          const pct = count > 0 ? Math.max(0, Math.min(100, (avg / 5) * 100)) : 0;
+          barEl.style.width = pct + '%';
+        }
+      }
+    } catch (err) {
+      console.warn('Kunde inte hämta snittbetyg:', err);
+    }
+  }
 
   function updateLoginUI() {
     const user = auth.getUser();
@@ -156,10 +236,14 @@ window.addEventListener('DOMContentLoaded', () => {
       // Inloggad
       loginStatus.textContent = `Inloggad som ${user.email || ''}${user.fullName ? ' (' + user.fullName + ')' : ''}.`;
       if (loginHint) {
-        loginHint.textContent = 'Du är inloggad och kan lämna betyg direkt i formuläret nedan.';
+        loginHint.innerHTML = 'Du är inloggad och kan lämna betyg direkt i formuläret nedan.';
       }
       if (ratingFormWrapper) {
         ratingFormWrapper.classList.remove('hidden');
+      }
+      if (profileRoot) {
+        profileRoot.classList.remove('hidden');
+        refreshProfile();
       }
       if (loginEmail) loginEmail.value = user.email || '';
       if (loginPassword) loginPassword.value = '';
@@ -178,6 +262,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       if (ratingFormWrapper) {
         ratingFormWrapper.classList.add('hidden');
+      }
+      if (profileRoot) {
+        profileRoot.classList.add('hidden');
       }
     }
   }
@@ -207,10 +294,12 @@ window.addEventListener('DOMContentLoaded', () => {
           if (loginStatus) loginStatus.textContent = 'Inloggning lyckades.';
           updateLoginUI();
 
-          // Scrolla ner till betygsformuläret så det känns "direkt"
-          const formEl = el('rate-form');
-          if (formEl) {
-            formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Scrolla till profil eller formulär efter login
+          const target =
+            el('profile-root') ||
+            el('rate-form');
+          if (target) {
+            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }
         } else {
           const msg = res?.error || 'Inloggningen misslyckades.';
@@ -223,10 +312,21 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Logga ut-knapp på Min profil
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      auth.clear();
+      location.reload();
+    });
+  }
+
   updateLoginUI();
+  if (profileRoot) {
+    refreshProfile();
+  }
 
   // ============================================================
-  // BETYGFORMULÄR
+  // BETYGFORMULÄR (finns på Lämna betyg och Min profil)
   // ============================================================
   const form = document.getElementById('rate-form');
   if (form) {
@@ -304,8 +404,13 @@ window.addEventListener('DOMContentLoaded', () => {
         if (res && (res.ok || res.id || res.created)) {
           showNotice(true, 'Tack för ditt omdöme – det har skickats.');
           e.target.reset();
-          el('rating').value = '';
+          const r = el('rating');
+          if (r) r.value = '';
           if (fileList) fileList.innerHTML = '';
+          // uppdatera ditt omdöme på Min profil om du är där
+          if (profileRoot) {
+            refreshProfile();
+          }
         } else {
           const msg =
             res?.error || res?.message || `Något gick fel. (status: ${res?.status ?? 'ok?'})`;
@@ -413,7 +518,7 @@ window.addEventListener('DOMContentLoaded', () => {
         console.log('Customer API response:', res);
 
         if (res && res.ok) {
-          showCustNotice(true, 'Tack! Din registrering har sparats. Du kan nu logga in på sidan Lämna betyg.');
+          showCustNotice(true, 'Tack! Din registrering har sparats. Du kan nu logga in på sidan Min profil eller Lämna betyg.');
           customerForm.reset();
         } else {
           const msg =
