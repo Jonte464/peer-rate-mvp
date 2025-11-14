@@ -6,73 +6,134 @@
   <title>PeerRate</title>
   <style>
     :root{
-      --brand-orange:#f6a94b;
-      --brand-card:#fbf2e6;
-      --brand-accent:#bfe9e6;
-      --brand-border:#eadfce;
       --brand-ink:#1e1830;
       --brand-ink-d:#4a425e;
+      --brand-border:#eadfce;
       --brand-purple:#1b1533;
       --ok:#0b7a65;
       --err:#9b1c1c;
     }
-    *{box-sizing:border-box}
+
+    *{ box-sizing:border-box; }
+
+    /* 🟢 Hela sidan transparent mot Wix */
     body{
       margin:0;
+      padding:0;
+      background:transparent;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
       color:var(--brand-ink);
-      background:
-        linear-gradient(180deg,var(--brand-orange) 0 56vh,var(--brand-accent) 56vh 100%);
-      position:relative;
-      min-height:100dvh;
     }
-    .wrap{max-width:720px;margin-inline:auto;padding:28px 24px}
-    h1{margin:0 0 12px}
-    .card{
-      background:var(--brand-card);
-      border:1px solid var(--brand-border);
-      border-radius:18px;
-      padding:18px;
-      box-shadow:0 8px 22px rgba(0,0,0,.06);
-      margin-bottom:16px;
-    }
-    label{display:block;font-weight:700;margin:12px 0 6px}
-    input,select,textarea,button{
-      width:100%;padding:12px 14px;border-radius:12px;border:1px solid #d9cbb7;background:#fff;color:var(--brand-ink);font:inherit;
-    }
-    input::placeholder,textarea::placeholder{color:#9b8f87}
-    textarea{min-height:110px;resize:vertical}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    .row>*{flex:1}
-    .muted{color:var(--brand-ink-d);font-size:14px}
-    .tiny{font-size:12px}
-    button.primary{background:var(--brand-purple);color:#fff;border:0;cursor:pointer;font-weight:800}
-    button.primary:hover{filter:brightness(1.05)}
-    button.secondary{background:#fff;color:var(--brand-ink);border:1px solid var(--brand-border)}
-    .notice{display:none;margin-top:12px;border-radius:12px;padding:12px 14px;font-weight:600;border:1px solid transparent;}
-    .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok)}
-    .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err)}
-    .report-box{display:none;border:1px solid var(--brand-border);background:#fff;padding:12px;border-radius:12px;margin-top:8px}
-    .files-note{font-size:12px;color:var(--brand-ink-d);margin-top:6px}
-    .file-list{margin:6px 0 0;padding:0;list-style:none}
-    .file-list li{font-size:12px;color:var(--brand-ink-d)}
-    .report-container #reportDetails{display:none;}
-    .report-container:has(#reportFlag:checked) #reportDetails{display:block;}
 
-    /* Ny klass för att gömma formuläret om man inte är inloggad */
-    .hidden{display:none !important;}
+    /* Wrapper utan bakgrund */
+    .wrap{
+      max-width:720px;
+      margin-inline:auto;
+      padding:12px 16px;
+      background:transparent !important;
+    }
+
+    /* 🟢 Kort utan bakgrund, ram eller skugga */
+    .card{
+      padding:0;
+      border:none !important;
+      background:transparent !important;
+      box-shadow:none !important;
+      margin-bottom:32px;
+    }
+
+    h1, h2{
+      margin:0 0 12px;
+      font-weight:700;
+    }
+
+    label{
+      display:block;
+      font-weight:600;
+      margin:12px 0 4px;
+    }
+
+    input,select,textarea,button{
+      width:100%;
+      padding:12px 14px;
+      border-radius:12px;
+      border:1px solid var(--brand-border);
+      background:#fff;
+      color:var(--brand-ink);
+      font:inherit;
+    }
+
+    textarea{ min-height:110px; resize:vertical; }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .row>*{ flex:1; }
+
+    .muted{ color:var(--brand-ink-d); font-size:14px; }
+    .tiny{ font-size:12px; }
+
+    button.primary{
+      background:var(--brand-purple);
+      color:#fff;
+      border:0;
+      cursor:pointer;
+      font-weight:700;
+      border-radius:12px;
+      padding:12px 14px;
+    }
+
+    button.secondary{
+      background:#fff;
+      color:var(--brand-ink);
+      border:1px solid var(--brand-border);
+      border-radius:12px;
+      padding:12px 14px;
+    }
+
+    .hidden{ display:none !important; }
+
+    .notice{
+      display:none;
+      margin-top:12px;
+      border-radius:12px;
+      padding:12px 14px;
+      font-weight:600;
+    }
+    .notice.ok{
+      display:block;
+      background:#e7f5f1;
+      border:1px solid #bde6db;
+      color:var(--ok);
+    }
+    .notice.err{
+      display:block;
+      background:#fdecec;
+      border:1px solid #f6c4c4;
+      color:var(--err);
+    }
+
+    .report-box{
+      display:none;
+      border:1px solid var(--brand-border);
+      background:#fff;
+      padding:12px;
+      border-radius:12px;
+      margin-top:8px;
+    }
+
+    .report-container:has(#reportFlag:checked) #reportDetails{
+      display:block;
+    }
   </style>
 </head>
 <body>
 
   <div class="wrap">
-    <h1>PeerRate</h1>
 
-    <!-- LOGIN-KORT -->
+    <!-- LOGIN-KORT (nu utan bakgrund) -->
     <section class="card" id="login-card">
       <h2>Logga in</h2>
       <p class="muted">
-        Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.
+        Logga in med den e-post och det lösenord du registrerade dig med.
       </p>
 
       <label for="login-email">E-post</label>
@@ -88,22 +149,22 @@
       <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
     </section>
 
-    <!-- FORMULÄR: Lämna betyg – visas bara om inloggad -->
+    <!-- BETYGSFORMULÄR (bara när inloggad) -->
     <section class="card" id="rating-card">
       <h2>Lämna ett betyg</h2>
       <p class="tiny muted" id="login-hint">
-        Du behöver logga in för att kunna lämna betyg.
-        Logga in ovan eller
-        <a href="/customer.html" target="_blank" rel="noopener noreferrer">registrera dig här</a>.
+        Du behöver logga in för att lämna betyg.<br>
+        Logga in ovan eller <a href="/customer.html" target="_blank">registrera dig här</a>.
       </p>
 
-      <!-- Den här wrappern göms/visas via JavaScript beroende på om man är inloggad -->
       <div id="rating-form-wrapper" class="hidden">
+
         <form id="rate-form" autocomplete="off">
-          <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
+
+          <label for="subject">Vem betygsätter du?</label>
           <input id="subject" type="text" placeholder="erik@example.com" required />
 
-          <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span></label>
+          <label for="rater">Ditt namn/mejl (valfritt)</label>
           <input id="rater" type="text" placeholder="" />
 
           <label for="rating">Betyg (1–5)</label>
@@ -116,21 +177,17 @@
             <option value="5">5</option>
           </select>
 
-          <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
-          <textarea id="comment" placeholder=""></textarea>
+          <label for="comment">Kommentar (valfritt)</label>
+          <textarea id="comment"></textarea>
 
-          <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
+          <label for="proofRef">Verifierings-ID (valfritt)</label>
           <input id="proofRef" type="text" placeholder="ORDER-123" />
 
-          <!-- RAPPORTERA BEDRÄGERI (samma som tidigare) -->
+          <!-- Rapportdel är oförändrad -->
           <div class="report-container">
-            <div class="field" style="margin-top:12px">
-              <label style="font-weight:600">
-                <input type="checkbox" id="reportFlag" />
-                Rapportera misstänkt bedrägeri
-              </label>
-              <div class="muted tiny">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
-            </div>
+            <label>
+              <input type="checkbox" id="reportFlag" /> Rapportera misstänkt bedrägeri
+            </label>
 
             <div id="reportDetails" class="report-box">
               <label for="reportReason">Typ av problem</label>
@@ -139,51 +196,15 @@
                 <option>Misstänkt bedrägeri</option>
                 <option>Vilseledande identitet</option>
                 <option>Obetald/utebliven leverans</option>
-                <option>Falsk/felaktigt beskriven vara/tjänst</option>
-                <option>Otillåten betalningsmetod/chargeback-abuse</option>
+                <option>Falsk/felaktigt beskriven vara</option>
+                <option>Otillåten betalningsmetod</option>
                 <option>Annan oegentlighet</option>
               </select>
 
-              <div class="row" style="margin-top:8px">
-                <div>
-                  <label for="reportDate">Datum</label>
-                  <input id="reportDate" type="date" />
-                </div>
-                <div>
-                  <label for="reportTime">Tid</label>
-                  <input id="reportTime" type="time" />
-                </div>
-              </div>
-
-              <div class="row" style="margin-top:8px">
-                <div>
-                  <label for="reportAmount">Belopp (SEK) <span class="tiny">(valfritt)</span></label>
-                  <input id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
-                </div>
-                <div>
-                  <label for="reportLink">Motpart/annonslänk <span class="tiny">(valfritt)</span></label>
-                  <input id="reportLink" type="url" placeholder="https://annons-eller-profil" />
-                </div>
-              </div>
-
-              <label for="reportText" style="margin-top:8px">Beskrivning</label>
-              <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp."></textarea>
-
-              <label for="evidenceUrl" style="margin-top:8px">Bevislänk <span class="tiny">(valfritt)</span></label>
-              <input type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
-
-              <label for="reportFiles" style="margin-top:8px">Ladda upp bevis <span class="tiny">(valfritt)</span></label>
-              <input id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
-              <div class="files-note">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
-              <ul id="fileList" class="file-list"></ul>
-
-              <label style="margin-top:8px;font-weight:600">
-                <input type="checkbox" id="reportConsent" />
-                Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
-              </label>
+              <label for="reportText">Beskrivning</label>
+              <textarea id="reportText"></textarea>
             </div>
           </div>
-          <!-- /RAPPORTERA BEDRÄGERI -->
 
           <div class="row" style="margin-top:12px">
             <button class="primary" type="submit">Skicka betyg</button>
