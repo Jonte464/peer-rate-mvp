@@ -3,113 +3,110 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PeerRate</title>
+  <title>PeerRate – Lämna betyg</title>
   <style>
     :root{
+      --brand-orange:#f6a94b;
+      --brand-card:#fbf2e6;
+      --brand-accent:#bfe9e6;
+      --brand-border:#eadfce;
       --brand-ink:#1e1830;
       --brand-ink-d:#4a425e;
-      --brand-border:#eadfce;
       --brand-purple:#1b1533;
       --ok:#0b7a65;
       --err:#9b1c1c;
     }
+    *{box-sizing:border-box;}
 
-    *{ box-sizing:border-box; }
-
-    /* 🟢 Hela sidan transparent mot Wix */
+    /* Bakgrund transparent så Wix färg lyser igenom */
     body{
       margin:0;
-      padding:0;
-      background:transparent;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
       color:var(--brand-ink);
+      background:transparent;
     }
 
-    /* Wrapper utan bakgrund */
+    /* Samma layout som "Registrera dig" */
     .wrap{
       max-width:720px;
-      margin-inline:auto;
-      padding:12px 16px;
-      background:transparent !important;
+      margin:40px auto 60px;
+      padding:0 16px 40px;
     }
 
-    /* 🟢 Kort utan bakgrund, ram eller skugga */
-    .card{
-      padding:0;
-      border:none !important;
-      background:transparent !important;
-      box-shadow:none !important;
-      margin-bottom:32px;
+    h1{
+      margin:0 0 6px;
+      font-size:32px;
     }
-
-    h1, h2{
-      margin:0 0 12px;
-      font-weight:700;
+    h2{
+      margin:0 0 6px;
+      font-size:22px;
+    }
+    .lead{
+      margin:0 0 18px;
+      font-size:15px;
+      color:var(--brand-ink-d);
     }
 
     label{
       display:block;
-      font-weight:600;
-      margin:12px 0 4px;
+      font-weight:700;
+      margin:12px 0 6px;
+      font-size:14px;
     }
-
     input,select,textarea,button{
       width:100%;
-      padding:12px 14px;
+      padding:11px 14px;
       border-radius:12px;
-      border:1px solid var(--brand-border);
+      border:1px solid #d9cbb7;
       background:#fff;
       color:var(--brand-ink);
       font:inherit;
     }
+    input::placeholder,textarea::placeholder{color:#9b8f87}
+    textarea{min-height:110px;resize:vertical;}
 
-    textarea{ min-height:110px; resize:vertical; }
+    .row{display:flex;gap:10px;flex-wrap:wrap;}
+    .row>*{flex:1;}
+    .muted{color:var(--brand-ink-d);font-size:13px;}
+    .tiny{font-size:12px;}
 
-    .row{ display:flex; gap:10px; flex-wrap:wrap; }
-    .row>*{ flex:1; }
-
-    .muted{ color:var(--brand-ink-d); font-size:14px; }
-    .tiny{ font-size:12px; }
+    /* Viktigt: samma kort-design som registrering */
+    .card{
+      background:var(--brand-card);
+      border:1px solid var(--brand-border);
+      border-radius:18px;
+      padding:18px 16px 22px;
+      box-shadow:0 8px 22px rgba(0,0,0,.06);
+      margin-bottom:16px;
+    }
 
     button.primary{
       background:var(--brand-purple);
       color:#fff;
       border:0;
       cursor:pointer;
-      font-weight:700;
-      border-radius:12px;
-      padding:12px 14px;
+      font-weight:800;
+      margin-top:8px;
     }
-
+    button.primary:hover{filter:brightness(1.05);}
     button.secondary{
       background:#fff;
       color:var(--brand-ink);
       border:1px solid var(--brand-border);
-      border-radius:12px;
-      padding:12px 14px;
+      margin-top:8px;
     }
-
-    .hidden{ display:none !important; }
 
     .notice{
       display:none;
       margin-top:12px;
       border-radius:12px;
-      padding:12px 14px;
+      padding:10px 14px;
       font-weight:600;
+      border:1px solid transparent;
+      font-size:14px;
     }
-    .notice.ok{
-      display:block;
-      background:#e7f5f1;
-      border:1px solid #bde6db;
-      color:var(--ok);
-    }
-    .notice.err{
-      display:block;
-      background:#fdecec;
-      border:1px solid #f6c4c4;
-      color:var(--err);
-    }
+    .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok);}
+    .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err);}
 
     .report-box{
       display:none;
@@ -119,21 +116,32 @@
       border-radius:12px;
       margin-top:8px;
     }
+    .files-note{font-size:12px;color:var(--brand-ink-d);margin-top:6px}
+    .file-list{margin:6px 0 0;padding:0;list-style:none}
+    .file-list li{font-size:12px;color:var(--brand-ink-d)}
 
-    .report-container:has(#reportFlag:checked) #reportDetails{
-      display:block;
+    .report-container #reportDetails{display:none;}
+    .report-container:has(#reportFlag:checked) #reportDetails{display:block;}
+
+    .hidden{display:none !important;}
+
+    @media (max-width:600px){
+      .wrap{margin:20px auto 40px;padding:0 12px 32px;}
+      h1{font-size:26px;}
     }
   </style>
 </head>
 <body>
-
   <div class="wrap">
+    <!-- Du kan lägga till en rubrik om du vill
+    <h1>Lämna ett betyg</h1>
+    -->
 
-    <!-- LOGIN-KORT (nu utan bakgrund) -->
+    <!-- LOGIN-KORT -->
     <section class="card" id="login-card">
       <h2>Logga in</h2>
       <p class="muted">
-        Logga in med den e-post och det lösenord du registrerade dig med.
+        Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.
       </p>
 
       <label for="login-email">E-post</label>
@@ -149,22 +157,22 @@
       <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
     </section>
 
-    <!-- BETYGSFORMULÄR (bara när inloggad) -->
+    <!-- LÄMNA BETYG -->
     <section class="card" id="rating-card">
       <h2>Lämna ett betyg</h2>
       <p class="tiny muted" id="login-hint">
-        Du behöver logga in för att lämna betyg.<br>
-        Logga in ovan eller <a href="/customer.html" target="_blank">registrera dig här</a>.
+        Du behöver logga in för att kunna lämna betyg.
+        Logga in ovan eller
+        <a href="/customer.html" target="_blank" rel="noopener noreferrer">registrera dig här</a>.
       </p>
 
+      <!-- Denna wrapper visas bara när man är inloggad (styrt av script.js) -->
       <div id="rating-form-wrapper" class="hidden">
-
         <form id="rate-form" autocomplete="off">
-
-          <label for="subject">Vem betygsätter du?</label>
+          <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
           <input id="subject" type="text" placeholder="erik@example.com" required />
 
-          <label for="rater">Ditt namn/mejl (valfritt)</label>
+          <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span></label>
           <input id="rater" type="text" placeholder="" />
 
           <label for="rating">Betyg (1–5)</label>
@@ -177,17 +185,21 @@
             <option value="5">5</option>
           </select>
 
-          <label for="comment">Kommentar (valfritt)</label>
-          <textarea id="comment"></textarea>
+          <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
+          <textarea id="comment" placeholder=""></textarea>
 
-          <label for="proofRef">Verifierings-ID (valfritt)</label>
+          <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
           <input id="proofRef" type="text" placeholder="ORDER-123" />
 
-          <!-- Rapportdel är oförändrad -->
+          <!-- RAPPORTERA BEDRÄGERI (full version så den matchar script.js) -->
           <div class="report-container">
-            <label>
-              <input type="checkbox" id="reportFlag" /> Rapportera misstänkt bedrägeri
-            </label>
+            <div class="field" style="margin-top:12px">
+              <label style="font-weight:600">
+                <input type="checkbox" id="reportFlag" />
+                Rapportera misstänkt bedrägeri
+              </label>
+              <div class="muted tiny">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
+            </div>
 
             <div id="reportDetails" class="report-box">
               <label for="reportReason">Typ av problem</label>
@@ -196,15 +208,51 @@
                 <option>Misstänkt bedrägeri</option>
                 <option>Vilseledande identitet</option>
                 <option>Obetald/utebliven leverans</option>
-                <option>Falsk/felaktigt beskriven vara</option>
-                <option>Otillåten betalningsmetod</option>
+                <option>Falsk/felaktigt beskriven vara/tjänst</option>
+                <option>Otillåten betalningsmetod/chargeback-abuse</option>
                 <option>Annan oegentlighet</option>
               </select>
 
-              <label for="reportText">Beskrivning</label>
-              <textarea id="reportText"></textarea>
+              <div class="row" style="margin-top:8px">
+                <div>
+                  <label for="reportDate">Datum</label>
+                  <input id="reportDate" type="date" />
+                </div>
+                <div>
+                  <label for="reportTime">Tid</label>
+                  <input id="reportTime" type="time" />
+                </div>
+              </div>
+
+              <div class="row" style="margin-top:8px">
+                <div>
+                  <label for="reportAmount">Belopp (SEK) <span class="tiny">(valfritt)</span></label>
+                  <input id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
+                </div>
+                <div>
+                  <label for="reportLink">Motpart/annonslänk <span class="tiny">(valfritt)</span></label>
+                  <input id="reportLink" type="url" placeholder="https://annons-eller-profil" />
+                </div>
+              </div>
+
+              <label for="reportText" style="margin-top:8px">Beskrivning</label>
+              <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp."></textarea>
+
+              <label for="evidenceUrl" style="margin-top:8px">Bevislänk <span class="tiny">(valfritt)</span></label>
+              <input type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
+
+              <label for="reportFiles" style="margin-top:8px">Ladda upp bevis <span class="tiny">(valfritt)</span></label>
+              <input id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
+              <div class="files-note">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
+              <ul id="fileList" class="file-list"></ul>
+
+              <label style="margin-top:8px;font-weight:600">
+                <input type="checkbox" id="reportConsent" />
+                Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
+              </label>
             </div>
           </div>
+          <!-- /RAPPORTERA BEDRÄGERI -->
 
           <div class="row" style="margin-top:12px">
             <button class="primary" type="submit">Skicka betyg</button>
