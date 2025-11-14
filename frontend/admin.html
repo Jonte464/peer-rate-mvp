@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin – PeerRate</title>
+  <style>
+    :root{
+      --brand-orange:#f6a94b;
+      --brand-card:#fbf2e6;
+      --brand-border:#eadfce;
+      --brand-ink:#1e1830;
+      --brand-ink-d:#4a425e;
+      --brand-purple:#1b1533;
+      --ok:#0b7a65;
+      --err:#9b1c1c;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      color:var(--brand-ink);
+      background:transparent;
+    }
+    .wrap{
+      max-width:960px;
+      margin:40px auto 60px;
+      padding:0 16px 40px;
+    }
+    h1{margin:0 0 6px;font-size:32px;}
+    h2{margin:0 0 6px;font-size:22px;}
+    .lead{margin:0 0 18px;font-size:15px;color:var(--brand-ink-d);}
+    label{display:block;font-weight:700;margin:12px 0 6px;font-size:14px;}
+    input,button{
+      width:100%;
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid #d9cbb7;
+      background:#fff;
+      color:var(--brand-ink);
+      font:inherit;
+    }
+    input::placeholder{color:#9b8f87}
+    .row{display:flex;gap:10px;flex-wrap:wrap;}
+    .row>*{flex:1;}
+    .muted{color:var(--brand-ink-d);font-size:13px;}
+    .tiny{font-size:12px;}
+    .card{
+      background:var(--brand-card);
+      border:1px solid var(--brand-border);
+      border-radius:18px;
+      padding:18px 16px 22px;
+      box-shadow:0 8px 22px rgba(0,0,0,.06);
+      margin-bottom:16px;
+    }
+    button.primary{
+      background:var(--brand-purple);
+      color:#fff;
+      border:0;
+      cursor:pointer;
+      font-weight:800;
+      margin-top:8px;
+    }
+    button.primary:hover{filter:brightness(1.05);}
+    button.secondary{
+      background:#fff;
+      color:var(--brand-ink);
+      border:1px solid var(--brand-border);
+      margin-top:8px;
+    }
+    .notice{
+      display:none;
+      margin-top:12px;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:600;
+      border:1px solid transparent;
+      font-size:14px;
+    }
+    .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok);}
+    .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err);}
+    .hidden{display:none !important;}
+
+    .stats-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:12px;
+      margin-top:12px;
+    }
+    .stat-box{
+      background:#fff;
+      border-radius:14px;
+      padding:10px 12px;
+      border:1px solid rgba(0,0,0,.05);
+    }
+    .stat-label{font-size:12px;color:var(--brand-ink-d);}
+    .stat-value{font-size:22px;font-weight:800;}
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:12px;
+      margin-top:8px;
+    }
+    th,td{
+      padding:6px 4px;
+      text-align:left;
+      border-bottom:1px solid rgba(0,0,0,.05);
+    }
+    th{font-weight:700;color:var(--brand-ink-d);}
+    tr:nth-child(even){background:rgba(255,255,255,.6);}
+    code{
+      font-family:SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace;
+      font-size:11px;
+      background:rgba(0,0,0,.03);
+      padding:1px 3px;
+      border-radius:4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Admin – PeerRate</h1>
+    <p class="lead">
+      Intern översikt över användare, betyg och rapporter. Endast för administratörer.
+    </p>
+
+    <!-- ADMIN LOGIN -->
+    <section class="card" id="admin-login-card">
+      <h2>Logga in som admin</h2>
+      <p class="tiny muted">
+        Ange admin-lösenordet (från <code>ADMIN_PASSWORD</code> i serverns miljövariabler).
+      </p>
+      <form id="admin-login-form" autocomplete="off">
+        <label for="admin-password">Admin-lösenord</label>
+        <input id="admin-password" type="password" placeholder="••••••••" />
+        <button type="submit" class="primary">Logga in</button>
+        <div id="admin-login-notice" class="notice"></div>
+      </form>
+    </section>
+
+    <!-- ADMIN INNEHÅLL (döljs tills man är inloggad) -->
+    <div id="admin-root" class="hidden">
+      <!-- Översikt -->
+      <section class="card">
+        <div class="row" style="align-items:center;justify-content:space-between;">
+          <h2 style="margin-bottom:0;">Översikt</h2>
+          <button id="admin-logout-btn" type="button" class="secondary" style="flex:0 0 auto;width:auto;">
+            Logga ut admin
+          </button>
+        </div>
+        <p class="tiny muted">Snabb överblick över PeerRate-data.</p>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Kunder</div>
+            <div class="stat-value" id="stat-customers">–</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Betyg</div>
+            <div class="stat-value" id="stat-ratings">–</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Rapporter</div>
+            <div class="stat-value" id="stat-reports">–</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Kundsök -->
+      <section class="card">
+        <h2>Sök kund</h2>
+        <p class="tiny muted">
+          Sök på e-post, subjectRef, personnummer eller namn för att se en kunds profil och omdömen.
+        </p>
+        <form id="admin-search-form" autocomplete="off">
+          <div class="row">
+            <input id="admin-search-input" type="text" placeholder="t.ex. erik@example.com eller 198001011234" />
+            <button type="submit" class="primary" style="flex:0 0 140px;">Sök</button>
+          </div>
+        </form>
+        <div id="admin-search-result" class="tiny muted" style="margin-top:10px;"></div>
+      </section>
+
+      <!-- Senaste betyg -->
+      <section class="card">
+        <h2>Senaste betyg</h2>
+        <p class="tiny muted">De senaste inskickade betygen i systemet.</p>
+        <div id="admin-ratings-table" class="tiny muted">Laddar…</div>
+      </section>
+
+      <!-- Senaste rapporter -->
+      <section class="card">
+        <h2>Senaste rapporter</h2>
+        <p class="tiny muted">Senaste rapporter om misstänkt bedrägeri eller avvikelse.</p>
+        <div id="admin-reports-table" class="tiny muted">Laddar…</div>
+      </section>
+    </div>
+  </div>
+
+  <script src="/script.js" defer></script>
+</body>
+</html>

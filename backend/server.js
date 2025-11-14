@@ -19,6 +19,9 @@ const {
   createCustomer,
   searchCustomers,
   findCustomerBySubjectRef,
+  adminGetCounts,
+  adminListRecentReports,
+  adminGetCustomerWithRatings,
 } = require('./storage');
 
 const app = express();
@@ -27,6 +30,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
 const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || null;
 
 // Lita på proxy (Render/Vercel/NGINX m.m.)
 app.set('trust proxy', 1);
@@ -153,7 +157,24 @@ const loginSchema = Joi.object({
   password: Joi.string().min(8).max(100).required(),
 });
 
-// --- API: skapa betyg ---
+/** Enkel admin-login (lösenord från .env) */
+const adminLoginSchema = Joi.object({
+  password: Joi.string().min(6).max(200).required(),
+});
+
+// --- Middleware: admin-skydd ---
+function requireAdmin(req, res, next) {
+  if (!ADMIN_PASSWORD) {
+    return res.status(500).json({ ok: false, error: 'Admin-läge ej konfigurerat (saknar ADMIN_PASSWORD).' });
+  }
+  const key = req.headers['x-admin-key'] || '';
+  if (key && key === ADMIN_PASSWORD) return next();
+  return res.status(401).json({ ok: false, error: 'Ej behörig (admin).' });
+}
+
+/* -------------------------------------------------------
+   API: skapa betyg
+   ------------------------------------------------------- */
 app.post('/api/ratings', async (req, res) => {
   const { error, value } = createRatingSchema.validate(req.body);
   if (error) {
@@ -205,7 +226,9 @@ app.post('/api/ratings', async (req, res) => {
   }
 });
 
-// --- API: lista betyg för subject ---
+/* -------------------------------------------------------
+   API: lista betyg för subject
+   ------------------------------------------------------- */
 app.get('/api/ratings', async (req, res) => {
   const subject = normSubject(req.query.subject || '');
   if (!subject) {
@@ -220,7 +243,9 @@ app.get('/api/ratings', async (req, res) => {
   }
 });
 
-// --- API: snitt ---
+/* -------------------------------------------------------
+   API: snitt
+   ------------------------------------------------------- */
 app.get('/api/ratings/average', async (req, res) => {
   const subject = normSubject(req.query.subject || '');
   if (!subject) {
@@ -235,7 +260,9 @@ app.get('/api/ratings/average', async (req, res) => {
   }
 });
 
-// --- API: senaste ---
+/* -------------------------------------------------------
+   API: senaste globalt
+   ------------------------------------------------------- */
 app.get('/api/ratings/recent', async (_req, res) => {
   try {
     const list = await listRecentRatings(20);
@@ -325,7 +352,7 @@ app.post('/api/customers', async (req, res) => {
 });
 
 /* -------------------------------------------------------
-   Login – används av “Lämna betyg” innan omdöme
+   Login – används av “Lämna betyg” & “Min profil”
    ------------------------------------------------------- */
 app.post('/api/auth/login', async (req, res) => {
   const { error, value } = loginSchema.validate(req.body);
@@ -373,6 +400,109 @@ app.get('/api/customers', async (req, res) => {
   } catch (e) {
     console.error('[GET /api/customers] error:', e);
     res.status(500).json({ ok: false, error: 'Kunde inte hämta kunder' });
+  }
+});
+
+/* -------------------------------------------------------
+   ADMIN-API
+   ------------------------------------------------------- */
+
+/** Enkel admin-login: skickar in samma lösenord som i .env */
+app.post('/api/admin/login', (req, res) => {
+  const { error, value } = adminLoginSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ ok: false, error: 'Ogiltigt admin-lösenord.' });
+  }
+  if (!ADMIN_PASSWORD) {
+    return res.status(500).json({ ok: false, error: 'ADMIN_PASSWORD saknas i servern.' });
+  }
+  if (value.password !== ADMIN_PASSWORD) {
+    return res.status(401).json({ ok: false, error: 'Fel admin-lösenord.' });
+  }
+  // Frontend sparar detta lösenord och skickar i x-admin-key-header.
+  res.json({ ok: true });
+});
+
+/** Admin-översikt: totalsiffror */
+app.get('/api/admin/summary', requireAdmin, async (_req, res) => {
+  try {
+    const counts = await adminGetCounts();
+    res.json({ ok: true, counts });
+  } catch (e) {
+    console.error('[GET /api/admin/summary] error:', e);
+    res.status(500).json({ ok: false, error: 'Kunde inte hämta admin-sammanfattning.' });
+  }
+});
+
+/** Senaste ratings (admin) */
+app.get('/api/admin/ratings/recent', requireAdmin, async (req, res) => {
+  const limit = Number(req.query.limit || 20);
+  try {
+    const list = await listRecentRatings(limit);
+    res.json({ ok: true, ratings: list });
+  } catch (e) {
+    console.error('[GET /api/admin/ratings/recent] error:', e);
+    res.status(500).json({ ok: false, error: 'Kunde inte hämta senaste ratings (admin).' });
+  }
+});
+
+/** Senaste rapporter (admin) */
+app.get('/api/admin/reports/recent', requireAdmin, async (req, res) => {
+  const limit = Number(req.query.limit || 20);
+  try {
+    const list = await adminListRecentReports(limit);
+    res.json({ ok: true, reports: list });
+  } catch (e) {
+    console.error('[GET /api/admin/reports/recent] error:', e);
+    res.status(500).json({ ok: false, error: 'Kunde inte hämta senaste rapporter (admin).' });
+  }
+});
+
+/** Sök kund + ratings (admin) */
+app.get('/api/admin/customer', requireAdmin, async (req, res) => {
+  const q = (req.query.q || '').trim();
+  if (!q) return res.status(400).json({ ok: false, error: 'Ange q i querystring.' });
+
+  try {
+    const customer = await adminGetCustomerWithRatings(q);
+    if (!customer) {
+      return res.json({ ok: true, customer: null });
+    }
+
+    // räkna snitt för denna kund
+    const agg = await prisma.rating?.aggregate
+      ? null
+      : null; // (vi använder existerande average-funktion istället via subjectRef)
+
+    const subjectRef = customer.subjectRef || (customer.email || '').toLowerCase();
+    let avgData = { count: 0, average: 0 };
+    if (subjectRef) {
+      avgData = await averageForSubjectRef(subjectRef);
+    }
+
+    res.json({
+      ok: true,
+      customer: {
+        id: customer.id,
+        fullName: customer.fullName,
+        subjectRef: customer.subjectRef,
+        email: customer.email,
+        personalNumber: customer.personalNumber,
+        createdAt: customer.createdAt,
+        ratings: customer.ratings.map((r) => ({
+          id: r.id,
+          score: r.score,
+          text: r.text,
+          raterName: r.raterName,
+          createdAt: r.createdAt,
+        })),
+        average: avgData.average,
+        count: avgData.count,
+      },
+    });
+  } catch (e) {
+    console.error('[GET /api/admin/customer] error:', e);
+    res.status(500).json({ ok: false, error: 'Kunde inte hämta kund (admin).' });
   }
 });
 

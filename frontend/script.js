@@ -644,4 +644,283 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+    // ============================================================
+  // ADMIN-DASHBOARD (admin.html)
+  // ============================================================
+  const ADMIN_KEY_STORAGE = 'peerRateAdminKey';
+
+  function getAdminKey() {
+    return localStorage.getItem(ADMIN_KEY_STORAGE) || null;
+  }
+  function setAdminKey(key) {
+    if (key) localStorage.setItem(ADMIN_KEY_STORAGE, key);
+  }
+  function clearAdminKey() {
+    localStorage.removeItem(ADMIN_KEY_STORAGE);
+  }
+
+  // Små helpers för admin-notiser
+  function setAdminNotice(id, ok, msg) {
+    const box = el(id);
+    if (!box) return;
+    box.className = 'notice ' + (ok ? 'ok' : 'err');
+    box.textContent = msg;
+  }
+
+  const adminLoginCard = el('admin-login-card');
+  const adminLoginForm = el('admin-login-form');
+  const adminPasswordInput = el('admin-password');
+  const adminLoginNotice = el('admin-login-notice');
+  const adminRoot = el('admin-root');
+  const adminLogoutBtn = el('admin-logout-btn');
+
+  const adminStatCustomers = el('stat-customers');
+  const adminStatRatings = el('stat-ratings');
+  const adminStatReports = el('stat-reports');
+  const adminRatingsTable = el('admin-ratings-table');
+  const adminReportsTable = el('admin-reports-table');
+  const adminSearchForm = el('admin-search-form');
+  const adminSearchInput = el('admin-search-input');
+  const adminSearchResult = el('admin-search-result');
+
+  // Använd samma fetch, men lägg till x-admin-key-header om admin är inloggad
+  async function adminFetch(path, options = {}) {
+    const key = getAdminKey();
+    if (!key) {
+      throw new Error('No admin key set');
+    }
+    const opts = {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        'Content-Type': options.headers && options.headers['Content-Type'] ? options.headers['Content-Type'] : 'application/json',
+        'x-admin-key': key,
+      },
+    };
+    const res = await fetch(path, opts);
+    const raw = await res.text();
+    try {
+      const json = JSON.parse(raw);
+      return json;
+    } catch {
+      console.warn('Non-JSON response (adminFetch):', raw);
+      return { ok: res.ok, status: res.status, raw };
+    }
+  }
+
+  async function loadAdminSummary() {
+    if (!adminRoot) return;
+    try {
+      const res = await adminFetch('/api/admin/summary');
+      if (res && res.ok && res.counts) {
+        if (adminStatCustomers) adminStatCustomers.textContent = String(res.counts.customers);
+        if (adminStatRatings) adminStatRatings.textContent = String(res.counts.ratings);
+        if (adminStatReports) adminStatReports.textContent = String(res.counts.reports);
+      } else {
+        if (adminStatCustomers) adminStatCustomers.textContent = '?';
+        if (adminStatRatings) adminStatRatings.textContent = '?';
+        if (adminStatReports) adminStatReports.textContent = '?';
+      }
+    } catch (err) {
+      console.error('loadAdminSummary error:', err);
+      if (adminStatCustomers) adminStatCustomers.textContent = '?';
+      if (adminStatRatings) adminStatRatings.textContent = '?';
+      if (adminStatReports) adminStatReports.textContent = '?';
+    }
+  }
+
+  async function loadAdminRecentRatings() {
+    if (!adminRatingsTable) return;
+    adminRatingsTable.textContent = 'Laddar…';
+    try {
+      const res = await adminFetch('/api/admin/ratings/recent?limit=20');
+      if (!res || !res.ok || !Array.isArray(res.ratings) || res.ratings.length === 0) {
+        adminRatingsTable.textContent = 'Inga betyg hittades.';
+        return;
+      }
+      const rows = res.ratings;
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th>Datum</th><th>Subject</th><th>Betyg</th><th>Rater</th><th>Kommentar</th></tr>';
+      const tbody = document.createElement('tbody');
+      rows.forEach((r) => {
+        const tr = document.createElement('tr');
+        const d = new Date(r.createdAt);
+        const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
+        tr.innerHTML = `
+          <td>${dateStr}</td>
+          <td>${r.subject || ''}</td>
+          <td>${r.rating ?? ''}</td>
+          <td>${r.raterMasked || ''}</td>
+          <td>${(r.comment || '').slice(0, 120)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      adminRatingsTable.innerHTML = '';
+      adminRatingsTable.appendChild(table);
+    } catch (err) {
+      console.error('loadAdminRecentRatings error:', err);
+      adminRatingsTable.textContent = 'Kunde inte ladda betyg.';
+    }
+  }
+
+  async function loadAdminRecentReports() {
+    if (!adminReportsTable) return;
+    adminReportsTable.textContent = 'Laddar…';
+    try {
+      const res = await adminFetch('/api/admin/reports/recent?limit=20');
+      if (!res || !res.ok || !Array.isArray(res.reports) || res.reports.length === 0) {
+        adminReportsTable.textContent = 'Inga rapporter hittades.';
+        return;
+      }
+      const rows = res.reports;
+      const table = document.createElement('table');
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th>Datum</th><th>Kund</th><th>Reason</th><th>Status</th><th>Belopp</th></tr>';
+      const tbody = document.createElement('tbody');
+      rows.forEach((r) => {
+        const d = new Date(r.createdAt);
+        const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
+        const name = r.fullName || r.subjectRef || '';
+        const amount = r.amount ? `${r.amount} ${r.currency || 'SEK'}` : '';
+        tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${dateStr}</td>
+          <td>${name}</td>
+          <td>${r.reason}</td>
+          <td>${r.status}</td>
+          <td>${amount}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      adminReportsTable.innerHTML = '';
+      adminReportsTable.appendChild(table);
+    } catch (err) {
+      console.error('loadAdminRecentReports error:', err);
+      adminReportsTable.textContent = 'Kunde inte ladda rapporter.';
+    }
+  }
+
+  async function handleAdminSearch(q) {
+    if (!adminSearchResult) return;
+    adminSearchResult.textContent = 'Söker…';
+    try {
+      const res = await adminFetch(`/api/admin/customer?q=${encodeURIComponent(q)}`);
+      if (!res || !res.ok || !res.customer) {
+        adminSearchResult.textContent = 'Ingen kund hittades för sökningen.';
+        return;
+      }
+      const c = res.customer;
+      let html = '';
+      html += `<div><strong>${c.fullName || '(namn saknas)'}</strong></div>`;
+      html += `<div class="tiny muted">E-post: ${c.email || '–'} | subjectRef: ${c.subjectRef || '–'} | personnummer: ${c.personalNumber || '–'}</div>`;
+      html += `<div class="tiny" style="margin-top:6px;">Snittbetyg: <strong>${(c.average ?? 0).toFixed(2)}</strong> / 5 (${c.count} omdömen)</div>`;
+
+      if (Array.isArray(c.ratings) && c.ratings.length) {
+        html += '<table><thead><tr><th>Datum</th><th>Betyg</th><th>Rater</th><th>Kommentar</th></tr></thead><tbody>';
+        c.ratings.forEach((r) => {
+          const d = new Date(r.createdAt);
+          const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
+          html += `<tr>
+            <td>${dateStr}</td>
+            <td>${r.score}</td>
+            <td>${r.raterName || ''}</td>
+            <td>${(r.text || '').slice(0, 160)}</td>
+          </tr>`;
+        });
+        html += '</tbody></table>';
+      } else {
+        html += '<div class="tiny muted" style="margin-top:6px;">Inga omdömen ännu.</div>';
+      }
+
+      adminSearchResult.innerHTML = html;
+    } catch (err) {
+      console.error('handleAdminSearch error:', err);
+      adminSearchResult.textContent = 'Fel vid sökning.';
+    }
+  }
+
+  function updateAdminUIAfterLogin() {
+    if (!adminRoot || !adminLoginCard) return;
+    const key = getAdminKey();
+    if (key) {
+      adminRoot.classList.remove('hidden');
+      adminLoginCard.classList.add('hidden');
+      loadAdminSummary();
+      loadAdminRecentRatings();
+      loadAdminRecentReports();
+    } else {
+      adminRoot.classList.add('hidden');
+      adminLoginCard.classList.remove('hidden');
+    }
+  }
+
+  if (adminLoginForm && adminPasswordInput) {
+    adminLoginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!adminLoginNotice) return;
+      const pwd = adminPasswordInput.value.trim();
+      if (!pwd) {
+        setAdminNotice('admin-login-notice', false, 'Fyll i admin-lösenord.');
+        return;
+      }
+      setAdminNotice('admin-login-notice', true, 'Loggar in…');
+      try {
+        const res = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: pwd }),
+        }).then(async (r) => {
+          const raw = await r.text();
+          try {
+            return JSON.parse(raw);
+          } catch {
+            console.warn('Non-JSON response (admin login):', raw);
+            return { ok: r.ok, status: r.status, raw };
+          }
+        });
+
+        if (res && res.ok) {
+          setAdminNotice('admin-login-notice', true, 'Admin-inloggning lyckades.');
+          setAdminKey(pwd);
+          updateAdminUIAfterLogin();
+        } else {
+          const msg = res?.error || 'Admin-inloggning misslyckades.';
+          setAdminNotice('admin-login-notice', false, msg);
+        }
+      } catch (err) {
+        console.error('Admin login error:', err);
+        setAdminNotice('admin-login-notice', false, 'Nätverksfel vid admin-inloggning.');
+      }
+    });
+  }
+
+  if (adminLogoutBtn) {
+    adminLogoutBtn.addEventListener('click', () => {
+      clearAdminKey();
+      updateAdminUIAfterLogin();
+    });
+  }
+
+  if (adminSearchForm && adminSearchInput) {
+    adminSearchForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const q = adminSearchInput.value.trim();
+      if (!q) {
+        if (adminSearchResult) adminSearchResult.textContent = 'Fyll i något att söka på.';
+        return;
+      }
+      handleAdminSearch(q);
+    });
+  }
+
+  // När sidan laddas: kolla om admin-nyckel redan finns
+  if (adminRoot || adminLoginCard) {
+    updateAdminUIAfterLogin();
+  }
+
 });
