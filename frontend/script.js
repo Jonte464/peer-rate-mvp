@@ -787,7 +787,10 @@ window.addEventListener('DOMContentLoaded', () => {
         console.log('Customer API response:', res);
 
         if (res && res.ok) {
-          showCustNotice(true, 'Tack! Din registrering har sparats. Du kan nu logga in på sidan Min profil eller Lämna betyg.');
+          showCustNotice(
+            true,
+            'Tack! Din registrering har sparats. Du kan nu logga in på sidan Min profil eller Lämna betyg.'
+          );
           customerForm.reset();
         } else {
           const msg =
@@ -854,7 +857,10 @@ window.addEventListener('DOMContentLoaded', () => {
       ...options,
       headers: {
         ...(options.headers || {}),
-        'Content-Type': options.headers && options.headers['Content-Type'] ? options.headers['Content-Type'] : 'application/json',
+        'Content-Type':
+          options.headers && options.headers['Content-Type']
+            ? options.headers['Content-Type']
+            : 'application/json',
         'x-admin-key': key,
       },
     };
@@ -902,7 +908,8 @@ window.addEventListener('DOMContentLoaded', () => {
       const rows = res.ratings;
       const table = document.createElement('table');
       const thead = document.createElement('thead');
-      thead.innerHTML = '<tr><th>Datum</th><th>Subject</th><th>Betyg</th><th>Rater</th><th>Kommentar</th></tr>';
+      thead.innerHTML =
+        '<tr><th>Datum</th><th>Subject</th><th>Betyg</th><th>Rater</th><th>Kommentar</th></tr>';
       const tbody = document.createElement('tbody');
       rows.forEach((r) => {
         const tr = document.createElement('tr');
@@ -939,7 +946,8 @@ window.addEventListener('DOMContentLoaded', () => {
       const rows = res.reports;
       const table = document.createElement('table');
       const thead = document.createElement('thead');
-      thead.innerHTML = '<tr><th>Datum</th><th>Kund</th><th>Reason</th><th>Status</th><th>Belopp</th></tr>';
+      thead.innerHTML =
+        '<tr><th>Datum</th><th>Kund</th><th>Reason</th><th>Status</th><th>Belopp</th></tr>';
       const tbody = document.createElement('tbody');
       rows.forEach((r) => {
         const d = new Date(r.createdAt);
@@ -978,11 +986,16 @@ window.addEventListener('DOMContentLoaded', () => {
       const c = res.customer;
       let html = '';
       html += `<div><strong>${c.fullName || '(namn saknas)'}</strong></div>`;
-      html += `<div class="tiny muted">E-post: ${c.email || '–'} | subjectRef: ${c.subjectRef || '–'} | personnummer: ${c.personalNumber || '–'}</div>`;
-      html += `<div class="tiny" style="margin-top:6px;">Snittbetyg: <strong>${(c.average ?? 0).toFixed(2)}</strong> / 5 (${c.count} omdömen)</div>`;
+      html += `<div class="tiny muted">E-post: ${c.email || '–'} | subjectRef: ${
+        c.subjectRef || '–'
+      } | personnummer: ${c.personalNumber || '–'}</div>`;
+      html += `<div class="tiny" style="margin-top:6px;">Snittbetyg: <strong>${(
+        c.average ?? 0
+      ).toFixed(2)}</strong> / 5 (${c.count} omdömen)</div>`;
 
       if (Array.isArray(c.ratings) && c.ratings.length) {
-        html += '<table><thead><tr><th>Datum</th><th>Betyg</th><th>Rater</th><th>Kommentar</th></tr></thead><tbody>';
+        html +=
+          '<table><thead><tr><th>Datum</th><th>Betyg</th><th>Rater</th><th>Kommentar</th></tr></thead><tbody>';
         c.ratings.forEach((r) => {
           const d = new Date(r.createdAt);
           const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');

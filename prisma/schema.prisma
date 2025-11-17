@@ -26,6 +26,9 @@ model Customer {
   // NYTT: lösenord (hashat, aldrig klartext)
   passwordHash   String?
 
+  // NYTT: samtycke till inhämtning från tredje part
+  thirdPartyConsent Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -155,6 +155,28 @@
         <label for="cust-country">Land</label>
         <input id="cust-country" type="text" placeholder="Sverige" />
 
+        <!-- NYTT: Samtycke till inhämtning från tredje part -->
+        <div style="margin-top:16px;">
+          <label class="tiny" style="font-weight:600;display:flex;align-items:flex-start;gap:8px;">
+            <input
+              id="cust-thirdPartyConsent"
+              type="checkbox"
+              style="width:auto;margin-top:3px;"
+              required
+            />
+            <span>
+              Jag samtycker till att PeerRate får inhämta och behandla uppgifter om mig från externa register
+              och andra tredjepartsleverantörer i syfte att verifiera min identitet, mina fordons- och/eller
+              fastighetsinnehav samt för att motverka bedrägerier och missbruk av tjänsten.
+              Exempel på sådana källor är Transportstyrelsen (fordonsuppgifter), Lantmäteriet (fastighetsuppgifter)
+              och motsvarande registerleverantörer. Jag är medveten om att sådan inhämtning alltid sker i enlighet
+              med gällande lagstiftning, inklusive dataskyddsregler (GDPR), samt de avtal som finns mellan PeerRate
+              och respektive registerhållare. Jag kan när som helst återkalla mitt samtycke genom att kontakta
+              PeerRate, men förstår att det kan påverka möjligheten att använda tjänsten fullt ut.
+            </span>
+          </label>
+        </div>
+
         <button type="submit" class="primary">Spara registrering</button>
 
         <div id="cust-notice" class="notice"></div>

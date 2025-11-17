@@ -149,6 +149,9 @@ const createCustomerSchema = Joi.object({
   addressZip: Joi.string().max(20).allow('', null),
   addressCity: Joi.string().max(100).allow('', null),
   country: Joi.string().max(100).allow('', null),
+
+  // NYTT: samtycke – måste vara TRUE
+  thirdPartyConsent: Joi.boolean().valid(true).required(),
 });
 
 /** Login */
@@ -324,6 +327,7 @@ app.post('/api/customers', async (req, res) => {
     addressCity: clean(value.addressCity),
     country: clean(value.country),
     passwordHash,
+    thirdPartyConsent: value.thirdPartyConsent === true,
   };
 
   try {
@@ -468,11 +472,6 @@ app.get('/api/admin/customer', requireAdmin, async (req, res) => {
     if (!customer) {
       return res.json({ ok: true, customer: null });
     }
-
-    // räkna snitt för denna kund
-    const agg = await prisma.rating?.aggregate
-      ? null
-      : null; // (vi använder existerande average-funktion istället via subjectRef)
 
     const subjectRef = customer.subjectRef || (customer.email || '').toLowerCase();
     let avgData = { count: 0, average: 0 };

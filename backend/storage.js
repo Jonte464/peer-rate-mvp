@@ -156,6 +156,7 @@ async function createCustomer(data) {
       addressCity: data.addressCity || null,
       country: data.country || null,
       passwordHash: data.passwordHash || null,
+      thirdPartyConsent: data.thirdPartyConsent === true,
     },
     select: {
       id: true,
@@ -194,6 +195,7 @@ async function searchCustomers(q) {
       addressCity: true,
       country: true,
       createdAt: true,
+      thirdPartyConsent: true,
     },
   });
   return rows;
@@ -211,6 +213,7 @@ async function findCustomerBySubjectRef(subjectRef) {
       passwordHash: true,
       personalNumber: true,
       createdAt: true,
+      thirdPartyConsent: true,
     },
   });
 }
