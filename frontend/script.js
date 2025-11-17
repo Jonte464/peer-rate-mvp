@@ -24,6 +24,19 @@ window.addEventListener('DOMContentLoaded', () => {
     },
   };
 
+  // Enkel lagring för profilbild (endast i webbläsaren)
+  const AVATAR_KEY = 'peerRateAvatar';
+  function getAvatar() {
+    return localStorage.getItem(AVATAR_KEY) || null;
+  }
+  function setAvatar(dataUrl) {
+    if (!dataUrl) return;
+    localStorage.setItem(AVATAR_KEY, dataUrl);
+  }
+  function clearAvatar() {
+    localStorage.removeItem(AVATAR_KEY);
+  }
+
   // ---- API helper ----
   const api = {
     createRating: (payload) => {
@@ -196,16 +209,12 @@ window.addEventListener('DOMContentLoaded', () => {
   const userBadgeName = el('user-badge-name');
   const userBadgeAvatar = el('user-badge-avatar');
 
-  function updateUserBadge(user) {
-    if (!userBadge || !userBadgeName || !userBadgeAvatar) return;
-    if (!user) {
-      userBadge.classList.add('hidden');
-      return;
-    }
-    const fullName = user.fullName || '';
-    const firstName = fullName.split(' ')[0] || user.email || '';
-    userBadgeName.textContent = firstName;
+  const profileAvatarPreview = el('profile-avatar-preview');
+  const profileAvatarInput = el('profile-avatar-input');
 
+  function computeInitials(user) {
+    if (!user) return 'P';
+    const fullName = user.fullName || '';
     const initials =
       fullName
         .split(' ')
@@ -213,8 +222,47 @@ window.addEventListener('DOMContentLoaded', () => {
         .slice(0, 2)
         .map((s) => s[0]?.toUpperCase())
         .join('') || (user.email ? user.email[0].toUpperCase() : 'P');
-    userBadgeAvatar.textContent = initials;
+    return initials;
+  }
+
+  function updateAvatars(user) {
+    const avatarUrl = getAvatar();
+    const initials = computeInitials(user);
+
+    // Badge
+    if (userBadgeAvatar) {
+      if (avatarUrl) {
+        userBadgeAvatar.style.backgroundImage = `url(${avatarUrl})`;
+        userBadgeAvatar.textContent = '';
+      } else {
+        userBadgeAvatar.style.backgroundImage = 'none';
+        userBadgeAvatar.textContent = initials;
+      }
+    }
+
+    // Profil-avatar
+    if (profileAvatarPreview) {
+      if (avatarUrl) {
+        profileAvatarPreview.style.backgroundImage = `url(${avatarUrl})`;
+        profileAvatarPreview.textContent = '';
+      } else {
+        profileAvatarPreview.style.backgroundImage = 'none';
+        profileAvatarPreview.textContent = initials;
+      }
+    }
+  }
+
+  function updateUserBadge(user) {
+    if (!userBadge || !userBadgeName) return;
+    if (!user) {
+      userBadge.classList.add('hidden');
+      return;
+    }
+    const fullName = user.fullName || '';
+    const firstName = fullName.split(' ')[0] || user.email || '';
+    userBadgeName.textContent = firstName;
     userBadge.classList.remove('hidden');
+    updateAvatars(user);
   }
 
   // Ritning av “Mitt omdöme”-graf
@@ -228,12 +276,16 @@ window.addEventListener('DOMContentLoaded', () => {
       const res = await api.listRatingsForSubject(subjectEmail);
       if (!res || !res.ok || !Array.isArray(res.ratings)) {
         graphEl.textContent = 'Kunde inte hämta omdömen.';
+        const listEl = el('ratings-list');
+        if (listEl) listEl.innerHTML = '';
         return;
       }
 
       const list = res.ratings;
       if (list.length === 0) {
         graphEl.textContent = 'Inga omdömen ännu.';
+        const listEl = el('ratings-list');
+        if (listEl) listEl.innerHTML = '<p class="tiny muted">Du har ännu inga individuella omdömen.</p>';
         return;
       }
 
@@ -282,10 +334,71 @@ window.addEventListener('DOMContentLoaded', () => {
         row.appendChild(val);
         graphEl.appendChild(row);
       });
+
+      // Bygg listan med individuella betyg + pratbubbla
+      renderRatingsList(list);
     } catch (err) {
       console.error('renderRatingsGraph error:', err);
       graphEl.textContent = 'Kunde inte hämta omdömen.';
+      const listEl = el('ratings-list');
+      if (listEl) listEl.textContent = 'Kunde inte hämta betyg.';
     }
+  }
+
+  function renderRatingsList(ratings) {
+    const listEl = el('ratings-list');
+    if (!listEl) return;
+
+    if (!ratings || ratings.length === 0) {
+      listEl.innerHTML = '<p class="tiny muted">Du har ännu inga individuella omdömen.</p>';
+      return;
+    }
+
+    listEl.innerHTML = '';
+    ratings.forEach((r, idx) => {
+      const row = document.createElement('div');
+      row.className = 'rating-row';
+
+      const main = document.createElement('div');
+      main.className = 'rating-main';
+
+      const stars = document.createElement('div');
+      stars.className = 'rating-stars';
+      const score = Number(r.rating || 0);
+      const fullStars = Math.max(0, Math.min(5, score));
+      stars.textContent = '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
+
+      const meta = document.createElement('div');
+      meta.className = 'rating-meta';
+      const d = new Date(r.createdAt);
+      const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleDateString('sv-SE');
+      const rater = r.raterMasked || 'Anonym';
+      meta.textContent = `${dateStr} · från ${rater}`;
+
+      main.appendChild(stars);
+      main.appendChild(meta);
+      row.appendChild(main);
+
+      if (r.comment && r.comment.trim().length > 0) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'rating-comment-btn';
+        btn.innerHTML = '💬';
+
+        const commentBox = document.createElement('div');
+        commentBox.className = 'rating-comment-text hidden';
+        commentBox.textContent = r.comment;
+
+        btn.addEventListener('click', () => {
+          commentBox.classList.toggle('hidden');
+        });
+
+        row.appendChild(btn);
+        row.appendChild(commentBox);
+      }
+
+      listEl.appendChild(row);
+    });
   }
 
   // Fyll “Mina uppgifter” + snittbetyg + graf
@@ -298,6 +411,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const nameEl = el('profile-name');
     const emailEl = el('profile-email');
     const pnEl = el('profile-personalNumber');
+    const phoneEl = el('profile-phone');
+    const streetEl = el('profile-addressStreet');
+    const zipEl = el('profile-addressZip');
+    const cityEl = el('profile-addressCity');
+    const countryEl = el('profile-country');
+
     const scoreEl = el('profile-score');
     const countEl = el('profile-score-count');
     const barEl = el('profile-score-bar');
@@ -308,16 +427,23 @@ window.addEventListener('DOMContentLoaded', () => {
     const email = user.email;
     if (!email) return;
 
+    // Hämta kundinfo (inkl. telefon och adress)
     try {
       const res = await api.searchCustomers(email);
       if (res && res.ok && Array.isArray(res.customers) && res.customers.length > 0) {
         const c = res.customers[0];
         if (pnEl) pnEl.textContent = c.personalNumber || '–';
+        if (phoneEl) phoneEl.textContent = c.phone || '–';
+        if (streetEl) streetEl.textContent = c.addressStreet || '–';
+        if (zipEl) zipEl.textContent = c.addressZip || '–';
+        if (cityEl) cityEl.textContent = c.addressCity || '–';
+        if (countryEl) countryEl.textContent = c.country || '–';
       }
     } catch (err) {
       console.warn('Kunde inte hämta kundinfo:', err);
     }
 
+    // Hämta snittbetyg
     try {
       const subject = email.trim().toLowerCase();
       const resAvg = await api.getRatingsAverage(subject);
@@ -336,6 +462,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     await renderRatingsGraph(email);
+    updateAvatars(user);
   }
 
   function updateLoginUI() {
@@ -383,50 +510,83 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  if (loginBtn && loginEmail && loginPassword) {
-    loginBtn.addEventListener('click', async () => {
-      const email = loginEmail.value.trim();
-      const password = loginPassword.value.trim();
+  // Gemensam login-funktion (knapp + Enter)
+  async function handleLogin() {
+    const email = loginEmail?.value?.trim() || '';
+    const password = loginPassword?.value?.trim() || '';
 
-      if (!email || !password) {
-        if (loginStatus) loginStatus.textContent = 'Fyll i både e-post och lösenord.';
-        return;
-      }
+    if (!email || !password) {
+      if (loginStatus) loginStatus.textContent = 'Fyll i både e-post och lösenord.';
+      return;
+    }
 
-      if (loginStatus) loginStatus.textContent = 'Loggar in...';
+    if (loginStatus) loginStatus.textContent = 'Loggar in...';
 
-      try {
-        const res = await api.login({ email, password });
-        console.log('Login response:', res);
+    try {
+      const res = await api.login({ email, password });
+      console.log('Login response:', res);
 
-        if (res && res.ok && res.customer) {
-          auth.setUser({
-            id: res.customer.id,
-            email: res.customer.email,
-            fullName: res.customer.fullName,
-          });
-          if (loginStatus) loginStatus.textContent = 'Inloggning lyckades.';
-          updateLoginUI();
+      if (res && res.ok && res.customer) {
+        auth.setUser({
+          id: res.customer.id,
+          email: res.customer.email,
+          fullName: res.customer.fullName,
+        });
+        if (loginStatus) loginStatus.textContent = 'Inloggning lyckades.';
+        updateLoginUI();
 
-          const target = el('profile-root') || el('rate-form');
-          if (target) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }
-        } else {
-          const msg = res?.error || 'Inloggningen misslyckades.';
-          if (loginStatus) loginStatus.textContent = msg;
+        const target = el('profile-root') || el('rate-form');
+        if (target) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-      } catch (err) {
-        console.error('Login fetch error:', err);
-        if (loginStatus) loginStatus.textContent = 'Nätverksfel vid inloggning.';
+      } else {
+        const msg = res?.error || 'Inloggningen misslyckades.';
+        if (loginStatus) loginStatus.textContent = msg;
       }
-    });
+    } catch (err) {
+      console.error('Login fetch error:', err);
+      if (loginStatus) loginStatus.textContent = 'Nätverksfel vid inloggning.';
+    }
+  }
+
+  if (loginBtn && loginEmail && loginPassword) {
+    loginBtn.addEventListener('click', handleLogin);
+
+    const loginKeyHandler = (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleLogin();
+      }
+    };
+    loginEmail.addEventListener('keydown', loginKeyHandler);
+    loginPassword.addEventListener('keydown', loginKeyHandler);
   }
 
   if (logoutBtn) {
     logoutBtn.addEventListener('click', () => {
       auth.clear();
+      clearAvatar();
       location.reload();
+    });
+  }
+
+  // Profilbild – lyssna på filuppladdning
+  if (profileAvatarInput) {
+    profileAvatarInput.addEventListener('change', () => {
+      const file = profileAvatarInput.files && profileAvatarInput.files[0];
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        alert('Välj en bildfil.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result;
+        setAvatar(dataUrl);
+        const user = auth.getUser();
+        updateAvatars(user);
+      };
+      reader.readAsDataURL(file);
     });
   }
 
@@ -644,7 +804,8 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
-    // ============================================================
+
+  // ============================================================
   // ADMIN-DASHBOARD (admin.html)
   // ============================================================
   const ADMIN_KEY_STORAGE = 'peerRateAdminKey';
@@ -785,7 +946,7 @@ window.addEventListener('DOMContentLoaded', () => {
         const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
         const name = r.fullName || r.subjectRef || '';
         const amount = r.amount ? `${r.amount} ${r.currency || 'SEK'}` : '';
-        tr = document.createElement('tr');
+        const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${dateStr}</td>
           <td>${name}</td>
@@ -922,5 +1083,4 @@ window.addEventListener('DOMContentLoaded', () => {
   if (adminRoot || adminLoginCard) {
     updateAdminUIAfterLogin();
   }
-
 });

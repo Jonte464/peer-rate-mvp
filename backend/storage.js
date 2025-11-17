@@ -188,6 +188,11 @@ async function searchCustomers(q) {
       fullName: true,
       personalNumber: true,
       email: true,
+      phone: true,
+      addressStreet: true,
+      addressZip: true,
+      addressCity: true,
+      country: true,
       createdAt: true,
     },
   });
