@@ -1,5 +1,5 @@
-require('dotenv').config();
 
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
@@ -8,6 +8,8 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 const bcrypt = require('bcryptjs');
+const fetch = require('node-fetch'); // Lägg till om du kör Node <18
+const prisma = require('./prismaClient'); // Lägg till din Prisma-klient
 
 const {
   getOrCreateCustomerBySubjectRef,
@@ -73,12 +75,27 @@ app.use(
   })
 );
 
+
 // --- Helpers ---
 function nowIso() {
   return new Date().toISOString();
 }
 function normSubject(s) {
   return String(s || '').trim().toLowerCase();
+}
+function clean(s) {
+  if (s === undefined || s === null) return null;
+  const trimmed = String(s).trim();
+  return trimmed === '' ? null : trimmed;
+}
+function normalizePhone(s) {
+  const v = clean(s);
+  if (!v) return null;
+    const stripped = v.replace(/[^0-9+]/g, '');
+  return stripped || null;
+}
+function normalizeCheckbox(v) {
+  return v === true || v === 'true' || v === 'on' || v === '1';
 }
 
 // --- Health ---
@@ -150,8 +167,9 @@ const createCustomerSchema = Joi.object({
   addressCity: Joi.string().max(100).allow('', null),
   country: Joi.string().max(100).allow('', null),
 
-  // NYTT: samtycke – måste vara TRUE
+  // Samtycken – måste vara TRUE
   thirdPartyConsent: Joi.boolean().valid(true).required(),
+  termsAccepted: Joi.boolean().valid(true).required(),
 });
 
 /** Login */
@@ -280,8 +298,24 @@ app.get('/api/ratings/recent', async (_req, res) => {
    Kundregister: registrera dig
    ------------------------------------------------------- */
 app.post('/api/customers', async (req, res) => {
-  const { error, value } = createCustomerSchema.validate(req.body);
-   if (error) {
+  // Normalisera checkboxar innan validering
+  const raw = req.body || {};
+
+  const body = {
+    ...raw,
+    thirdPartyConsent: normalizeCheckbox(raw.thirdPartyConsent),
+    termsAccepted: normalizeCheckbox(raw.termsAccepted),
+  };
+
+  console.log(
+    'DEBUG backend /api/customers body:',
+    'thirdPartyConsent =', body.thirdPartyConsent,
+    'termsAccepted =', body.termsAccepted
+  );
+
+  const { error, value } = createCustomerSchema.validate(body);
+
+  if (error) {
     const firstDetail = error.details && error.details[0];
     const key =
       (firstDetail && firstDetail.context && firstDetail.context.key) ||
@@ -355,43 +389,9 @@ app.post('/api/customers', async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Lösenorden matchar inte.' });
   }
 
-  // --- NYTT: kolla checkboxarna för samtycke ---
-  const normalizeCheckbox = (v) =>
-    v === true || v === 'true' || v === 'on' || v === '1';
-
-  const thirdPartyConsent = normalizeCheckbox(req.body.thirdPartyConsent);
-  const termsAccepted = normalizeCheckbox(req.body.termsAccepted);
-
-  if (!thirdPartyConsent) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Du behöver samtycka till inhämtning från tredje part för att kunna registrera dig.',
-    });
-  }
-
-  if (!termsAccepted) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Du måste godkänna användarvillkor och integritetspolicy för att kunna registrera dig.',
-    });
-  }
-  // --- SLUT NYTT ---
-
-  const clean = (s) => {
-    if (s === undefined || s === null) return null;
-    const trimmed = String(s).trim();
-    return trimmed === '' ? null : trimmed;
-  };
-
-  const normalizePhone = (s) => {
-    const v = clean(s);
-    if (!v) return null;
-    const stripped = v.replace(/[^\d+]/g, '');
-    return stripped || null;
-  };
-
-  const fullName = `${clean(value.firstName) || ''} ${clean(value.lastName) || ''}`.trim() || null;
-
+  // Här vet vi: thirdPartyConsent = true, termsAccepted = true (validerat av Joi)
+  const fullName = `${clean(value.firstName) || ''} ${clean(value.lastName) || ''}`
+    .trim() || null;
   const passwordHash = await bcrypt.hash(value.password, 10);
 
   const payload = {
@@ -405,9 +405,8 @@ app.post('/api/customers', async (req, res) => {
     addressCity: clean(value.addressCity),
     country: clean(value.country),
     passwordHash,
-    // Om vi senare lägger in fält i databasen kan vi även spara dessa:
-    // thirdPartyConsent,
-    // termsAccepted,
+    thirdPartyConsent: value.thirdPartyConsent === true,
+    // termsAccepted sparas inte i DB just nu – bara valideras
   };
 
   try {
@@ -586,7 +585,8 @@ app.get('/api/admin/customer', requireAdmin, async (req, res) => {
   }
 });
 
-// --- Fallback: SPA ---
+
+// --- Fallback: SPA --- (lägg sist)
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
