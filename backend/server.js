@@ -8,7 +8,6 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 const bcrypt = require('bcryptjs');
-const fetch = require('node-fetch'); // Lägg till om du kör Node <18
 const prisma = require('./prismaClient'); // Lägg till din Prisma-klient
 
 const {
