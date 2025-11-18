@@ -590,10 +590,51 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  updateLoginUI();
+    updateLoginUI();
   if (profileRoot) {
     refreshProfile();
   }
+
+  // ============================================================
+  // EXTERN DATA (DEMO) - profile.html
+  // ============================================================
+  const fetchExternalBtn = document.getElementById('fetch-external');
+  if (fetchExternalBtn) {
+    fetchExternalBtn.addEventListener('click', async () => {
+      const box = document.getElementById('external-result');
+      box.textContent = 'Hämtar extern data…';
+
+      try {
+        const res = await fetch('/api/profile/external-demo', {
+          method: 'GET',
+          credentials: 'include'
+        });
+
+        const data = await res.json();
+
+        if (!data.ok) {
+          box.textContent = data.error || 'Kunde inte hämta data.';
+          return;
+        }
+
+        box.innerHTML = `
+          <strong>Postnummer:</strong> ${data.postnummer}<br />
+          <strong>Ort:</strong> ${data.ort || '-'}<br />
+          <strong>Region:</strong> ${data.region || '-'}<br />
+          <strong>Latitud:</strong> ${data.latitude || '-'}<br />
+          <strong>Longitud:</strong> ${data.longitude || '-'}
+        `;
+      } catch (err) {
+        box.textContent = 'Tekniskt fel.';
+        console.error(err);
+      }
+    });
+  }
+
+  // ============================================================
+  // BETYGFORMULÄR
+  // ============================================================
+
 
   // ============================================================
   // BETYGFORMULÄR
