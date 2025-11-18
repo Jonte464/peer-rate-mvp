@@ -744,123 +744,135 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ============================================================ 
-  // KUNDREGISTRERING (customer.html)
-  // ============================================================
-  const customerForm = document.getElementById('customer-form');
-  if (customerForm) {
-    let custNoticeTimer = null;
-    function showCustNotice(ok, msg) {
-      const box = el('cust-notice');
-      if (!box) return;
-      box.className = 'notice ' + (ok ? 'ok' : 'err');
-      box.textContent = msg;
-      clearTimeout(custNoticeTimer);
-      custNoticeTimer = setTimeout(() => {
-        box.className = 'notice';
-        box.textContent = '';
-      }, 7000);
-    }
-    function clearCustNotice() {
-      const box = el('cust-notice');
-      if (!box) return;
-      clearTimeout(custNoticeTimer);
+// ============================================================
+// KUNDREGISTRERING (customer.html)
+// ============================================================
+
+const customerForm = document.getElementById('customer-form');
+
+if (customerForm) {
+  let custNoticeTimer = null;
+
+  function showCustNotice(ok, msg) {
+    const box = el('cust-notice');
+    if (!box) return;
+    box.className = 'notice ' + (ok ? 'ok' : 'err');
+    box.textContent = msg;
+    clearTimeout(custNoticeTimer);
+    custNoticeTimer = setTimeout(() => {
       box.className = 'notice';
       box.textContent = '';
-    }
-
-    customerForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      clearCustNotice();
-
-      const firstName = el('cust-firstName')?.value?.trim() || '';
-      const lastName = el('cust-lastName')?.value?.trim() || '';
-      const personalNumber = el('cust-personalNumber')?.value?.trim() || '';
-      const email = el('cust-email')?.value?.trim() || '';
-      const emailConfirm = el('cust-emailConfirm')?.value?.trim() || '';
-      const password = el('cust-password')?.value || '';
-      const passwordConfirm = el('cust-passwordConfirm')?.value || '';
-      const phone = el('cust-phone')?.value?.trim() || '';
-      const addressStreet = el('cust-addressStreet')?.value?.trim() || '';
-      const addressZip = el('cust-addressZip')?.value?.trim() || '';
-      const addressCity = el('cust-addressCity')?.value?.trim() || '';
-      const country = el('cust-country')?.value?.trim() || '';
-
-      // Nya rutor: tredjepartssamtycke + villkor/integritet
-      const thirdPartyConsent = el('cust-thirdPartyConsent')?.checked || false;
-      const termsAccepted = el('cust-terms')?.checked || false;
-
-      if (!firstName || !lastName) {
-        return showCustNotice(false, 'Fyll i både förnamn och efternamn.');
-      }
-      if (!personalNumber || !/^\d{10,12}$/.test(personalNumber)) {
-        return showCustNotice(false, 'Fyll i ett giltigt personnummer med 10–12 siffror.');
-      }
-      if (!email || !emailConfirm) {
-        return showCustNotice(false, 'Fyll i och bekräfta din e-postadress.');
-      }
-      if (email.toLowerCase() !== emailConfirm.toLowerCase()) {
-        return showCustNotice(false, 'E-postadresserna matchar inte.');
-      }
-      if (!password || password.length < 8) {
-        return showCustNotice(false, 'Lösenordet måste vara minst 8 tecken.');
-      }
-      if (password !== passwordConfirm) {
-        return showCustNotice(false, 'Lösenorden matchar inte.');
-      }
-      if (phone && !/^[0-9+\s\-()]*$/.test(phone)) {
-        return showCustNotice(false, 'Telefonnummer får bara innehålla siffror, mellanslag, +, -, ().');
-      }
-
-      // Extra säkerhet: kolla att checkboxarna verkligen är ikryssade
-      if (!thirdPartyConsent) {
-        return showCustNotice(false, 'Du behöver samtycka till inhämtning från tredje part för att kunna använda tjänsten.');
-      }
-      if (!termsAccepted) {
-        return showCustNotice(false, 'Du måste godkänna användarvillkor och integritetspolicy.');
-      }
-
-      const body = {
-  firstName,
-  lastName,
-  personalNumber,
-  email,
-  emailConfirm,
-  password,
-  passwordConfirm,
-  phone: phone || null,
-  addressStreet: addressStreet || null,
-  addressZip: addressZip || null,
-  addressCity: addressCity || null,
-  country: country || null,
-  thirdPartyConsent,
-  termsAccepted,
-};
-
-
-      try {
-        const res = await api.createCustomer(body);
-        console.log('Customer API response:', res);
-
-        if (res && res.ok) {
-          showCustNotice(true, 'Tack! Din registrering har sparats. Du kan nu logga in på sidan Min profil eller Lämna betyg.');
-          customerForm.reset();
-        } else {
-          const msg =
-            res?.error ||
-            res?.message ||
-            (res?.status === 409
-              ? 'Det finns redan en användare med samma e-post eller personnummer.'
-              : `Något gick fel. (status: ${res?.status ?? 'ok?'})`);
-          showCustNotice(false, msg);
-        }
-      } catch (err) {
-        console.error('Customer fetch error:', err);
-        showCustNotice(false, 'Nätverksfel. Försök igen.');
-      }
-    });
+    }, 7000);
   }
 
+  function clearCustNotice() {
+    const box = el('cust-notice');
+    if (!box) return;
+    clearTimeout(custNoticeTimer);
+    box.className = 'notice';
+    box.textContent = '';
+  }
+
+  // EXAKT NY SUBMIT-FUNKTION
+  customerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearCustNotice();
+
+    // === 1. Läs alla vanliga fält ===
+    const firstName = el('cust-firstName')?.value?.trim() || '';
+    const lastName = el('cust-lastName')?.value?.trim() || '';
+    const personalNumber = el('cust-personalNumber')?.value?.trim() || '';
+    const email = el('cust-email')?.value?.trim() || '';
+    const emailConfirm = el('cust-emailConfirm')?.value?.trim() || '';
+    const password = el('cust-password')?.value || '';
+    const passwordConfirm = el('cust-passwordConfirm')?.value || '';
+    const phone = el('cust-phone')?.value?.trim() || '';
+    const addressStreet = el('cust-addressStreet')?.value?.trim() || '';
+    const addressZip = el('cust-addressZip')?.value?.trim() || '';
+    const addressCity = el('cust-addressCity')?.value?.trim() || '';
+    const country = el('cust-country')?.value?.trim() || '';
+
+    // === 2. Läs checkboxarna korrekt ===
+    const thirdPartyConsent = el('cust-thirdPartyConsent')?.checked === true;
+    const termsAccepted = el('cust-termsAccepted')?.checked === true;
+
+    console.log("DEBUG frontend termsAccepted:", termsAccepted);
+    console.log("DEBUG frontend thirdPartyConsent:", thirdPartyConsent);
+
+    // === 3. Frontend-validering ===
+    if (!firstName || !lastName)
+      return showCustNotice(false, 'Fyll i både förnamn och efternamn.');
+
+    if (!personalNumber || !/^\d{10,12}$/.test(personalNumber))
+      return showCustNotice(false, 'Fyll i ett giltigt personnummer med 10–12 siffror.');
+
+    if (!email || !emailConfirm)
+      return showCustNotice(false, 'Fyll i och bekräfta din e-postadress.');
+
+    if (email.toLowerCase() !== emailConfirm.toLowerCase())
+      return showCustNotice(false, 'E-postadresserna matchar inte.');
+
+    if (!password || password.length < 8)
+      return showCustNotice(false, 'Lösenordet måste vara minst 8 tecken.');
+
+    if (password !== passwordConfirm)
+      return showCustNotice(false, 'Lösenorden matchar inte.');
+
+    if (!thirdPartyConsent)
+      return showCustNotice(false, 'Du behöver samtycka till extern registerinhämtning.');
+
+    if (!termsAccepted)
+      return showCustNotice(false, 'Du måste godkänna användarvillkor och integritetspolicy.');
+
+    // === 4. Skapa body exakt enligt backend ===
+    const body = {
+      firstName,
+      lastName,
+      personalNumber,
+      email,
+      emailConfirm,
+      password,
+      passwordConfirm,
+      phone: phone || null,
+      addressStreet: addressStreet || null,
+      addressZip: addressZip || null,
+      addressCity: addressCity || null,
+      country: country || null,
+      thirdPartyConsent,
+      termsAccepted,
+    };
+
+    console.log("DEBUG payload before send:", body);
+
+    // === 5. Skicka till backend ===
+    try {
+      const res = await api.createCustomer(body);
+      console.log("Customer API response:", res);
+
+      // Backend OK
+      if (res && res.ok) {
+        showCustNotice(true, 'Tack! Din registrering har sparats. Du kan nu logga in.');
+        customerForm.reset();
+        return;
+      }
+
+      // Backend FEL
+      const msg =
+        res?.fieldErrors?.termsAccepted ||
+        res?.error ||
+        res?.message ||
+        (res?.status === 409
+          ? 'Det finns redan en användare med denna e-post eller personnummer.'
+          : `Fel vid registrering (status ${res?.status}).`);
+
+      showCustNotice(false, msg);
+
+    } catch (err) {
+      console.error("Customer fetch error:", err);
+      showCustNotice(false, 'Tekniskt fel. Försök igen strax.');
+    }
+  });
+}
 
   // ============================================================
   // ADMIN-DASHBOARD (admin.html)

@@ -73,6 +73,7 @@
       margin-top:16px;
     }
     button.primary:hover{filter:brightness(1.05);}
+
     .notice{
       display:none;
       margin-top:12px;
@@ -82,8 +83,19 @@
       border:1px solid transparent;
       font-size:14px;
     }
-    .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok);}
-    .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err);}
+    .notice.ok{
+      display:block;
+      background:#e7f5f1;
+      border-color:#bde6db;
+      color:var(--ok);
+    }
+    .notice.err{
+      display:block;
+      background:#fdecec;
+      border-color:#f6c4c4;
+      color:var(--err);
+    }
+
     @media (max-width:600px){
       .wrap{margin:20px auto 40px;padding:0 12px 32px;}
       h1{font-size:26px;}
@@ -102,17 +114,18 @@
         <div class="row">
           <div>
             <label for="cust-firstName">Förnamn</label>
-            <input id="cust-firstName" type="text" placeholder="Erik" required />
+            <input id="cust-firstName" name="firstName" type="text" placeholder="Erik" required />
           </div>
           <div>
             <label for="cust-lastName">Efternamn</label>
-            <input id="cust-lastName" type="text" placeholder="Example" required />
+            <input id="cust-lastName" name="lastName" type="text" placeholder="Example" required />
           </div>
         </div>
 
         <label for="cust-personalNumber">Personnummer (10–12 siffror)</label>
         <input
           id="cust-personalNumber"
+          name="personalNumber"
           type="text"
           inputmode="numeric"
           pattern="[0-9]{10,12}"
@@ -121,45 +134,53 @@
         />
 
         <label for="cust-email">E-post</label>
-        <input id="cust-email" type="email" placeholder="erik@example.com" required />
+        <input id="cust-email" name="email" type="email" placeholder="erik@example.com" required />
 
         <label for="cust-emailConfirm">Bekräfta e-post</label>
-        <input id="cust-emailConfirm" type="email" placeholder="Upprepa e-postadressen" required />
+        <input id="cust-emailConfirm" name="emailConfirm" type="email" placeholder="Upprepa e-postadressen" required />
 
         <label for="cust-password">Lösenord</label>
-        <input id="cust-password" type="password" placeholder="Minst 8 tecken" required minlength="8" />
+        <input id="cust-password" name="password" type="password" placeholder="Minst 8 tecken" required minlength="8" />
 
         <label for="cust-passwordConfirm">Bekräfta lösenord</label>
-        <input id="cust-passwordConfirm" type="password" placeholder="Upprepa lösenord" required minlength="8" />
+        <input
+          id="cust-passwordConfirm"
+          name="passwordConfirm"
+          type="password"
+          placeholder="Upprepa lösenord"
+          required
+          minlength="8"
+        />
         <p class="tiny muted">
           Spara ditt lösenord – senare kan du logga in med BankID istället, men tills dess används detta.
         </p>
 
         <label for="cust-phone">Telefon (valfritt)</label>
-        <input id="cust-phone" type="tel" placeholder="+46 70 123 45 67" />
+        <input id="cust-phone" name="phone" type="tel" placeholder="+46 70 123 45 67" />
 
         <label for="cust-addressStreet">Gatuadress</label>
-        <input id="cust-addressStreet" type="text" placeholder="Exempelgatan 1" />
+        <input id="cust-addressStreet" name="addressStreet" type="text" placeholder="Exempelgatan 1" />
 
         <div class="row">
           <div>
             <label for="cust-addressZip">Postnummer</label>
-            <input id="cust-addressZip" type="text" placeholder="123 45" />
+            <input id="cust-addressZip" name="addressZip" type="text" placeholder="123 45" />
           </div>
           <div>
             <label for="cust-addressCity">Ort</label>
-            <input id="cust-addressCity" type="text" placeholder="Exempelstad" />
+            <input id="cust-addressCity" name="addressCity" type="text" placeholder="Exempelstad" />
           </div>
         </div>
 
         <label for="cust-country">Land</label>
-        <input id="cust-country" type="text" placeholder="Sverige" />
+        <input id="cust-country" name="country" type="text" placeholder="Sverige" />
 
         <!-- Samtycke till inhämtning från tredje part -->
         <div style="margin-top:16px;">
           <label class="tiny" style="font-weight:600;display:flex;align-items:flex-start;gap:8px;">
             <input
               id="cust-thirdPartyConsent"
+              name="thirdPartyConsent"
               type="checkbox"
               style="width:auto;margin-top:3px;"
               required
@@ -177,11 +198,12 @@
           </label>
         </div>
 
-        <!-- NYTT: Godkännande av användarvillkor och integritetspolicy -->
+        <!-- Godkännande av användarvillkor och integritetspolicy -->
         <div style="margin-top:12px;">
           <label class="tiny" style="font-weight:600;display:flex;align-items:flex-start;gap:8px;">
             <input
-              id="cust-terms"
+              id="cust-termsAccepted"
+              name="termsAccepted"
               type="checkbox"
               style="width:auto;margin-top:3px;"
               required
