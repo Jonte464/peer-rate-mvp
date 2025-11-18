@@ -299,6 +299,28 @@ app.post('/api/customers', async (req, res) => {
     return res.status(400).json({ ok: false, error: 'Lösenorden matchar inte.' });
   }
 
+  // --- NYTT: kolla checkboxarna för samtycke ---
+  const normalizeCheckbox = (v) =>
+    v === true || v === 'true' || v === 'on' || v === '1';
+
+  const thirdPartyConsent = normalizeCheckbox(req.body.thirdPartyConsent);
+  const termsAccepted = normalizeCheckbox(req.body.termsAccepted);
+
+  if (!thirdPartyConsent) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Du behöver samtycka till inhämtning från tredje part för att kunna registrera dig.',
+    });
+  }
+
+  if (!termsAccepted) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Du måste godkänna användarvillkor och integritetspolicy för att kunna registrera dig.',
+    });
+  }
+  // --- SLUT NYTT ---
+
   const clean = (s) => {
     if (s === undefined || s === null) return null;
     const trimmed = String(s).trim();
@@ -327,7 +349,9 @@ app.post('/api/customers', async (req, res) => {
     addressCity: clean(value.addressCity),
     country: clean(value.country),
     passwordHash,
-    thirdPartyConsent: value.thirdPartyConsent === true,
+    // Om vi senare lägger in fält i databasen kan vi även spara dessa:
+    // thirdPartyConsent,
+    // termsAccepted,
   };
 
   try {
@@ -354,6 +378,7 @@ app.post('/api/customers', async (req, res) => {
     return res.status(500).json({ ok: false, error: 'Kunde inte spara kund' });
   }
 });
+
 
 /* -------------------------------------------------------
    Login – används av “Lämna betyg” & “Min profil”

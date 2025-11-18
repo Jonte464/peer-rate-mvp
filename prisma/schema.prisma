@@ -36,6 +36,8 @@ model Customer {
   reports      Report[]      @relation("CustomerReports")
   score        Score?
   transactions Transaction[]
+  termsAccepted Boolean @default(false)
+
 }
 
 /**

@@ -155,7 +155,7 @@
         <label for="cust-country">Land</label>
         <input id="cust-country" type="text" placeholder="Sverige" />
 
-        <!-- NYTT: Samtycke till inhämtning från tredje part -->
+        <!-- Samtycke till inhämtning från tredje part -->
         <div style="margin-top:16px;">
           <label class="tiny" style="font-weight:600;display:flex;align-items:flex-start;gap:8px;">
             <input
@@ -167,12 +167,35 @@
             <span>
               Jag samtycker till att PeerRate får inhämta och behandla uppgifter om mig från externa register
               och andra tredjepartsleverantörer i syfte att verifiera min identitet, mina fordons- och/eller
-              fastighetsinnehav samt för att motverka bedrägerier och missbruk av tjänsten.
-              Exempel på sådana källor är Transportstyrelsen (fordonsuppgifter), Lantmäteriet (fastighetsuppgifter)
-              och motsvarande registerleverantörer. Jag är medveten om att sådan inhämtning alltid sker i enlighet
-              med gällande lagstiftning, inklusive dataskyddsregler (GDPR), samt de avtal som finns mellan PeerRate
-              och respektive registerhållare. Jag kan när som helst återkalla mitt samtycke genom att kontakta
-              PeerRate, men förstår att det kan påverka möjligheten att använda tjänsten fullt ut.
+              fastighetsinnehav samt för att motverka bedrägerier och missbruk av tjänsten. Exempel på sådana
+              källor är Transportstyrelsen (fordonsuppgifter), Lantmäteriet (fastighetsuppgifter) och
+              motsvarande registerleverantörer. Jag är medveten om att sådan inhämtning alltid sker i enlighet
+              med gällande lagstiftning, inklusive dataskyddsregler (GDPR), samt de avtal som finns mellan
+              PeerRate och respektive registerhållare. Jag kan när som helst återkalla mitt samtycke genom att
+              kontakta PeerRate, men förstår att det kan påverka möjligheten att använda tjänsten fullt ut.
+            </span>
+          </label>
+        </div>
+
+        <!-- NYTT: Godkännande av användarvillkor och integritetspolicy -->
+        <div style="margin-top:12px;">
+          <label class="tiny" style="font-weight:600;display:flex;align-items:flex-start;gap:8px;">
+            <input
+              id="cust-terms"
+              type="checkbox"
+              style="width:auto;margin-top:3px;"
+              required
+            />
+            <span>
+              Jag har läst och godkänner
+              <a href="https://www.peerrate.ai/villkor" target="_blank" rel="noopener noreferrer">
+                användarvillkoren
+              </a>
+              och
+              <a href="https://www.peerrate.ai/integritetspolicy" target="_blank" rel="noopener noreferrer">
+                integritetspolicyn
+              </a>
+              för PeerRate.
             </span>
           </label>
         </div>

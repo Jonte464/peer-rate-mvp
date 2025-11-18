@@ -703,7 +703,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // ============================================================
+  // ============================================================ 
   // KUNDREGISTRERING (customer.html)
   // ============================================================
   const customerForm = document.getElementById('customer-form');
@@ -745,6 +745,10 @@ window.addEventListener('DOMContentLoaded', () => {
       const addressCity = el('cust-addressCity')?.value?.trim() || '';
       const country = el('cust-country')?.value?.trim() || '';
 
+      // Nya rutor: tredjepartssamtycke + villkor/integritet
+      const thirdPartyConsent = el('cust-thirdPartyConsent')?.checked || false;
+      const termsAccepted = el('cust-terms')?.checked || false;
+
       if (!firstName || !lastName) {
         return showCustNotice(false, 'Fyll i både förnamn och efternamn.');
       }
@@ -767,30 +771,38 @@ window.addEventListener('DOMContentLoaded', () => {
         return showCustNotice(false, 'Telefonnummer får bara innehålla siffror, mellanslag, +, -, ().');
       }
 
+      // Extra säkerhet: kolla att checkboxarna verkligen är ikryssade
+      if (!thirdPartyConsent) {
+        return showCustNotice(false, 'Du behöver samtycka till inhämtning från tredje part för att kunna använda tjänsten.');
+      }
+      if (!termsAccepted) {
+        return showCustNotice(false, 'Du måste godkänna användarvillkor och integritetspolicy.');
+      }
+
       const body = {
-        firstName,
-        lastName,
-        personalNumber,
-        email,
-        emailConfirm,
-        password,
-        passwordConfirm,
-        phone: phone || null,
-        addressStreet: addressStreet || null,
-        addressZip: addressZip || null,
-        addressCity: addressCity || null,
-        country: country || null,
-      };
+  firstName,
+  lastName,
+  personalNumber,
+  email,
+  emailConfirm,
+  password,
+  passwordConfirm,
+  phone: phone || null,
+  addressStreet: addressStreet || null,
+  addressZip: addressZip || null,
+  addressCity: addressCity || null,
+  country: country || null,
+  thirdPartyConsent,
+  termsAccepted,
+};
+
 
       try {
         const res = await api.createCustomer(body);
         console.log('Customer API response:', res);
 
         if (res && res.ok) {
-          showCustNotice(
-            true,
-            'Tack! Din registrering har sparats. Du kan nu logga in på sidan Min profil eller Lämna betyg.'
-          );
+          showCustNotice(true, 'Tack! Din registrering har sparats. Du kan nu logga in på sidan Min profil eller Lämna betyg.');
           customerForm.reset();
         } else {
           const msg =
@@ -807,6 +819,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
 
   // ============================================================
   // ADMIN-DASHBOARD (admin.html)
