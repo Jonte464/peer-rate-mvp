@@ -345,7 +345,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function renderRatingsList(ratings) {
+    function renderRatingsList(ratings) {
     const listEl = el('ratings-list');
     if (!listEl) return;
 
@@ -353,6 +353,45 @@ window.addEventListener('DOMContentLoaded', () => {
       listEl.innerHTML = '<p class="tiny muted">Du har ännu inga individuella omdömen.</p>';
       return;
     }
+
+    listEl.innerHTML = '';
+    ratings.forEach((r) => {
+      const row = document.createElement('div');
+      row.className = 'rating-row';
+
+      // Vänster del: stjärnor + metadata
+      const main = document.createElement('div');
+      main.className = 'rating-main';
+
+      const stars = document.createElement('div');
+      stars.className = 'rating-stars';
+      const score = Number(r.rating || 0);
+      const fullStars = Math.max(0, Math.min(5, score));
+      stars.textContent = '★'.repeat(fullStars) + '☆'.repeat(5 - fullStars);
+
+      const meta = document.createElement('div');
+      meta.className = 'rating-meta';
+      const d = new Date(r.createdAt);
+      const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleDateString('sv-SE');
+      const rater = r.raterMasked || 'Anonym';
+      meta.textContent = `${dateStr} · från ${rater}`;
+
+      main.appendChild(stars);
+      main.appendChild(meta);
+      row.appendChild(main);
+
+      // Höger del: kommentar i kursiv text (om den finns)
+      if (r.comment && r.comment.trim().length > 0) {
+        const commentEl = document.createElement('div');
+        commentEl.className = 'rating-comment-inline';
+        commentEl.textContent = r.comment;
+        row.appendChild(commentEl);
+      }
+
+      listEl.appendChild(row);
+    });
+  }
+
 
     listEl.innerHTML = '';
     ratings.forEach((r, idx) => {

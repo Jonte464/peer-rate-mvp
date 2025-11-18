@@ -281,11 +281,67 @@ app.get('/api/ratings/recent', async (_req, res) => {
    ------------------------------------------------------- */
 app.post('/api/customers', async (req, res) => {
   const { error, value } = createCustomerSchema.validate(req.body);
-  if (error) {
+   if (error) {
+    const firstDetail = error.details && error.details[0];
+    const key =
+      (firstDetail && firstDetail.context && firstDetail.context.key) ||
+      (firstDetail && firstDetail.path && firstDetail.path[0]);
+
+    let friendlyField = null;
+    switch (key) {
+      case 'firstName':
+        friendlyField = 'förnamn';
+        break;
+      case 'lastName':
+        friendlyField = 'efternamn';
+        break;
+      case 'personalNumber':
+        friendlyField = 'personnummer';
+        break;
+      case 'email':
+        friendlyField = 'e-post';
+        break;
+      case 'emailConfirm':
+        friendlyField = 'bekräfta e-post';
+        break;
+      case 'phone':
+        friendlyField = 'telefonnummer';
+        break;
+      case 'addressStreet':
+        friendlyField = 'gatuadress';
+        break;
+      case 'addressZip':
+        friendlyField = 'postnummer';
+        break;
+      case 'addressCity':
+        friendlyField = 'ort';
+        break;
+      case 'country':
+        friendlyField = 'land';
+        break;
+      case 'password':
+        friendlyField = 'lösenord';
+        break;
+      case 'passwordConfirm':
+        friendlyField = 'bekräfta lösenord';
+        break;
+      case 'thirdPartyConsent':
+        friendlyField = 'samtycke till tredjepartsdata';
+        break;
+      case 'termsAccepted':
+        friendlyField = 'godkännande av villkor och integritetspolicy';
+        break;
+      default:
+        friendlyField = null;
+    }
+
+    const msg = friendlyField
+      ? `Kontrollera fältet: ${friendlyField}.`
+      : 'En eller flera uppgifter är ogiltiga. Kontrollera formuläret.';
+
     return res.status(400).json({
       ok: false,
-      error: 'Ogiltig kunddata',
-      details: error.details,
+      error: msg,
     });
   }
 
@@ -533,6 +589,62 @@ app.get('/api/admin/customer', requireAdmin, async (req, res) => {
 // --- Fallback: SPA ---
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+});
+
+/* -------------------------------------------------------
+   Hämta extern data (DEMO) baserat på postnummer
+   ------------------------------------------------------- */
+app.get('/api/profile/external-demo', async (req, res) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ ok: false, error: 'Ej inloggad' });
+    }
+
+    // Hämta kund från databasen
+    const customer = await prisma.customer.findUnique({
+      where: { id: req.user.id },
+    });
+
+    if (!customer) {
+      return res.status(404).json({ ok: false, error: 'Kund saknas' });
+    }
+
+    // Om användaren inte har postnummer → fel
+    if (!customer.addressZip) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Användaren saknar postnummer. Lägg till det i din profil.',
+      });
+    }
+
+    const zip = String(customer.addressZip).replace(/\s+/g, '');
+
+    // Hämta extern data från gratis API
+    const apiUrl = `https://api.zippopotam.us/SE/${zip}`;
+    const response = await fetch(apiUrl);
+
+    if (!response.ok) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Ingen extern information hittades för detta postnummer.',
+      });
+    }
+
+    const data = await response.json();
+
+    return res.json({
+      ok: true,
+      source: 'zippopotam.us',
+      postnummer: zip,
+      ort: data.places?.[0]?.['place name'] || null,
+      region: data.places?.[0]?.['state'] || null,
+      latitude: data.places?.[0]?.latitude || null,
+      longitude: data.places?.[0]?.longitude || null,
+    });
+  } catch (err) {
+    console.error('External demo error:', err);
+    return res.status(500).json({ ok: false, error: 'Serverfel vid extern hämtning' });
+  }
 });
 
 // --- Start ---
