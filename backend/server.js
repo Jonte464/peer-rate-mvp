@@ -8,7 +8,12 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 const bcrypt = require('bcryptjs');
-const prisma = require('./prismaClient'); // Lägg till din Prisma-klient
+
+// ✅ Prisma-klient direkt här (ingen prismaClient-fil behövs)
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+// ✅ INGEN node-fetch här – Node 20 har fetch inbyggt globalt
 
 const {
   getOrCreateCustomerBySubjectRef,
@@ -24,6 +29,7 @@ const {
   adminListRecentReports,
   adminGetCustomerWithRatings,
 } = require('./storage');
+
 
 const app = express();
 
