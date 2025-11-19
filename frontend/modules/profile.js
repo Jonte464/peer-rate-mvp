@@ -201,7 +201,18 @@ async function handleRatingSubmit(event) {
 
   const body = { ratedUserEmail, score, comment, proofRef };
   try {
-    const result = await api.createRating(body);
+    // Map to backend schema: subject, rating, rater, comment, proofRef
+    const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || null;
+    const payload = {
+      subject: ratedUserEmail,
+      rating: Number(score),
+      rater: raterVal || undefined,
+      comment: comment || undefined,
+      proofRef: proofRef || undefined,
+    };
+    console.log('Sending rating payload:', payload);
+    const result = await api.createRating(payload);
+    console.log('Rating response:', result);
     if (!result || result.ok === false) {
       const message = result?.error || 'Kunde inte spara betyget.';
       showNotification('error', message, 'notice');
