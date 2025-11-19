@@ -175,17 +175,19 @@
         Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.
       </p>
 
-      <label for="login-email">E-post</label>
-      <input id="login-email" type="email" placeholder="erik@example.com" />
+      <form id="rating-login-form" autocomplete="off">
+        <label for="login-email">E-post</label>
+        <input id="login-email" name="email" type="email" placeholder="erik@example.com" />
 
-      <label for="login-password">Lösenord</label>
-      <input id="login-password" type="password" placeholder="Ditt lösenord" />
+        <label for="login-password">Lösenord</label>
+        <input id="login-password" name="password" type="password" placeholder="Ditt lösenord" />
 
-      <div class="row" style="margin-top:12px">
-        <button class="primary" type="button" id="login-btn">Logga in</button>
-      </div>
+        <div class="row" style="margin-top:12px">
+          <button class="primary" type="submit" id="login-btn">Logga in</button>
+        </div>
 
-      <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
+        <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
+      </form>
     </section>
 
     <!-- LÄMNA BETYG -->
@@ -199,15 +201,15 @@
 
       <!-- Denna wrapper visas bara när man är inloggad (styrt av script.js) -->
       <div id="rating-form-wrapper" class="hidden">
-        <form id="rate-form" autocomplete="off">
+        <form id="rating-form" autocomplete="off">
           <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
-          <input id="subject" type="text" placeholder="erik@example.com" required />
+          <input id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
 
           <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span></label>
-          <input id="rater" type="text" placeholder="" />
+          <input id="rater" name="rater" type="text" placeholder="" />
 
           <label for="rating">Betyg (1–5)</label>
-          <select id="rating" required>
+          <select id="rating" name="score" required>
             <option value="" disabled selected hidden>Välj betyg</option>
             <option value="1">1</option>
             <option value="2">2</option>
@@ -217,10 +219,10 @@
           </select>
 
           <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
-          <textarea id="comment" placeholder=""></textarea>
+          <textarea id="comment" name="comment" placeholder=""></textarea>
 
           <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
-          <input id="proofRef" type="text" placeholder="ORDER-123" />
+          <input id="proofRef" name="proofRef" type="text" placeholder="ORDER-123" />
 
           <!-- RAPPORT-del (som tidigare) -->
           <div class="report-container">

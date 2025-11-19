@@ -3,7 +3,7 @@ import auth from './auth.js';
 import api from './api.js';
 import { el, showNotice, clearNotice } from './utils.js';
 import customerForm from './customer.js';
-import { updateUserBadge, updateAvatars, initProfilePage } from './profile.js';
+import { updateUserBadge, updateAvatars, initProfilePage, initRatingLogin } from './profile.js';
 import { adminLoginForm, adminLogoutBtn } from './admin.js';
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -26,5 +26,10 @@ window.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname || '';
   if (path.includes('/min-profil') || path.includes('profile.html') || path.includes('/profile')) {
     initProfilePage();
+  }
+
+  // Initiera Lämna-betyg login på rating-sidan
+  if (path.includes('/lamna-betyg') || path.includes('index.html') || document.getElementById('rating-card')) {
+    initRatingLogin();
   }
 });

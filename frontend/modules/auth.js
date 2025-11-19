@@ -36,4 +36,15 @@ export async function login(email, password) {
   }
 }
 
+// Logga ut: rensa lokalt lagrad user
+export async function logout() {
+  try {
+    auth.clear();
+    return { ok: true };
+  } catch (err) {
+    console.error('auth.logout error', err);
+    return { ok: false, error: 'logout_failed' };
+  }
+}
+
 export default auth;
