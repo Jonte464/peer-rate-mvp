@@ -549,6 +549,46 @@ app.get('/api/admin/reports/recent', requireAdmin, async (req, res) => {
   }
 });
 
+/** Lista kunder (admin) */
+app.get('/api/admin/customers', requireAdmin, async (req, res) => {
+  try {
+    const page = Math.max(1, Number(req.query.page || 1));
+    const pageSize = Math.min(1000, Math.max(1, Number(req.query.limit || 50)));
+    const skip = (page - 1) * pageSize;
+
+    const [rows, total] = await Promise.all([
+      prisma.customer.findMany({
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: pageSize,
+        select: {
+          id: true,
+          subjectRef: true,
+          fullName: true,
+          email: true,
+          personalNumber: true,
+          createdAt: true,
+        },
+      }),
+      prisma.customer.count(),
+    ]);
+
+    const customers = rows.map((r) => ({
+      id: r.id,
+      subjectRef: r.subjectRef,
+      fullName: r.fullName || null,
+      email: r.email || null,
+      personalNumber: r.personalNumber || null,
+      createdAt: r.createdAt ? r.createdAt.toISOString() : null,
+    }));
+
+    res.json({ ok: true, count: customers.length, total, page, pageSize, customers });
+  } catch (e) {
+    console.error('[GET /api/admin/customers] error:', e);
+    res.status(500).json({ ok: false, error: 'Kunde inte hämta kunder' });
+  }
+});
+
 /** Sök kund + ratings (admin) */
 app.get('/api/admin/customer', requireAdmin, async (req, res) => {
   const q = (req.query.q || '').trim();
@@ -559,38 +599,6 @@ app.get('/api/admin/customer', requireAdmin, async (req, res) => {
     if (!customer) {
       return res.json({ ok: true, customer: null });
     }
-
-    /** Lista kunder (admin) */
-    app.get('/api/admin/customers', requireAdmin, async (req, res) => {
-      try {
-        const limit = Math.min(1000, Number(req.query.limit || 200));
-        const rows = await prisma.customer.findMany({
-          orderBy: { createdAt: 'desc' },
-          take: limit,
-          select: {
-            id: true,
-            subjectRef: true,
-            fullName: true,
-            email: true,
-            personalNumber: true,
-            createdAt: true,
-          },
-        });
-        const customers = rows.map((r) => ({
-          id: r.id,
-          subjectRef: r.subjectRef,
-          fullName: r.fullName || null,
-          email: r.email || null,
-          personalNumber: r.personalNumber || null,
-          createdAt: r.createdAt ? r.createdAt.toISOString() : null,
-        }));
-        res.json({ ok: true, count: customers.length, customers });
-      } catch (e) {
-        console.error('[GET /api/admin/customers] error:', e);
-        res.status(500).json({ ok: false, error: 'Kunde inte hämta kunder' });
-      }
-    });
-
     const subjectRef = customer.subjectRef || (customer.email || '').toLowerCase();
     let avgData = { count: 0, average: 0 };
     if (subjectRef) {

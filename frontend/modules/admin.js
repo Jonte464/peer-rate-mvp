@@ -119,29 +119,54 @@ async function loadAdminRecentReports() {
   }
 }
 
-// Hämta och rendera kunder
-async function loadAdminCustomers() {
+// Hämta och rendera kunder med pagination och felmeddelanden
+let adminCustomersCurrentPage = 1;
+let adminCustomersPageSize = 50;
+
+async function loadAdminCustomers(page = adminCustomersCurrentPage) {
   if (!adminCustomersTable) return;
   adminCustomersTable.textContent = 'Laddar…';
   try {
-    const res = await api.adminFetch('/api/admin/customers');
-    if (!res || !res.ok || !Array.isArray(res.customers)) {
-      adminCustomersTable.textContent = 'Kunde inte ladda kunder.';
+    const res = await api.adminFetch(`/api/admin/customers?limit=${adminCustomersPageSize}&page=${page}`);
+    if (!res || !res.ok) {
+      const serverMsg = res && res.error ? res.error : 'Kunde inte ladda kunder.';
+      adminCustomersTable.innerHTML = `<div class="tiny err">${escapeHtml(String(serverMsg))}</div>`;
       return;
     }
-    const rows = res.customers;
+
+    const rows = Array.isArray(res.customers) ? res.customers : [];
+    adminCustomersCurrentPage = Number(res.page || page || 1);
+    adminCustomersPageSize = Number(res.pageSize || adminCustomersPageSize);
+    const total = Number(res.total || 0);
+
+    if (!rows.length) {
+      adminCustomersTable.innerHTML = '<div class="tiny muted">Inga kunder hittades.</div>';
+      return;
+    }
+
     let html = '<table><thead><tr><th>Namn</th><th>E-post</th><th>subjectRef</th><th>Registrerat</th></tr></thead><tbody>';
     rows.forEach((c) => {
       const d = new Date(c.createdAt || c.registeredAt || '');
       const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleDateString('sv-SE');
       const displayName = c.fullName || c.name || '(namn saknas)';
-      // data-id will hold subjectRef or id
       const key = c.subjectRef || c.id || c.email || '';
-      html += `<tr data-key="${key}" style="cursor:pointer;"><td>${escapeHtml(displayName)}</td><td>${escapeHtml(c.email||'')}</td><td>${escapeHtml(c.subjectRef||'')}</td><td>${dateStr}</td></tr>`;
+      html += `<tr data-key="${escapeHtml(key)}" style="cursor:pointer;"><td>${escapeHtml(displayName)}</td><td>${escapeHtml(c.email||'')}</td><td>${escapeHtml(c.subjectRef||'')}</td><td>${dateStr}</td></tr>`;
     });
     html += '</tbody></table>';
+
+    // Pagination controls
+    const totalPages = Math.max(1, Math.ceil(total / adminCustomersPageSize));
+    const prevDisabled = adminCustomersCurrentPage <= 1 ? 'disabled' : '';
+    const nextDisabled = adminCustomersCurrentPage >= totalPages ? 'disabled' : '';
+    html += `<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+      <button id="cust-prev" ${prevDisabled} class="secondary" type="button">Föregående</button>
+      <div class="tiny muted">Sida ${adminCustomersCurrentPage} av ${totalPages} — ${total} kunder</div>
+      <button id="cust-next" ${nextDisabled} class="secondary" type="button">Nästa</button>
+    </div>`;
+
     adminCustomersTable.innerHTML = html;
-    // Attach click handlers (event delegation)
+
+    // Attach click handlers for rows
     adminCustomersTable.querySelectorAll('tbody tr').forEach((tr) => {
       tr.addEventListener('click', async () => {
         const key = tr.getAttribute('data-key');
@@ -159,6 +184,13 @@ async function loadAdminCustomers() {
         }
       });
     });
+
+    // Pagination button handlers
+    const prevBtn = adminCustomersTable.querySelector('#cust-prev');
+    const nextBtn = adminCustomersTable.querySelector('#cust-next');
+    if (prevBtn) prevBtn.addEventListener('click', () => loadAdminCustomers(Math.max(1, adminCustomersCurrentPage - 1)));
+    if (nextBtn) nextBtn.addEventListener('click', () => loadAdminCustomers(Math.min(totalPages, adminCustomersCurrentPage + 1)));
+
   } catch (err) {
     console.error('loadAdminCustomers error', err);
     adminCustomersTable.textContent = 'Fel vid hämtning.';
