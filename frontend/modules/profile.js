@@ -203,23 +203,58 @@ async function handleRatingSubmit(event) {
   try {
     // Map to backend schema: subject, rating, rater, comment, proofRef
     const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || null;
+
+    // Rapportfält
+    const reportFlag = !!(form.querySelector('#reportFlag')?.checked || form.querySelector('[name="fraudReportEnabled"]')?.checked);
+    const reportReason = form.querySelector('#reportReason')?.value || form.querySelector('[name="fraudType"]')?.value || null;
+    const reportDate = form.querySelector('#reportDate')?.value || form.querySelector('[name="fraudDate"]')?.value || null;
+    const reportTime = form.querySelector('#reportTime')?.value || form.querySelector('[name="fraudTime"]')?.value || null;
+    const reportAmount = form.querySelector('#reportAmount')?.value || form.querySelector('[name="fraudAmount"]')?.value || null;
+    const reportLink = form.querySelector('#reportLink')?.value || form.querySelector('[name="fraudLink"]')?.value || null;
+    const reportText = form.querySelector('#reportText')?.value?.trim() || form.querySelector('[name="fraudDescription"]')?.value?.trim() || '';
+    const reportConsent = !!(form.querySelector('#reportConsent')?.checked || form.querySelector('[name="fraudConsent"]')?.checked);
+
+    // Compose a sensible report_text if structured fields are present
+    let composedReportText = reportText || '';
+    if (reportDate) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Datum: ${reportDate}`;
+    if (reportTime) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Tid: ${reportTime}`;
+    if (reportAmount) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Belopp: ${reportAmount}`;
+    if (reportLink) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Länk: ${reportLink}`;
+
     const payload = {
       subject: ratedUserEmail,
       rating: Number(score),
       rater: raterVal || undefined,
       comment: comment || undefined,
       proofRef: proofRef || undefined,
+      report: undefined,
     };
+
+    if (reportFlag || reportReason || composedReportText) {
+      payload.report = {
+        report_flag: !!reportFlag,
+        report_reason: reportReason || null,
+        report_text: composedReportText || null,
+        evidence_url: (form.querySelector('#evidenceUrl')?.value || null) || null,
+        report_consent: !!reportConsent,
+      };
+    }
+
+    const submitBtn = form.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
     console.log('Sending rating payload:', payload);
     const result = await api.createRating(payload);
     console.log('Rating response:', result);
     if (!result || result.ok === false) {
       const message = result?.error || 'Kunde inte spara betyget.';
       showNotification('error', message, 'notice');
+      if (submitBtn) submitBtn.disabled = false;
       return;
     }
     showNotification('success', 'Tack för ditt omdöme!', 'notice');
     form.reset();
+    if (submitBtn) submitBtn.disabled = false;
   } catch (err) {
     console.error('handleRatingSubmit error', err);
     showNotification('error', 'Tekniskt fel. Försök igen om en stund.', 'notice');
