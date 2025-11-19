@@ -64,6 +64,7 @@ export function updateAvatars(user) {
 // ----------------------
 import { showNotification } from './utils.js';
 import { login } from './auth.js';
+import auth from './auth.js';
 
 async function handleLoginSubmit(event) {
   event.preventDefault();
@@ -85,8 +86,10 @@ async function handleLoginSubmit(event) {
     }
 
     showNotification('success', 'Du är nu inloggad.', 'login-status');
-    // Ladda om sidan efter kort för att uppdatera UI
-    setTimeout(() => window.location.reload(), 600);
+    // Ladda om sidan efter kort för att uppdatera UI (liten fördröjning så användaren hinner se notisen)
+    window.setTimeout(() => {
+      window.location.reload();
+    }, 500);
   } catch (err) {
     console.error('handleLoginSubmit error', err);
     showNotification('error', 'Tekniskt fel vid inloggning. Försök igen om en stund.', 'login-status');
@@ -101,4 +104,22 @@ export function initProfilePage() {
     return;
   }
   form.addEventListener('submit', handleLoginSubmit);
+  // Om användaren redan är inloggad, visa profilen istället för login-formuläret
+  try {
+    const user = auth.getUser();
+    const loginCard = document.getElementById('login-card');
+    const profileRoot = document.getElementById('profile-root');
+    if (user) {
+      if (loginCard) loginCard.classList.add('hidden');
+      if (profileRoot) profileRoot.classList.remove('hidden');
+      // uppdatera UI
+      updateUserBadge(user);
+      updateAvatars(user);
+    } else {
+      if (loginCard) loginCard.classList.remove('hidden');
+      if (profileRoot) profileRoot.classList.add('hidden');
+    }
+  } catch (err) {
+    console.error('initProfilePage check user error', err);
+  }
 }
