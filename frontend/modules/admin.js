@@ -14,6 +14,7 @@ const adminStatReports = el('stat-reports');
 const adminSearchForm = el('admin-search-form');
 const adminSearchInput = el('admin-search-input');
 const adminSearchResult = el('admin-search-result');
+const adminCustomersTable = el('admin-customers-table');
 const adminRatingsTable = el('admin-ratings-table');
 const adminReportsTable = el('admin-reports-table');
 
@@ -36,6 +37,7 @@ if (adminLoginForm && adminPasswordInput) {
         loadAdminSummary();
         loadAdminRecentRatings();
         loadAdminRecentReports();
+        loadAdminCustomers();
       } else {
         showNotification('error', res?.error || 'Admin-inloggning misslyckades.', 'admin-login-notice');
       }
@@ -115,6 +117,84 @@ async function loadAdminRecentReports() {
     console.error('loadAdminRecentReports error', err);
     adminReportsTable.textContent = 'Fel vid hämtning.';
   }
+}
+
+// Hämta och rendera kunder
+async function loadAdminCustomers() {
+  if (!adminCustomersTable) return;
+  adminCustomersTable.textContent = 'Laddar…';
+  try {
+    const res = await api.adminFetch('/api/admin/customers');
+    if (!res || !res.ok || !Array.isArray(res.customers)) {
+      adminCustomersTable.textContent = 'Kunde inte ladda kunder.';
+      return;
+    }
+    const rows = res.customers;
+    let html = '<table><thead><tr><th>Namn</th><th>E-post</th><th>subjectRef</th><th>Registrerat</th></tr></thead><tbody>';
+    rows.forEach((c) => {
+      const d = new Date(c.createdAt || c.registeredAt || '');
+      const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleDateString('sv-SE');
+      const displayName = c.fullName || c.name || '(namn saknas)';
+      // data-id will hold subjectRef or id
+      const key = c.subjectRef || c.id || c.email || '';
+      html += `<tr data-key="${key}" style="cursor:pointer;"><td>${escapeHtml(displayName)}</td><td>${escapeHtml(c.email||'')}</td><td>${escapeHtml(c.subjectRef||'')}</td><td>${dateStr}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    adminCustomersTable.innerHTML = html;
+    // Attach click handlers (event delegation)
+    adminCustomersTable.querySelectorAll('tbody tr').forEach((tr) => {
+      tr.addEventListener('click', async () => {
+        const key = tr.getAttribute('data-key');
+        if (!key) return;
+        try {
+          const res = await api.adminFetch(`/api/admin/customer?q=${encodeURIComponent(key)}`);
+          if (!res || !res.ok || !res.customer) {
+            if (adminSearchResult) adminSearchResult.textContent = 'Kunde inte hämta kunddetaljer.';
+            return;
+          }
+          renderCustomerDetails(res.customer);
+        } catch (err) {
+          console.error('fetch customer details error', err);
+          if (adminSearchResult) adminSearchResult.textContent = 'Fel vid hämtning av kund.';
+        }
+      });
+    });
+  } catch (err) {
+    console.error('loadAdminCustomers error', err);
+    adminCustomersTable.textContent = 'Fel vid hämtning.';
+  }
+}
+
+// Rendera kunddetaljer i samma area som sökresultatet
+function renderCustomerDetails(c) {
+  if (!adminSearchResult) return;
+  let html = '';
+  html += `<div><strong>${escapeHtml(c.fullName || '(namn saknas)')}</strong></div>`;
+  html += `<div class="tiny muted">E-post: ${escapeHtml(c.email||'–')} | subjectRef: ${escapeHtml(c.subjectRef||'–')} | personnummer: ${escapeHtml(c.personalNumber||'–')}</div>`;
+  if (Array.isArray(c.ratings) && c.ratings.length) {
+    html += '<table><thead><tr><th>Datum</th><th>Betyg</th><th>Rater</th><th>Kommentar</th></tr></thead><tbody>';
+    c.ratings.forEach((r) => {
+      const d = new Date(r.createdAt);
+      const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
+      html += `<tr><td>${dateStr}</td><td>${escapeHtml(String(r.score||r.rating||''))}</td><td>${escapeHtml(r.raterName||'')}</td><td>${escapeHtml((r.text||r.comment||'').slice(0,160))}</td></tr>`;
+    });
+    html += '</tbody></table>';
+  }
+  adminSearchResult.innerHTML = html;
+}
+
+// basic HTML escaper
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, function (s) {
+    return ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    })[s];
+  });
 }
 
 // Hantera admin-sök
