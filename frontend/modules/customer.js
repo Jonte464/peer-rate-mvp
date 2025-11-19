@@ -1,7 +1,6 @@
 // customer.js - Hanterar registreringslogik
 
-import api from './api.js';
-import { el, showNotice, clearNotice } from './utils.js';
+import { el, showNotification, clearNotice } from './utils.js';
 
 const customerForm = el('customer-form');
 if (customerForm) {
@@ -25,22 +24,43 @@ if (customerForm) {
       thirdPartyConsent: el('cust-thirdPartyConsent')?.checked || false,
       termsAccepted: el('cust-termsAccepted')?.checked || false,
     };
+    // Debug: logga payload innan vi skickar den
+    console.log('DEBUG customer payload (before send):', body);
 
+    let response;
     try {
-      const res = await api.createCustomer(body);
-      console.log('Customer API response:', res);
-
-      if (res && res.ok) {
-        showNotice(true, 'Tack! Din registrering har sparats.');
-        customerForm.reset();
-      } else {
-        const msg = res?.error || 'Något gick fel.';
-        showNotice(false, msg);
-      }
+      response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
     } catch (err) {
       console.error('Customer fetch error:', err);
-      showNotice(false, 'Nätverksfel. Försök igen.');
+      showNotification('error', 'Kunde inte kontakta servern. Försök igen om en stund.', 'cust-notice');
+      return;
     }
+
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (e) {
+      // Ingen JSON i svaret — fortsätt ändå
+    }
+
+    if (response.status === 409) {
+      const message = data?.error || 'Det finns redan en användare med samma e-post eller personnummer.';
+      showNotification('error', message, 'cust-notice');
+      return;
+    }
+
+    if (!response.ok) {
+      const message = data?.error || data?.message || 'Något gick fel vid registreringen.';
+      showNotification('error', message, 'cust-notice');
+      return;
+    }
+
+    showNotification('success', 'Tack! Din registrering är mottagen.', 'cust-notice');
+    customerForm.reset();
   });
 }
 

@@ -305,6 +305,8 @@ app.get('/api/ratings/recent', async (_req, res) => {
 app.post('/api/customers', async (req, res) => {
   // Normalisera checkboxar innan validering
   const raw = req.body || {};
+  // Extra debug: visa rå body exakt som den kom in (används för att felsöka produktion)
+  console.log('DEBUG raw req.body (incoming):', JSON.stringify(raw));
 
   const body = {
     ...raw,
