@@ -143,10 +143,27 @@ const api = {
   getExternalDataForCurrentCustomer: async () => {
     try {
       // Försök backend-endpoint som kan finnas
-      const res = await fetch('/api/profile/external-demo', { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+      let res = await fetch('/api/profile/external-demo', { method: 'GET', headers: { 'Content-Type': 'application/json' } });
       if (res && res.ok) {
         const json = await res.json();
         return json;
+      }
+
+      // If not ok (e.g. 401 because server requires auth), try a public lookup using cached user info
+      try {
+        const raw = localStorage.getItem('peerRateUser');
+        if (raw) {
+          const cached = JSON.parse(raw);
+          const q = cached.email || cached.subjectRef || cached.id || null;
+          if (q) {
+            res = await fetch(`/api/profile/external-demo?subject=${encodeURIComponent(q)}`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+            if (res && res.ok) {
+              try { return await res.json(); } catch (err) { /* fallthrough */ }
+            }
+          }
+        }
+      } catch (err) {
+        // ignore
       }
     } catch (err) {
       // ignore and fallback

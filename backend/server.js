@@ -645,12 +645,22 @@ app.get('*', (_req, res) => {
    ------------------------------------------------------- */
 app.get('/api/profile/external-demo', async (req, res) => {
   try {
-    if (!req.user || !req.user.id) {
-      return res.status(401).json({ ok: false, error: 'Ej inloggad' });
+    // Support for two modes:
+    // 1) authenticated requests where req.user.id is present
+    // 2) public lookup when caller provides ?subject=<email|subjectRef>
+    const subjectQ = (req.query.subject || '').trim();
+
+    let customer = null;
+    if (req.user && req.user.id) {
+      customer = await prisma.customer.findUnique({ where: { id: req.user.id } });
+    } else if (subjectQ) {
+      // Find by subjectRef (email) using helper
+      const found = await findCustomerBySubjectRef(subjectQ.toLowerCase());
+      customer = found || null;
+    } else {
+      return res.status(401).json({ ok: false, error: 'Ej inloggad. Ange subject som queryparameter för publik lookup.' });
     }
 
-    // Hämta kund från databasen
-    const customer = await prisma.customer.findUnique({ where: { id: req.user.id } });
     if (!customer) return res.status(404).json({ ok: false, error: 'Kund saknas' });
 
     // Bygg adressuppsättning för PAP API
