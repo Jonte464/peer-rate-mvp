@@ -1,39 +1,60 @@
-// profile.js - Hanterar profilvisning och uppdatering
+// profile.js – Hanterar profilvisning och avatarer
 
 import { el } from './utils.js';
 
-function updateUserBadge(user) {
+// Visar / gömmer “Hej Jonathan”-badgen
+export function updateUserBadge(user) {
   const userBadge = el('user-badge');
   const userBadgeName = el('user-badge-name');
+
   if (!userBadge || !userBadgeName) return;
+
+  // Ingen inloggad → göm badgen
   if (!user) {
     userBadge.classList.add('hidden');
+    userBadgeName.textContent = '';
     return;
   }
-  const fullName = user.fullName || '';
-  const firstName = fullName.split(' ')[0] || user.email || '';
-  userBadgeName.textContent = firstName;
+
+  const fullName = (user.fullName || '').trim();
+  const firstName =
+    fullName.split(/\s+/)[0] ||
+    (user.email ? user.email.split('@')[0] : '');
+
+  userBadgeName.textContent = firstName || 'Profil';
   userBadge.classList.remove('hidden');
 }
 
-function updateAvatars(user) {
+// Uppdaterar avatarerna (badge + profilbild)
+// Funkar även när user är null
+export function updateAvatars(user) {
   const avatarUrl = localStorage.getItem('peerRateAvatar');
-  const initials = user.fullName
-    ? user.fullName.split(' ').map((n) => n[0]).join('').toUpperCase()
-    : 'P';
 
-  const userBadgeAvatar = el('user-badge-avatar');
-  const profileAvatarPreview = el('profile-avatar-preview');
-
-  if (userBadgeAvatar) {
-    userBadgeAvatar.style.backgroundImage = avatarUrl ? `url(${avatarUrl})` : 'none';
-    userBadgeAvatar.textContent = avatarUrl ? '' : initials;
+  let initials = 'P';
+  if (user && typeof user === 'object') {
+    if (user.fullName && typeof user.fullName === 'string' && user.fullName.trim() !== '') {
+      initials = user.fullName
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((n) => n[0].toUpperCase())
+        .join('');
+    } else if (user.email && typeof user.email === 'string' && user.email.length > 0) {
+      initials = user.email[0].toUpperCase();
+    }
   }
 
-  if (profileAvatarPreview) {
-    profileAvatarPreview.style.backgroundImage = avatarUrl ? `url(${avatarUrl})` : 'none';
-    profileAvatarPreview.textContent = avatarUrl ? '' : initials;
-  }
+  const applyAvatar = (target) => {
+    if (!target) return;
+    if (avatarUrl) {
+      target.style.backgroundImage = `url(${avatarUrl})`;
+      target.textContent = '';
+    } else {
+      target.style.backgroundImage = 'none';
+      target.textContent = initials;
+    }
+  };
+
+  applyAvatar(el('user-badge-avatar'));
+  applyAvatar(el('profile-avatar-preview'));
 }
-
-export { updateUserBadge, updateAvatars };
