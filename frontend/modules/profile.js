@@ -111,6 +111,12 @@ export function initRatingLogin() {
     if (user) {
       if (loginCard) loginCard.classList.add('hidden');
       if (ratingWrapper) ratingWrapper.classList.remove('hidden');
+      // Ensure the rating form submit handler is attached when the form is shown
+      try {
+        initRatingForm();
+      } catch (err) {
+        console.error('Could not init rating form', err);
+      }
       // populate rater field if present
       const raterInput = document.querySelector('#rating-form input[name="rater"]') || document.getElementById('rater');
       if (raterInput && user.email) raterInput.value = user.email;
@@ -181,10 +187,30 @@ import api from './api.js';
 export function initRatingForm() {
   const form = document.getElementById('rating-form');
   if (!form) return;
+  // Mark as bound so delegation fallback knows it's handled
+  form.dataset.ratingBound = '1';
   form.addEventListener('submit', handleRatingSubmit);
   const resetBtn = document.getElementById('reset-form');
   if (resetBtn) resetBtn.addEventListener('click', () => form.reset());
 }
+
+// Delegation fallback: if the form is inserted dynamically or the normal init missed it,
+// handle submit events for #rating-form here. This runs at module-load time.
+document.addEventListener('submit', (e) => {
+  try {
+    const target = e.target;
+    if (!target || !(target instanceof HTMLFormElement)) return;
+    if (target.id !== 'rating-form') return;
+    // If initRatingForm already bound the form, skip (dataset.ratingBound === '1')
+    if (target.dataset && target.dataset.ratingBound === '1') return;
+    // Prevent double handling and call the same handler
+    e.preventDefault();
+    handleRatingSubmit.call(target, e);
+  } catch (err) {
+    // swallow errors from fallback to avoid breaking other scripts
+    console.error('rating-form delegation error', err);
+  }
+}, true);
 
 async function handleRatingSubmit(event) {
   event.preventDefault();
