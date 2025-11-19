@@ -311,17 +311,19 @@
         Logga in med den e-post och det lösenord du registrerade dig med.
       </p>
 
-      <label for="login-email">E-post</label>
-      <input id="login-email" type="email" placeholder="erik@example.com" />
+      <form id="login-form" autocomplete="off">
+        <label for="login-email">E-post</label>
+        <input id="login-email" name="email" type="email" placeholder="erik@example.com" />
 
-      <label for="login-password">Lösenord</label>
-      <input id="login-password" type="password" placeholder="Ditt lösenord" />
+        <label for="login-password">Lösenord</label>
+        <input id="login-password" name="password" type="password" placeholder="Ditt lösenord" />
 
-      <div class="row" style="margin-top:12px">
-        <button class="primary" type="button" id="login-btn">Logga in</button>
-      </div>
+        <div class="row" style="margin-top:12px">
+          <button class="primary" type="submit" id="login-btn">Logga in</button>
+        </div>
 
-      <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
+        <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
+      </form>
     </section>
 
     <!-- Allt här visas bara när man är inloggad -->
