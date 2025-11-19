@@ -266,6 +266,74 @@ async function loadProfileData() {
   }
 }
 
+// Hämta och rendera externa data (t.ex. postnummer-/ort-info eller externa counts)
+async function loadExternalData() {
+  try {
+    const data = await api.getExternalDataForCurrentCustomer();
+    if (!data) return;
+
+    const set = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = value === undefined || value === null || value === '' ? '-' : String(value);
+    };
+
+    // Try common keys
+    set('ext-vehicles-count', data.vehicles ?? data.vehicleCount ?? data.vehiclesCount ?? '-');
+    set('ext-properties-count', data.properties ?? data.propertyCount ?? data.propertiesCount ?? '-');
+    // last-updated / location fallback
+    const last = data.lastUpdatedText || data.lastUpdated || (data.postnummer ? `${data.postnummer} ${data.ort || ''}` : null) || data.source || '-';
+    set('ext-last-updated', last);
+  } catch (err) {
+    console.error('Kunde inte ladda externa data', err);
+  }
+}
+
+// Hämta och rendera mitt omdöme (average + lista)
+async function loadMyRating() {
+  try {
+    const info = await api.getMyRating();
+    if (!info) return;
+
+    const set = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = value === undefined || value === null || value === '' ? '-' : String(value);
+    };
+
+    if (typeof info.average === 'number') {
+      set('profile-score', String(info.average));
+      set('profile-score-count', String(info.count || 0));
+      const bar = document.getElementById('profile-score-bar');
+      if (bar) {
+        const fill = bar.querySelector('.score-bar-fill');
+        if (fill) {
+          const pct = Math.max(0, Math.min(100, (info.average / 5) * 100));
+          fill.style.width = `${pct}%`;
+        }
+      }
+    }
+
+    // Rendera individuella betyg i #ratings-list
+    const listEl = document.getElementById('ratings-list');
+    if (listEl) {
+      if (!Array.isArray(info.ratings) || info.ratings.length === 0) {
+        listEl.innerHTML = '<div class="tiny muted">Inga omdömen än.</div>';
+      } else {
+        let html = '';
+        info.ratings.forEach((r) => {
+          const d = new Date(r.createdAt);
+          const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
+          html += `<div class="rating-row"><div class="rating-main"><div class="rating-stars">${r.rating || r.score || ''} / 5</div><div class="rating-meta">${r.raterName || r.rater || ''} · ${dateStr}</div><div class="rating-comment-inline">${(r.comment||r.text||'').slice(0,400)}</div></div></div>`;
+        });
+        listEl.innerHTML = html;
+      }
+    }
+  } catch (err) {
+    console.error('Kunde inte ladda Mitt omdöme', err);
+  }
+}
+
 export async function initProfilePage() {
   console.log('initProfilePage');
   const form = document.getElementById('login-form');
@@ -292,11 +360,11 @@ export async function initProfilePage() {
       // uppdatera UI
       updateUserBadge(user);
       updateAvatars(user);
-      // Ladda profildata från backend
+      // Ladda profildata, externa data och egna betyg parallellt
       try {
-        await loadProfileData();
+        await Promise.all([loadProfileData(), loadExternalData(), loadMyRating()]);
       } catch (err) {
-        console.error('loadProfileData error', err);
+        console.error('profile data loaders error', err);
       }
     } else {
       if (loginCard) loginCard.classList.remove('hidden');

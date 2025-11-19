@@ -139,6 +139,78 @@ const api = {
       return null;
     }
   },
+  // Hämta externa data för inloggad kund via backend (fall back to public API)
+  getExternalDataForCurrentCustomer: async () => {
+    try {
+      // Försök backend-endpoint som kan finnas
+      const res = await fetch('/api/profile/external-demo', { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+      if (res && res.ok) {
+        const json = await res.json();
+        return json;
+      }
+    } catch (err) {
+      // ignore and fallback
+    }
+
+    // Fallback: om vi har cached kund med postnummer, använd zippopotamus publika API
+    try {
+      const raw = localStorage.getItem('peerRateUser');
+      if (!raw) return null;
+      const cached = JSON.parse(raw);
+      const zip = cached.addressZip || cached.zip || null;
+      if (!zip) return null;
+      const zipClean = String(zip).replace(/\s+/g, '');
+      const apiUrl = `https://api.zippopotam.us/SE/${zipClean}`;
+      const r = await fetch(apiUrl);
+      if (!r.ok) return null;
+      const data = await r.json();
+      return {
+        ok: true,
+        source: 'zippopotam.us',
+        postnummer: zipClean,
+        ort: data.places?.[0]?.['place name'] || null,
+        region: data.places?.[0]?.['state'] || null,
+        latitude: data.places?.[0]?.latitude || null,
+        longitude: data.places?.[0]?.longitude || null,
+      };
+    } catch (err) {
+      return null;
+    }
+  },
+
+  // Hämta mitt omdöme (average + senaste ratings) för inloggad kund
+  getMyRating: async () => {
+    try {
+      // Först: hitta aktuell kund (subjectRef/email)
+      const current = await api.getCurrentCustomer();
+      const subject = (current && (current.subjectRef || current.email)) || null;
+      if (!subject) return null;
+
+      const avgP = fetch(`/api/ratings/average?subject=${encodeURIComponent(subject)}`, { method: 'GET' }).then(async (r) => {
+        if (!r.ok) return null;
+        try { return await r.json(); } catch { return null; }
+      });
+
+      const listP = fetch(`/api/ratings?subject=${encodeURIComponent(subject)}`, { method: 'GET' }).then(async (r) => {
+        if (!r.ok) return null;
+        try { return await r.json(); } catch { return null; }
+      });
+
+      const [avg, list] = await Promise.all([avgP, listP]);
+      const result = { average: null, count: 0, ratings: [] };
+      if (avg && avg.ok) {
+        result.average = avg.average ?? null;
+        result.count = avg.count ?? 0;
+      }
+      if (list && list.ok && Array.isArray(list.ratings)) {
+        result.ratings = list.ratings;
+      }
+      return result;
+    } catch (err) {
+      console.error('getMyRating error', err);
+      return null;
+    }
+  },
 };
 
 export default api;
