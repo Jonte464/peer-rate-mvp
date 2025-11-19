@@ -226,7 +226,47 @@ async function handleRatingSubmit(event) {
   }
 }
 
-export function initProfilePage() {
+// Hämta och rendera profil-data i DOM
+async function loadProfileData() {
+  try {
+    // api.getCurrentCustomer försöker flera endpoints och fallback till localStorage
+    const customer = await api.getCurrentCustomer();
+    if (!customer) return;
+
+    const set = (id, value) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = value === undefined || value === null || value === '' ? '-' : String(value);
+    };
+
+    set('profile-name', customer.fullName || customer.name || `${customer.firstName || ''} ${customer.lastName || ''}`);
+    set('profile-email', customer.email || customer.subjectRef || '-');
+    set('profile-personalNumber', customer.personalNumber || customer.ssn || '-');
+    set('profile-phone', customer.phone || '-');
+    set('profile-addressStreet', customer.addressStreet || customer.street || '-');
+    set('profile-addressZip', customer.addressZip || customer.zip || '-');
+    set('profile-addressCity', customer.addressCity || customer.city || '-');
+    set('profile-country', customer.country || '-');
+
+    // Ratings summary if present
+    if (typeof customer.average === 'number') {
+      set('profile-score', String(customer.average));
+      set('profile-score-count', String(customer.count || 0));
+      const bar = document.getElementById('profile-score-bar');
+      if (bar) {
+        const fill = bar.querySelector('.score-bar-fill');
+        if (fill) {
+          const pct = Math.max(0, Math.min(100, (customer.average / 5) * 100));
+          fill.style.width = `${pct}%`;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Kunde inte ladda profil', err);
+  }
+}
+
+export async function initProfilePage() {
   console.log('initProfilePage');
   const form = document.getElementById('login-form');
   if (!form) {
@@ -252,6 +292,12 @@ export function initProfilePage() {
       // uppdatera UI
       updateUserBadge(user);
       updateAvatars(user);
+      // Ladda profildata från backend
+      try {
+        await loadProfileData();
+      } catch (err) {
+        console.error('loadProfileData error', err);
+      }
     } else {
       if (loginCard) loginCard.classList.remove('hidden');
       if (profileRoot) profileRoot.classList.add('hidden');

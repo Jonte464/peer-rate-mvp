@@ -88,6 +88,57 @@ const api = {
       }
     });
   },
+  // Hämta aktuell inloggad kund — försök flera vanliga endpoints, annars fallback till localStorage
+  getCurrentCustomer: async () => {
+    const endpoints = ['/api/customers/me', '/api/auth/me', '/api/profile/me'];
+    for (const ep of endpoints) {
+      try {
+        const res = await fetch(ep, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+        });
+        if (!res) continue;
+        const text = await res.text();
+        try {
+          const json = JSON.parse(text);
+          // Common shapes: { ok: true, customer: {...} } or { ok: true, ...customer fields... }
+          if (json && json.ok && json.customer) return json.customer;
+          if (json && json.customer) return json.customer;
+          // If endpoint returns the customer object directly
+          if (json && json.id && (json.email || json.subjectRef)) return json;
+        } catch (err) {
+          // Non-JSON or unexpected — skip
+          continue;
+        }
+      } catch (err) {
+        // Network error — try next
+        continue;
+      }
+    }
+
+    // Fallback: try to read from localStorage (client-side cached user)
+    try {
+      const raw = localStorage.getItem('peerRateUser');
+      if (!raw) return null;
+      const cached = JSON.parse(raw);
+      // If we have an email/subjectRef, try to fetch a fresh server-side record via searchCustomers
+      const q = cached.email || cached.subjectRef || cached.id || null;
+      if (q) {
+        try {
+          const found = await api.searchCustomers(q);
+          if (found && found.ok && Array.isArray(found.customers) && found.customers.length) {
+            return found.customers[0];
+          }
+        } catch (err) {
+          // ignore and fallback to cached
+        }
+      }
+      return cached;
+    } catch (err) {
+      return null;
+    }
+  },
 };
 
 export default api;
