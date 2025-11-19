@@ -345,6 +345,23 @@ async function loadExternalData() {
     // last-updated / location fallback
     const last = data.lastUpdatedText || data.lastUpdated || (data.postnummer ? `${data.postnummer} ${data.ort || ''}` : null) || data.source || '-';
     set('ext-last-updated', last);
+
+    // Address verification from PAP API (if present)
+    try {
+      if (data.addressVerification) {
+        const a = data.addressVerification;
+        const line = [a.street, a.number].filter(Boolean).join(' ') +
+          (a.zipcode || a.city ? `, ${[a.zipcode, a.city].filter(Boolean).join(' ')}` : '');
+
+        const lineEl = document.querySelector('[data-field="externalAddressLine"]');
+        const statusEl = document.querySelector('[data-field="externalAddressStatus"]');
+
+        if (lineEl) lineEl.textContent = line || '-';
+        if (statusEl) statusEl.textContent = a.statusTextSv || a.statusTextEn || '-';
+      }
+    } catch (err) {
+      console.error('Kunde inte rendera addressVerification', err);
+    }
   } catch (err) {
     console.error('Kunde inte ladda externa data', err);
   }

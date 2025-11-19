@@ -30,6 +30,9 @@ const {
   adminGetCustomerWithRatings,
 } = require('./storage');
 
+// PAP API service (adressverifiering)
+const { lookupAddressWithPapApi } = require('./services/papApiService');
+
 
 const app = express();
 
@@ -647,45 +650,40 @@ app.get('/api/profile/external-demo', async (req, res) => {
     }
 
     // Hämta kund från databasen
-    const customer = await prisma.customer.findUnique({
-      where: { id: req.user.id },
-    });
+    const customer = await prisma.customer.findUnique({ where: { id: req.user.id } });
+    if (!customer) return res.status(404).json({ ok: false, error: 'Kund saknas' });
 
-    if (!customer) {
-      return res.status(404).json({ ok: false, error: 'Kund saknas' });
+    // Bygg adressuppsättning för PAP API
+    const addrStreetRaw = (customer.addressStreet || '') && String(customer.addressStreet).trim();
+    let street = addrStreetRaw || null;
+    let number = null;
+    if (addrStreetRaw) {
+      const tokens = addrStreetRaw.split(/\s+/);
+      const last = tokens[tokens.length - 1] || '';
+      if (/\d/.test(last)) {
+        number = last;
+        tokens.pop();
+        street = tokens.join(' ') || null;
+      }
     }
 
-    // Om användaren inte har postnummer → fel
-    if (!customer.addressZip) {
-      return res.status(400).json({
-        ok: false,
-        error: 'Användaren saknar postnummer. Lägg till det i din profil.',
-      });
+    const zipcode = (customer.addressZip || customer.zip || '') || null;
+    const city = (customer.addressCity || customer.city || '') || null;
+
+    let externalAddress = null;
+    try {
+      externalAddress = await lookupAddressWithPapApi({ street, number, zipcode, city });
+    } catch (err) {
+      console.error('PAP API lookup failed', err);
+      externalAddress = null;
     }
-
-    const zip = String(customer.addressZip).replace(/\s+/g, '');
-
-    // Hämta extern data från gratis API
-    const apiUrl = `https://api.zippopotam.us/SE/${zip}`;
-    const response = await fetch(apiUrl);
-
-    if (!response.ok) {
-      return res.status(404).json({
-        ok: false,
-        error: 'Ingen extern information hittades för detta postnummer.',
-      });
-    }
-
-    const data = await response.json();
 
     return res.json({
       ok: true,
-      source: 'zippopotam.us',
-      postnummer: zip,
-      ort: data.places?.[0]?.['place name'] || null,
-      region: data.places?.[0]?.['state'] || null,
-      latitude: data.places?.[0]?.latitude || null,
-      longitude: data.places?.[0]?.longitude || null,
+      vehicleCount: 0,
+      propertyCount: 0,
+      lastUpdatedText: new Date().toISOString(),
+      addressVerification: externalAddress,
     });
   } catch (err) {
     console.error('External demo error:', err);
