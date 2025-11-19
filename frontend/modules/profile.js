@@ -101,8 +101,26 @@ async function handleLoginSubmit(event) {
 // ----------------------
 export function initRatingLogin() {
   const form = document.getElementById('rating-login-form');
-  if (!form) return;
-  form.addEventListener('submit', handleRatingLoginSubmit);
+  const loginCard = document.getElementById('login-card');
+  const ratingWrapper = document.getElementById('rating-form-wrapper');
+  if (form) form.addEventListener('submit', handleRatingLoginSubmit);
+
+  // On init, if user already logged in -> hide login and show rating form
+  try {
+    const user = auth.getUser();
+    if (user) {
+      if (loginCard) loginCard.classList.add('hidden');
+      if (ratingWrapper) ratingWrapper.classList.remove('hidden');
+      // populate rater field if present
+      const raterInput = document.querySelector('#rating-form input[name="rater"]') || document.getElementById('rater');
+      if (raterInput && user.email) raterInput.value = user.email;
+    } else {
+      if (loginCard) loginCard.classList.remove('hidden');
+      if (ratingWrapper) ratingWrapper.classList.add('hidden');
+    }
+  } catch (err) {
+    console.error('initRatingLogin check user error', err);
+  }
 }
 
 async function handleRatingLoginSubmit(event) {
@@ -122,8 +140,10 @@ async function handleRatingLoginSubmit(event) {
       return;
     }
     showNotification('success', 'Du är nu inloggad.', 'login-status');
+    // ensure UI updates same as Min profil: reload so init logic picks up stored user
     window.setTimeout(() => {
       window.location.reload();
+      // alternatively: window.location.href = '/lämna-betyg';
     }, 500);
   } catch (err) {
     console.error('handleRatingLoginSubmit error', err);
