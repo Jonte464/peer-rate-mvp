@@ -201,6 +201,28 @@ const api = {
       return null;
     }
   },
+  // Hämta extern data för en specifik profil (t.ex. när du tittar på din frus profil)
+  getExternalDataForEmail: async (emailOrSubject) => {
+    try {
+      if (!emailOrSubject) return null;
+
+      const path = `/api/customers/external-data?email=${encodeURIComponent(emailOrSubject)}`;
+      const json = await api._clientGet(path);
+      if (!json) return null;
+
+      return {
+        ok: json.ok ?? true,
+        vehicles: json.vehiclesCount ?? json.vehicles ?? 0,
+        properties: json.propertiesCount ?? json.properties ?? 0,
+        lastUpdated: formatDate(json.lastUpdated),
+        validatedAddress: json.validatedAddress ?? '-',
+        addressStatus: json.addressStatus ?? '-'
+      };
+    } catch (err) {
+      console.error('getExternalDataForEmail error', err);
+      return null;
+    }
+  },
 
   // ---------------------- MITT OMDÖME ---------------------------
   getMyRating: async () => {

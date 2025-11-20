@@ -307,23 +307,25 @@ function requireAuth(req, res, next) {
  */
 app.get('/api/customers/external-data', async (req, res) => {
   try {
-    const email = String(req.query.email || '').trim().toLowerCase();
-    if (!email) {
+    const emailOrSubject = String(req.query.email || '').trim().toLowerCase();
+    if (!emailOrSubject) {
       return res.status(400).json({ ok: false, error: 'Saknar email' });
     }
 
-    // Hitta kund i databasen via e-post (case-insensitive)
+    // Försök hitta kund via subjectRef (alltid lowercase) eller email
     const customer = await prisma.customer.findFirst({
-      where: { email },
+      where: {
+        OR: [
+          { subjectRef: emailOrSubject },
+          { email: emailOrSubject },
+        ],
+      },
     });
 
     if (!customer) {
-      return res
-        .status(404)
-        .json({ ok: false, error: 'Kund hittades inte' });
+      return res.status(404).json({ ok: false, error: 'Kund hittades inte' });
     }
 
-    // Plocka ut adressdelar för PAP-uppslag
     const { street, number, zipcode, city } =
       extractAddressPartsFromCustomer(customer);
 
@@ -346,11 +348,10 @@ app.get('/api/customers/external-data', async (req, res) => {
     return res.json(payload);
   } catch (err) {
     console.error('external-data error', err);
-    return res
-      .status(500)
-      .json({ ok: false, error: 'Internt serverfel' });
+    return res.status(500).json({ ok: false, error: 'Internt serverfel' });
   }
 });
+
 
 /** Mappa svenska/engelska etiketter -> enum ReportReason */
 function mapReportReason(input) {
