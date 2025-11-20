@@ -88,31 +88,35 @@ const api = {
       }
     });
   },
+  // Internal helper to perform GET requests with consistent auth/credentials
+  _clientGet: async (path) => {
+    try {
+      const res = await fetch(path, { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
+      const text = await res.text();
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { ok: res.ok, status: res.status, raw: text };
+      }
+    } catch (err) {
+      console.error('api._clientGet error', err);
+      return null;
+    }
+  },
   // Hämta aktuell inloggad kund — försök flera vanliga endpoints, annars fallback till localStorage
   getCurrentCustomer: async () => {
     const endpoints = ['/api/customers/me', '/api/auth/me', '/api/profile/me'];
     for (const ep of endpoints) {
       try {
-        const res = await fetch(ep, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-        });
-        if (!res) continue;
-        const text = await res.text();
-        try {
-          const json = JSON.parse(text);
-          // Common shapes: { ok: true, customer: {...} } or { ok: true, ...customer fields... }
-          if (json && json.ok && json.customer) return json.customer;
-          if (json && json.customer) return json.customer;
-          // If endpoint returns the customer object directly
-          if (json && json.id && (json.email || json.subjectRef)) return json;
-        } catch (err) {
-          // Non-JSON or unexpected — skip
-          continue;
-        }
+        const json = await api._clientGet(ep);
+        if (!json) continue;
+        // Common shapes: { ok: true, customer: {...} } or { ok: true, ...customer fields... }
+        if (json && json.ok && json.customer) return json.customer;
+        if (json && json.customer) return json.customer;
+        // If endpoint returns the customer object directly
+        if (json && json.id && (json.email || json.subjectRef)) return json;
       } catch (err) {
-        // Network error — try next
+        // ignore and try next
         continue;
       }
     }
@@ -139,17 +143,11 @@ const api = {
       return null;
     }
   },
-  // Hämta externa data för inloggad kund via backend
+  // Hämta externa data för inloggad kund via backend (använder samma auth/credentials som getCurrentCustomer)
   getExternalDataForCurrentCustomer: async () => {
-    // Använder samma fetch-mönster som övriga API-anrop
     try {
-      const res = await fetch('/api/customers/me/external-data', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('external-data API error');
-      return await res.json();
+      const json = await api._clientGet('/api/customers/me/external-data');
+      return json;
     } catch (err) {
       console.error('getExternalDataForCurrentCustomer error', err);
       return null;
