@@ -139,58 +139,19 @@ const api = {
       return null;
     }
   },
-  // Hämta externa data för inloggad kund via backend (fall back to public API)
+  // Hämta externa data för inloggad kund via backend
   getExternalDataForCurrentCustomer: async () => {
+    // Använder samma fetch-mönster som övriga API-anrop
     try {
-      // Försök backend-endpoint som kan finnas
-      let res = await fetch('/api/profile/external-demo', { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-      if (res && res.ok) {
-        const json = await res.json();
-        return json;
-      }
-
-      // If not ok (e.g. 401 because server requires auth), try a public lookup using cached user info
-      try {
-        const raw = localStorage.getItem('peerRateUser');
-        if (raw) {
-          const cached = JSON.parse(raw);
-          const q = cached.email || cached.subjectRef || cached.id || null;
-          if (q) {
-            res = await fetch(`/api/profile/external-demo?subject=${encodeURIComponent(q)}`, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
-            if (res && res.ok) {
-              try { return await res.json(); } catch (err) { /* fallthrough */ }
-            }
-          }
-        }
-      } catch (err) {
-        // ignore
-      }
+      const res = await fetch('/api/customers/me/external-data', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('external-data API error');
+      return await res.json();
     } catch (err) {
-      // ignore and fallback
-    }
-
-    // Fallback: om vi har cached kund med postnummer, använd zippopotamus publika API
-    try {
-      const raw = localStorage.getItem('peerRateUser');
-      if (!raw) return null;
-      const cached = JSON.parse(raw);
-      const zip = cached.addressZip || cached.zip || null;
-      if (!zip) return null;
-      const zipClean = String(zip).replace(/\s+/g, '');
-      const apiUrl = `https://api.zippopotam.us/SE/${zipClean}`;
-      const r = await fetch(apiUrl);
-      if (!r.ok) return null;
-      const data = await r.json();
-      return {
-        ok: true,
-        source: 'zippopotam.us',
-        postnummer: zipClean,
-        ort: data.places?.[0]?.['place name'] || null,
-        region: data.places?.[0]?.['state'] || null,
-        latitude: data.places?.[0]?.latitude || null,
-        longitude: data.places?.[0]?.longitude || null,
-      };
-    } catch (err) {
+      console.error('getExternalDataForCurrentCustomer error', err);
       return null;
     }
   },

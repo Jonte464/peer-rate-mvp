@@ -1,3 +1,58 @@
+// Enkel auth-middleware för /api/customers/me och liknande
+function requireAuth(req, res, next) {
+  // Exempel: använd session/JWT eller localStorage-token
+  // Här: kolla om req.user finns (sätts av tidigare middleware)
+  if (req.user && req.user.id) return next();
+  return res.status(401).json({ ok: false, error: 'Ej inloggad' });
+}
+/**
+ * GET /api/customers/me/external-data
+ * Returnerar extern adressverifiering för inloggad kund
+ * Kräver inloggning (requireAuth)
+ */
+app.get('/api/customers/me/external-data', requireAuth, async (req, res) => {
+  try {
+    // Hämta kund från databasen
+    const customer = await prisma.customer.findUnique({ where: { id: req.user.id } });
+    if (!customer) return res.status(404).json({ ok: false, error: 'Kund saknas' });
+
+    // Bygg adressuppsättning för PAP API
+    const addrStreetRaw = (customer.addressStreet || '') && String(customer.addressStreet).trim();
+    let street = addrStreetRaw || null;
+    let number = null;
+    if (addrStreetRaw) {
+      const tokens = addrStreetRaw.split(/\s+/);
+      const last = tokens[tokens.length - 1] || '';
+      if (/\d/.test(last)) {
+        number = last;
+        tokens.pop();
+        street = tokens.join(' ') || null;
+      }
+    }
+
+    const zipcode = (customer.addressZip || customer.zip || '') || null;
+    const city = (customer.addressCity || customer.city || '') || null;
+
+    let externalAddress = null;
+    try {
+      externalAddress = await lookupAddressWithPapApi({ street, number, zipcode, city });
+    } catch (err) {
+      console.error('PAP API lookup failed', err);
+      externalAddress = null;
+    }
+
+    return res.json({
+      ok: true,
+      vehicleCount: 0,
+      propertyCount: 0,
+      lastUpdatedText: new Date().toISOString(),
+      addressVerification: externalAddress,
+    });
+  } catch (err) {
+    console.error('external-data error:', err);
+    return res.status(500).json({ ok: false, error: 'Serverfel vid extern hämtning' });
+  }
+});
 
 require('dotenv').config();
 const express = require('express');
