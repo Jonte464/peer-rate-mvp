@@ -301,9 +301,9 @@ function requireAuth(req, res, next) {
 
 /**
  * GET /api/customers/external-data
- * Publik endpoint (MVP): tar ?email=... och returnerar extern adressverifiering
- * Frontend: api.getExternalDataForCurrentCustomer() kallar denna och förväntar sig:
- *   { ok, vehiclesCount/propertiesCount, lastUpdated, validatedAddress, addressStatus }
+ * Returnerar extern eller profilbaserad adressdata.
+ * Frontend förväntar sig:
+ * { ok, vehiclesCount, propertiesCount, lastUpdated, validatedAddress, addressStatus }
  */
 app.get('/api/customers/external-data', async (req, res) => {
   try {
@@ -312,31 +312,44 @@ app.get('/api/customers/external-data', async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Saknar email' });
     }
 
-    // Försök hitta kund via subjectRef (alltid lowercase) eller email
+    // Hitta kund via subjectRef eller email
     const customer = await prisma.customer.findFirst({
       where: {
         OR: [
           { subjectRef: emailOrSubject },
-          { email: emailOrSubject },
-        ],
-      },
+          { email: emailOrSubject }
+        ]
+      }
     });
 
     if (!customer) {
       return res.status(404).json({ ok: false, error: 'Kund hittades inte' });
     }
 
-    const { street, number, zipcode, city } =
-      extractAddressPartsFromCustomer(customer);
+    // --- PROFILENS EGNA ADRESSDELAR ---
+    const street = (customer.addressStreet || '').trim() || null;
+    const zip = (customer.addressZip || '').trim() || null;
+    const city = (customer.addressCity || '').trim() || null;
 
+    let validatedAddress = null;
+    let addressStatus = '-';
+
+    const profileParts = [street, zip, city].filter(Boolean);
+
+    if (profileParts.length) {
+      validatedAddress = profileParts.join(', ');
+      addressStatus = 'FROM_PROFILE';
+    }
+
+    // --- PAP API (valfritt, används endast om aktivt) ---
     let externalAddress = null;
     try {
-      if (street || zipcode || city) {
+      if (street || zip || city) {
         externalAddress = await lookupAddressWithPapApi({
           street,
-          number,
-          zipcode,
-          city,
+          number: null,
+          zipcode: zip,
+          city
         });
       }
     } catch (err) {
@@ -344,8 +357,51 @@ app.get('/api/customers/external-data', async (req, res) => {
       externalAddress = null;
     }
 
-    const payload = buildExternalDataResponse(customer, externalAddress);
-    return res.json(payload);
+    // Om PAP gav bättre data -> skriv över validatedAddress
+    if (externalAddress && typeof externalAddress === 'object') {
+      const addrObj =
+        externalAddress.normalizedAddress ||
+        externalAddress.address ||
+        externalAddress;
+
+      const extStreet =
+        addrObj.street || addrObj.addressStreet || addrObj.gatuadress || null;
+      const extZip =
+        addrObj.zipcode || addrObj.postalCode || addrObj.postnr || null;
+      const extCity =
+        addrObj.city || addrObj.postort || addrObj.addressCity || null;
+
+      const parts = [extStreet, extZip, extCity].filter(Boolean);
+
+      if (parts.length) {
+        validatedAddress = parts.join(', ');
+        addressStatus =
+          externalAddress.status
+            ? String(externalAddress.status).toUpperCase()
+            : (externalAddress.matchStatus
+                ? String(externalAddress.matchStatus).toUpperCase()
+                : 'VERIFIED');
+      }
+    }
+
+    if (!validatedAddress) {
+      validatedAddress = null;
+      if (addressStatus === '-') addressStatus = 'NO_ADDRESS';
+    }
+
+    const now = new Date().toISOString();
+
+    return res.json({
+      ok: true,
+      vehiclesCount: 0,
+      propertiesCount: 0,
+      vehicles: 0,
+      properties: 0,
+      lastUpdated: now,
+      validatedAddress,
+      addressStatus
+    });
+
   } catch (err) {
     console.error('external-data error', err);
     return res.status(500).json({ ok: false, error: 'Internt serverfel' });
