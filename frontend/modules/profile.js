@@ -333,18 +333,38 @@ async function loadExternalData() {
     const data = await api.getExternalDataForCurrentCustomer();
     if (!data) return;
 
-    const set = (id, value) => {
+    const setIfPresent = (id, value) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.textContent = value === undefined || value === null || value === '' ? '-' : String(value);
+      if (value === undefined || value === null || value === '') {
+        el.textContent = '';
+      } else {
+        el.textContent = String(value);
+      }
+      // Hide parent list row if value is empty
+      try {
+        const li = el.closest && el.closest('li');
+        if (li) {
+          if (!el.textContent || el.textContent.trim() === '') li.classList.add('hidden');
+          else li.classList.remove('hidden');
+        }
+      } catch (err) {
+        // ignore
+      }
     };
 
-    // Try common keys
-    set('ext-vehicles-count', data.vehicles ?? data.vehicleCount ?? data.vehiclesCount ?? '-');
-    set('ext-properties-count', data.properties ?? data.propertyCount ?? data.propertiesCount ?? '-');
+    // Try common keys — only set values if present (0 is a valid value)
+    const vehicles = data.vehicles ?? data.vehicleCount ?? data.vehiclesCount;
+    const properties = data.properties ?? data.propertyCount ?? data.propertiesCount;
+    if (typeof vehicles !== 'undefined' && vehicles !== null) setIfPresent('ext-vehicles-count', vehicles);
+    else setIfPresent('ext-vehicles-count', '');
+    if (typeof properties !== 'undefined' && properties !== null) setIfPresent('ext-properties-count', properties);
+    else setIfPresent('ext-properties-count', '');
+
     // last-updated / location fallback
-    const last = data.lastUpdatedText || data.lastUpdated || (data.postnummer ? `${data.postnummer} ${data.ort || ''}` : null) || data.source || '-';
-    set('ext-last-updated', last);
+    const last = data.lastUpdatedText || data.lastUpdated || (data.postnummer ? `${data.postnummer} ${data.ort || ''}` : null) || data.source || null;
+    if (last) setIfPresent('ext-last-updated', last);
+    else setIfPresent('ext-last-updated', '');
 
     // Address verification from PAP API (if present)
     try {
@@ -356,8 +376,22 @@ async function loadExternalData() {
         const lineEl = document.querySelector('[data-field="externalAddressLine"]');
         const statusEl = document.querySelector('[data-field="externalAddressStatus"]');
 
-        if (lineEl) lineEl.textContent = line || '-';
-        if (statusEl) statusEl.textContent = a.statusTextSv || a.statusTextEn || '-';
+        if (lineEl) {
+          lineEl.textContent = line || '';
+          const li = lineEl.closest && lineEl.closest('li');
+          if (li) {
+            if (!lineEl.textContent.trim()) li.classList.add('hidden');
+            else li.classList.remove('hidden');
+          }
+        }
+        if (statusEl) {
+          statusEl.textContent = a.statusTextSv || a.statusTextEn || '';
+          const li2 = statusEl.closest && statusEl.closest('li');
+          if (li2) {
+            if (!statusEl.textContent.trim()) li2.classList.add('hidden');
+            else li2.classList.remove('hidden');
+          }
+        }
       }
     } catch (err) {
       console.error('Kunde inte rendera addressVerification', err);

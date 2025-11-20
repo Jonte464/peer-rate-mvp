@@ -105,6 +105,54 @@ function normalizeCheckbox(v) {
   return v === true || v === 'true' || v === 'on' || v === '1';
 }
 
+// Validate Swedish personal identity number (YYYYMMDDNNNN or YYMMDDNNNN)
+function isValidPersonalNumber(input) {
+  if (!input) return false;
+  const raw = String(input).replace(/[^0-9]/g, '');
+  // Accept 10 or 12 digits
+  if (!(raw.length === 10 || raw.length === 12)) return false;
+
+  // Extract date part and serial
+  let datePart = raw.length === 12 ? raw.slice(0, 8) : raw.slice(0, 6);
+  // For Luhn checksum we need the last 10 digits (YYMMDDNNNN)
+  const luhnSource = raw.length === 12 ? raw.slice(2) : raw;
+
+  // Validate date
+  let year, month, day;
+  if (datePart.length === 8) {
+    year = Number(datePart.slice(0, 4));
+    month = Number(datePart.slice(4, 6));
+    day = Number(datePart.slice(6, 8));
+  } else {
+    // YYMMDD -> assume 1900/2000 ambiguous; just validate month/day
+    year = Number(datePart.slice(0, 2));
+    month = Number(datePart.slice(2, 4));
+    day = Number(datePart.slice(4, 6));
+  }
+  if (month < 1 || month > 12) return false;
+  if (day < 1 || day > 31) return false;
+  // Basic day-month check
+  const mdays = [31, (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (datePart.length >= 6) {
+    const mon = month - 1;
+    if (mon < 0 || mon > 11) return false;
+    if (day > mdays[mon]) return false;
+  }
+
+  // Luhn check on last 10 digits
+  const digits = luhnSource.split('').map((d) => Number(d));
+  if (digits.length !== 10 || digits.some((n) => Number.isNaN(n))) return false;
+  let sum = 0;
+  for (let i = 0; i < 10; i++) {
+    let val = digits[i];
+    // multiply by 2 for even indexes (0-based) when applying Luhn from left on 10-digit
+    if (i % 2 === 0) val = val * 2;
+    if (val > 9) val = val - 9;
+    sum += val;
+  }
+  return sum % 10 === 0;
+}
+
 // --- Health ---
 app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }));
 app.get('/health', (_req, res) => {
@@ -215,7 +263,12 @@ const createCustomerSchema = Joi.object({
   firstName: Joi.string().min(2).max(100).required(),
   lastName: Joi.string().min(2).max(100).required(),
   personalNumber: Joi.string()
-    .pattern(/^\d{10,12}$/)
+    .custom((value, helpers) => {
+      if (!isValidPersonalNumber(value)) {
+        return helpers.error('any.invalid');
+      }
+      return value;
+    })
     .required(),
   email: Joi.string().email().required(),
   emailConfirm: Joi.string().email().required(),
@@ -433,14 +486,16 @@ app.post('/api/customers', async (req, res) => {
         friendlyField = null;
     }
 
+    // Specialfall: ogiltigt personnummer
+    if (key === 'personalNumber') {
+      return res.status(400).json({ ok: false, error: 'Ogiltigt personnummer.' });
+    }
+
     const msg = friendlyField
       ? `Kontrollera fältet: ${friendlyField}.`
       : 'En eller flera uppgifter är ogiltiga. Kontrollera formuläret.';
 
-    return res.status(400).json({
-      ok: false,
-      error: msg,
-    });
+    return res.status(400).json({ ok: false, error: msg });
   }
 
   const emailTrim = String(value.email || '').trim().toLowerCase();

@@ -1,11 +1,37 @@
 // api.js - Hanterar API-anrop till backend
 
+// liten helper för att hämta ev. auth-token från localStorage (utan att krascha på server)
+function getAuthToken() {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    // testa flera vanliga nycklar
+    return (
+      localStorage.getItem('peerRateToken') ||
+      localStorage.getItem('token') ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
+// bygger headers med ev. Authorization-header
+function buildAuthHeaders(baseHeaders = {}) {
+  const headers = { ...baseHeaders };
+  const token = getAuthToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 const api = {
   createRating: (payload) => {
     return fetch('/api/ratings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
+      credentials: 'include',
     }).then(async (r) => {
       const raw = await r.text();
       try {
@@ -16,10 +42,11 @@ const api = {
       }
     });
   },
+
   createCustomer: (payload) => {
     return fetch('/api/customers', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }, // registrering kan vara öppen
       body: JSON.stringify(payload),
     }).then(async (r) => {
       const raw = await r.text();
@@ -31,21 +58,33 @@ const api = {
       }
     });
   },
+
   login: (payload) => {
     return fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      credentials: 'include',
     }).then(async (r) => {
       const raw = await r.text();
       try {
-        return JSON.parse(raw);
+        const json = JSON.parse(raw);
+        // om backend skickar med token kan vi cacha den
+        if (json && json.token) {
+          try {
+            localStorage.setItem('peerRateToken', json.token);
+          } catch {
+            // ignore
+          }
+        }
+        return json;
       } catch {
         console.warn('Non-JSON response (login):', raw);
         return { ok: r.ok, status: r.status, raw };
       }
     });
   },
+
   // Admin-login (separat endpoint)
   adminLogin: (payload) => {
     return fetch('/api/admin/login', {
@@ -62,11 +101,24 @@ const api = {
       }
     });
   },
+
   // Helper for admin requests that require x-admin-key header
   adminFetch: (path, opts = {}) => {
-    const key = localStorage.getItem('peerRateAdminKey') || '';
-    const headers = Object.assign({}, opts.headers || {}, key ? { 'x-admin-key': key } : {});
-    return fetch(path, Object.assign({}, opts, { headers } )).then(async (r) => {
+    const key =
+      (typeof localStorage !== 'undefined' &&
+        localStorage.getItem('peerRateAdminKey')) ||
+      '';
+    const headers = Object.assign(
+      {},
+      opts.headers || {},
+      key ? { 'x-admin-key': key } : {}
+    );
+    return fetch(
+      path,
+      Object.assign({}, opts, {
+        headers,
+      })
+    ).then(async (r) => {
       const raw = await r.text();
       try {
         return JSON.parse(raw);
@@ -75,9 +127,12 @@ const api = {
       }
     });
   },
+
   searchCustomers: (q) => {
     return fetch(`/api/customers?q=${encodeURIComponent(q)}`, {
       method: 'GET',
+      headers: buildAuthHeaders(),
+      credentials: 'include',
     }).then(async (r) => {
       const raw = await r.text();
       try {
@@ -88,10 +143,15 @@ const api = {
       }
     });
   },
+
   // Internal helper to perform GET requests with consistent auth/credentials
   _clientGet: async (path) => {
     try {
-      const res = await fetch(path, { method: 'GET', headers: { 'Content-Type': 'application/json' }, credentials: 'include' });
+      const res = await fetch(path, {
+        method: 'GET',
+        headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'include', // skicka cookies också
+      });
       const text = await res.text();
       try {
         return JSON.parse(text);
@@ -103,6 +163,7 @@ const api = {
       return null;
     }
   },
+
   // Hämta aktuell inloggad kund — försök flera vanliga endpoints, annars fallback till localStorage
   getCurrentCustomer: async () => {
     const endpoints = ['/api/customers/me', '/api/auth/me', '/api/profile/me'];
@@ -123,7 +184,10 @@ const api = {
 
     // Fallback: try to read from localStorage (client-side cached user)
     try {
-      const raw = localStorage.getItem('peerRateUser');
+      const raw =
+        typeof localStorage !== 'undefined'
+          ? localStorage.getItem('peerRateUser')
+          : null;
       if (!raw) return null;
       const cached = JSON.parse(raw);
       // If we have an email/subjectRef, try to fetch a fresh server-side record via searchCustomers
@@ -131,7 +195,12 @@ const api = {
       if (q) {
         try {
           const found = await api.searchCustomers(q);
-          if (found && found.ok && Array.isArray(found.customers) && found.customers.length) {
+          if (
+            found &&
+            found.ok &&
+            Array.isArray(found.customers) &&
+            found.customers.length
+          ) {
             return found.customers[0];
           }
         } catch (err) {
@@ -143,6 +212,7 @@ const api = {
       return null;
     }
   },
+
   // Hämta externa data för inloggad kund via backend (använder samma auth/credentials som getCurrentCustomer)
   getExternalDataForCurrentCustomer: async () => {
     try {
@@ -162,14 +232,32 @@ const api = {
       const subject = (current && (current.subjectRef || current.email)) || null;
       if (!subject) return null;
 
-      const avgP = fetch(`/api/ratings/average?subject=${encodeURIComponent(subject)}`, { method: 'GET' }).then(async (r) => {
+      const avgP = fetch(
+        `/api/ratings/average?subject=${encodeURIComponent(subject)}`,
+        {
+          method: 'GET',
+        }
+      ).then(async (r) => {
         if (!r.ok) return null;
-        try { return await r.json(); } catch { return null; }
+        try {
+          return await r.json();
+        } catch {
+          return null;
+        }
       });
 
-      const listP = fetch(`/api/ratings?subject=${encodeURIComponent(subject)}`, { method: 'GET' }).then(async (r) => {
+      const listP = fetch(
+        `/api/ratings?subject=${encodeURIComponent(subject)}`,
+        {
+          method: 'GET',
+        }
+      ).then(async (r) => {
         if (!r.ok) return null;
-        try { return await r.json(); } catch { return null; }
+        try {
+          return await r.json();
+        } catch {
+          return null;
+        }
       });
 
       const [avg, list] = await Promise.all([avgP, listP]);
