@@ -173,33 +173,33 @@ function requireAuth(req, res, next) {
 }
 
 /**
- * GET /api/customers/me/external-data
- * Returnerar extern adressverifiering för inloggad kund
- * Kräver inloggning (requireAuth)
+/** GET /api/customers/external-data
+ * Publik endpoint (MVP): tar ?email=... och returnerar extern adressverifiering
+ * Vi kräver inte inloggning här för MVP; frontend skickar e-post
  */
-app.get('/api/customers/me/external-data', requireAuth, async (req, res) => {
+app.get('/api/customers/external-data', async (req, res) => {
   try {
-    // Hämta kund från databasen
-    const customer = await prisma.customer.findUnique({ where: { id: req.user.id } });
-    if (!customer) return res.status(404).json({ ok: false, error: 'Kund saknas' });
-
-    // Bygg adressuppsättning för PAP API
-    const addrStreetRaw = (customer.addressStreet || '') && String(customer.addressStreet).trim();
-    let street = addrStreetRaw || null;
-    let number = null;
-    if (addrStreetRaw) {
-      const tokens = addrStreetRaw.split(/\s+/);
-      const last = tokens[tokens.length - 1] || '';
-      if (/\d/.test(last)) {
-        number = last;
-        tokens.pop();
-        street = tokens.join(' ') || null;
-      }
+    const email = String(req.query.email || '').trim();
+    if (!email) {
+      return res.status(400).json({ ok: false, error: 'Saknar email' });
     }
 
-    const zipcode = (customer.addressZip || customer.zip || '') || null;
-    const city = (customer.addressCity || customer.city || '') || null;
+    // Hitta kund i databasen via e-post (case-insensitive)
+    const customer = await prisma.customer.findFirst({
+      where: { email: email.toLowerCase() },
+    });
 
+    if (!customer) {
+      return res.status(404).json({ ok: false, error: 'Kund hittades inte' });
+    }
+
+    // Plocka ut adressfält (anpassa till dina kolumnnamn)
+    const street = customer.street || customer.addressStreet || '';
+    const number = customer.streetNumber || customer.addressNumber || '';
+    const zipcode = customer.zipcode || customer.postalCode || customer.addressZip || '';
+    const city = customer.city || customer.addressCity || '';
+
+    // Anropa PAP-API (lookupAddressWithPapApi)
     let externalAddress = null;
     try {
       externalAddress = await lookupAddressWithPapApi({ street, number, zipcode, city });
@@ -216,8 +216,8 @@ app.get('/api/customers/me/external-data', requireAuth, async (req, res) => {
       addressVerification: externalAddress,
     });
   } catch (err) {
-    console.error('external-data error:', err);
-    return res.status(500).json({ ok: false, error: 'Serverfel vid extern hämtning' });
+    console.error('external-data error', err);
+    return res.status(500).json({ ok: false, error: 'Internt serverfel' });
   }
 });
 

@@ -216,7 +216,12 @@ const api = {
   // Hämta externa data för inloggad kund via backend (använder samma auth/credentials som getCurrentCustomer)
   getExternalDataForCurrentCustomer: async () => {
     try {
-      const json = await api._clientGet('/api/customers/me/external-data');
+      // För MVP: backend erbjuder publik endpoint som tar ?email=...
+      const current = await api.getCurrentCustomer();
+      const email = (current && (current.email || current.subjectRef)) || null;
+      if (!email) return null;
+      const path = `/api/customers/external-data?email=${encodeURIComponent(email)}`;
+      const json = await api._clientGet(path);
       return json;
     } catch (err) {
       console.error('getExternalDataForCurrentCustomer error', err);
