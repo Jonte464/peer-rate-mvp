@@ -214,6 +214,11 @@ async function findCustomerBySubjectRef(subjectRef) {
       personalNumber: true,
       createdAt: true,
       thirdPartyConsent: true,
+      // ⬇️ dessa läggs till för extern-adress-API:t
+      addressStreet: true,
+      addressZip: true,
+      addressCity: true,
+      country: true,
     },
   });
 }

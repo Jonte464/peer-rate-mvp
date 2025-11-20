@@ -32,7 +32,6 @@ const {
 // PAP API service (adressverifiering)
 const { lookupAddressWithPapApi } = require('./services/papApiService');
 
-
 const app = express();
 
 // --- Config ---
@@ -82,7 +81,6 @@ app.use(
   })
 );
 
-
 // --- Helpers ---
 function nowIso() {
   return new Date().toISOString();
@@ -98,7 +96,7 @@ function clean(s) {
 function normalizePhone(s) {
   const v = clean(s);
   if (!v) return null;
-    const stripped = v.replace(/[^0-9+]/g, '');
+  const stripped = v.replace(/[^0-9+]/g, '');
   return stripped || null;
 }
 function normalizeCheckbox(v) {
@@ -132,7 +130,20 @@ function isValidPersonalNumber(input) {
   if (month < 1 || month > 12) return false;
   if (day < 1 || day > 31) return false;
   // Basic day-month check
-  const mdays = [31, (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  const mdays = [
+    31,
+    (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ];
   if (datePart.length >= 6) {
     const mon = month - 1;
     if (mon < 0 || mon > 11) return false;
@@ -153,6 +164,122 @@ function isValidPersonalNumber(input) {
   return sum % 10 === 0;
 }
 
+// --- External data helpers ---
+
+/**
+ * Plocka ut adressdelar från kundobjektet, med lite tolerans för olika kolumnnamn.
+ */
+function extractAddressPartsFromCustomer(customer) {
+  const addrStreetRaw = String(
+    customer.addressStreet || customer.street || ''
+  ).trim();
+
+  let street = addrStreetRaw || null;
+  let number = null;
+
+  if (addrStreetRaw) {
+    const tokens = addrStreetRaw.split(/\s+/);
+    const last = tokens[tokens.length - 1] || '';
+    if (/\d/.test(last)) {
+      number = last;
+      tokens.pop();
+      street = tokens.join(' ') || null;
+    }
+  }
+
+  const zipcode = String(
+    customer.addressZip ||
+      customer.zipcode ||
+      customer.postalCode ||
+      customer.zip ||
+      ''
+  ).trim() || null;
+
+  const city = String(
+    customer.addressCity || customer.city || ''
+  ).trim() || null;
+
+  return { street, number, zipcode, city };
+}
+
+/**
+ * Bygger ett standardiserat svar som matchar frontend/api.js:
+ *  - vehiclesCount / propertiesCount / vehicles / properties
+ *  - lastUpdated (ISO, frontend kapar till YYYY-MM-DD)
+ *  - validatedAddress (text)
+ *  - addressStatus (t.ex. VERIFIED / FROM_PROFILE / NO_ADDRESS / NO_DATA / osv.)
+ */
+function buildExternalDataResponse(customer, externalAddress) {
+  let validatedAddress = null;
+  let status = '-';
+
+  if (externalAddress && typeof externalAddress === 'object') {
+    const addrObj =
+      externalAddress.normalizedAddress ||
+      externalAddress.address ||
+      externalAddress;
+
+    const streetExt =
+      addrObj.street || addrObj.addressStreet || addrObj.gatuadress || null;
+    const zipExt =
+      addrObj.zipcode ||
+      addrObj.postalCode ||
+      addrObj.postnr ||
+      addrObj.zip ||
+      null;
+    const cityExt =
+      addrObj.city ||
+      addrObj.postort ||
+      addrObj.addressCity ||
+      null;
+
+    const partsExt = [streetExt, zipExt, cityExt].filter(Boolean);
+    if (partsExt.length) {
+      validatedAddress = partsExt.join(', ');
+    }
+
+    if (externalAddress.status) {
+      status = String(externalAddress.status).toUpperCase();
+    } else if (externalAddress.matchStatus) {
+      status = String(externalAddress.matchStatus).toUpperCase();
+    } else {
+      status = 'VERIFIED';
+    }
+  }
+
+  // Fallback: använd kundens egen adress om vi inte fick någon bättre
+  if (!validatedAddress) {
+    const street = customer.addressStreet || customer.street || null;
+    const zip = customer.addressZip || customer.postalCode || null;
+    const city = customer.addressCity || customer.city || null;
+    const parts = [street, zip, city].filter(Boolean);
+    if (parts.length) {
+      validatedAddress = parts.join(', ');
+      if (status === '-') status = 'FROM_PROFILE';
+    }
+  }
+
+  if (!validatedAddress) {
+    validatedAddress = null;
+    if (status === '-') status = 'NO_ADDRESS';
+  }
+
+  const now = new Date().toISOString();
+
+  return {
+    ok: true,
+    // just nu inga kopplingar till fordon/fastighet – men fälten finns
+    vehiclesCount: 0,
+    propertiesCount: 0,
+    vehicles: 0,
+    properties: 0,
+    // frontend api.js: formatDate(json.lastUpdated)
+    lastUpdated: now,
+    validatedAddress,
+    addressStatus: status,
+  };
+}
+
 // --- Health ---
 app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }));
 app.get('/health', (_req, res) => {
@@ -166,58 +293,62 @@ app.get('/health', (_req, res) => {
   });
 });
 
-// Enkel auth-middleware för /api/customers/me/external-data
+// Enkel auth-middleware för /api/customers/me/external-data (ej använd än)
 function requireAuth(req, res, next) {
   if (req.user && req.user.id) return next();
   return res.status(401).json({ ok: false, error: 'Ej inloggad' });
 }
 
 /**
-/** GET /api/customers/external-data
+ * GET /api/customers/external-data
  * Publik endpoint (MVP): tar ?email=... och returnerar extern adressverifiering
- * Vi kräver inte inloggning här för MVP; frontend skickar e-post
+ * Frontend: api.getExternalDataForCurrentCustomer() kallar denna och förväntar sig:
+ *   { ok, vehiclesCount/propertiesCount, lastUpdated, validatedAddress, addressStatus }
  */
 app.get('/api/customers/external-data', async (req, res) => {
   try {
-    const email = String(req.query.email || '').trim();
+    const email = String(req.query.email || '').trim().toLowerCase();
     if (!email) {
       return res.status(400).json({ ok: false, error: 'Saknar email' });
     }
 
     // Hitta kund i databasen via e-post (case-insensitive)
     const customer = await prisma.customer.findFirst({
-      where: { email: email.toLowerCase() },
+      where: { email },
     });
 
     if (!customer) {
-      return res.status(404).json({ ok: false, error: 'Kund hittades inte' });
+      return res
+        .status(404)
+        .json({ ok: false, error: 'Kund hittades inte' });
     }
 
-    // Plocka ut adressfält (anpassa till dina kolumnnamn)
-    const street = customer.street || customer.addressStreet || '';
-    const number = customer.streetNumber || customer.addressNumber || '';
-    const zipcode = customer.zipcode || customer.postalCode || customer.addressZip || '';
-    const city = customer.city || customer.addressCity || '';
+    // Plocka ut adressdelar för PAP-uppslag
+    const { street, number, zipcode, city } =
+      extractAddressPartsFromCustomer(customer);
 
-    // Anropa PAP-API (lookupAddressWithPapApi)
     let externalAddress = null;
     try {
-      externalAddress = await lookupAddressWithPapApi({ street, number, zipcode, city });
+      if (street || zipcode || city) {
+        externalAddress = await lookupAddressWithPapApi({
+          street,
+          number,
+          zipcode,
+          city,
+        });
+      }
     } catch (err) {
       console.error('PAP API lookup failed', err);
       externalAddress = null;
     }
 
-    return res.json({
-      ok: true,
-      vehicleCount: 0,
-      propertyCount: 0,
-      lastUpdatedText: new Date().toISOString(),
-      addressVerification: externalAddress,
-    });
+    const payload = buildExternalDataResponse(customer, externalAddress);
+    return res.json(payload);
   } catch (err) {
     console.error('external-data error', err);
-    return res.status(500).json({ ok: false, error: 'Internt serverfel' });
+    return res
+      .status(500)
+      .json({ ok: false, error: 'Internt serverfel' });
   }
 });
 
@@ -226,7 +357,14 @@ function mapReportReason(input) {
   if (!input) return null;
   const v = String(input).trim().toLowerCase();
 
-  const direct = ['fraud', 'impersonation', 'non_delivery', 'counterfeit', 'payment_abuse', 'other'];
+  const direct = [
+    'fraud',
+    'impersonation',
+    'non_delivery',
+    'counterfeit',
+    'payment_abuse',
+    'other',
+  ];
   const directClean = v.replace('-', '_');
   if (direct.includes(directClean)) {
     return directClean.toUpperCase();
@@ -301,7 +439,12 @@ const adminLoginSchema = Joi.object({
 // --- Middleware: admin-skydd ---
 function requireAdmin(req, res, next) {
   if (!ADMIN_PASSWORD) {
-    return res.status(500).json({ ok: false, error: 'Admin-läge ej konfigurerat (saknar ADMIN_PASSWORD).' });
+    return res
+      .status(500)
+      .json({
+        ok: false,
+        error: 'Admin-läge ej konfigurerat (saknar ADMIN_PASSWORD).',
+      });
   }
   const key = req.headers['x-admin-key'] || '';
   if (key && key === ADMIN_PASSWORD) return next();
@@ -314,7 +457,9 @@ function requireAdmin(req, res, next) {
 app.post('/api/ratings', async (req, res) => {
   const { error, value } = createRatingSchema.validate(req.body);
   if (error) {
-    return res.status(400).json({ ok: false, error: 'Ogiltig inmatning', details: error.details });
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Ogiltig inmatning', details: error.details });
   }
 
   const subjectRef = normSubject(value.subject);
@@ -335,8 +480,10 @@ app.post('/api/ratings', async (req, res) => {
 
     const r = value.report || null;
     if (r) {
-      const flagged = r.report_flag === true || !!r.report_reason || !!r.report_text;
-      const consentOk = r.report_consent === undefined ? true : !!r.report_consent;
+      const flagged =
+        r.report_flag === true || !!r.report_reason || !!r.report_text;
+      const consentOk =
+        r.report_consent === undefined ? true : !!r.report_consent;
       if (flagged && consentOk) {
         const reasonEnum = mapReportReason(r.report_reason);
         await createReport({
@@ -354,11 +501,14 @@ app.post('/api/ratings', async (req, res) => {
     if (e && e.code === 'DUP_24H') {
       return res.status(409).json({
         ok: false,
-        error: 'Du har redan lämnat betyg för denna mottagare senaste 24 timmarna.',
+        error:
+          'Du har redan lämnat betyg för denna mottagare senaste 24 timmarna.',
       });
     }
     console.error('[POST /api/ratings] error:', e);
-    return res.status(500).json({ ok: false, error: 'Kunde inte spara betyg' });
+    return res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte spara betyg' });
   }
 });
 
@@ -368,14 +518,18 @@ app.post('/api/ratings', async (req, res) => {
 app.get('/api/ratings', async (req, res) => {
   const subject = normSubject(req.query.subject || '');
   if (!subject) {
-    return res.status(400).json({ ok: false, error: 'Ange subject i querystring.' });
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Ange subject i querystring.' });
   }
   try {
     const list = await listRatingsBySubjectRef(subject);
     res.json({ ok: true, count: list.length, ratings: list });
   } catch (e) {
     console.error('[GET /api/ratings] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta betyg' });
+    res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte hämta betyg' });
   }
 });
 
@@ -385,14 +539,18 @@ app.get('/api/ratings', async (req, res) => {
 app.get('/api/ratings/average', async (req, res) => {
   const subject = normSubject(req.query.subject || '');
   if (!subject) {
-    return res.status(400).json({ ok: false, error: 'Ange subject i querystring.' });
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Ange subject i querystring.' });
   }
   try {
     const { count, average } = await averageForSubjectRef(subject);
     res.json({ ok: true, subject, count, average });
   } catch (e) {
     console.error('[GET /api/ratings/average] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte beräkna snitt' });
+    res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte beräkna snitt' });
   }
 });
 
@@ -405,7 +563,9 @@ app.get('/api/ratings/recent', async (_req, res) => {
     res.json({ ok: true, ratings: list });
   } catch (e) {
     console.error('[GET /api/ratings/recent] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta senaste' });
+    res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte hämta senaste' });
   }
 });
 
@@ -426,8 +586,10 @@ app.post('/api/customers', async (req, res) => {
 
   console.log(
     'DEBUG backend /api/customers body:',
-    'thirdPartyConsent =', body.thirdPartyConsent,
-    'termsAccepted =', body.termsAccepted
+    'thirdPartyConsent =',
+    body.thirdPartyConsent,
+    'termsAccepted =',
+    body.termsAccepted
   );
 
   const { error, value } = createCustomerSchema.validate(body);
@@ -488,7 +650,9 @@ app.post('/api/customers', async (req, res) => {
 
     // Specialfall: ogiltigt personnummer
     if (key === 'personalNumber') {
-      return res.status(400).json({ ok: false, error: 'Ogiltigt personnummer.' });
+      return res
+        .status(400)
+        .json({ ok: false, error: 'Ogiltigt personnummer.' });
     }
 
     const msg = friendlyField
@@ -501,16 +665,21 @@ app.post('/api/customers', async (req, res) => {
   const emailTrim = String(value.email || '').trim().toLowerCase();
   const emailConfirmTrim = String(value.emailConfirm || '').trim().toLowerCase();
   if (!emailTrim || emailTrim !== emailConfirmTrim) {
-    return res.status(400).json({ ok: false, error: 'E-postadresserna matchar inte.' });
+    return res
+      .status(400)
+      .json({ ok: false, error: 'E-postadresserna matchar inte.' });
   }
 
   if (value.password !== value.passwordConfirm) {
-    return res.status(400).json({ ok: false, error: 'Lösenorden matchar inte.' });
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Lösenorden matchar inte.' });
   }
 
   // Här vet vi: thirdPartyConsent = true, termsAccepted = true (validerat av Joi)
-  const fullName = `${clean(value.firstName) || ''} ${clean(value.lastName) || ''}`
-    .trim() || null;
+  const fullName =
+    `${clean(value.firstName) || ''} ${clean(value.lastName) || ''}`.trim() ||
+    null;
   const passwordHash = await bcrypt.hash(value.password, 10);
 
   const payload = {
@@ -545,14 +714,16 @@ app.post('/api/customers', async (req, res) => {
     if (e.code === 'P2002') {
       return res.status(409).json({
         ok: false,
-        error: 'Det finns redan en användare med samma e-post eller personnummer.',
+        error:
+          'Det finns redan en användare med samma e-post eller personnummer.',
       });
     }
 
-    return res.status(500).json({ ok: false, error: 'Kunde inte spara kund' });
+    return res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte spara kund' });
   }
 });
-
 
 /* -------------------------------------------------------
    Login – används av “Lämna betyg” & “Min profil”
@@ -560,7 +731,9 @@ app.post('/api/customers', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   const { error, value } = loginSchema.validate(req.body);
   if (error) {
-    return res.status(400).json({ ok: false, error: 'Ogiltiga inloggningsuppgifter.' });
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Ogiltiga inloggningsuppgifter.' });
   }
 
   const emailTrim = String(value.email || '').trim().toLowerCase();
@@ -568,12 +741,16 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const customer = await findCustomerBySubjectRef(emailTrim);
     if (!customer || !customer.passwordHash) {
-      return res.status(401).json({ ok: false, error: 'Fel e-post eller lösenord.' });
+      return res
+        .status(401)
+        .json({ ok: false, error: 'Fel e-post eller lösenord.' });
     }
 
     const match = await bcrypt.compare(value.password, customer.passwordHash);
     if (!match) {
-      return res.status(401).json({ ok: false, error: 'Fel e-post eller lösenord.' });
+      return res
+        .status(401)
+        .json({ ok: false, error: 'Fel e-post eller lösenord.' });
     }
 
     return res.status(200).json({
@@ -586,7 +763,9 @@ app.post('/api/auth/login', async (req, res) => {
     });
   } catch (e) {
     console.error('[POST /api/auth/login] error:', e);
-    return res.status(500).json({ ok: false, error: 'Kunde inte logga in.' });
+    return res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte logga in.' });
   }
 });
 
@@ -594,7 +773,9 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/customers', async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) {
-    return res.status(400).json({ ok: false, error: 'Ange q i querystring.' });
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Ange q i querystring.' });
   }
 
   try {
@@ -602,7 +783,9 @@ app.get('/api/customers', async (req, res) => {
     res.json({ ok: true, count: customers.length, customers });
   } catch (e) {
     console.error('[GET /api/customers] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta kunder' });
+    res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte hämta kunder' });
   }
 });
 
@@ -614,13 +797,19 @@ app.get('/api/customers', async (req, res) => {
 app.post('/api/admin/login', (req, res) => {
   const { error, value } = adminLoginSchema.validate(req.body);
   if (error) {
-    return res.status(400).json({ ok: false, error: 'Ogiltigt admin-lösenord.' });
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Ogiltigt admin-lösenord.' });
   }
   if (!ADMIN_PASSWORD) {
-    return res.status(500).json({ ok: false, error: 'ADMIN_PASSWORD saknas i servern.' });
+    return res
+      .status(500)
+      .json({ ok: false, error: 'ADMIN_PASSWORD saknas i servern.' });
   }
   if (value.password !== ADMIN_PASSWORD) {
-    return res.status(401).json({ ok: false, error: 'Fel admin-lösenord.' });
+    return res
+      .status(401)
+      .json({ ok: false, error: 'Fel admin-lösenord.' });
   }
   // Frontend sparar detta lösenord och skickar i x-admin-key-header.
   res.json({ ok: true });
@@ -633,7 +822,10 @@ app.get('/api/admin/summary', requireAdmin, async (_req, res) => {
     res.json({ ok: true, counts });
   } catch (e) {
     console.error('[GET /api/admin/summary] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta admin-sammanfattning.' });
+    res.status(500).json({
+      ok: false,
+      error: 'Kunde inte hämta admin-sammanfattning.',
+    });
   }
 });
 
@@ -645,7 +837,10 @@ app.get('/api/admin/ratings/recent', requireAdmin, async (req, res) => {
     res.json({ ok: true, ratings: list });
   } catch (e) {
     console.error('[GET /api/admin/ratings/recent] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta senaste ratings (admin).' });
+    res.status(500).json({
+      ok: false,
+      error: 'Kunde inte hämta senaste ratings (admin).',
+    });
   }
 });
 
@@ -657,7 +852,10 @@ app.get('/api/admin/reports/recent', requireAdmin, async (req, res) => {
     res.json({ ok: true, reports: list });
   } catch (e) {
     console.error('[GET /api/admin/reports/recent] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta senaste rapporter (admin).' });
+    res.status(500).json({
+      ok: false,
+      error: 'Kunde inte hämta senaste rapporter (admin).',
+    });
   }
 });
 
@@ -665,7 +863,10 @@ app.get('/api/admin/reports/recent', requireAdmin, async (req, res) => {
 app.get('/api/admin/customers', requireAdmin, async (req, res) => {
   try {
     const page = Math.max(1, Number(req.query.page || 1));
-    const pageSize = Math.min(1000, Math.max(1, Number(req.query.limit || 50)));
+    const pageSize = Math.min(
+      1000,
+      Math.max(1, Number(req.query.limit || 50))
+    );
     const skip = (page - 1) * pageSize;
 
     const [rows, total] = await Promise.all([
@@ -694,24 +895,37 @@ app.get('/api/admin/customers', requireAdmin, async (req, res) => {
       createdAt: r.createdAt ? r.createdAt.toISOString() : null,
     }));
 
-    res.json({ ok: true, count: customers.length, total, page, pageSize, customers });
+    res.json({
+      ok: true,
+      count: customers.length,
+      total,
+      page,
+      pageSize,
+      customers,
+    });
   } catch (e) {
     console.error('[GET /api/admin/customers] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta kunder' });
+    res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte hämta kunder' });
   }
 });
 
 /** Sök kund + ratings (admin) */
 app.get('/api/admin/customer', requireAdmin, async (req, res) => {
   const q = (req.query.q || '').trim();
-  if (!q) return res.status(400).json({ ok: false, error: 'Ange q i querystring.' });
+  if (!q)
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Ange q i querystring.' });
 
   try {
     const customer = await adminGetCustomerWithRatings(q);
     if (!customer) {
       return res.json({ ok: true, customer: null });
     }
-    const subjectRef = customer.subjectRef || (customer.email || '').toLowerCase();
+    const subjectRef =
+      customer.subjectRef || (customer.email || '').toLowerCase();
     let avgData = { count: 0, average: 0 };
     if (subjectRef) {
       avgData = await averageForSubjectRef(subjectRef);
@@ -739,75 +953,71 @@ app.get('/api/admin/customer', requireAdmin, async (req, res) => {
     });
   } catch (e) {
     console.error('[GET /api/admin/customer] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta kund (admin).' });
+    res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte hämta kund (admin).' });
   }
 });
 
-
-// --- Fallback: SPA --- (lägg sist)
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
-});
-
 /* -------------------------------------------------------
-   Hämta extern data (DEMO) baserat på postnummer
+   Hämta extern data (DEMO) baserat på profil
    ------------------------------------------------------- */
 app.get('/api/profile/external-demo', async (req, res) => {
   try {
-    // Support for two modes:
-    // 1) authenticated requests where req.user.id is present
-    // 2) public lookup when caller provides ?subject=<email|subjectRef>
-    const subjectQ = (req.query.subject || '').trim();
+    // 1) authenticated requests där req.user.id finns (framtid)
+    // 2) publik lookup: ?subject=<email|subjectRef>
+    const subjectQ = String(req.query.subject || '').trim().toLowerCase();
 
     let customer = null;
     if (req.user && req.user.id) {
-      customer = await prisma.customer.findUnique({ where: { id: req.user.id } });
+      customer = await prisma.customer.findUnique({
+        where: { id: req.user.id },
+      });
     } else if (subjectQ) {
-      // Find by subjectRef (email) using helper
-      const found = await findCustomerBySubjectRef(subjectQ.toLowerCase());
-      customer = found || null;
+      customer = await findCustomerBySubjectRef(subjectQ);
     } else {
-      return res.status(401).json({ ok: false, error: 'Ej inloggad. Ange subject som queryparameter för publik lookup.' });
+      return res.status(401).json({
+        ok: false,
+        error:
+          'Ej inloggad. Ange subject som queryparameter för publik lookup.',
+      });
     }
 
-    if (!customer) return res.status(404).json({ ok: false, error: 'Kund saknas' });
+    if (!customer)
+      return res.status(404).json({ ok: false, error: 'Kund saknas' });
 
-    // Bygg adressuppsättning för PAP API
-    const addrStreetRaw = (customer.addressStreet || '') && String(customer.addressStreet).trim();
-    let street = addrStreetRaw || null;
-    let number = null;
-    if (addrStreetRaw) {
-      const tokens = addrStreetRaw.split(/\s+/);
-      const last = tokens[tokens.length - 1] || '';
-      if (/\d/.test(last)) {
-        number = last;
-        tokens.pop();
-        street = tokens.join(' ') || null;
-      }
-    }
-
-    const zipcode = (customer.addressZip || customer.zip || '') || null;
-    const city = (customer.addressCity || customer.city || '') || null;
+    const { street, number, zipcode, city } =
+      extractAddressPartsFromCustomer(customer);
 
     let externalAddress = null;
     try {
-      externalAddress = await lookupAddressWithPapApi({ street, number, zipcode, city });
+      if (street || zipcode || city) {
+        externalAddress = await lookupAddressWithPapApi({
+          street,
+          number,
+          zipcode,
+          city,
+        });
+      }
     } catch (err) {
       console.error('PAP API lookup failed', err);
       externalAddress = null;
     }
 
-    return res.json({
-      ok: true,
-      vehicleCount: 0,
-      propertyCount: 0,
-      lastUpdatedText: new Date().toISOString(),
-      addressVerification: externalAddress,
-    });
+    const payload = buildExternalDataResponse(customer, externalAddress);
+    return res.json(payload);
   } catch (err) {
     console.error('External demo error:', err);
-    return res.status(500).json({ ok: false, error: 'Serverfel vid extern hämtning' });
+    return res.status(500).json({
+      ok: false,
+      error: 'Serverfel vid extern hämtning',
+    });
   }
+});
+
+// --- Fallback: SPA --- (lägg allra sist)
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
 // --- Start ---
