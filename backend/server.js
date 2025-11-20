@@ -301,7 +301,7 @@ function requireAuth(req, res, next) {
 
 /**
  * GET /api/customers/external-data
- * Returnerar extern eller profilbaserad adressdata.
+ * Hämtar ENDAST extern data. Ingen fallback till profilen.
  * Frontend förväntar sig:
  * { ok, vehiclesCount, propertiesCount, lastUpdated, validatedAddress, addressStatus }
  */
@@ -317,91 +317,94 @@ app.get('/api/customers/external-data', async (req, res) => {
       where: {
         OR: [
           { subjectRef: emailOrSubject },
-          { email: emailOrSubject }
-        ]
-      }
+          { email: emailOrSubject },
+        ],
+      },
     });
 
     if (!customer) {
       return res.status(404).json({ ok: false, error: 'Kund hittades inte' });
     }
 
-    // --- PROFILENS EGNA ADRESSDELAR ---
-    const street = (customer.addressStreet || '').trim() || null;
-    const zip = (customer.addressZip || '').trim() || null;
-    const city = (customer.addressCity || '').trim() || null;
+    // Plocka ut adressdelar från kundprofilen ENBART för att slå mot extern tjänst
+    // (vi använder INTE dessa direkt som "validerad" adress)
+    const { street, number, zipcode, city } =
+      extractAddressPartsFromCustomer(customer); // helper som du redan har i server.js
 
     let validatedAddress = null;
-    let addressStatus = '-';
+    let addressStatus = 'NO_EXTERNAL_DATA';
+    let vehiclesCount = null;
+    let propertiesCount = null;
 
-    const profileParts = [street, zip, city].filter(Boolean);
-
-    if (profileParts.length) {
-      validatedAddress = profileParts.join(', ');
-      addressStatus = 'FROM_PROFILE';
-    }
-
-    // --- PAP API (valfritt, används endast om aktivt) ---
-    let externalAddress = null;
-    try {
-      if (street || zip || city) {
-        externalAddress = await lookupAddressWithPapApi({
+    // Anropa extern adress-tjänst om vi har något att slå på
+    if (street || zipcode || city) {
+      try {
+        const externalAddress = await lookupAddressWithPapApi({
           street,
-          number: null,
-          zipcode: zip,
-          city
+          number,
+          zipcode,
+          city,
         });
+
+        if (externalAddress && typeof externalAddress === 'object') {
+          const addrObj =
+            externalAddress.normalizedAddress ||
+            externalAddress.address ||
+            externalAddress;
+
+          const extStreet =
+            addrObj.street || addrObj.addressStreet || addrObj.gatuadress || null;
+          const extZip =
+            addrObj.zipcode || addrObj.postalCode || addrObj.postnr || null;
+          const extCity =
+            addrObj.city || addrObj.postort || addrObj.addressCity || null;
+
+          const parts = [extStreet, extZip, extCity].filter(Boolean);
+          if (parts.length) {
+            validatedAddress = parts.join(', ');
+          }
+
+          // Om externa källan råkar ge antal fordon/fastigheter i framtiden
+          vehiclesCount =
+            externalAddress.vehiclesCount ??
+            externalAddress.vehicleCount ??
+            externalAddress.vehicles ??
+            null;
+
+          propertiesCount =
+            externalAddress.propertiesCount ??
+            externalAddress.propertyCount ??
+            externalAddress.properties ??
+            null;
+
+          if (validatedAddress) {
+            addressStatus = externalAddress.status
+              ? String(externalAddress.status).toUpperCase()
+              : (externalAddress.matchStatus
+                  ? String(externalAddress.matchStatus).toUpperCase()
+                  : 'VERIFIED');
+          } else {
+            addressStatus = 'NO_ADDRESS_IN_RESPONSE';
+          }
+        }
+      } catch (err) {
+        console.error('PAP API lookup failed', err);
+        addressStatus = 'LOOKUP_FAILED';
       }
-    } catch (err) {
-      console.error('PAP API lookup failed', err);
-      externalAddress = null;
-    }
-
-    // Om PAP gav bättre data -> skriv över validatedAddress
-    if (externalAddress && typeof externalAddress === 'object') {
-      const addrObj =
-        externalAddress.normalizedAddress ||
-        externalAddress.address ||
-        externalAddress;
-
-      const extStreet =
-        addrObj.street || addrObj.addressStreet || addrObj.gatuadress || null;
-      const extZip =
-        addrObj.zipcode || addrObj.postalCode || addrObj.postnr || null;
-      const extCity =
-        addrObj.city || addrObj.postort || addrObj.addressCity || null;
-
-      const parts = [extStreet, extZip, extCity].filter(Boolean);
-
-      if (parts.length) {
-        validatedAddress = parts.join(', ');
-        addressStatus =
-          externalAddress.status
-            ? String(externalAddress.status).toUpperCase()
-            : (externalAddress.matchStatus
-                ? String(externalAddress.matchStatus).toUpperCase()
-                : 'VERIFIED');
-      }
-    }
-
-    if (!validatedAddress) {
-      validatedAddress = null;
-      if (addressStatus === '-') addressStatus = 'NO_ADDRESS';
+    } else {
+      addressStatus = 'NO_ADDRESS_INPUT';
     }
 
     const now = new Date().toISOString();
 
     return res.json({
       ok: true,
-      vehiclesCount: 0,
-      propertiesCount: 0,
-      vehicles: 0,
-      properties: 0,
+      vehiclesCount,
+      propertiesCount,
       lastUpdated: now,
       validatedAddress,
-      addressStatus
+      addressStatus,
     });
-
   } catch (err) {
     console.error('external-data error', err);
     return res.status(500).json({ ok: false, error: 'Internt serverfel' });

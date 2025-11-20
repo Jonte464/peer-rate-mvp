@@ -174,7 +174,7 @@ const api = {
     }
   },
 
-  // ---------------------- EXTERN DATA ---------------------------
+    // ---------------------- EXTERN DATA ---------------------------
   getExternalDataForCurrentCustomer: async () => {
     try {
       const current = await api.getCurrentCustomer();
@@ -183,24 +183,22 @@ const api = {
 
       const path = `/api/customers/external-data?email=${encodeURIComponent(email)}`;
       const json = await api._clientGet(path);
-      if (!json) return null;
+      if (!json || json.ok === false) return json; // kan vara null eller { ok:false, error:... }
 
       return {
-        ok: json.ok ?? true,
-
-        vehicles: json.vehiclesCount ?? json.vehicles ?? 0,
-        properties: json.propertiesCount ?? json.properties ?? 0,
-
+        ok: true,
+        vehicles: json.vehiclesCount ?? json.vehicles ?? null,
+        properties: json.propertiesCount ?? json.properties ?? null,
         lastUpdated: formatDate(json.lastUpdated),
-
-        validatedAddress: json.validatedAddress ?? '-',
-        addressStatus: json.addressStatus ?? '-'
+        validatedAddress: json.validatedAddress ?? null,
+        addressStatus: json.addressStatus ?? null,
       };
     } catch (err) {
       console.error('getExternalDataForCurrentCustomer error', err);
       return null;
     }
   },
+
   // Hämta extern data för en specifik profil (t.ex. när du tittar på din frus profil)
   getExternalDataForEmail: async (emailOrSubject) => {
     try {

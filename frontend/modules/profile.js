@@ -309,7 +309,7 @@ async function loadProfileData() {
     set('profile-addressCity', customer.addressCity || customer.city || '-');
     set('profile-country', customer.country || '-');
 
-    // Ratings summary if present
+    // Ratings summary if present (om profil kommer med avg)
     if (typeof customer.average === 'number') {
       set('profile-score', String(customer.average));
       set('profile-score-count', String(customer.count || 0));
@@ -327,77 +327,72 @@ async function loadProfileData() {
   }
 }
 
-// Hämta och rendera externa data (t.ex. postnummer-/ort-info eller externa counts)
+// Hämta och rendera EXTERN data (endast om verklig extern data finns)
 async function loadExternalData() {
   try {
-    const data = await api.getExternalDataForCurrentCustomer();
-    if (!data) return;
+    const section = document.getElementById('external-data-section');
 
-    const setIfPresent = (id, value) => {
+    const data = await api.getExternalDataForCurrentCustomer();
+
+    // Om inget svar eller ok === false → göm hela sektionen
+    if (!data || data.ok === false) {
+      if (section) section.classList.add('hidden');
+      return;
+    }
+
+    let anyVisible = false;
+
+    const setAndToggle = (id, value) => {
       const el = document.getElementById(id);
       if (!el) return;
+      const li = el.closest && el.closest('li');
+
       if (value === undefined || value === null || value === '') {
         el.textContent = '';
+        if (li) li.classList.add('hidden');
       } else {
         el.textContent = String(value);
-      }
-      // Hide parent list row if value is empty
-      try {
-        const li = el.closest && el.closest('li');
-        if (li) {
-          if (!el.textContent || el.textContent.trim() === '') li.classList.add('hidden');
-          else li.classList.remove('hidden');
-        }
-      } catch (err) {
-        // ignore
+        if (li) li.classList.remove('hidden');
+        anyVisible = true;
       }
     };
 
-    // Try common keys — only set values if present (0 is a valid value)
-    const vehicles = data.vehicles ?? data.vehicleCount ?? data.vehiclesCount;
-    const properties = data.properties ?? data.propertyCount ?? data.propertiesCount;
-    if (typeof vehicles !== 'undefined' && vehicles !== null) setIfPresent('ext-vehicles-count', vehicles);
-    else setIfPresent('ext-vehicles-count', '');
-    if (typeof properties !== 'undefined' && properties !== null) setIfPresent('ext-properties-count', properties);
-    else setIfPresent('ext-properties-count', '');
+    // Fordon & fastigheter – visas bara om värdet INTE är null/undefined
+    setAndToggle('ext-vehicles-count', data.vehicles);
+    setAndToggle('ext-properties-count', data.properties);
 
-    // last-updated / location fallback
-    const last = data.lastUpdatedText || data.lastUpdated || (data.postnummer ? `${data.postnummer} ${data.ort || ''}` : null) || data.source || null;
-    if (last) setIfPresent('ext-last-updated', last);
-    else setIfPresent('ext-last-updated', '');
+    // Senast uppdaterad
+    setAndToggle('ext-last-updated', data.lastUpdated);
 
-    // Address verification from PAP API (if present)
-    try {
-      if (data.addressVerification) {
-        const a = data.addressVerification;
-        const line = [a.street, a.number].filter(Boolean).join(' ') +
-          (a.zipcode || a.city ? `, ${[a.zipcode, a.city].filter(Boolean).join(' ')}` : '');
+    // Validerad adress & adressstatus – använder data från extern källa
+    const addrEl = document.querySelector('[data-field="externalAddressLine"]');
+    const statusEl = document.querySelector('[data-field="externalAddressStatus"]');
 
-        const lineEl = document.querySelector('[data-field="externalAddressLine"]');
-        const statusEl = document.querySelector('[data-field="externalAddressStatus"]');
-
-        if (lineEl) {
-          lineEl.textContent = line || '';
-          const li = lineEl.closest && lineEl.closest('li');
-          if (li) {
-            if (!lineEl.textContent.trim()) li.classList.add('hidden');
-            else li.classList.remove('hidden');
-          }
-        }
-        if (statusEl) {
-          statusEl.textContent = a.statusTextSv || a.statusTextEn || '';
-          const li2 = statusEl.closest && statusEl.closest('li');
-          if (li2) {
-            if (!statusEl.textContent.trim()) li2.classList.add('hidden');
-            else li2.classList.remove('hidden');
-          }
-        }
+    const setSpecial = (node, value) => {
+      if (!node) return;
+      const li = node.closest && node.closest('li');
+      if (value === undefined || value === null || value === '') {
+        node.textContent = '';
+        if (li) li.classList.add('hidden');
+      } else {
+        node.textContent = String(value);
+        if (li) li.classList.remove('hidden');
+        anyVisible = true;
       }
-    } catch (err) {
-      console.error('Kunde inte rendera addressVerification', err);
+    };
+
+    setSpecial(addrEl, data.validatedAddress);
+    setSpecial(statusEl, data.addressStatus);
+
+    // Om inget fält hade något → göm hela sektionen
+    if (section) {
+      if (!anyVisible) section.classList.add('hidden');
+      else section.classList.remove('hidden');
     }
   } catch (err) {
     console.error('Kunde inte ladda externa data', err);
+    const section = document.getElementById('external-data-section');
+    if (section) section.classList.add('hidden');
   }
 }
 
