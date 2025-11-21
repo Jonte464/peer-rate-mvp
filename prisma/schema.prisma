@@ -38,6 +38,12 @@ model Customer {
   transactions Transaction[]
   termsAccepted Boolean @default(false)
 
+  // NYTT: externa profiler (Blocket, Tradera m.fl.)
+  externalProfiles ExternalProfile[]
+
+  // NYTT: affärshändelser (deals) där kunden är säljare eller köpare
+  dealsAsSeller Deal[] @relation("CustomerDealsAsSeller")
+  dealsAsBuyer  Deal[] @relation("CustomerDealsAsBuyer")
 }
 
 /**
@@ -67,6 +73,9 @@ model Rating {
   customerId    String
   transactionId String?
 
+  // NYTT: koppling till affärshändelse (Deal)
+  dealId        String?
+
   // Betyg 1–5
   score Int
 
@@ -92,11 +101,15 @@ model Rating {
   customer    Customer     @relation(fields: [customerId], references: [id])
   transaction Transaction? @relation(fields: [transactionId], references: [id])
 
+  // NYTT: relation till Deal
+  deal        Deal?        @relation(fields: [dealId], references: [id])
+
   // En rating kan ha 0..n rapporter kopplade
   reports Report[]
 
   @@index([customerId])
   @@index([transactionId])
+  @@index([dealId])
   @@index([createdAt])
 }
 
@@ -195,6 +208,91 @@ model User {
 }
 
 /**
+ * NYTT: Externa profiler (Blocket, senare Tradera m.fl.)
+ */
+model ExternalProfile {
+  id           String              @id @default(uuid())
+  customerId   String
+  customer     Customer            @relation(fields: [customerId], references: [id])
+
+  platform     ExternalPlatform
+  username     String
+
+  // Alternativ C: vi kan lagra ett krypterat lösenord + cookies
+  encryptedPassword String?
+  cookiesJson       Json?
+
+  status       ExternalProfileStatus @default(ACTIVE)
+
+  lastSyncedAt DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  listings     Listing[]
+
+  @@index([customerId])
+  @@index([platform, username])
+}
+
+/**
+ * NYTT: Annons/snapshot från extern plattform (t.ex. Blocket-annons)
+ */
+model Listing {
+  id                String         @id @default(uuid())
+  externalProfileId String
+  externalProfile   ExternalProfile @relation(fields: [externalProfileId], references: [id])
+
+  externalListingId String         // Annons-ID på Blocket (om vi kan plocka ut det)
+  title             String
+  price             Int?
+  currency          String?        @default("SEK")
+  status            ListingStatus
+
+  url               String?
+  firstSeenAt       DateTime       @default(now())
+  lastSeenAt        DateTime       @default(now())
+
+  deals             Deal[]
+
+  @@index([externalProfileId])
+  @@index([externalListingId])
+}
+
+/**
+ * NYTT: Affärshändelse (Deal) – underlag för omdömen
+ */
+model Deal {
+  id        String     @id @default(uuid())
+
+  listingId String?
+  listing   Listing?   @relation(fields: [listingId], references: [id])
+
+  sellerId  String
+  seller    Customer   @relation("CustomerDealsAsSeller", fields: [sellerId], references: [id])
+
+  buyerId   String?
+  buyer     Customer?  @relation("CustomerDealsAsBuyer", fields: [buyerId], references: [id])
+
+  source    DealSource @default(BLOCKET_SCRAPE)
+  status    DealStatus @default(PENDING_RATING)
+
+  blocketTitle String?
+  blocketPrice Int?
+
+  completedAt  DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // En deal kan ha flera ratings (köpare ↔ säljare)
+  ratings Rating[]
+
+  @@index([sellerId])
+  @@index([buyerId])
+  @@index([listingId])
+  @@index([createdAt])
+}
+
+/**
  * Enum-typer
  */
 enum ReportReason {
@@ -211,4 +309,38 @@ enum ReportStatus {
   UNDER_REVIEW
   RESOLVED
   REJECTED
+}
+
+// NYTT: externa plattformar (Blocket nu, fler sen)
+enum ExternalPlatform {
+  BLOCKET
+  TRADERA
+}
+
+// NYTT: status för extern profil
+enum ExternalProfileStatus {
+  ACTIVE
+  DISABLED
+  ERROR
+}
+
+// NYTT: status för annons/listing
+enum ListingStatus {
+  ACTIVE      // Annonsen ligger ute
+  SOLD        // Markerad som såld / avslutad
+  REMOVED     // Försvunnen / borttagen
+}
+
+// NYTT: status för deal
+enum DealStatus {
+  PENDING_RATING
+  RATED
+  FLAGGED
+}
+
+// NYTT: varifrån dealen kommer
+enum DealSource {
+  BLOCKET_SCRAPE
+  MANUAL
+  PARTNER_API
 }

@@ -7,6 +7,8 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 const bcrypt = require('bcryptjs');
+const { connectBlocketProfile } = require('./services/blocketService');
+
 
 // ✅ Prisma-klient direkt här (ingen prismaClient-fil behövs)
 const { PrismaClient } = require('@prisma/client');
@@ -569,6 +571,27 @@ app.post('/api/ratings', async (req, res) => {
     return res
       .status(500)
       .json({ ok: false, error: 'Kunde inte spara betyg' });
+  }
+});
+
+app.post('/api/external/blocket/connect', async (req, res) => {
+  try {
+    const { customerId, username, password } = req.body;
+
+    if (!customerId || !username || !password) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const profile = await connectBlocketProfile(customerId, username, password);
+
+    res.json({
+      success: true,
+      profile
+    });
+
+  } catch (err) {
+    console.error('Blocket connect error:', err);
+    res.status(500).json({ error: 'Failed to connect Blocket profile' });
   }
 });
 
