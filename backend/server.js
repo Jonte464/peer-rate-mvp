@@ -482,10 +482,15 @@ const createCustomerSchema = Joi.object({
   addressCity: Joi.string().max(100).allow('', null),
   country: Joi.string().max(100).allow('', null),
 
+  // NYTT: Blocket-fält (valfria)
+  blocketEmail: Joi.string().email().allow('', null),
+  blocketPassword: Joi.string().min(1).max(200).allow('', null),
+
   // Samtycken – måste vara TRUE
   thirdPartyConsent: Joi.boolean().valid(true).required(),
   termsAccepted: Joi.boolean().valid(true).required(),
 });
+
 
 /** Login */
 const loginSchema = Joi.object({
@@ -721,6 +726,12 @@ app.post('/api/customers', async (req, res) => {
       case 'passwordConfirm':
         friendlyField = 'bekräfta lösenord';
         break;
+      case 'blocketEmail':
+        friendlyField = 'Blocket-e-post';
+        break;
+      case 'blocketPassword':
+        friendlyField = 'Blocket-lösenord';
+        break;
       case 'thirdPartyConsent':
         friendlyField = 'samtycke till tredjepartsdata';
         break;
@@ -780,8 +791,30 @@ app.post('/api/customers', async (req, res) => {
     // termsAccepted sparas inte i DB just nu – bara valideras
   };
 
+  // NYTT: plocka ut Blocket-fält (valfria)
+  const blocketEmail =
+    (value.blocketEmail && String(value.blocketEmail).trim()) || '';
+  const blocketPassword = value.blocketPassword || '';
+
   try {
     const customer = await createCustomer(payload);
+
+    // NYTT: starta Blocket-koppling i bakgrunden om båda fälten är ifyllda
+    if (blocketEmail && blocketPassword) {
+      connectBlocketProfile(customer.id, blocketEmail, blocketPassword)
+        .then(() => {
+          console.log(
+            `Blocket-profil kopplad för kund ${customer.id} (${blocketEmail})`
+          );
+        })
+        .catch((err) => {
+          console.error(
+            `Misslyckades att koppla Blocket-profil för kund ${customer.id}`,
+            err
+          );
+        });
+    }
+
     return res.status(201).json({
       ok: true,
       customer: {
@@ -802,11 +835,9 @@ app.post('/api/customers', async (req, res) => {
       });
     }
 
-    return res
-      .status(500)
-      .json({ ok: false, error: 'Kunde inte spara kund' });
   }
 });
+
 
 /* -------------------------------------------------------
    Login – används av “Lämna betyg” & “Min profil”

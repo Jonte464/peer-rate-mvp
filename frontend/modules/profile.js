@@ -287,6 +287,33 @@ async function handleRatingSubmit(event) {
   }
 }
 
+// ----------------------
+// Hjälpare: översätt adressstatus till svenska
+// ----------------------
+function translateAddressStatus(rawStatus) {
+  if (!rawStatus) return '-';
+  const s = String(rawStatus).toUpperCase();
+
+  switch (s) {
+    case 'VERIFIED':
+      return 'Bekräftad (adress hittad i adressregister)';
+    case 'FROM_PROFILE':
+      return 'Från din profil (ej verifierad externt)';
+    case 'NO_EXTERNAL_DATA':
+      return 'Ingen extern data';
+    case 'NO_ADDRESS_INPUT':
+      return 'Ingen adress angiven';
+    case 'NO_ADDRESS_IN_RESPONSE':
+      return 'Ingen adress i svaret från tjänsten';
+    case 'NO_ADDRESS':
+      return 'Ingen adress';
+    case 'LOOKUP_FAILED':
+      return 'Tekniskt fel vid adresskontroll';
+    default:
+      return `Okänd status (${s})`;
+  }
+}
+
 // Hämta och rendera profil-data i DOM
 async function loadProfileData() {
   try {
@@ -382,7 +409,8 @@ async function loadExternalData() {
     };
 
     setSpecial(addrEl, data.validatedAddress);
-    setSpecial(statusEl, data.addressStatus);
+    // 🔁 Här översätter vi tekniska koder → svenska texter
+    setSpecial(statusEl, translateAddressStatus(data.addressStatus));
 
     // Om inget fält hade något → göm hela sektionen
     if (section) {
