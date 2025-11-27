@@ -62,7 +62,7 @@ export function updateAvatars(user) {
 }
 
 // ----------------------
-// Profilbild – uppladdning
+// Profilbild – uppladdning (fix för moduluppdelning)
 // ----------------------
 function initAvatarUpload() {
   const input = document.getElementById('profile-avatar-input');
@@ -217,7 +217,6 @@ export function initRatingForm() {
   if (resetBtn) resetBtn.addEventListener('click', () => form.reset());
 }
 
-// Event-delegering som backup
 document.addEventListener(
   'submit',
   (e) => {
@@ -290,8 +289,10 @@ async function handleRatingSubmit(event) {
     let composedReportText = reportText || '';
     if (reportDate) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Datum: ${reportDate}`;
     if (reportTime) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Tid: ${reportTime}`;
-    if (reportAmount) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Belopp: ${reportAmount}`;
-    if (reportLink) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Länk: ${reportLink}`;
+    if (reportAmount)
+      composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Belopp: ${reportAmount}`;
+    if (reportLink)
+      composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Länk: ${reportLink}`;
 
     const payload = {
       subject: ratedUserEmail,
@@ -299,7 +300,7 @@ async function handleRatingSubmit(event) {
       rater: raterVal || undefined,
       comment: comment || undefined,
       proofRef: proofRef || undefined,
-      // Källa i klartext (Blocket, Tradera, Airbnb, Husknuten Tiptap, Annat)
+      // skicka med källan i klartext (Blocket, Tradera, AirBNB, Husknuten Tiptap)
       source: sourceRaw || undefined,
       report: undefined,
     };
@@ -363,24 +364,20 @@ function translateAddressStatus(rawStatus) {
 }
 
 // ----------------------
-// Hjälpare: översätt källa → svensk etikett
+// Hjälpare: översätt RatingSource -> svensk etikett
 // ----------------------
+// Den här är extra tolerant: plockar upp BLOCKET, blocket, BLOCKET_SCRAPE osv.
 function mapRatingSourceLabel(source) {
   if (!source) return 'Annat/okänt';
   const s = String(source).toUpperCase();
-  switch (s) {
-    case 'BLOCKET':
-      return 'Blocket';
-    case 'TRADERA':
-      return 'Tradera';
-    case 'AIRBNB':
-      return 'Airbnb';
-    case 'HUSKNUTEN_TIPTAP':
-      return 'Husknuten Tiptap';
-    case 'OTHER':
-    default:
-      return 'Annat/okänt';
-  }
+
+  if (s.includes('BLOCKET')) return 'Blocket';
+  if (s.includes('TRADERA')) return 'Tradera';
+  if (s.includes('AIRBNB')) return 'Airbnb';
+  if (s.includes('HUSKNUTEN')) return 'Husknuten Tiptap';
+  if (s === 'OTHER') return 'Annat/okänt';
+
+  return 'Annat/okänt';
 }
 
 // ----------------------
@@ -480,9 +477,9 @@ async function loadProfileData() {
     if (!customer) return;
 
     const set = (id, value) => {
-      const elNode = document.getElementById(id);
-      if (!elNode) return;
-      elNode.textContent =
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent =
         value === undefined || value === null || value === ''
           ? '-'
           : String(value);
@@ -534,15 +531,15 @@ async function loadExternalData() {
     let anyVisible = false;
 
     const setAndToggle = (id, value) => {
-      const elNode = document.getElementById(id);
-      if (!elNode) return;
-      const li = elNode.closest && elNode.closest('li');
+      const el = document.getElementById(id);
+      if (!el) return;
+      const li = el.closest && el.closest('li');
 
       if (value === undefined || value === null || value === '') {
-        elNode.textContent = '';
+        el.textContent = '';
         if (li) li?.classList.add('hidden');
       } else {
-        elNode.textContent = String(value);
+        el.textContent = String(value);
         if (li) li?.classList.remove('hidden');
         anyVisible = true;
       }
@@ -595,9 +592,9 @@ async function loadMyRating() {
     }
 
     const set = (id, value) => {
-      const elNode = document.getElementById(id);
-      if (!elNode) return;
-      elNode.textContent =
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent =
         value === undefined || value === null || value === ''
           ? '-'
           : String(value);
@@ -630,7 +627,6 @@ async function loadMyRating() {
 
           const score = r.rating || r.score || '';
 
-          // Försök använda så mycket info som möjligt om vem som betygsatt
           const raterLabel =
             (r.raterName && String(r.raterName).trim()) ||
             (r.raterMasked && String(r.raterMasked).trim()) ||
@@ -643,7 +639,7 @@ async function loadMyRating() {
 
           const metaParts = [];
           if (raterLabel) metaParts.push(`av ${raterLabel}`);
-          if (sourceLabel) metaParts.push(sourceLabel);
+          if (sourceLabel) metaParts.push(`betyg via ${sourceLabel}`);
           if (dateStr) metaParts.push(dateStr);
           const metaText = metaParts.join(' · ');
 
@@ -680,7 +676,7 @@ export async function initProfilePage() {
   try {
     initLogoutButton();
     initRatingForm();
-    initAvatarUpload();
+    initAvatarUpload(); // 🔁 se till att profilbild-uppladdning kopplas in
   } catch (err) {
     console.error('initProfilePage auxiliary inits error', err);
   }
