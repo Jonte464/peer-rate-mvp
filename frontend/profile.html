@@ -152,7 +152,7 @@
     .profile-value{font-weight:500;}
 
     .score-line{
-      margin:4px 0 6px;
+      margin:8px 0 6px;
       font-size:14px;
     }
     .score-bar{
@@ -169,7 +169,7 @@
       transition:width .3s ease-out;
     }
 
-    /* Enkelt stapeldiagram för “Mitt omdöme” */
+    /* Enkelt stapeldiagram (om vi vill använda det senare) */
     .ratings-graph{
       margin-top:12px;
       font-size:12px;
@@ -207,7 +207,7 @@
       font-variant-numeric:tabular-nums;
     }
 
-    /* Lista med individuella betyg + pratbubbla */
+    /* Lista med individuella betyg + “pratbubblor” */
     .ratings-list{
       margin-top:14px;
       font-size:13px;
@@ -232,14 +232,13 @@
       color:var(--brand-ink-d);
       margin-top:2px;
     }
-       .rating-comment-inline{
+    .rating-comment-inline{
       font-size:12px;
       font-style:italic;
       color:var(--brand-ink-d);
       margin-left:8px;
       flex:1;
     }
-
 
     /* Profilbild-block */
     .profile-avatar-block{
@@ -281,9 +280,94 @@
       display:none;
     }
 
+    /* Nya illustrationer under "Mitt omdöme" */
+    .ratings-visuals{
+      display:flex;
+      gap:16px;
+      margin-top:8px;
+      flex-wrap:wrap;
+    }
+    .ratings-visual-box{
+      flex:1;
+      min-width:0;
+    }
+    .ratings-visual-box h3{
+      margin:0 0 4px;
+      font-size:13px;
+      font-weight:700;
+      color:var(--brand-ink-d);
+    }
+
+    .rating-pie{
+      width:110px;
+      height:110px;
+      border-radius:50%;
+      margin:4px auto 6px;
+      background:#f1e4d5;
+      position:relative;
+      box-shadow:0 4px 10px rgba(0,0,0,.06);
+    }
+    .rating-pie-center-label{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:12px;
+      font-weight:700;
+      color:var(--brand-ink-d);
+      text-align:center;
+      padding:0 6px;
+    }
+    .rating-legend{
+      margin-top:4px;
+    }
+    .rating-legend-item{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      margin-bottom:2px;
+    }
+    .rating-legend-color{
+      width:10px;
+      height:10px;
+      border-radius:3px;
+    }
+    .rating-legend-label{
+      flex:1;
+      overflow:hidden;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+    }
+    .rating-legend-value{
+      font-variant-numeric:tabular-nums;
+    }
+
+    .rating-p-row{
+      display:flex;
+      gap:6px;
+      margin-top:8px;
+    }
+    .rating-p{
+      font-weight:900;
+      font-size:28px;
+      color:#d9cbb7;
+      line-height:1;
+    }
+    .rating-p.full{
+      color:var(--brand-purple);
+    }
+    .rating-p.half{
+      background:linear-gradient(to right, var(--brand-purple) 0 50%, #d9cbb7 50% 100%);
+      -webkit-background-clip:text;
+      background-clip:text;
+      color:transparent;
+    }
+
     @media (max-width:600px){
       .wrap{margin:20px auto 40px;padding:0 12px 32px;}
       h1{font-size:26px;}
+      .ratings-visuals{flex-direction:column;}
     }
   </style>
 </head>
@@ -422,6 +506,24 @@
         <p class="tiny muted">
           Sammanfattning av betyg som är kopplade till din e-postadress.
         </p>
+
+        <!-- Två illustrationer högst upp -->
+        <div class="ratings-visuals">
+          <div class="ratings-visual-box">
+            <h3 class="tiny">Varifrån kommer dina omdömen?</h3>
+            <div id="rating-source-pie" class="rating-pie">
+              <div id="rating-source-pie-label" class="rating-pie-center-label">Inga omdömen</div>
+            </div>
+            <div id="rating-source-legend" class="rating-legend tiny muted"></div>
+          </div>
+
+          <div class="ratings-visual-box">
+            <h3 class="tiny">Din PeerRate-rating</h3>
+            <div id="rating-p-symbols" class="rating-p-row"></div>
+            <div id="rating-p-symbols-text" class="tiny muted"></div>
+          </div>
+        </div>
+
         <p class="score-line">
           Snittbetyg:
           <strong><span id="profile-score">–</span> / 5</strong>
@@ -433,10 +535,10 @@
           <div class="score-bar-fill" id="profile-score-bar"></div>
         </div>
 
-        <!-- Stapeldiagram över var omdömena kommer ifrån (per användare) -->
+        <!-- (Valfri) stapelinfo per källa kan vi använda senare -->
         <div id="ratings-graph" class="ratings-graph"></div>
 
-        <!-- Individuella betyg + pratbubblor med kommentarer -->
+        <!-- Individuella betyg + kommentarer -->
         <div id="ratings-list" class="ratings-list"></div>
       </section>
 
@@ -487,8 +589,6 @@
     </div>
   </div>
 
-<script type="module" src="/modules/main.js"></script>
+  <script type="module" src="/modules/main.js"></script>
 </body>
 </html>
-
-

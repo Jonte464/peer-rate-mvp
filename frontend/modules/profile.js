@@ -1,6 +1,8 @@
-// profile.js – Hanterar profilvisning och avatarer
+// profile.js – Hanterar profilvisning, avatarer och profil-UI
 
-import { el } from './utils.js';
+import { el, showNotification } from './utils.js';
+import auth, { login, logout } from './auth.js';
+import api from './api.js';
 
 // Visar / gömmer “Hej Jonathan”-badgen
 export function updateUserBadge(user) {
@@ -60,11 +62,38 @@ export function updateAvatars(user) {
 }
 
 // ----------------------
+// Profilbild – uppladdning (fix för moduluppdelning)
+// ----------------------
+function initAvatarUpload() {
+  const input = document.getElementById('profile-avatar-input');
+  if (!input) return;
+
+  input.addEventListener('change', (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        // Spara bara lokalt i webbläsaren
+        localStorage.setItem('peerRateAvatar', reader.result);
+      } catch (err) {
+        console.error('Kunde inte spara avatar i localStorage', err);
+      }
+      try {
+        const user = auth.getUser();
+        updateAvatars(user);
+      } catch (err) {
+        console.error('Kunde inte uppdatera avatar efter uppladdning', err);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ----------------------
 // Login på Min profil
 // ----------------------
-import { showNotification } from './utils.js';
-import { login } from './auth.js';
-import auth from './auth.js';
 
 async function handleLoginSubmit(event) {
   event.preventDefault();
@@ -86,7 +115,7 @@ async function handleLoginSubmit(event) {
     }
 
     showNotification('success', 'Du är nu inloggad.', 'login-status');
-    // Ladda om sidan efter kort för att uppdatera UI (liten fördröjning så användaren hinner se notisen)
+    // Ladda om sidan efter kort för att uppdatera UI
     window.setTimeout(() => {
       window.location.reload();
     }, 500);
@@ -111,13 +140,11 @@ export function initRatingLogin() {
     if (user) {
       if (loginCard) loginCard.classList.add('hidden');
       if (ratingWrapper) ratingWrapper.classList.remove('hidden');
-      // Ensure the rating form submit handler is attached when the form is shown
       try {
         initRatingForm();
       } catch (err) {
         console.error('Could not init rating form', err);
       }
-      // populate rater field if present
       const raterInput = document.querySelector('#rating-form input[name="rater"]') || document.getElementById('rater');
       if (raterInput && user.email) raterInput.value = user.email;
     } else {
@@ -146,10 +173,8 @@ async function handleRatingLoginSubmit(event) {
       return;
     }
     showNotification('success', 'Du är nu inloggad.', 'login-status');
-    // ensure UI updates same as Min profil: reload so init logic picks up stored user
     window.setTimeout(() => {
       window.location.reload();
-      // alternatively: window.location.href = '/lämna-betyg';
     }, 500);
   } catch (err) {
     console.error('handleRatingLoginSubmit error', err);
@@ -160,8 +185,6 @@ async function handleRatingLoginSubmit(event) {
 // ----------------------
 // Logout-knapp
 // ----------------------
-import { logout } from './auth.js';
-
 export function initLogoutButton() {
   const btn = document.getElementById('logout-btn') || document.getElementById('logout-button');
   if (!btn) return;
@@ -182,32 +205,25 @@ export function initLogoutButton() {
 // ----------------------
 // Rating form (skicka betyg)
 // ----------------------
-import api from './api.js';
 
 export function initRatingForm() {
   const form = document.getElementById('rating-form');
   if (!form) return;
-  // Mark as bound so delegation fallback knows it's handled
   form.dataset.ratingBound = '1';
   form.addEventListener('submit', handleRatingSubmit);
   const resetBtn = document.getElementById('reset-form');
   if (resetBtn) resetBtn.addEventListener('click', () => form.reset());
 }
 
-// Delegation fallback: if the form is inserted dynamically or the normal init missed it,
-// handle submit events for #rating-form here. This runs at module-load time.
 document.addEventListener('submit', (e) => {
   try {
     const target = e.target;
     if (!target || !(target instanceof HTMLFormElement)) return;
     if (target.id !== 'rating-form') return;
-    // If initRatingForm already bound the form, skip (dataset.ratingBound === '1')
     if (target.dataset && target.dataset.ratingBound === '1') return;
-    // Prevent double handling and call the same handler
     e.preventDefault();
     handleRatingSubmit.call(target, e);
   } catch (err) {
-    // swallow errors from fallback to avoid breaking other scripts
     console.error('rating-form delegation error', err);
   }
 }, true);
@@ -225,12 +241,9 @@ async function handleRatingSubmit(event) {
     return;
   }
 
-  const body = { ratedUserEmail, score, comment, proofRef };
   try {
-    // Map to backend schema: subject, rating, rater, comment, proofRef
     const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || null;
 
-    // Rapportfält
     const reportFlag = !!(form.querySelector('#reportFlag')?.checked || form.querySelector('[name="fraudReportEnabled"]')?.checked);
     const reportReason = form.querySelector('#reportReason')?.value || form.querySelector('[name="fraudType"]')?.value || null;
     const reportDate = form.querySelector('#reportDate')?.value || form.querySelector('[name="fraudDate"]')?.value || null;
@@ -240,7 +253,6 @@ async function handleRatingSubmit(event) {
     const reportText = form.querySelector('#reportText')?.value?.trim() || form.querySelector('[name="fraudDescription"]')?.value?.trim() || '';
     const reportConsent = !!(form.querySelector('#reportConsent')?.checked || form.querySelector('[name="fraudConsent"]')?.checked);
 
-    // Compose a sensible report_text if structured fields are present
     let composedReportText = reportText || '';
     if (reportDate) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Datum: ${reportDate}`;
     if (reportTime) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Tid: ${reportTime}`;
@@ -314,10 +326,97 @@ function translateAddressStatus(rawStatus) {
   }
 }
 
+// ----------------------
+// Nya illustrationer för "Mitt omdöme"
+// ----------------------
+
+// 5 st P-symboler, med stöd för halvor
+function renderPRating(avg) {
+  const row = document.getElementById('rating-p-symbols');
+  const text = document.getElementById('rating-p-symbols-text');
+  if (!row) return;
+
+  row.innerHTML = '';
+  const val = Math.max(0, Math.min(5, Number(avg) || 0));
+
+  for (let i = 1; i <= 5; i++) {
+    let cls = 'rating-p';
+    if (val >= i) {
+      cls += ' full';
+    } else if (val >= i - 0.5) {
+      cls += ' half';
+    }
+    const span = document.createElement('span');
+    span.className = cls;
+    span.textContent = 'P';
+    row.appendChild(span);
+  }
+
+  if (text) {
+    if (!avg || isNaN(avg)) {
+      text.textContent = 'Inga omdömen ännu.';
+    } else {
+      text.textContent = `Din nuvarande rating är ${val.toFixed(1)} / 5.`;
+    }
+  }
+}
+
+// Tårtliknande illustration för varifrån omdömena kommer
+function renderRatingSources(ratings) {
+  const pie = document.getElementById('rating-source-pie');
+  const pieLabel = document.getElementById('rating-source-pie-label');
+  const legend = document.getElementById('rating-source-legend');
+  if (!pie || !legend) return;
+
+  if (!Array.isArray(ratings) || ratings.length === 0) {
+    pie.style.background = '#f1e4d5';
+    if (pieLabel) pieLabel.textContent = 'Inga omdömen';
+    legend.innerHTML = '<div class="tiny muted">Inga omdömen ännu.</div>';
+    return;
+  }
+
+  const counts = new Map();
+  for (const r of ratings) {
+    const name =
+      (r.raterName || r.rater || '').toString().trim() || 'Okänd källa';
+    counts.set(name, (counts.get(name) || 0) + 1);
+  }
+
+  const entries = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  const total = ratings.length;
+
+  const colors = ['#f6a94b', '#1b1533', '#4a425e', '#0b7a65', '#c67e3d', '#8b6bff'];
+  let current = 0;
+  const parts = [];
+
+  legend.innerHTML = '';
+  entries.forEach(([name, count], idx) => {
+    const share = (count / total) * 100;
+    const start = current;
+    const end = start + share;
+    current = end;
+    const color = colors[idx % colors.length];
+    parts.push(`${color} ${start}% ${end}%`);
+
+    const item = document.createElement('div');
+    item.className = 'rating-legend-item';
+    item.innerHTML = `
+      <span class="rating-legend-color" style="background:${color}"></span>
+      <span class="rating-legend-label">${name}</span>
+      <span class="rating-legend-value">${Math.round(share)}% (${count})</span>
+    `;
+    legend.appendChild(item);
+  });
+
+  pie.style.background = `conic-gradient(${parts.join(', ')})`;
+  if (pieLabel) pieLabel.textContent = `${total} omdömen`;
+}
+
+// ----------------------
 // Hämta och rendera profil-data i DOM
+// ----------------------
 async function loadProfileData() {
   try {
-    // api.getCurrentCustomer försöker flera endpoints och fallback till localStorage
     const customer = await api.getCurrentCustomer();
     if (!customer) return;
 
@@ -336,32 +435,30 @@ async function loadProfileData() {
     set('profile-addressCity', customer.addressCity || customer.city || '-');
     set('profile-country', customer.country || '-');
 
-    // Ratings summary if present (om profil kommer med avg)
     if (typeof customer.average === 'number') {
       set('profile-score', String(customer.average));
       set('profile-score-count', String(customer.count || 0));
-      const bar = document.getElementById('profile-score-bar');
-      if (bar) {
-        const fill = bar.querySelector('.score-bar-fill');
-        if (fill) {
-          const pct = Math.max(0, Math.min(100, (customer.average / 5) * 100));
-          fill.style.width = `${pct}%`;
-        }
+      const fill = document.getElementById('profile-score-bar');
+      if (fill) {
+        const pct = Math.max(0, Math.min(100, (customer.average / 5) * 100));
+        fill.style.width = `${pct}%`;
       }
+      renderPRating(customer.average);
     }
   } catch (err) {
     console.error('Kunde inte ladda profil', err);
   }
 }
 
-// Hämta och rendera EXTERN data (endast om verklig extern data finns)
+// ----------------------
+// Hämta och rendera EXTERN data
+// ----------------------
 async function loadExternalData() {
   try {
-    const section = document.getElementById('external-data-section');
+    const section = document.getElementById('external-data-section'); // kan saknas i HTML just nu
 
     const data = await api.getExternalDataForCurrentCustomer();
 
-    // Om inget svar eller ok === false → göm hela sektionen
     if (!data || data.ok === false) {
       if (section) section.classList.add('hidden');
       return;
@@ -376,22 +473,18 @@ async function loadExternalData() {
 
       if (value === undefined || value === null || value === '') {
         el.textContent = '';
-        if (li) li.classList.add('hidden');
+        if (li) li?.classList.add('hidden');
       } else {
         el.textContent = String(value);
-        if (li) li.classList.remove('hidden');
+        if (li) li?.classList.remove('hidden');
         anyVisible = true;
       }
     };
 
-    // Fordon & fastigheter – visas bara om värdet INTE är null/undefined
     setAndToggle('ext-vehicles-count', data.vehicles);
     setAndToggle('ext-properties-count', data.properties);
-
-    // Senast uppdaterad
     setAndToggle('ext-last-updated', data.lastUpdated);
 
-    // Validerad adress & adressstatus – använder data från extern källa
     const addrEl = document.querySelector('[data-field="externalAddressLine"]');
     const statusEl = document.querySelector('[data-field="externalAddressStatus"]');
 
@@ -400,19 +493,17 @@ async function loadExternalData() {
       const li = node.closest && node.closest('li');
       if (value === undefined || value === null || value === '') {
         node.textContent = '';
-        if (li) li.classList.add('hidden');
+        if (li) li?.classList.add('hidden');
       } else {
         node.textContent = String(value);
-        if (li) li.classList.remove('hidden');
+        if (li) li?.classList.remove('hidden');
         anyVisible = true;
       }
     };
 
     setSpecial(addrEl, data.validatedAddress);
-    // 🔁 Här översätter vi tekniska koder → svenska texter
     setSpecial(statusEl, translateAddressStatus(data.addressStatus));
 
-    // Om inget fält hade något → göm hela sektionen
     if (section) {
       if (!anyVisible) section.classList.add('hidden');
       else section.classList.remove('hidden');
@@ -424,11 +515,17 @@ async function loadExternalData() {
   }
 }
 
-// Hämta och rendera mitt omdöme (average + lista)
+// ----------------------
+// Hämta och rendera "Mitt omdöme"
+// ----------------------
 async function loadMyRating() {
   try {
     const info = await api.getMyRating();
-    if (!info) return;
+    if (!info) {
+      renderPRating(null);
+      renderRatingSources([]);
+      return;
+    }
 
     const set = (id, value) => {
       const el = document.getElementById(id);
@@ -439,15 +536,16 @@ async function loadMyRating() {
     if (typeof info.average === 'number') {
       set('profile-score', String(info.average));
       set('profile-score-count', String(info.count || 0));
-      const bar = document.getElementById('profile-score-bar');
-      if (bar) {
-        const fill = bar.querySelector('.score-bar-fill');
-        if (fill) {
-          const pct = Math.max(0, Math.min(100, (info.average / 5) * 100));
-          fill.style.width = `${pct}%`;
-        }
+      const fill = document.getElementById('profile-score-bar');
+      if (fill) {
+        const pct = Math.max(0, Math.min(100, (info.average / 5) * 100));
+        fill.style.width = `${pct}%`;
       }
     }
+
+    // Nya illustrationer
+    renderPRating(info.average);
+    renderRatingSources(info.ratings || []);
 
     // Rendera individuella betyg i #ratings-list
     const listEl = document.getElementById('ratings-list');
@@ -459,16 +557,27 @@ async function loadMyRating() {
         info.ratings.forEach((r) => {
           const d = new Date(r.createdAt);
           const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
-          html += `<div class="rating-row"><div class="rating-main"><div class="rating-stars">${r.rating || r.score || ''} / 5</div><div class="rating-meta">${r.raterName || r.rater || ''} · ${dateStr}</div><div class="rating-comment-inline">${(r.comment||r.text||'').slice(0,400)}</div></div></div>`;
+          html += `<div class="rating-row">
+            <div class="rating-main">
+              <div class="rating-stars">${r.rating || r.score || ''} / 5</div>
+              <div class="rating-meta">${r.raterName || r.rater || ''} · ${dateStr}</div>
+              <div class="rating-comment-inline">${(r.comment || r.text || '').slice(0,400)}</div>
+            </div>
+          </div>`;
         });
         listEl.innerHTML = html;
       }
     }
   } catch (err) {
     console.error('Kunde inte ladda Mitt omdöme', err);
+    renderPRating(null);
+    renderRatingSources([]);
   }
 }
 
+// ----------------------
+// Initiera profilsidan
+// ----------------------
 export async function initProfilePage() {
   console.log('initProfilePage');
   const form = document.getElementById('login-form');
@@ -477,14 +586,15 @@ export async function initProfilePage() {
     return;
   }
   form.addEventListener('submit', handleLoginSubmit);
-  // initera logout-knapp och rating-form om de finns på sidan
+
   try {
     initLogoutButton();
     initRatingForm();
+    initAvatarUpload(); // 🔁 se till att profilbild-uppladdning kopplas in
   } catch (err) {
     console.error('initProfilePage auxiliary inits error', err);
   }
-  // Om användaren redan är inloggad, visa profilen istället för login-formuläret
+
   try {
     const user = auth.getUser();
     const loginCard = document.getElementById('login-card');
@@ -492,10 +602,8 @@ export async function initProfilePage() {
     if (user) {
       if (loginCard) loginCard.classList.add('hidden');
       if (profileRoot) profileRoot.classList.remove('hidden');
-      // uppdatera UI
       updateUserBadge(user);
       updateAvatars(user);
-      // Ladda profildata, externa data och egna betyg parallellt
       try {
         await Promise.all([loadProfileData(), loadExternalData(), loadMyRating()]);
       } catch (err) {
