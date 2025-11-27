@@ -3,8 +3,9 @@
 const express = require('express');
 const Joi = require('joi');
 const bcrypt = require('bcryptjs');
+const { PrismaClient } = require('@prisma/client');
 
-const { createCustomer, searchCustomers } = require('../storage');
+const { searchCustomers } = require('../storage');
 const { connectBlocketProfile } = require('../services/blocketService');
 
 const {
@@ -12,8 +13,10 @@ const {
   normalizePhone,
   normalizeCheckbox,
   isValidPersonalNumber,
+  normSubject,
 } = require('../helpers');
 
+const prisma = new PrismaClient();
 const router = express.Router();
 
 /** Skapa kund – validering */
@@ -148,7 +151,10 @@ router.post('/customers', async (req, res) => {
   }
 
   const emailTrim = String(value.email || '').trim().toLowerCase();
-  const emailConfirmTrim = String(value.emailConfirm || '').trim().toLowerCase();
+  const emailConfirmTrim = String(value.emailConfirm || '')
+    .trim()
+    .toLowerCase();
+
   if (!emailTrim || emailTrim !== emailConfirmTrim) {
     return res
       .status(400)
@@ -161,26 +167,14 @@ router.post('/customers', async (req, res) => {
       .json({ ok: false, error: 'Lösenorden matchar inte.' });
   }
 
+  const subjectRef = normSubject(emailTrim);
+  const personalNumberClean = clean(value.personalNumber);
+
   // Här vet vi: thirdPartyConsent = true, termsAccepted = true (validerat av Joi)
   const fullName =
     `${clean(value.firstName) || ''} ${clean(value.lastName) || ''}`.trim() ||
     null;
   const passwordHash = await bcrypt.hash(value.password, 10);
-
-  const payload = {
-    subjectRef: emailTrim,
-    fullName,
-    personalNumber: clean(value.personalNumber),
-    email: clean(value.email),
-    phone: normalizePhone(value.phone),
-    addressStreet: clean(value.addressStreet),
-    addressZip: clean(value.addressZip),
-    addressCity: clean(value.addressCity),
-    country: clean(value.country),
-    passwordHash,
-    thirdPartyConsent: value.thirdPartyConsent === true,
-    // termsAccepted sparas inte i DB just nu – bara valideras
-  };
 
   // NYTT: plocka ut Blocket-fält (valfria)
   const blocketEmail =
@@ -188,9 +182,77 @@ router.post('/customers', async (req, res) => {
   const blocketPassword = value.blocketPassword || '';
 
   try {
-    const customer = await createCustomer(payload);
+    // 1) Finns det redan en kund med denna subjectRef (dvs e-post som subject)?
+    const existingBySubject = await prisma.customer.findUnique({
+      where: { subjectRef },
+    });
 
-    // NYTT: starta Blocket-koppling i bakgrunden om båda fälten är ifyllda
+    // 2) Finns det någon annan kund med samma personnummer?
+    const existingByPn = await prisma.customer.findUnique({
+      where: { personalNumber: personalNumberClean },
+    });
+
+    if (
+      existingByPn &&
+      (!existingBySubject || existingByPn.id !== existingBySubject.id)
+    ) {
+      return res.status(409).json({
+        ok: false,
+        error: 'Det finns redan en användare med samma personnummer.',
+      });
+    }
+
+    let customer;
+
+    if (existingBySubject) {
+      // Om den redan har ett lösenord: det är ett "riktigt" konto -> stoppa
+      if (existingBySubject.passwordHash) {
+        return res.status(409).json({
+          ok: false,
+          error:
+            'Det finns redan ett registrerat konto med denna e-postadress.',
+        });
+      }
+
+      // Annars: uppgradera "skugganvändaren" (skapad via tidigare betyg)
+      customer = await prisma.customer.update({
+        where: { id: existingBySubject.id },
+        data: {
+          subjectRef, // oförändrat egentligen
+          fullName,
+          personalNumber: personalNumberClean,
+          email: emailTrim,
+          phone: normalizePhone(value.phone),
+          addressStreet: clean(value.addressStreet),
+          addressZip: clean(value.addressZip),
+          addressCity: clean(value.addressCity),
+          country: clean(value.country),
+          passwordHash,
+          thirdPartyConsent: value.thirdPartyConsent === true,
+          termsAccepted: value.termsAccepted === true,
+        },
+      });
+    } else {
+      // Ingen kund alls – skapa ny
+      customer = await prisma.customer.create({
+        data: {
+          subjectRef,
+          fullName,
+          personalNumber: personalNumberClean,
+          email: emailTrim,
+          phone: normalizePhone(value.phone),
+          addressStreet: clean(value.addressStreet),
+          addressZip: clean(value.addressZip),
+          addressCity: clean(value.addressCity),
+          country: clean(value.country),
+          passwordHash,
+          thirdPartyConsent: value.thirdPartyConsent === true,
+          termsAccepted: value.termsAccepted === true,
+        },
+      });
+    }
+
+    // Starta Blocket-koppling i bakgrunden om båda fälten är ifyllda
     if (blocketEmail && blocketPassword) {
       connectBlocketProfile(customer.id, blocketEmail, blocketPassword)
         .then(() => {
@@ -219,6 +281,7 @@ router.post('/customers', async (req, res) => {
     console.error('[POST /api/customers] error:', e);
 
     if (e.code === 'P2002') {
+      // Fallback om någon unik-constraint ändå smäller
       return res.status(409).json({
         ok: false,
         error:
