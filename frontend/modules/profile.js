@@ -4,6 +4,18 @@ import { el, showNotification } from './utils.js';
 import auth, { login, logout } from './auth.js';
 import api from './api.js';
 
+// Hjälpare: nyckel i localStorage per användare
+function getAvatarKey(user) {
+  if (!user || typeof user !== 'object') {
+    return 'peerRateAvatar:default';
+  }
+  const id =
+    (user.email && String(user.email).toLowerCase()) ||
+    (user.subjectRef && String(user.subjectRef).toLowerCase()) ||
+    'default';
+  return `peerRateAvatar:${id}`;
+}
+
 // Visar / gömmer “Hej Jonathan”-badgen
 export function updateUserBadge(user) {
   const userBadge = el('user-badge');
@@ -30,7 +42,8 @@ export function updateUserBadge(user) {
 // Uppdaterar avatarerna (badge + profilbild)
 // Funkar även när user är null
 export function updateAvatars(user) {
-  const avatarUrl = localStorage.getItem('peerRateAvatar');
+  const key = getAvatarKey(user);
+  const avatarUrl = localStorage.getItem(key);
 
   let initials = 'P';
   if (user && typeof user === 'object') {
@@ -62,7 +75,7 @@ export function updateAvatars(user) {
 }
 
 // ----------------------
-// Profilbild – uppladdning (fix för moduluppdelning)
+// Profilbild – uppladdning
 // ----------------------
 function initAvatarUpload() {
   const input = document.getElementById('profile-avatar-input');
@@ -75,16 +88,13 @@ function initAvatarUpload() {
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        // Spara bara lokalt i webbläsaren
-        localStorage.setItem('peerRateAvatar', reader.result);
-      } catch (err) {
-        console.error('Kunde inte spara avatar i localStorage', err);
-      }
-      try {
         const user = auth.getUser();
+        const key = getAvatarKey(user);
+        // Spara bara lokalt i webbläsaren, per användare
+        localStorage.setItem(key, reader.result);
         updateAvatars(user);
       } catch (err) {
-        console.error('Kunde inte uppdatera avatar efter uppladdning', err);
+        console.error('Kunde inte spara/uppdatera avatar', err);
       }
     };
     reader.readAsDataURL(file);
@@ -115,7 +125,6 @@ async function handleLoginSubmit(event) {
     }
 
     showNotification('success', 'Du är nu inloggad.', 'login-status');
-    // Ladda om sidan efter kort för att uppdatera UI
     window.setTimeout(() => {
       window.location.reload();
     }, 500);
@@ -134,7 +143,6 @@ export function initRatingLogin() {
   const ratingWrapper = document.getElementById('rating-form-wrapper');
   if (form) form.addEventListener('submit', handleRatingLoginSubmit);
 
-  // On init, if user already logged in -> hide login and show rating form
   try {
     const user = auth.getUser();
     if (user) {
@@ -237,21 +245,28 @@ document.addEventListener(
 async function handleRatingSubmit(event) {
   event.preventDefault();
   const form = event.currentTarget;
-  const ratedUserEmail = form.querySelector('input[name="ratedUserEmail"]')?.value?.trim() || '';
+  const ratedUserEmail =
+    form.querySelector('input[name="ratedUserEmail"]')?.value?.trim() || '';
   const score = Number(form.querySelector('select[name="score"]')?.value || 0);
-  const comment = form.querySelector('textarea[name="comment"]')?.value?.trim() || '';
-  const proofRef = form.querySelector('input[name="proofRef"]')?.value?.trim() || '';
+  const comment =
+    form.querySelector('textarea[name="comment"]')?.value?.trim() || '';
+  const proofRef =
+    form.querySelector('input[name="proofRef"]')?.value?.trim() || '';
 
-  // Källa (rullista)
   const sourceRaw = form.querySelector('select[name="source"]')?.value || '';
 
   if (!ratedUserEmail || !score) {
-    showNotification('error', 'Fyll i alla obligatoriska fält innan du skickar.', 'notice');
+    showNotification(
+      'error',
+      'Fyll i alla obligatoriska fält innan du skickar.',
+      'notice'
+    );
     return;
   }
 
   try {
-    const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || null;
+    const raterVal =
+      form.querySelector('input[name="rater"]')?.value?.trim() || null;
 
     const reportFlag = !!(
       form.querySelector('#reportFlag')?.checked ||
@@ -287,12 +302,22 @@ async function handleRatingSubmit(event) {
     );
 
     let composedReportText = reportText || '';
-    if (reportDate) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Datum: ${reportDate}`;
-    if (reportTime) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Tid: ${reportTime}`;
+    if (reportDate)
+      composedReportText = `${composedReportText}${
+        composedReportText ? '\n' : ''
+      }Datum: ${reportDate}`;
+    if (reportTime)
+      composedReportText = `${composedReportText}${
+        composedReportText ? '\n' : ''
+      }Tid: ${reportTime}`;
     if (reportAmount)
-      composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Belopp: ${reportAmount}`;
+      composedReportText = `${composedReportText}${
+        composedReportText ? '\n' : ''
+      }Belopp: ${reportAmount}`;
     if (reportLink)
-      composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Länk: ${reportLink}`;
+      composedReportText = `${composedReportText}${
+        composedReportText ? '\n' : ''
+      }Länk: ${reportLink}`;
 
     const payload = {
       subject: ratedUserEmail,
@@ -300,7 +325,6 @@ async function handleRatingSubmit(event) {
       rater: raterVal || undefined,
       comment: comment || undefined,
       proofRef: proofRef || undefined,
-      // skicka med källan i klartext (Blocket, Tradera, AirBNB, Husknuten Tiptap)
       source: sourceRaw || undefined,
       report: undefined,
     };
@@ -363,21 +387,25 @@ function translateAddressStatus(rawStatus) {
   }
 }
 
-// ----------------------
 // Hjälpare: översätt RatingSource -> svensk etikett
-// ----------------------
-// Den här är extra tolerant: plockar upp BLOCKET, blocket, BLOCKET_SCRAPE osv.
 function mapRatingSourceLabel(source) {
   if (!source) return 'Annat/okänt';
   const s = String(source).toUpperCase();
-
-  if (s.includes('BLOCKET')) return 'Blocket';
-  if (s.includes('TRADERA')) return 'Tradera';
-  if (s.includes('AIRBNB')) return 'Airbnb';
-  if (s.includes('HUSKNUTEN')) return 'Husknuten Tiptap';
-  if (s === 'OTHER') return 'Annat/okänt';
-
-  return 'Annat/okänt';
+  switch (s) {
+    case 'BLOCKET':
+      return 'Blocket';
+    case 'TRADERA':
+      return 'Tradera';
+    case 'AIRBNB':
+      return 'Airbnb';
+    case 'HUSKNUTEN':
+      return 'Husknuten';
+    case 'TIPTAP':
+      return 'Tiptap';
+    case 'OTHER':
+    default:
+      return 'Annat/okänt';
+  }
 }
 
 // ----------------------
@@ -480,9 +508,7 @@ async function loadProfileData() {
       const el = document.getElementById(id);
       if (!el) return;
       el.textContent =
-        value === undefined || value === null || value === ''
-          ? '-'
-          : String(value);
+        value === undefined || value === null || value === '' ? '-' : String(value);
     };
 
     set(
@@ -494,7 +520,10 @@ async function loadProfileData() {
     set('profile-email', customer.email || customer.subjectRef || '-');
     set('profile-personalNumber', customer.personalNumber || customer.ssn || '-');
     set('profile-phone', customer.phone || '-');
-    set('profile-addressStreet', customer.addressStreet || customer.street || '-');
+    set(
+      'profile-addressStreet',
+      customer.addressStreet || customer.street || '-'
+    );
     set('profile-addressZip', customer.addressZip || customer.zip || '-');
     set('profile-addressCity', customer.addressCity || customer.city || '-');
     set('profile-country', customer.country || '-');
@@ -504,7 +533,10 @@ async function loadProfileData() {
       set('profile-score-count', String(customer.count || 0));
       const fill = document.getElementById('profile-score-bar');
       if (fill) {
-        const pct = Math.max(0, Math.min(100, (customer.average / 5) * 100));
+        const pct = Math.max(
+          0,
+          Math.min(100, (customer.average / 5) * 100)
+        );
         fill.style.width = `${pct}%`;
       }
       renderPRating(customer.average);
@@ -519,7 +551,7 @@ async function loadProfileData() {
 // ----------------------
 async function loadExternalData() {
   try {
-    const section = document.getElementById('external-data-section'); // kan saknas i HTML just nu
+    const section = document.getElementById('external-data-section');
 
     const data = await api.getExternalDataForCurrentCustomer();
 
@@ -595,9 +627,7 @@ async function loadMyRating() {
       const el = document.getElementById(id);
       if (!el) return;
       el.textContent =
-        value === undefined || value === null || value === ''
-          ? '-'
-          : String(value);
+        value === undefined || value === null || value === '' ? '-' : String(value);
     };
 
     if (typeof info.average === 'number') {
@@ -605,40 +635,39 @@ async function loadMyRating() {
       set('profile-score-count', String(info.count || 0));
       const fill = document.getElementById('profile-score-bar');
       if (fill) {
-        const pct = Math.max(0, Math.min(100, (info.average / 5) * 100));
+        const pct = Math.max(
+          0,
+          Math.min(100, (info.average / 5) * 100)
+        );
         fill.style.width = `${pct}%`;
       }
     }
 
-    // Nya illustrationer
     renderPRating(info.average);
     renderRatingSources(info.ratings || []);
 
-    // Rendera individuella betyg i #ratings-list
     const listEl = document.getElementById('ratings-list');
     if (listEl) {
       if (!Array.isArray(info.ratings) || info.ratings.length === 0) {
-        listEl.innerHTML = '<div class="tiny muted">Inga omdömen än.</div>';
+        listEl.innerHTML =
+          '<div class="tiny muted">Inga omdömen än.</div>';
       } else {
         let html = '';
         info.ratings.forEach((r) => {
           const d = new Date(r.createdAt);
-          const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
+          const dateStr = isNaN(d.getTime())
+            ? ''
+            : d.toLocaleString('sv-SE');
 
           const score = r.rating || r.score || '';
-
-          const raterLabel =
-            (r.raterName && String(r.raterName).trim()) ||
-            (r.raterMasked && String(r.raterMasked).trim()) ||
-            (r.rater && String(r.rater).trim()) ||
-            'Okänd';
-
+          const rater =
+            (r.raterName || r.rater || '').toString().trim() || 'Okänd';
           const sourceLabel = mapRatingSourceLabel(
             r.source || r.ratingSource || r.sourceLabel
           );
 
           const metaParts = [];
-          if (raterLabel) metaParts.push(`av ${raterLabel}`);
+          if (rater) metaParts.push(`av ${rater}`);
           if (sourceLabel) metaParts.push(`betyg via ${sourceLabel}`);
           if (dateStr) metaParts.push(dateStr);
           const metaText = metaParts.join(' · ');
@@ -676,7 +705,7 @@ export async function initProfilePage() {
   try {
     initLogoutButton();
     initRatingForm();
-    initAvatarUpload(); // 🔁 se till att profilbild-uppladdning kopplas in
+    initAvatarUpload();
   } catch (err) {
     console.error('initProfilePage auxiliary inits error', err);
   }

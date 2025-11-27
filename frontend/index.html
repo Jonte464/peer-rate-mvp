@@ -219,14 +219,16 @@
           </select>
 
           <!-- NYTT: källa för omdömet -->
-          <label for="rating-source">Var kommer omdömet ifrån? <span class="tiny">(valfritt)</span></label>
-          <select id="rating-source" name="source">
-            <option value="">Välj källa (valfritt)</option>
-            <option value="Blocket">Blocket</option>
-            <option value="Tradera">Tradera</option>
-            <option value="AirBNB">AirBNB</option>
-            <option value="Husknuten Tiptap">Husknuten Tiptap</option>
-          </select>
+          <label for="ratingSource">Varifrån kommer betyget? <span class="tiny">(valfritt)</span></label>
+<select id="ratingSource" name="source">
+  <option value="" selected>Välj källa (valfritt)</option>
+  <option value="Blocket">Blocket</option>
+  <option value="Tradera">Tradera</option>
+  <option value="Airbnb">Airbnb</option>
+  <option value="Husknuten">Husknuten</option>
+  <option value="Tiptap">Tiptap</option>
+</select>
+
 
           <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
           <textarea id="comment" name="comment" placeholder=""></textarea>

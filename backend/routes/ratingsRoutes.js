@@ -27,7 +27,8 @@ function mapRatingSource(input) {
   if (v.includes('blocket')) return 'BLOCKET';
   if (v.includes('tradera')) return 'TRADERA';
   if (v.includes('airbnb')) return 'AIRBNB';
-  if (v.includes('husknuten') || v.includes('tiptap')) return 'HUSKNUTEN_TIPTAP';
+  if (v.includes('husknuten')) return 'HUSKNUTEN';
+  if (v.includes('tiptap')) return 'TIPTAP';
 
   return 'OTHER';
 }
@@ -47,10 +48,7 @@ const createRatingSchema = Joi.object({
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().max(1000).allow('', null),
   proofRef: Joi.string().max(200).allow('', null),
-
-  // NYTT: källa (Blocket, Tradera, AirBNB, Husknuten Tiptap)
-  source: Joi.string().allow('', null),
-
+  source: Joi.string().allow('', null), // källa (Blocket, Tradera, ...)
   report: reportSchema.optional(),
 });
 
@@ -71,7 +69,7 @@ router.post('/ratings', async (req, res) => {
   const raterName = (value.rater || '').toString().trim() || null;
   const proofRef = (value.proofRef || '').toString().trim() || null;
 
-  // Mappa texten i rullistan -> enum för databasen
+  // Mappa text i rullistan -> enum
   const ratingSource = mapRatingSource(value.source);
 
   try {
@@ -82,7 +80,7 @@ router.post('/ratings', async (req, res) => {
       raterName,
       proofRef,
       createdAt: nowIso(),
-      ratingSource, // ⬅️ viktigt: skicka rätt fält vidare
+      ratingSource, // viktigt
     });
 
     const r = value.report || null;

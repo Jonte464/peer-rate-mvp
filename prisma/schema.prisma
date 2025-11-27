@@ -32,10 +32,10 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ratings      Rating[]
-  reports      Report[]      @relation("CustomerReports")
-  score        Score?
-  transactions Transaction[]
+  ratings       Rating[]
+  reports       Report[]      @relation("CustomerReports")
+  score         Score?
+  transactions  Transaction[]
   termsAccepted Boolean @default(false)
 
   // NYTT: externa profiler (Blocket, Tradera m.fl.)
@@ -214,9 +214,9 @@ model User {
  * NYTT: Externa profiler (Blocket, senare Tradera m.fl.)
  */
 model ExternalProfile {
-  id           String              @id @default(uuid())
+  id           String               @id @default(uuid())
   customerId   String
-  customer     Customer            @relation(fields: [customerId], references: [id])
+  customer     Customer             @relation(fields: [customerId], references: [id])
 
   platform     ExternalPlatform
   username     String
@@ -241,7 +241,7 @@ model ExternalProfile {
  * NYTT: Annons/snapshot från extern plattform (t.ex. Blocket-annons)
  */
 model Listing {
-  id                String         @id @default(uuid())
+  id                String          @id @default(uuid())
   externalProfileId String
   externalProfile   ExternalProfile @relation(fields: [externalProfileId], references: [id])
 
@@ -314,15 +314,6 @@ enum ReportStatus {
   REJECTED
 }
 
-// 🔴 NYTT: varifrån ett betyg kommer
-enum RatingSource {
-  BLOCKET
-  TRADERA
-  AIRBNB
-  HUSKNUTEN_TIPTAP
-  OTHER
-}
-
 // NYTT: externa plattformar (Blocket nu, fler sen)
 enum ExternalPlatform {
   BLOCKET
@@ -355,4 +346,15 @@ enum DealSource {
   BLOCKET_SCRAPE
   MANUAL
   PARTNER_API
+}
+
+// NYTT: varifrån ett betyg kommer
+enum RatingSource {
+  BLOCKET
+  TRADERA
+  AIRBNB
+  HUSKNUTEN
+  TIPTAP
+  HUSKNUTEN_TIPTAP // legacy – finns kvar i DB för gamla rader
+  OTHER
 }
