@@ -12,11 +12,11 @@ datasource db {
  * Kunder/användare (registrera dig-formuläret)
  */
 model Customer {
-  id             String   @id @default(uuid())
-  subjectRef     String   @unique        // används som "konto-id", vi sätter detta = email (lowercase)
+  id             String  @id @default(uuid())
+  subjectRef     String  @unique // används som "konto-id", vi sätter detta = email (lowercase)
   fullName       String?
-  personalNumber String?  @unique
-  email          String?  @unique
+  personalNumber String? @unique
+  email          String? @unique
   phone          String?
   addressStreet  String?
   addressZip     String?
@@ -24,7 +24,7 @@ model Customer {
   country        String?
 
   // NYTT: lösenord (hashat, aldrig klartext)
-  passwordHash   String?
+  passwordHash String?
 
   // NYTT: samtycke till inhämtning från tredje part
   thirdPartyConsent Boolean @default(false)
@@ -32,11 +32,11 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ratings      Rating[]
-  reports      Report[]      @relation("CustomerReports")
-  score        Score?
-  transactions Transaction[]
-  termsAccepted Boolean @default(false)
+  ratings       Rating[]
+  reports       Report[]      @relation("CustomerReports")
+  score         Score?
+  transactions  Transaction[]
+  termsAccepted Boolean       @default(false)
 
   // NYTT: externa profiler (Blocket, Tradera m.fl.)
   externalProfiles ExternalProfile[]
@@ -58,9 +58,9 @@ model Transaction {
   externalRef String?
   evidenceUrl String?
 
-  ratings     Rating[]
-  reports     Report[]
-  customer    Customer  @relation(fields: [customerId], references: [id])
+  ratings  Rating[]
+  reports  Report[]
+  customer Customer @relation(fields: [customerId], references: [id])
 
   @@index([customerId])
 }
@@ -74,7 +74,7 @@ model Rating {
   transactionId String?
 
   // NYTT: koppling till affärshändelse (Deal)
-  dealId        String?
+  dealId String?
 
   // Betyg 1–5
   score Int
@@ -92,6 +92,9 @@ model Rating {
   // Historiskt fält – lämnas kvar för bakåtkomp.
   proofRef String?
 
+  // NYTT: varifrån omdömet kommer (Blocket, Tradera, m.m.)
+  source RatingSource @default(OTHER)
+
   // Om kryssrutan "Rapportera misstänkt bedrägeri" var ikryssad
   reportedSuspectedFraud Boolean @default(false)
 
@@ -102,7 +105,7 @@ model Rating {
   transaction Transaction? @relation(fields: [transactionId], references: [id])
 
   // NYTT: relation till Deal
-  deal        Deal?        @relation(fields: [dealId], references: [id])
+  deal Deal? @relation(fields: [dealId], references: [id])
 
   // En rating kan ha 0..n rapporter kopplade
   reports Report[]
@@ -193,7 +196,7 @@ model ReportFile {
   data      Bytes
   createdAt DateTime @default(now())
 
-  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@index([reportId])
 }
@@ -211,24 +214,24 @@ model User {
  * NYTT: Externa profiler (Blocket, senare Tradera m.fl.)
  */
 model ExternalProfile {
-  id           String              @id @default(uuid())
-  customerId   String
-  customer     Customer            @relation(fields: [customerId], references: [id])
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
 
-  platform     ExternalPlatform
-  username     String
+  platform ExternalPlatform
+  username String
 
   // Alternativ C: vi kan lagra ett krypterat lösenord + cookies
   encryptedPassword String?
   cookiesJson       Json?
 
-  status       ExternalProfileStatus @default(ACTIVE)
+  status ExternalProfileStatus @default(ACTIVE)
 
   lastSyncedAt DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  listings     Listing[]
+  listings Listing[]
 
   @@index([customerId])
   @@index([platform, username])
@@ -238,21 +241,21 @@ model ExternalProfile {
  * NYTT: Annons/snapshot från extern plattform (t.ex. Blocket-annons)
  */
 model Listing {
-  id                String         @id @default(uuid())
+  id                String          @id @default(uuid())
   externalProfileId String
   externalProfile   ExternalProfile @relation(fields: [externalProfileId], references: [id])
 
-  externalListingId String         // Annons-ID på Blocket (om vi kan plocka ut det)
+  externalListingId String // Annons-ID på Blocket (om vi kan plocka ut det)
   title             String
   price             Int?
-  currency          String?        @default("SEK")
+  currency          String?       @default("SEK")
   status            ListingStatus
 
-  url               String?
-  firstSeenAt       DateTime       @default(now())
-  lastSeenAt        DateTime       @default(now())
+  url         String?
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
 
-  deals             Deal[]
+  deals Deal[]
 
   @@index([externalProfileId])
   @@index([externalListingId])
@@ -262,26 +265,26 @@ model Listing {
  * NYTT: Affärshändelse (Deal) – underlag för omdömen
  */
 model Deal {
-  id        String     @id @default(uuid())
+  id String @id @default(uuid())
 
   listingId String?
-  listing   Listing?   @relation(fields: [listingId], references: [id])
+  listing   Listing? @relation(fields: [listingId], references: [id])
 
-  sellerId  String
-  seller    Customer   @relation("CustomerDealsAsSeller", fields: [sellerId], references: [id])
+  sellerId String
+  seller   Customer @relation("CustomerDealsAsSeller", fields: [sellerId], references: [id])
 
-  buyerId   String?
-  buyer     Customer?  @relation("CustomerDealsAsBuyer", fields: [buyerId], references: [id])
+  buyerId String?
+  buyer   Customer? @relation("CustomerDealsAsBuyer", fields: [buyerId], references: [id])
 
-  source    DealSource @default(BLOCKET_SCRAPE)
-  status    DealStatus @default(PENDING_RATING)
+  source DealSource @default(BLOCKET_SCRAPE)
+  status DealStatus @default(PENDING_RATING)
 
   blocketTitle String?
   blocketPrice Int?
 
-  completedAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   // En deal kan ha flera ratings (köpare ↔ säljare)
   ratings Rating[]
@@ -326,9 +329,9 @@ enum ExternalProfileStatus {
 
 // NYTT: status för annons/listing
 enum ListingStatus {
-  ACTIVE      // Annonsen ligger ute
-  SOLD        // Markerad som såld / avslutad
-  REMOVED     // Försvunnen / borttagen
+  ACTIVE // Annonsen ligger ute
+  SOLD // Markerad som såld / avslutad
+  REMOVED // Försvunnen / borttagen
 }
 
 // NYTT: status för deal
@@ -343,4 +346,13 @@ enum DealSource {
   BLOCKET_SCRAPE
   MANUAL
   PARTNER_API
+}
+
+// NYTT: varifrån ratingen kommer
+enum RatingSource {
+  BLOCKET
+  TRADERA
+  AIRBNB
+  HUSKNUTEN_TIPTAP
+  OTHER
 }

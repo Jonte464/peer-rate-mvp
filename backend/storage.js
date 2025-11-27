@@ -18,7 +18,7 @@ async function getOrCreateCustomerBySubjectRef(subjectRef) {
 
 /** Skapa rating och returnera ids */
 async function createRating(item) {
-  // item: { subjectRef, rating, comment, raterName, proofRef, createdAt }
+  // item: { subjectRef, rating, comment, raterName, proofRef, createdAt, source }
   const customer = await getOrCreateCustomerBySubjectRef(item.subjectRef);
 
   // Dubblettspärr 24h per raterName (om satt)
@@ -39,6 +39,9 @@ async function createRating(item) {
     }
   }
 
+  // Defaultkälla
+  const sourceEnum = item.source || 'OTHER';
+
   const rating = await prisma.rating.create({
     data: {
       customerId: customer.id,
@@ -46,6 +49,7 @@ async function createRating(item) {
       text: item.comment || null,
       raterName: item.raterName || null,
       proofRef: item.proofRef || null,
+      source: sourceEnum,
       ...(item.createdAt ? { createdAt: new Date(item.createdAt) } : {}),
     },
     select: { id: true },
@@ -87,6 +91,7 @@ async function listRatingsBySubjectRef(subjectRef) {
       text: true,
       raterName: true,
       proofRef: true,
+      source: true,
       createdAt: true,
       customer: { select: { subjectRef: true } },
     },
@@ -100,6 +105,7 @@ async function listRatingsBySubjectRef(subjectRef) {
     raterMasked: r.raterName || null,
     hasProof: !!(r.proofRef && r.proofRef.length > 0),
     proofHash: null,
+    source: r.source || 'OTHER',
     createdAt: r.createdAt.toISOString(),
   }));
 }
@@ -138,6 +144,7 @@ async function listRecentRatings(limit = 20) {
     raterMasked: r.raterName || null,
     hasProof: !!(r.proofRef && r.proofRef.length > 0),
     proofHash: null,
+    source: r.source || 'OTHER',
     createdAt: r.createdAt.toISOString(),
   }));
 }

@@ -218,6 +218,16 @@
             <option value="5">5</option>
           </select>
 
+          <!-- NYTT: källa för omdömet -->
+          <label for="rating-source">Var kommer omdömet ifrån? <span class="tiny">(valfritt)</span></label>
+          <select id="rating-source" name="source">
+            <option value="">Välj källa (valfritt)</option>
+            <option value="Blocket">Blocket</option>
+            <option value="Tradera">Tradera</option>
+            <option value="AirBNB">AirBNB</option>
+            <option value="Husknuten Tiptap">Husknuten Tiptap</option>
+          </select>
+
           <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
           <textarea id="comment" name="comment" placeholder=""></textarea>
 
@@ -300,5 +310,3 @@
 <script type="module" src="/modules/main.js"></script>
 </body>
 </html>
-
-

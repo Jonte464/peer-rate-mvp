@@ -11,9 +11,26 @@ const {
   listRecentRatings,
 } = require('../storage');
 
-const { nowIso, normSubject, mapReportReason } = require('../helpers');
+const {
+  nowIso,
+  normSubject,
+  mapReportReason,
+} = require('../helpers');
 
 const router = express.Router();
+
+/** Mappa svensk benämning -> enum RatingSource */
+function mapRatingSource(input) {
+  if (!input) return 'OTHER';
+  const v = String(input).trim().toLowerCase();
+
+  if (v.includes('blocket')) return 'BLOCKET';
+  if (v.includes('tradera')) return 'TRADERA';
+  if (v.includes('airbnb')) return 'AIRBNB';
+  if (v.includes('husknuten') || v.includes('tiptap')) return 'HUSKNUTEN_TIPTAP';
+
+  return 'OTHER';
+}
 
 // --- Validation ---
 const reportSchema = Joi.object({
@@ -30,6 +47,7 @@ const createRatingSchema = Joi.object({
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().max(1000).allow('', null),
   proofRef: Joi.string().max(200).allow('', null),
+  source: Joi.string().allow('', null), // NYTT: källa (Blocket, Tradera, ...)
   report: reportSchema.optional(),
 });
 
@@ -39,11 +57,9 @@ const createRatingSchema = Joi.object({
 router.post('/ratings', async (req, res) => {
   const { error, value } = createRatingSchema.validate(req.body);
   if (error) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Ogiltig inmatning',
-      details: error.details,
-    });
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Ogiltig inmatning', details: error.details });
   }
 
   const subjectRef = normSubject(value.subject);
@@ -51,6 +67,7 @@ router.post('/ratings', async (req, res) => {
   const comment = (value.comment || '').toString().trim();
   const raterName = (value.rater || '').toString().trim() || null;
   const proofRef = (value.proofRef || '').toString().trim() || null;
+  const sourceEnum = mapRatingSource(value.source);
 
   try {
     const { customerId, ratingId } = await createRating({
@@ -60,6 +77,7 @@ router.post('/ratings', async (req, res) => {
       raterName,
       proofRef,
       createdAt: nowIso(),
+      source: sourceEnum,
     });
 
     const r = value.report || null;
@@ -111,7 +129,9 @@ router.get('/ratings', async (req, res) => {
     res.json({ ok: true, count: list.length, ratings: list });
   } catch (e) {
     console.error('[GET /api/ratings] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta betyg' });
+    res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte hämta betyg' });
   }
 });
 
@@ -130,7 +150,9 @@ router.get('/ratings/average', async (req, res) => {
     res.json({ ok: true, subject, count, average });
   } catch (e) {
     console.error('[GET /api/ratings/average] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte beräkna snitt' });
+    res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte beräkna snitt' });
   }
 });
 
@@ -143,7 +165,9 @@ router.get('/ratings/recent', async (_req, res) => {
     res.json({ ok: true, ratings: list });
   } catch (e) {
     console.error('[GET /api/ratings/recent] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta senaste' });
+    res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte hämta senaste' });
   }
 });
 

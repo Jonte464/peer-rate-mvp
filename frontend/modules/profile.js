@@ -236,6 +236,9 @@ async function handleRatingSubmit(event) {
   const comment = form.querySelector('textarea[name="comment"]')?.value?.trim() || '';
   const proofRef = form.querySelector('input[name="proofRef"]')?.value?.trim() || '';
 
+  // NYTT: källa (rullista)
+  const sourceRaw = form.querySelector('select[name="source"]')?.value || '';
+
   if (!ratedUserEmail || !score) {
     showNotification('error', 'Fyll i alla obligatoriska fält innan du skickar.', 'notice');
     return;
@@ -265,6 +268,8 @@ async function handleRatingSubmit(event) {
       rater: raterVal || undefined,
       comment: comment || undefined,
       proofRef: proofRef || undefined,
+      // NYTT: skicka med källan i klartext (Blocket, Tradera, AirBNB, Husknuten Tiptap)
+      source: sourceRaw || undefined,
       report: undefined,
     };
 
@@ -327,6 +332,27 @@ function translateAddressStatus(rawStatus) {
 }
 
 // ----------------------
+// Hjälpare: översätt RatingSource -> svensk etikett
+// ----------------------
+function mapRatingSourceLabel(source) {
+  if (!source) return 'Okänd';
+  const s = String(source).toUpperCase();
+  switch (s) {
+    case 'BLOCKET':
+      return 'Blocket';
+    case 'TRADERA':
+      return 'Tradera';
+    case 'AIRBNB':
+      return 'Airbnb';
+    case 'HUSKNUTEN_TIPTAP':
+      return 'Husknuten Tiptap';
+    case 'OTHER':
+    default:
+      return 'Annat/okänt';
+  }
+}
+
+// ----------------------
 // Nya illustrationer för "Mitt omdöme"
 // ----------------------
 
@@ -337,7 +363,8 @@ function renderPRating(avg) {
   if (!row) return;
 
   row.innerHTML = '';
-  const val = Math.max(0, Math.min(5, Number(avg) || 0));
+  const valRaw = Number(avg);
+  const val = Math.max(0, Math.min(5, isNaN(valRaw) ? 0 : valRaw));
 
   for (let i = 1; i <= 5; i++) {
     let cls = 'rating-p';
@@ -353,7 +380,7 @@ function renderPRating(avg) {
   }
 
   if (text) {
-    if (!avg || isNaN(avg)) {
+    if (!avg || isNaN(valRaw)) {
       text.textContent = 'Inga omdömen ännu.';
     } else {
       text.textContent = `Din nuvarande rating är ${val.toFixed(1)} / 5.`;
@@ -377,9 +404,9 @@ function renderRatingSources(ratings) {
 
   const counts = new Map();
   for (const r of ratings) {
-    const name =
-      (r.raterName || r.rater || '').toString().trim() || 'Okänd källa';
-    counts.set(name, (counts.get(name) || 0) + 1);
+    // NYTT: använd källa istället för namn
+    const label = mapRatingSourceLabel(r.source || r.ratingSource || r.sourceLabel);
+    counts.set(label, (counts.get(label) || 0) + 1);
   }
 
   const entries = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
@@ -557,10 +584,21 @@ async function loadMyRating() {
         info.ratings.forEach((r) => {
           const d = new Date(r.createdAt);
           const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
+
+          const score = r.rating || r.score || '';
+          const rater = (r.raterName || r.rater || '').toString().trim() || 'Okänd';
+          const sourceLabel = mapRatingSourceLabel(r.source || r.ratingSource || r.sourceLabel);
+
+          const metaParts = [];
+          if (rater) metaParts.push(`av ${rater}`);
+          if (sourceLabel) metaParts.push(sourceLabel);
+          if (dateStr) metaParts.push(dateStr);
+          const metaText = metaParts.join(' · ');
+
           html += `<div class="rating-row">
             <div class="rating-main">
-              <div class="rating-stars">${r.rating || r.score || ''} / 5</div>
-              <div class="rating-meta">${r.raterName || r.rater || ''} · ${dateStr}</div>
+              <div class="rating-stars">${score} / 5</div>
+              <div class="rating-meta">${metaText}</div>
               <div class="rating-comment-inline">${(r.comment || r.text || '').slice(0,400)}</div>
             </div>
           </div>`;
