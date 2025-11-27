@@ -169,7 +169,7 @@
       transition:width .3s ease-out;
     }
 
-    /* Enkelt stapeldiagram (om vi vill använda det senare) */
+    /* Enkelt stapeldiagram (framtida användning) */
     .ratings-graph{
       margin-top:12px;
       font-size:12px;
@@ -207,7 +207,7 @@
       font-variant-numeric:tabular-nums;
     }
 
-    /* Lista med individuella betyg + “pratbubblor” */
+    /* Lista med individuella betyg */
     .ratings-list{
       margin-top:14px;
       font-size:13px;
@@ -385,7 +385,7 @@
 
     <h1>Min profil</h1>
     <p class="lead">
-      Här kan du se dina uppgifter, ditt omdöme och lämna betyg på andra användare.
+      Här kan du se dina uppgifter och ditt samlade omdöme.
     </p>
 
     <!-- LOGIN-KORT (visas bara om man inte är inloggad) -->
@@ -540,45 +540,6 @@
 
         <!-- Individuella betyg + kommentarer -->
         <div id="ratings-list" class="ratings-list"></div>
-      </section>
-
-      <!-- Lämna betyg -->
-      <section class="card">
-        <h2>Lämna ett betyg</h2>
-        <p class="tiny muted">
-          Här kan du lämna ett betyg på någon annan. Din e-post fylls i automatiskt om du vill.
-        </p>
-
-        <form id="rating-form" autocomplete="off">
-          <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
-          <input id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
-
-          <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt)</span></label>
-          <input id="rater" name="rater" type="text" placeholder="" />
-
-          <label for="rating">Betyg (1–5)</label>
-          <select id="rating" name="score" required>
-            <option value="" disabled selected hidden>Välj betyg</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-          </select>
-
-          <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
-          <textarea id="comment" name="comment" placeholder=""></textarea>
-
-          <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
-          <input id="proofRef" name="proofRef" type="text" placeholder="ORDER-123" />
-
-          <div class="row" style="margin-top:12px">
-            <button class="primary" type="submit">Skicka betyg</button>
-            <button class="secondary" type="button" id="reset-form">Avbryt</button>
-          </div>
-
-          <div id="notice" class="notice"></div>
-        </form>
       </section>
 
       <!-- Logga ut -->
