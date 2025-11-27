@@ -62,7 +62,7 @@ export function updateAvatars(user) {
 }
 
 // ----------------------
-// Profilbild – uppladdning (fix för moduluppdelning)
+// Profilbild – uppladdning
 // ----------------------
 function initAvatarUpload() {
   const input = document.getElementById('profile-avatar-input');
@@ -145,7 +145,9 @@ export function initRatingLogin() {
       } catch (err) {
         console.error('Could not init rating form', err);
       }
-      const raterInput = document.querySelector('#rating-form input[name="rater"]') || document.getElementById('rater');
+      const raterInput =
+        document.querySelector('#rating-form input[name="rater"]') ||
+        document.getElementById('rater');
       if (raterInput && user.email) raterInput.value = user.email;
     } else {
       if (loginCard) loginCard.classList.remove('hidden');
@@ -215,18 +217,23 @@ export function initRatingForm() {
   if (resetBtn) resetBtn.addEventListener('click', () => form.reset());
 }
 
-document.addEventListener('submit', (e) => {
-  try {
-    const target = e.target;
-    if (!target || !(target instanceof HTMLFormElement)) return;
-    if (target.id !== 'rating-form') return;
-    if (target.dataset && target.dataset.ratingBound === '1') return;
-    e.preventDefault();
-    handleRatingSubmit.call(target, e);
-  } catch (err) {
-    console.error('rating-form delegation error', err);
-  }
-}, true);
+// Event-delegering som backup
+document.addEventListener(
+  'submit',
+  (e) => {
+    try {
+      const target = e.target;
+      if (!target || !(target instanceof HTMLFormElement)) return;
+      if (target.id !== 'rating-form') return;
+      if (target.dataset && target.dataset.ratingBound === '1') return;
+      e.preventDefault();
+      handleRatingSubmit.call(target, e);
+    } catch (err) {
+      console.error('rating-form delegation error', err);
+    }
+  },
+  true
+);
 
 async function handleRatingSubmit(event) {
   event.preventDefault();
@@ -236,7 +243,7 @@ async function handleRatingSubmit(event) {
   const comment = form.querySelector('textarea[name="comment"]')?.value?.trim() || '';
   const proofRef = form.querySelector('input[name="proofRef"]')?.value?.trim() || '';
 
-  // NYTT: källa (rullista)
+  // Källa (rullista)
   const sourceRaw = form.querySelector('select[name="source"]')?.value || '';
 
   if (!ratedUserEmail || !score) {
@@ -247,14 +254,38 @@ async function handleRatingSubmit(event) {
   try {
     const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || null;
 
-    const reportFlag = !!(form.querySelector('#reportFlag')?.checked || form.querySelector('[name="fraudReportEnabled"]')?.checked);
-    const reportReason = form.querySelector('#reportReason')?.value || form.querySelector('[name="fraudType"]')?.value || null;
-    const reportDate = form.querySelector('#reportDate')?.value || form.querySelector('[name="fraudDate"]')?.value || null;
-    const reportTime = form.querySelector('#reportTime')?.value || form.querySelector('[name="fraudTime"]')?.value || null;
-    const reportAmount = form.querySelector('#reportAmount')?.value || form.querySelector('[name="fraudAmount"]')?.value || null;
-    const reportLink = form.querySelector('#reportLink')?.value || form.querySelector('[name="fraudLink"]')?.value || null;
-    const reportText = form.querySelector('#reportText')?.value?.trim() || form.querySelector('[name="fraudDescription"]')?.value?.trim() || '';
-    const reportConsent = !!(form.querySelector('#reportConsent')?.checked || form.querySelector('[name="fraudConsent"]')?.checked);
+    const reportFlag = !!(
+      form.querySelector('#reportFlag')?.checked ||
+      form.querySelector('[name="fraudReportEnabled"]')?.checked
+    );
+    const reportReason =
+      form.querySelector('#reportReason')?.value ||
+      form.querySelector('[name="fraudType"]')?.value ||
+      null;
+    const reportDate =
+      form.querySelector('#reportDate')?.value ||
+      form.querySelector('[name="fraudDate"]')?.value ||
+      null;
+    const reportTime =
+      form.querySelector('#reportTime')?.value ||
+      form.querySelector('[name="fraudTime"]')?.value ||
+      null;
+    const reportAmount =
+      form.querySelector('#reportAmount')?.value ||
+      form.querySelector('[name="fraudAmount"]')?.value ||
+      null;
+    const reportLink =
+      form.querySelector('#reportLink')?.value ||
+      form.querySelector('[name="fraudLink"]')?.value ||
+      null;
+    const reportText =
+      form.querySelector('#reportText')?.value?.trim() ||
+      form.querySelector('[name="fraudDescription"]')?.value?.trim() ||
+      '';
+    const reportConsent = !!(
+      form.querySelector('#reportConsent')?.checked ||
+      form.querySelector('[name="fraudConsent"]')?.checked
+    );
 
     let composedReportText = reportText || '';
     if (reportDate) composedReportText = `${composedReportText}${composedReportText ? '\n' : ''}Datum: ${reportDate}`;
@@ -268,7 +299,7 @@ async function handleRatingSubmit(event) {
       rater: raterVal || undefined,
       comment: comment || undefined,
       proofRef: proofRef || undefined,
-      // NYTT: skicka med källan i klartext (Blocket, Tradera, AirBNB, Husknuten Tiptap)
+      // Källa i klartext (Blocket, Tradera, Airbnb, Husknuten Tiptap, Annat)
       source: sourceRaw || undefined,
       report: undefined,
     };
@@ -332,10 +363,10 @@ function translateAddressStatus(rawStatus) {
 }
 
 // ----------------------
-// Hjälpare: översätt RatingSource -> svensk etikett
+// Hjälpare: översätt källa → svensk etikett
 // ----------------------
 function mapRatingSourceLabel(source) {
-  if (!source) return 'Okänd';
+  if (!source) return 'Annat/okänt';
   const s = String(source).toUpperCase();
   switch (s) {
     case 'BLOCKET':
@@ -404,8 +435,9 @@ function renderRatingSources(ratings) {
 
   const counts = new Map();
   for (const r of ratings) {
-    // NYTT: använd källa istället för namn
-    const label = mapRatingSourceLabel(r.source || r.ratingSource || r.sourceLabel);
+    const label = mapRatingSourceLabel(
+      r.source || r.ratingSource || r.sourceLabel
+    );
     counts.set(label, (counts.get(label) || 0) + 1);
   }
 
@@ -448,12 +480,20 @@ async function loadProfileData() {
     if (!customer) return;
 
     const set = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = value === undefined || value === null || value === '' ? '-' : String(value);
+      const elNode = document.getElementById(id);
+      if (!elNode) return;
+      elNode.textContent =
+        value === undefined || value === null || value === ''
+          ? '-'
+          : String(value);
     };
 
-    set('profile-name', customer.fullName || customer.name || `${customer.firstName || ''} ${customer.lastName || ''}`);
+    set(
+      'profile-name',
+      customer.fullName ||
+        customer.name ||
+        `${customer.firstName || ''} ${customer.lastName || ''}`
+    );
     set('profile-email', customer.email || customer.subjectRef || '-');
     set('profile-personalNumber', customer.personalNumber || customer.ssn || '-');
     set('profile-phone', customer.phone || '-');
@@ -494,15 +534,15 @@ async function loadExternalData() {
     let anyVisible = false;
 
     const setAndToggle = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const li = el.closest && el.closest('li');
+      const elNode = document.getElementById(id);
+      if (!elNode) return;
+      const li = elNode.closest && elNode.closest('li');
 
       if (value === undefined || value === null || value === '') {
-        el.textContent = '';
+        elNode.textContent = '';
         if (li) li?.classList.add('hidden');
       } else {
-        el.textContent = String(value);
+        elNode.textContent = String(value);
         if (li) li?.classList.remove('hidden');
         anyVisible = true;
       }
@@ -555,9 +595,12 @@ async function loadMyRating() {
     }
 
     const set = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent = value === undefined || value === null || value === '' ? '-' : String(value);
+      const elNode = document.getElementById(id);
+      if (!elNode) return;
+      elNode.textContent =
+        value === undefined || value === null || value === ''
+          ? '-'
+          : String(value);
     };
 
     if (typeof info.average === 'number') {
@@ -586,11 +629,20 @@ async function loadMyRating() {
           const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
 
           const score = r.rating || r.score || '';
-          const rater = (r.raterName || r.rater || '').toString().trim() || 'Okänd';
-          const sourceLabel = mapRatingSourceLabel(r.source || r.ratingSource || r.sourceLabel);
+
+          // Försök använda så mycket info som möjligt om vem som betygsatt
+          const raterLabel =
+            (r.raterName && String(r.raterName).trim()) ||
+            (r.raterMasked && String(r.raterMasked).trim()) ||
+            (r.rater && String(r.rater).trim()) ||
+            'Okänd';
+
+          const sourceLabel = mapRatingSourceLabel(
+            r.source || r.ratingSource || r.sourceLabel
+          );
 
           const metaParts = [];
-          if (rater) metaParts.push(`av ${rater}`);
+          if (raterLabel) metaParts.push(`av ${raterLabel}`);
           if (sourceLabel) metaParts.push(sourceLabel);
           if (dateStr) metaParts.push(dateStr);
           const metaText = metaParts.join(' · ');
@@ -628,7 +680,7 @@ export async function initProfilePage() {
   try {
     initLogoutButton();
     initRatingForm();
-    initAvatarUpload(); // 🔁 se till att profilbild-uppladdning kopplas in
+    initAvatarUpload();
   } catch (err) {
     console.error('initProfilePage auxiliary inits error', err);
   }
@@ -643,7 +695,11 @@ export async function initProfilePage() {
       updateUserBadge(user);
       updateAvatars(user);
       try {
-        await Promise.all([loadProfileData(), loadExternalData(), loadMyRating()]);
+        await Promise.all([
+          loadProfileData(),
+          loadExternalData(),
+          loadMyRating(),
+        ]);
       } catch (err) {
         console.error('profile data loaders error', err);
       }
