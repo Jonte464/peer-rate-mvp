@@ -47,7 +47,10 @@ const createRatingSchema = Joi.object({
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().max(1000).allow('', null),
   proofRef: Joi.string().max(200).allow('', null),
-  source: Joi.string().allow('', null), // NYTT: källa (Blocket, Tradera, ...)
+
+  // NYTT: källa (Blocket, Tradera, AirBNB, Husknuten Tiptap)
+  source: Joi.string().allow('', null),
+
   report: reportSchema.optional(),
 });
 
@@ -67,7 +70,9 @@ router.post('/ratings', async (req, res) => {
   const comment = (value.comment || '').toString().trim();
   const raterName = (value.rater || '').toString().trim() || null;
   const proofRef = (value.proofRef || '').toString().trim() || null;
-  const sourceEnum = mapRatingSource(value.source);
+
+  // Mappa texten i rullistan -> enum för databasen
+  const ratingSource = mapRatingSource(value.source);
 
   try {
     const { customerId, ratingId } = await createRating({
@@ -77,7 +82,7 @@ router.post('/ratings', async (req, res) => {
       raterName,
       proofRef,
       createdAt: nowIso(),
-      source: sourceEnum,
+      ratingSource, // ⬅️ viktigt: skicka rätt fält vidare
     });
 
     const r = value.report || null;
@@ -86,6 +91,7 @@ router.post('/ratings', async (req, res) => {
         r.report_flag === true || !!r.report_reason || !!r.report_text;
       const consentOk =
         r.report_consent === undefined ? true : !!r.report_consent;
+
       if (flagged && consentOk) {
         const reasonEnum = mapReportReason(r.report_reason);
         await createReport({

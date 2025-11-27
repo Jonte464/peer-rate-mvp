@@ -18,7 +18,7 @@ async function getOrCreateCustomerBySubjectRef(subjectRef) {
 
 /** Skapa rating och returnera ids */
 async function createRating(item) {
-  // item: { subjectRef, rating, comment, raterName, proofRef, createdAt }
+  // item: { subjectRef, rating, comment, raterName, proofRef, createdAt, ratingSource? }
   const customer = await getOrCreateCustomerBySubjectRef(item.subjectRef);
 
   // Dubblettspärr 24h per raterName (om satt)
@@ -46,6 +46,8 @@ async function createRating(item) {
       text: item.comment || null,
       raterName: item.raterName || null,
       proofRef: item.proofRef || null,
+      ratingSource: item.ratingSource || 'OTHER', // ⬅️ NYTT
+
       ...(item.createdAt ? { createdAt: new Date(item.createdAt) } : {}),
     },
     select: { id: true },
@@ -56,7 +58,6 @@ async function createRating(item) {
 
 /** Skapa en rapport (kopplad till kund och ev. rating/transaction) */
 async function createReport(data) {
-  // data: { reportedCustomerId, ratingId?, transactionId?, reason, details?, evidenceUrl? }
   await prisma.report.create({
     data: {
       reportedCustomerId: data.reportedCustomerId,
@@ -87,6 +88,7 @@ async function listRatingsBySubjectRef(subjectRef) {
       text: true,
       raterName: true,
       proofRef: true,
+      ratingSource: true,              // ⬅️ NYTT
       createdAt: true,
       customer: { select: { subjectRef: true } },
     },
@@ -97,12 +99,13 @@ async function listRatingsBySubjectRef(subjectRef) {
     subject: r.customer?.subjectRef || subjectRef,
     rating: r.score,
     comment: r.text || '',
-    // 🔸 Exponera både rått namn och ett "maskat"-fält (för ev. framtida användning)
-    raterName: r.raterName || null,
     raterMasked: r.raterName || null,
     hasProof: !!(r.proofRef && r.proofRef.length > 0),
     proofHash: null,
     createdAt: r.createdAt.toISOString(),
+
+    // Skicka med källan till frontend
+    ratingSource: r.ratingSource || 'OTHER',
   }));
 }
 
@@ -137,11 +140,12 @@ async function listRecentRatings(limit = 20) {
     subject: r.customer?.subjectRef || '(unknown)',
     rating: r.score,
     comment: r.text || '',
-    raterName: r.raterName || null,
     raterMasked: r.raterName || null,
     hasProof: !!(r.proofRef && r.proofRef.length > 0),
     proofHash: null,
     createdAt: r.createdAt.toISOString(),
+
+    ratingSource: r.ratingSource || 'OTHER',
   }));
 }
 
@@ -149,7 +153,7 @@ async function listRecentRatings(limit = 20) {
 async function createCustomer(data) {
   const created = await prisma.customer.create({
     data: {
-      subjectRef: data.subjectRef, // vi sätter detta = email (lowercase)
+      subjectRef: data.subjectRef,
       fullName: data.fullName || null,
       personalNumber: data.personalNumber || null,
       email: data.email || null,
@@ -217,7 +221,6 @@ async function findCustomerBySubjectRef(subjectRef) {
       personalNumber: true,
       createdAt: true,
       thirdPartyConsent: true,
-      // ⬇️ dessa läggs till för extern-adress-API:t
       addressStreet: true,
       addressZip: true,
       addressCity: true,
@@ -228,7 +231,6 @@ async function findCustomerBySubjectRef(subjectRef) {
 
 /* ===================== ADMIN-FUNKTIONER ===================== */
 
-/** Antal kunder, ratings, rapporter (admin-översikt) */
 async function adminGetCounts() {
   const [customers, ratings, reports] = await Promise.all([
     prisma.customer.count(),
@@ -238,7 +240,6 @@ async function adminGetCounts() {
   return { customers, ratings, reports };
 }
 
-/** Senaste rapporter (admin-vy) */
 async function adminListRecentReports(limit = 20) {
   const rows = await prisma.report.findMany({
     orderBy: { createdAt: 'desc' },
@@ -260,9 +261,7 @@ async function adminListRecentReports(limit = 20) {
   }));
 }
 
-/** Hämta en kund + dennes ratings (admin-sök) */
 async function adminGetCustomerWithRatings(query) {
-  // Försök först hitta på exakt email/subjectRef
   const candidate = await prisma.customer.findFirst({
     where: {
       OR: [
@@ -279,7 +278,6 @@ async function adminGetCustomerWithRatings(query) {
   });
 
   if (!candidate) {
-    // fallback: enkel contains-sök
     const list = await prisma.customer.findMany({
       where: {
         OR: [
