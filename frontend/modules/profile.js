@@ -635,14 +635,19 @@ async function loadMyRating() {
       set('profile-score-count', String(info.count || 0));
       const fill = document.getElementById('profile-score-bar');
       if (fill) {
-        const pct = Math.max(0, Math.min(100, (info.average / 5) * 100));
+        const pct = Math.max(
+          0,
+          Math.min(100, (info.average / 5) * 100)
+        );
         fill.style.width = `${pct}%`;
       }
     }
 
+    // Övergripande illustrationer
     renderPRating(info.average);
     renderRatingSources(info.ratings || []);
 
+    // Lista med individuella omdömen
     const listEl = document.getElementById('ratings-list');
     if (listEl) {
       if (!Array.isArray(info.ratings) || info.ratings.length === 0) {
@@ -656,39 +661,32 @@ async function loadMyRating() {
             ? ''
             : d.toLocaleString('sv-SE');
 
-          const score = r.rating ?? r.score ?? '';
+          const score = r.rating || r.score || '';
 
-          // --- NY LOGIK FÖR "av X" ---
-          const rawName = ((r.raterName || r.rater) ?? '').toString().trim();
-          const rawEmail = (r.raterEmail ?? '').toString().trim();
+          // 👇 Försök först med riktiga fält från databasen
+          const rawRaterName =
+            (r.raterName || r.raterEmail || r.rater || '').toString().trim();
 
-          const sourceRaw = r.source || r.ratingSource || r.sourceLabel;
-          const sourceLabel = mapRatingSourceLabel(sourceRaw);
+          // Om backend skickar med någon "etikett", t.ex. "Tip-tap användare"
+          const channelLabel = (r.raterLabel || '').toString().trim();
 
-          let rater = rawName || rawEmail;
+          // Riktig visning: "Anna J" om vi har det, annars ev. "Tip-tap användare", annars "Okänd"
+          const raterDisplay = rawRaterName || channelLabel || 'Okänd';
 
-          // Snygg fallback per källa om vi saknar namn/mejl
-          if (!rater) {
-            if (sourceRaw === 'BLOCKET') {
-              rater = 'Blocket-användare';
-            } else if (sourceRaw === 'TRADERA') {
-              rater = 'Tradera-användare';
-            } else if (sourceRaw === 'AIRBNB') {
-              rater = 'Airbnb-användare';
-            } else if (sourceRaw === 'HUSKNUTEN') {
-              rater = 'Husknuten-användare';
-            } else if (sourceRaw === 'TIPTAP') {
-              rater = 'Tiptap-användare';
-            } else {
-              rater = 'Okänd';
-            }
-          }
-          // --- SLUT NY LOGIK ---
+          const sourceLabel = mapRatingSourceLabel(
+            r.source || r.ratingSource || r.sourceLabel
+          );
 
           const metaParts = [];
-          if (rater) metaParts.push(`av ${rater}`);
-          if (sourceLabel) metaParts.push(`betyg via ${sourceLabel}`);
-          if (dateStr) metaParts.push(dateStr);
+          if (raterDisplay && raterDisplay !== 'Okänd') {
+            metaParts.push(`av ${raterDisplay}`);
+          }
+          if (sourceLabel) {
+            metaParts.push(`betyg via ${sourceLabel}`);
+          }
+          if (dateStr) {
+            metaParts.push(dateStr);
+          }
           const metaText = metaParts.join(' · ');
 
           html += `<div class="rating-row">

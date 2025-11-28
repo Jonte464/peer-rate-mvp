@@ -6,11 +6,29 @@ import customerForm from './customer.js';
 import { updateUserBadge, updateAvatars, initProfilePage, initRatingLogin } from './profile.js';
 import { adminLoginForm, adminLogoutBtn } from './admin.js';
 
+/**
+ * Döljer eller visar login-hint på sidan Lämna betyg.
+ */
+function updateRatingLoginHint(user) {
+  const hint = document.getElementById('rating-login-hint');
+  if (!hint) return;
+
+  if (user) {
+    // Inloggad → göm texten
+    hint.classList.add('hidden');
+  } else {
+    // Utloggad → visa texten
+    hint.classList.remove('hidden');
+  }
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   console.log('DOM ready');
 
-  // Använd moduler här
+  // Hämta inloggad användare
   const user = auth.getUser();
+
+  // Uppdatera topp-badgen + avatar
   updateUserBadge(user);
   updateAvatars(user);
 
@@ -22,14 +40,30 @@ window.addEventListener('DOMContentLoaded', () => {
     console.log('Admin functionality loaded');
   }
 
-  // Initiera profile-sida login om vi är på profilen
+  // Vilken sida är vi på?
   const path = window.location.pathname || '';
-  if (path.includes('/min-profil') || path.includes('profile.html') || path.includes('/profile')) {
+
+  // ------------------------
+  // Initiera profilsidan
+  // ------------------------
+  if (
+    path.includes('/min-profil') ||
+    path.includes('profile.html') ||
+    path.includes('/profile')
+  ) {
     initProfilePage();
   }
 
-  // Initiera Lämna-betyg login på rating-sidan
-  if (path.includes('/lamna-betyg') || path.includes('index.html') || document.getElementById('rating-card')) {
+  // ------------------------
+  // Initiera Lämna betyg-sidan
+  // ------------------------
+  const isRatingPage =
+    path.includes('/lamna-betyg') ||
+    path.includes('index.html') ||
+    document.getElementById('rating-card');
+
+  if (isRatingPage) {
     initRatingLogin();
+    updateRatingLoginHint(user); // 👈 Göm/visa login-hint här
   }
 });
