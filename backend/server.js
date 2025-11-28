@@ -13,7 +13,6 @@ const ratingsRoutes = require('./routes/ratingsRoutes');
 const customersRoutes = require('./routes/customersRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
-const traderaRoutes = require('./routes/traderaRoutes'); // NYTT
 
 const prisma = new PrismaClient();
 
@@ -81,7 +80,6 @@ app.use(
 app.use('/api', ratingsRoutes);
 app.use('/api', customersRoutes);
 app.use('/api', authRoutes);
-app.use('/api/tradera', traderaRoutes); // NYTT: /api/tradera/...
 app.use('/api/admin', adminRoutes);
 
 // --- Health ---
@@ -234,6 +232,140 @@ app.post('/api/external/blocket/connect', async (req, res) => {
   } catch (err) {
     console.error('Blocket connect error:', err);
     res.status(500).json({ error: 'Failed to connect Blocket profile' });
+  }
+});
+
+/* -------------------------------------------------------
+   Tradera-koppling (MVP: spara bara användarnamn)
+   ------------------------------------------------------- */
+app.post('/api/tradera/connect', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const emailTrim = String(body.email || '').trim().toLowerCase();
+    const usernameTrim = String(body.username || '').trim();
+
+    if (!emailTrim || !usernameTrim) {
+      return res
+        .status(400)
+        .json({ ok: false, error: 'Saknar e-post eller Tradera-användarnamn.' });
+    }
+
+    const customer = await prisma.customer.findFirst({
+      where: {
+        OR: [{ subjectRef: emailTrim }, { email: emailTrim }],
+      },
+    });
+
+    if (!customer) {
+      return res
+        .status(404)
+        .json({ ok: false, error: 'Kund hittades inte.' });
+    }
+
+    let profile = await prisma.externalProfile.findFirst({
+      where: {
+        customerId: customer.id,
+        platform: 'TRADERA',
+      },
+    });
+
+    if (profile) {
+      profile = await prisma.externalProfile.update({
+        where: { id: profile.id },
+        data: {
+          username: usernameTrim,
+          status: 'ACTIVE',
+        },
+      });
+    } else {
+      profile = await prisma.externalProfile.create({
+        data: {
+          customerId: customer.id,
+          platform: 'TRADERA',
+          username: usernameTrim,
+          status: 'ACTIVE',
+        },
+      });
+    }
+
+    return res.json({ ok: true, profileId: profile.id });
+  } catch (err) {
+    console.error('Tradera connect error', err);
+    return res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte koppla Tradera-konto.' });
+  }
+});
+
+/* -------------------------------------------------------
+   Tradera-summary (MVP: bara meta, inga ordrar än)
+   ------------------------------------------------------- */
+app.get('/api/tradera/summary', async (req, res) => {
+  try {
+    const emailQ = String(req.query.email || '').trim().toLowerCase();
+    const limitRaw = Number(req.query.limit || 50);
+    const limit = Math.max(
+      1,
+      Math.min(200, Number.isNaN(limitRaw) ? 50 : limitRaw)
+    );
+
+    if (!emailQ) {
+      return res.status(400).json({ ok: false, error: 'Saknar email' });
+    }
+
+    const customer = await prisma.customer.findFirst({
+      where: {
+        OR: [{ subjectRef: emailQ }, { email: emailQ }],
+      },
+    });
+
+    if (!customer) {
+      return res.status(404).json({ ok: false, error: 'Kund hittades inte' });
+    }
+
+    const profile = await prisma.externalProfile.findFirst({
+      where: {
+        customerId: customer.id,
+        platform: 'TRADERA',
+      },
+    });
+
+    if (!profile) {
+      return res.json({
+        ok: true,
+        hasTradera: false,
+        profile: null,
+        orders: [],
+      });
+    }
+
+    // MVP: vi har ännu ingen TraderaOrder-tabell, så vi returnerar tom lista
+    const orders = [];
+
+    const dtoProfile = {
+      username: profile.username,
+      email: null,
+      externalUserId: null,
+      accountCreatedAt: null,
+      feedbackScore: null,
+      feedbackCountPositive: null,
+      feedbackCountNegative: null,
+      lastSyncedAt: profile.lastSyncedAt,
+    };
+
+    return res.json({
+      ok: true,
+      hasTradera: true,
+      profile: dtoProfile,
+      orders,
+      limit,
+    });
+  } catch (err) {
+    console.error('Tradera summary error', err);
+    return res.status(500).json({
+      ok: false,
+      error: 'Serverfel vid hämtning av Tradera-data',
+    });
   }
 });
 

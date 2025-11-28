@@ -420,7 +420,7 @@ function renderPRating(avg) {
 
   row.innerHTML = '';
   const valRaw = Number(avg);
-  const val = Math.max(0, Math.min(5, isNaN(valRaw) ? 0 : valRaw));
+  const val = Math.max(0, Math.min(5, Number.isNaN(valRaw) ? 0 : valRaw));
 
   for (let i = 1; i <= 5; i++) {
     let cls = 'rating-p';
@@ -436,7 +436,7 @@ function renderPRating(avg) {
   }
 
   if (text) {
-    if (!avg || isNaN(valRaw)) {
+    if (!avg || Number.isNaN(valRaw)) {
       text.textContent = 'Inga omdömen ännu.';
     } else {
       text.textContent = `Din nuvarande rating är ${val.toFixed(1)} / 5.`;
@@ -505,9 +505,9 @@ async function loadProfileData() {
     if (!customer) return;
 
     const set = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent =
+      const node = document.getElementById(id);
+      if (!node) return;
+      node.textContent =
         value === undefined || value === null || value === '' ? '-' : String(value);
     };
 
@@ -563,15 +563,15 @@ async function loadExternalData() {
     let anyVisible = false;
 
     const setAndToggle = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      const li = el.closest && el.closest('li');
+      const node = document.getElementById(id);
+      if (!node) return;
+      const li = node.closest && node.closest('li');
 
       if (value === undefined || value === null || value === '') {
-        el.textContent = '';
+        node.textContent = '';
         if (li) li?.classList.add('hidden');
       } else {
-        el.textContent = String(value);
+        node.textContent = String(value);
         if (li) li?.classList.remove('hidden');
         anyVisible = true;
       }
@@ -729,6 +729,93 @@ async function loadTraderaData(user) {
 }
 
 // ----------------------
+// Koppla Tradera-konto (knapp på Min profil)
+// ----------------------
+function initTraderaConnect(user) {
+  const btn = document.getElementById('tradera-connect-btn');
+  if (!btn) return;
+
+  // Ingen inloggad användare → gör inget (knappen visas ändå, men gör inget)
+  if (!user || !user.email) {
+    btn.addEventListener('click', () => {
+      showNotification(
+        'error',
+        'Logga in först för att koppla ditt Tradera-konto.',
+        'tradera-connect-status'
+      );
+    });
+    return;
+  }
+
+  btn.addEventListener('click', async () => {
+    const usernameInput = document.getElementById('tradera-connect-username');
+    const statusId = 'tradera-connect-status';
+
+    const username =
+      (usernameInput && usernameInput.value && usernameInput.value.trim()) || '';
+
+    if (!username) {
+      showNotification(
+        'error',
+        'Fyll i ditt Tradera-användarnamn.',
+        statusId
+      );
+      return;
+    }
+
+    btn.disabled = true;
+    const statusNode = document.getElementById(statusId);
+    if (statusNode) {
+      statusNode.textContent = 'Kopplar Tradera-konto...';
+    }
+
+    try {
+      const res = await fetch('/api/tradera/connect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          username,
+        }),
+      });
+
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        // ignore
+      }
+
+      if (!res.ok || !data.ok) {
+        const msg =
+          data?.error || 'Kunde inte koppla Tradera-konto. Försök igen.';
+        showNotification('error', msg, statusId);
+        btn.disabled = false;
+        return;
+      }
+
+      showNotification(
+        'success',
+        'Tradera-kontot är kopplat. Uppdaterar vy...',
+        statusId
+      );
+
+      // Hämta om Tradera-blocket så att det visas
+      await loadTraderaData(user);
+    } catch (err) {
+      console.error('Tradera connect error', err);
+      showNotification(
+        'error',
+        'Tekniskt fel vid koppling. Försök igen om en stund.',
+        statusId
+      );
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+// ----------------------
 // Hämta och rendera "Mitt omdöme"
 // ----------------------
 async function loadMyRating() {
@@ -741,9 +828,9 @@ async function loadMyRating() {
     }
 
     const set = (id, value) => {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.textContent =
+      const node = document.getElementById(id);
+      if (!node) return;
+      node.textContent =
         value === undefined || value === null || value === '' ? '-' : String(value);
     };
 
@@ -853,6 +940,10 @@ export async function initProfilePage() {
       if (profileRoot) profileRoot.classList.remove('hidden');
       updateUserBadge(user);
       updateAvatars(user);
+
+      // Initiera Tradera-knappen nu när vi vet vem som är inloggad
+      initTraderaConnect(user);
+
       try {
         await Promise.all([
           loadProfileData(),
