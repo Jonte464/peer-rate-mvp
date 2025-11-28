@@ -1,4 +1,4 @@
-// prisma/schema.prisma
+// prisma/schema.prisma 
 generator client {
   provider = "prisma-client-js"
 }
@@ -211,7 +211,7 @@ model User {
 }
 
 /**
- * NYTT: Externa profiler (Blocket, senare Tradera m.fl.)
+ * NYTT: Externa profiler (Blocket, Tradera m.fl.)
  */
 model ExternalProfile {
   id           String               @id @default(uuid())
@@ -221,9 +221,19 @@ model ExternalProfile {
   platform     ExternalPlatform
   username     String
 
-  // Alternativ C: vi kan lagra ett krypterat lösenord + cookies
-  encryptedPassword String?
-  cookiesJson       Json?
+  // Generellt extern-id (t.ex. Tradera userId)
+  externalUserId       String?
+
+  // Autentisering via token (t.ex. från Tradera Developer Program)
+  authToken            String?
+  authTokenExpiresAt   DateTime?
+
+  // Rå profil-data från extern plattform (t.ex. feedback, ratings, osv.)
+  profileJson          Json?
+
+  // Alternativ C: vi kan lagra ett krypterat lösenord + cookies (t.ex. för Blocket-scrape)
+  encryptedPassword    String?
+  cookiesJson          Json?
 
   status       ExternalProfileStatus @default(ACTIVE)
 
@@ -231,7 +241,8 @@ model ExternalProfile {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  listings     Listing[]
+  listings       Listing[]
+  traderaOrders  TraderaOrder[]
 
   @@index([customerId])
   @@index([platform, username])
@@ -296,8 +307,51 @@ model Deal {
 }
 
 /**
+ * NYTT: TraderaOrder – avslutade affärer från Tradera, kopplade till ExternalProfile (TRADERA)
+ */
+model TraderaOrder {
+  id                String          @id @default(uuid())
+  externalProfileId String
+  externalProfile   ExternalProfile @relation(fields: [externalProfileId], references: [id])
+
+  // Order/affärs-id på Tradera
+  traderaOrderId    String
+  traderaItemId     String?
+  title             String
+
+  amount            Decimal? @db.Decimal(12, 2)
+  currency          String?  @default("SEK")
+
+  // Om vår kund var köpare eller säljare i affären
+  role              TraderaOrderRole @default(SELLER)
+
+  // Motpartens info
+  counterpartyAlias String?
+  counterpartyEmail String?
+
+  completedAt       DateTime?
+
+  // Rå data från Tradera (kan innehålla extra fält)
+  rawJson           Json?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([externalProfileId])
+  @@index([traderaOrderId])
+  @@index([completedAt])
+}
+
+/**
  * Enum-typer
  */
+
+// Roll i Tradera-affär
+enum TraderaOrderRole {
+  BUYER
+  SELLER
+}
+
 enum ReportReason {
   FRAUD
   IMPERSONATION
@@ -314,7 +368,7 @@ enum ReportStatus {
   REJECTED
 }
 
-// NYTT: externa plattformar (Blocket nu, fler sen)
+// NYTT: externa plattformar (Blocket nu, Tradera m.fl.)
 enum ExternalPlatform {
   BLOCKET
   TRADERA
