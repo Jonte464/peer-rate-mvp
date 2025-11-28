@@ -364,6 +364,34 @@
       color:transparent;
     }
 
+    /* Tradera-block */
+    .tradera-orders{
+      margin-top:10px;
+      font-size:13px;
+    }
+    .tradera-order-row{
+      padding:6px 0;
+      border-bottom:1px solid rgba(0,0,0,.05);
+    }
+    .tradera-order-title{
+      font-weight:600;
+      color:var(--brand-ink);
+      margin-bottom:2px;
+    }
+    .tradera-order-meta{
+      font-size:12px;
+      color:var(--brand-ink-d);
+    }
+    .tradera-tag{
+      display:inline-block;
+      padding:2px 6px;
+      border-radius:999px;
+      background:#fff;
+      border:1px solid var(--brand-border);
+      font-size:11px;
+      margin-right:4px;
+    }
+
     @media (max-width:600px){
       .wrap{margin:20px auto 40px;padding:0 12px 32px;}
       h1{font-size:26px;}
@@ -469,7 +497,7 @@
       </section>
 
       <!-- Externa data -->
-      <section class="card">
+      <section class="card" id="external-data-section">
         <h2>Externa data</h2>
         <p class="tiny muted">
           Här visas viss information som hämtats från externa, offentliga källor kopplat till din profil.
@@ -498,6 +526,54 @@
             <span class="profile-value"><span data-field="externalAddressStatus">–</span></span>
           </li>
         </ul>
+      </section>
+
+      <!-- Tradera -->
+      <section class="card hidden" id="tradera-section">
+        <h2>Tradera</h2>
+        <p class="tiny muted">
+          Här visas information från ditt Tradera-konto (t.ex. avslutade affärer och omdömen)
+          när du har kopplat ditt konto till PeerRate.
+        </p>
+
+        <ul class="profile-list">
+          <li>
+            <span class="profile-label">Användarnamn</span>
+            <span class="profile-value" id="tradera-username">–</span>
+          </li>
+          <li>
+            <span class="profile-label">E-post</span>
+            <span class="profile-value" id="tradera-email">–</span>
+          </li>
+          <li>
+            <span class="profile-label">Tradera-ID</span>
+            <span class="profile-value" id="tradera-userId">–</span>
+          </li>
+          <li>
+            <span class="profile-label">Konto sedan</span>
+            <span class="profile-value" id="tradera-account-created">–</span>
+          </li>
+          <li>
+            <span class="profile-label">Tradera-omdöme</span>
+            <span class="profile-value" id="tradera-feedback-score">–</span>
+          </li>
+          <li>
+            <span class="profile-label">Positiva / Negativa</span>
+            <span class="profile-value">
+              <span id="tradera-feedback-positive">–</span> / <span id="tradera-feedback-negative">–</span>
+            </span>
+          </li>
+          <li>
+            <span class="profile-label">Senast synkad</span>
+            <span class="profile-value" id="tradera-last-synced">–</span>
+          </li>
+        </ul>
+
+        <h3 style="margin-top:14px;font-size:15px;">Avslutade affärer</h3>
+        <p class="tiny muted" id="tradera-orders-empty">
+          Inga avslutade Tradera-affärer har hämtats ännu.
+        </p>
+        <div id="tradera-orders-list" class="tradera-orders"></div>
       </section>
 
       <!-- Mitt omdöme -->
