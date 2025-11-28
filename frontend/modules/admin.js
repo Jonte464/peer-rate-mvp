@@ -51,23 +51,39 @@ if (adminLoginForm && adminPasswordInput) {
     e.preventDefault();
     const pwd = adminPasswordInput.value.trim();
     if (!pwd) {
-      showNotification('error', 'Fyll i admin-lösenord.', 'admin-login-notice');
+      showNotification(
+        'error',
+        'Fyll i admin-lösenord.',
+        'admin-login-notice'
+      );
       return;
     }
     showNotification('success', 'Loggar in…', 'admin-login-notice');
     try {
       const res = await api.adminLogin({ password: pwd });
       if (res && res.ok) {
-        showNotification('success', 'Admin-inloggning lyckades.', 'admin-login-notice');
+        showNotification(
+          'success',
+          'Admin-inloggning lyckades.',
+          'admin-login-notice'
+        );
         // Spara nyckeln i localStorage så att F5 inte loggar ut
         localStorage.setItem('peerRateAdminKey', pwd);
         onAdminLoggedIn();
       } else {
-        showNotification('error', res?.error || 'Admin-inloggning misslyckades.', 'admin-login-notice');
+        showNotification(
+          'error',
+          res?.error || 'Admin-inloggning misslyckades.',
+          'admin-login-notice'
+        );
       }
     } catch (err) {
       console.error('Admin login error:', err);
-      showNotification('error', 'Nätverksfel vid admin-inloggning.', 'admin-login-notice');
+      showNotification(
+        'error',
+        'Nätverksfel vid admin-inloggning.',
+        'admin-login-notice'
+      );
     }
   });
 }
@@ -114,9 +130,12 @@ async function loadAdminSummary() {
   try {
     const res = await api.adminFetch('/api/admin/summary');
     if (res && res.ok && res.counts) {
-      if (adminStatCustomers) adminStatCustomers.textContent = res.counts.customers ?? '–';
-      if (adminStatRatings) adminStatRatings.textContent = res.counts.ratings ?? '–';
-      if (adminStatReports) adminStatReports.textContent = res.counts.reports ?? '–';
+      if (adminStatCustomers)
+        adminStatCustomers.textContent = res.counts.customers ?? '–';
+      if (adminStatRatings)
+        adminStatRatings.textContent = res.counts.ratings ?? '–';
+      if (adminStatReports)
+        adminStatReports.textContent = res.counts.reports ?? '–';
     } else {
       console.warn('loadAdminSummary failed', res);
     }
@@ -134,11 +153,18 @@ async function loadAdminRecentRatings() {
     const res = await api.adminFetch('/api/admin/ratings/recent');
     if (res && res.ok && Array.isArray(res.ratings)) {
       const rows = res.ratings;
-      let html = '<table><thead><tr><th>Datum</th><th>Kund</th><th>Betyg</th><th>Kommentar</th></tr></thead><tbody>';
+      let html =
+        '<table><thead><tr><th>Datum</th><th>Kund</th><th>Betyg</th><th>Kommentar</th></tr></thead><tbody>';
       rows.forEach((r) => {
         const d = new Date(r.createdAt);
-        const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
-        html += `<tr><td>${dateStr}</td><td>${escapeHtml(r.subject)}</td><td>${escapeHtml(String(r.rating))}</td><td>${escapeHtml((r.comment || '').slice(0, 120))}</td></tr>`;
+        const dateStr = isNaN(d.getTime())
+          ? ''
+          : d.toLocaleString('sv-SE');
+        html += `<tr><td>${dateStr}</td><td>${escapeHtml(
+          r.subject
+        )}</td><td>${escapeHtml(String(r.rating))}</td><td>${escapeHtml(
+          (r.comment || '').slice(0, 120)
+        )}</td></tr>`;
       });
       html += '</tbody></table>';
       adminRatingsTable.innerHTML = html;
@@ -161,11 +187,18 @@ async function loadAdminRecentReports() {
     if (res && res.ok && Array.isArray(res.reports)) {
       adminReportsCache = res.reports;
       const rows = res.reports;
-      let html = '<table><thead><tr><th>Datum</th><th>Kund</th><th>Typ</th><th>Status</th></tr></thead><tbody>';
+      let html =
+        '<table><thead><tr><th>Datum</th><th>Kund</th><th>Typ</th><th>Status</th></tr></thead><tbody>';
       rows.forEach((r, idx) => {
         const d = new Date(r.createdAt);
-        const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
-        html += `<tr data-index="${idx}" style="cursor:pointer;"><td>${dateStr}</td><td>${escapeHtml(r.subjectRef || '')}</td><td>${escapeHtml(r.reason || '')}</td><td>${escapeHtml(r.status || '')}</td></tr>`;
+        const dateStr = isNaN(d.getTime())
+          ? ''
+          : d.toLocaleString('sv-SE');
+        html += `<tr data-index="${idx}" style="cursor:pointer;"><td>${dateStr}</td><td>${escapeHtml(
+          r.subjectRef || ''
+        )}</td><td>${escapeHtml(r.reason || '')}</td><td>${escapeHtml(
+          r.status || ''
+        )}</td></tr>`;
       });
       html += '</tbody></table>';
       adminReportsTable.innerHTML = html;
@@ -195,38 +228,53 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
   if (!adminCustomersTable) return;
   adminCustomersTable.textContent = 'Laddar…';
   try {
-    const res = await api.adminFetch(`/api/admin/customers?limit=${adminCustomersPageSize}&page=${page}`);
+    const res = await api.adminFetch(
+      `/api/admin/customers?limit=${adminCustomersPageSize}&page=${page}`
+    );
     if (!res || !res.ok) {
-      const serverMsg = res && res.error ? res.error : 'Kunde inte ladda kunder.';
-      adminCustomersTable.innerHTML = `<div class="tiny err">${escapeHtml(String(serverMsg))}</div>`;
+      const serverMsg =
+        res && res.error ? res.error : 'Kunde inte ladda kunder.';
+      adminCustomersTable.innerHTML = `<div class="tiny err">${escapeHtml(
+        String(serverMsg)
+      )}</div>`;
       return;
     }
 
     const rows = Array.isArray(res.customers) ? res.customers : [];
     adminCustomersCurrentPage = Number(res.page || page || 1);
-    adminCustomersPageSize = Number(res.pageSize || adminCustomersPageSize);
+    adminCustomersPageSize = Number(
+      res.pageSize || adminCustomersPageSize
+    );
     const total = Number(res.total || 0);
 
     if (!rows.length) {
-      adminCustomersTable.innerHTML = '<div class="tiny muted">Inga kunder hittades.</div>';
+      adminCustomersTable.innerHTML =
+        '<div class="tiny muted">Inga kunder hittades.</div>';
       return;
     }
 
-    let html = '<table><thead><tr><th>Namn</th><th>E-post</th><th>subjectRef</th><th>Registrerat</th><th></th></tr></thead><tbody>';
+    let html =
+      '<table><thead><tr><th>Namn</th><th>E-post</th><th>subjectRef</th><th>Registrerat</th><th></th></tr></thead><tbody>';
     rows.forEach((c) => {
       const d = new Date(c.createdAt || c.registeredAt || '');
-      const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleDateString('sv-SE');
+      const dateStr = isNaN(d.getTime())
+        ? ''
+        : d.toLocaleDateString('sv-SE');
       const displayName = c.fullName || c.name || '(namn saknas)';
       const key = c.subjectRef || c.id || c.email || '';
       const id = c.id;
       html += `
-        <tr data-key="${escapeHtml(key)}" data-id="${escapeHtml(String(id))}" style="cursor:pointer;">
+        <tr data-key="${escapeHtml(key)}" data-id="${escapeHtml(
+        String(id)
+      )}" style="cursor:pointer;">
           <td>${escapeHtml(displayName)}</td>
           <td>${escapeHtml(c.email || '')}</td>
           <td>${escapeHtml(c.subjectRef || '')}</td>
           <td>${dateStr}</td>
           <td>
-            <button type="button" class="icon-btn danger delete-customer-btn" data-id="${escapeHtml(String(id))}">
+            <button type="button" class="icon-btn danger delete-customer-btn" data-id="${escapeHtml(
+              String(id)
+            )}">
               Ta bort
             </button>
           </td>
@@ -235,9 +283,13 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
     html += '</tbody></table>';
 
     // Pagination controls
-    const totalPages = Math.max(1, Math.ceil(total / adminCustomersPageSize));
+    const totalPages = Math.max(
+      1,
+      Math.ceil(total / adminCustomersPageSize)
+    );
     const prevDisabled = adminCustomersCurrentPage <= 1 ? 'disabled' : '';
-    const nextDisabled = adminCustomersCurrentPage >= totalPages ? 'disabled' : '';
+    const nextDisabled =
+      adminCustomersCurrentPage >= totalPages ? 'disabled' : '';
     html += `<div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
       <button id="cust-prev" ${prevDisabled} class="secondary" type="button">Föregående</button>
       <div class="tiny muted">Sida ${adminCustomersCurrentPage} av ${totalPages} — ${total} kunder</div>
@@ -252,53 +304,76 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
         const key = tr.getAttribute('data-key');
         if (!key) return;
         try {
-          const res = await api.adminFetch(`/api/admin/customer?q=${encodeURIComponent(key)}`);
+          const res = await api.adminFetch(
+            `/api/admin/customer?q=${encodeURIComponent(key)}`
+          );
           if (!res || !res.ok || !res.customer) {
-            if (adminSearchResult) adminSearchResult.textContent = 'Kunde inte hämta kunddetaljer.';
+            if (adminSearchResult)
+              adminSearchResult.textContent =
+                'Kunde inte hämta kunddetaljer.';
             return;
           }
           renderCustomerDetails(res.customer);
         } catch (err) {
           console.error('fetch customer details error', err);
-          if (adminSearchResult) adminSearchResult.textContent = 'Fel vid hämtning av kund.';
+          if (adminSearchResult)
+            adminSearchResult.textContent =
+              'Fel vid hämtning av kund.';
         }
       });
     });
 
     // Klick på radera-knappar (stoppar bubbla så att raden inte triggar detaljvisning)
-    adminCustomersTable.querySelectorAll('.delete-customer-btn').forEach((btn) => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation(); // Viktigt: klicka inte raden samtidigt
-        const id = btn.getAttribute('data-id');
-        if (!id) return;
+    adminCustomersTable
+      .querySelectorAll('.delete-customer-btn')
+      .forEach((btn) => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation(); // Viktigt: klicka inte raden samtidigt
+          const id = btn.getAttribute('data-id');
+          if (!id) return;
 
-        const ok = window.confirm('Är du säker på att du vill radera den här kunden? Detta kan inte ångras.');
-        if (!ok) return;
+          const ok = window.confirm(
+            'Är du säker på att du vill radera den här kunden? Detta kan inte ångras.'
+          );
+          if (!ok) return;
 
-        try {
-          const res = await api.adminFetch(`/api/admin/customers/${encodeURIComponent(id)}`, {
-            method: 'DELETE',
-          });
-          if (res && res.ok) {
-            alert('Kunden har raderats.');
-            // Ladda om kundlistan (börjar om från första sidan)
-            loadAdminCustomers(1);
-            if (adminSearchResult) adminSearchResult.textContent = '';
-          } else {
-            alert(res?.error || 'Kunde inte radera kunden.');
+          try {
+            const res = await api.adminFetch(
+              `/api/admin/customers/${encodeURIComponent(id)}`,
+              {
+                method: 'DELETE',
+              }
+            );
+            if (res && res.ok) {
+              alert('Kunden har raderats.');
+              // Ladda om kundlistan (börjar om från första sidan)
+              loadAdminCustomers(1);
+              if (adminSearchResult) adminSearchResult.textContent = '';
+            } else {
+              alert(res?.error || 'Kunde inte radera kunden.');
+            }
+          } catch (err) {
+            console.error('delete customer error', err);
+            alert('Fel vid radering av kund.');
           }
-        } catch (err) {
-          console.error('delete customer error', err);
-          alert('Fel vid radering av kund.');
-        }
+        });
       });
-    });
 
     // Pagination button handlers
     const prevBtn = adminCustomersTable.querySelector('#cust-prev');
     const nextBtn = adminCustomersTable.querySelector('#cust-next');
-    if (prevBtn) prevBtn.addEventListener('click', () => loadAdminCustomers(Math.max(1, adminCustomersCurrentPage - 1)));
-    if (nextBtn) nextBtn.addEventListener('click', () => loadAdminCustomers(Math.min(totalPages, adminCustomersCurrentPage + 1)));
+    if (prevBtn)
+      prevBtn.addEventListener('click', () =>
+        loadAdminCustomers(
+          Math.max(1, adminCustomersCurrentPage - 1)
+        )
+      );
+    if (nextBtn)
+      nextBtn.addEventListener('click', () =>
+        loadAdminCustomers(
+          Math.min(totalPages, adminCustomersCurrentPage + 1)
+        )
+      );
   } catch (err) {
     console.error('loadAdminCustomers error', err);
     adminCustomersTable.textContent = 'Fel vid hämtning.';
@@ -311,14 +386,29 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
 function renderCustomerDetails(c) {
   if (!adminSearchResult) return;
   let html = '';
-  html += `<div><strong>${escapeHtml(c.fullName || '(namn saknas)')}</strong></div>`;
-  html += `<div class="tiny muted">E-post: ${escapeHtml(c.email || '–')} | subjectRef: ${escapeHtml(c.subjectRef || '–')} | personnummer: ${escapeHtml(c.personalNumber || '–')}</div>`;
+  html += `<div><strong>${escapeHtml(
+    c.fullName || '(namn saknas)'
+  )}</strong></div>`;
+  html += `<div class="tiny muted">E-post: ${escapeHtml(
+    c.email || '–'
+  )} | subjectRef: ${escapeHtml(
+    c.subjectRef || '–'
+  )} | personnummer: ${escapeHtml(c.personalNumber || '–')}</div>`;
   if (Array.isArray(c.ratings) && c.ratings.length) {
-    html += '<table><thead><tr><th>Datum</th><th>Betyg</th><th>Rater</th><th>Kommentar</th></tr></thead><tbody>';
+    html +=
+      '<table><thead><tr><th>Datum</th><th>Betyg</th><th>Rater</th><th>Kommentar</th></tr></thead><tbody>';
     c.ratings.forEach((r) => {
       const d = new Date(r.createdAt);
-      const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
-      html += `<tr><td>${dateStr}</td><td>${escapeHtml(String(r.score || r.rating || ''))}</td><td>${escapeHtml(r.raterName || '')}</td><td>${escapeHtml((r.text || r.comment || '').slice(0, 160))}</td></tr>`;
+      const dateStr = isNaN(d.getTime())
+        ? ''
+        : d.toLocaleString('sv-SE');
+      html += `<tr><td>${dateStr}</td><td>${escapeHtml(
+        String(r.score || r.rating || '')
+      )}</td><td>${escapeHtml(
+        r.raterName || ''
+      )}</td><td>${escapeHtml(
+        (r.text || r.comment || '').slice(0, 160)
+      )}</td></tr>`;
     });
     html += '</tbody></table>';
   }
@@ -331,35 +421,89 @@ function renderCustomerDetails(c) {
 function renderReportDetails(r) {
   if (!adminReportDetail) return;
 
-  const d = new Date(r.createdAt);
-  const dateStr = isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
+  const created = r.createdAt ? new Date(r.createdAt) : null;
+  const createdStr =
+    created && !isNaN(created.getTime())
+      ? created.toLocaleString('sv-SE')
+      : '';
+
+  const occurred = r.occurredAt ? new Date(r.occurredAt) : null;
+  const occurredStr =
+    occurred && !isNaN(occurred.getTime())
+      ? occurred.toLocaleString('sv-SE')
+      : null;
 
   let html = '';
   html += `<h3 style="margin:0 0 4px;font-size:14px;">Detaljer för rapport</h3>`;
-  html += `<div class="tiny muted" style="margin-bottom:8px;">Skapad: ${escapeHtml(dateStr)}</div>`;
+  html += `<div class="tiny muted" style="margin-bottom:8px;">Skapad: ${escapeHtml(
+    createdStr
+  )}</div>`;
 
-  html += `<div class="tiny"><strong>Kund (subjectRef):</strong> ${escapeHtml(r.subjectRef || '–')}</div>`;
-  html += `<div class="tiny"><strong>Typ av problem:</strong> ${escapeHtml(r.reason || '–')}</div>`;
-  html += `<div class="tiny"><strong>Status:</strong> ${escapeHtml(r.status || '–')}</div>`;
-
-  if (r.amountSek != null) {
-    html += `<div class="tiny"><strong>Belopp (SEK):</strong> ${escapeHtml(String(r.amountSek))}</div>`;
+  if (occurredStr) {
+    html += `<div class="tiny"><strong>Tidpunkt för händelsen:</strong> ${escapeHtml(
+      occurredStr
+    )}</div>`;
   }
+
+  html += `<div class="tiny"><strong>Kund (subjectRef):</strong> ${escapeHtml(
+    r.subjectRef || '–'
+  )}</div>`;
+  html += `<div class="tiny"><strong>Namn:</strong> ${escapeHtml(
+    r.fullName || '–'
+  )}</div>`;
+  html += `<div class="tiny"><strong>Typ av problem:</strong> ${escapeHtml(
+    r.reason || '–'
+  )}</div>`;
+  html += `<div class="tiny"><strong>Status:</strong> ${escapeHtml(
+    r.status || '–'
+  )}</div>`;
+
+  if (r.amount) {
+    html += `<div class="tiny"><strong>Belopp:</strong> ${escapeHtml(
+      r.amount
+    )} ${escapeHtml(r.currency || 'SEK')}</div>`;
+  }
+
   if (r.counterpartyLink) {
-    html += `<div class="tiny"><strong>Motpart/annonslänk:</strong> <a href="${escapeHtml(r.counterpartyLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.counterpartyLink)}</a></div>`;
-  }
-  if (r.description) {
-    html += `<div class="tiny" style="margin-top:6px;"><strong>Beskrivning:</strong><br/>${escapeHtml(r.description)}</div>`;
-  }
-  if (r.evidenceLink) {
-    html += `<div class="tiny" style="margin-top:6px;"><strong>Bevislänk:</strong> <a href="${escapeHtml(r.evidenceLink)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.evidenceLink)}</a></div>`;
+    html += `<div class="tiny"><strong>Motpart/annonslänk:</strong> <a href="${escapeHtml(
+      r.counterpartyLink
+    )}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+      r.counterpartyLink
+    )}</a></div>`;
   }
 
-  // Visa alltid "rådata" så att du ser ALLT som finns i objektet,
-  // även fält jag inte känner till.
+  if (r.details) {
+    html += `<div class="tiny" style="margin-top:6px;"><strong>Beskrivning:</strong><br/>${escapeHtml(
+      r.details
+    )}</div>`;
+  }
+
+  if (r.evidenceUrl) {
+    html += `<div class="tiny" style="margin-top:6px;"><strong>Bevislänk:</strong> <a href="${escapeHtml(
+      r.evidenceUrl
+    )}" target="_blank" rel="noopener noreferrer">${escapeHtml(
+      r.evidenceUrl
+    )}</a></div>`;
+  }
+
+  if (r.reporterConsent !== null && r.reporterConsent !== undefined) {
+    html += `<div class="tiny" style="margin-top:6px;"><strong>Reporter har intygat uppgifterna:</strong> ${
+      r.reporterConsent ? 'Ja' : 'Nej'
+    }</div>`;
+  }
+
+  if (r.verificationId) {
+    html += `<div class="tiny"><strong>Verifierings-ID:</strong> ${escapeHtml(
+      r.verificationId
+    )}</div>`;
+  }
+
+  // Visa alltid "rådata" så att du ser ALLT som finns i objektet
   html += `<details style="margin-top:8px;">
-    <summary class="tiny">Visa rådata (alla fält)</summary>
-    <pre class="tiny" style="white-space:pre-wrap;margin-top:4px;">${escapeHtml(JSON.stringify(r, null, 2))}</pre>
+    <summary class="tiny">Visa rådata (alla fält från API:t)</summary>
+    <pre class="tiny" style="white-space:pre-wrap;margin-top:4px;">${escapeHtml(
+      JSON.stringify(r, null, 2)
+    )}</pre>
   </details>`;
 
   adminReportDetail.innerHTML = html;
@@ -389,20 +533,26 @@ if (adminSearchForm && adminSearchInput) {
     e.preventDefault();
     const q = adminSearchInput.value.trim();
     if (!q) {
-      if (adminSearchResult) adminSearchResult.textContent = 'Fyll i något att söka på.';
+      if (adminSearchResult)
+        adminSearchResult.textContent = 'Fyll i något att söka på.';
       return;
     }
     if (adminSearchResult) adminSearchResult.textContent = 'Söker…';
     try {
-      const res = await api.adminFetch(`/api/admin/customer?q=${encodeURIComponent(q)}`);
+      const res = await api.adminFetch(
+        `/api/admin/customer?q=${encodeURIComponent(q)}`
+      );
       if (!res || !res.ok || !res.customer) {
-        if (adminSearchResult) adminSearchResult.textContent = 'Ingen kund hittades för sökningen.';
+        if (adminSearchResult)
+          adminSearchResult.textContent =
+            'Ingen kund hittades för sökningen.';
         return;
       }
       renderCustomerDetails(res.customer);
     } catch (err) {
       console.error('admin search error', err);
-      if (adminSearchResult) adminSearchResult.textContent = 'Fel vid sökning.';
+      if (adminSearchResult)
+        adminSearchResult.textContent = 'Fel vid sökning.';
     }
   });
 }
