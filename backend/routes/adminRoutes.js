@@ -157,6 +157,69 @@ router.get('/customers', async (req, res) => {
   }
 });
 
+/** DELETE /api/admin/customers/:id – radera kund + relaterade data (admin) */
+router.delete('/customers/:id', async (req, res) => {
+  const idNum = Number(req.params.id);
+  if (!idNum || Number.isNaN(idNum)) {
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Ogiltigt kund-ID.' });
+  }
+
+  try {
+    const customer = await prisma.customer.findUnique({
+      where: { id: idNum },
+    });
+
+    if (!customer) {
+      return res
+        .status(404)
+        .json({ ok: false, error: 'Kunden hittades inte.' });
+    }
+
+    const subjectRef =
+      customer.subjectRef || (customer.email || '').toLowerCase();
+
+    // Ta bort relaterade ratings (baserat på subjectRef om det finns)
+    if (subjectRef) {
+      try {
+        await prisma.rating.deleteMany({
+          where: { subjectRef },
+        });
+      } catch (err) {
+        console.warn(
+          '[DELETE /api/admin/customers/:id] kunde inte radera ratings via subjectRef:',
+          err
+        );
+      }
+
+      // Ta bort relaterade rapporter om modellen har subjectRef
+      try {
+        await prisma.report.deleteMany({
+          where: { subjectRef },
+        });
+      } catch (err) {
+        console.warn(
+          '[DELETE /api/admin/customers/:id] kunde inte radera rapporter via subjectRef:',
+          err
+        );
+      }
+    }
+
+    // Till sist: ta bort kunden
+    await prisma.customer.delete({
+      where: { id: idNum },
+    });
+
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('[DELETE /api/admin/customers/:id] error:', e);
+    res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte radera kund.' });
+  }
+});
+
 /** GET /api/admin/customer – sök kund + ratings (admin) */
 router.get('/customer', async (req, res) => {
   const q = (req.query.q || '').trim();

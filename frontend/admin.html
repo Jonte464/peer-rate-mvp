@@ -116,6 +116,22 @@
       padding:1px 3px;
       border-radius:4px;
     }
+
+    /* Små ikonknappar, t.ex. "Ta bort" i kundlistan */
+    .icon-btn{
+      width:auto;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      line-height:1.2;
+      cursor:pointer;
+    }
+    .icon-btn.danger{
+      background:#fff5f5;
+      border-color:#f6c4c4;
+      color:var(--err);
+      font-weight:600;
+    }
   </style>
 </head>
 <body>
@@ -181,12 +197,15 @@
         <div id="admin-search-result" class="tiny muted" style="margin-top:10px;"></div>
       </section>
 
-        <!-- Kundlista -->
-        <section class="card">
-          <h2>Kunder</h2>
-          <p class="tiny muted">Lista över registrerade kunder. Klicka på en rad för att se detaljer.</p>
-          <div id="admin-customers-table" class="tiny muted">Laddar…</div>
-        </section>
+      <!-- Kundlista -->
+      <section class="card">
+        <h2>Kunder</h2>
+        <p class="tiny muted">
+          Lista över registrerade kunder. Klicka på en rad för att se detaljer, eller använd knappen
+          <strong>Ta bort</strong> för att radera en kund.
+        </p>
+        <div id="admin-customers-table" class="tiny muted">Laddar…</div>
+      </section>
 
       <!-- Senaste betyg -->
       <section class="card">
@@ -200,12 +219,11 @@
         <h2>Senaste rapporter</h2>
         <p class="tiny muted">Senaste rapporter om misstänkt bedrägeri eller avvikelse.</p>
         <div id="admin-reports-table" class="tiny muted">Laddar…</div>
+        <div id="admin-report-detail" class="tiny muted" style="margin-top:10px;"></div>
       </section>
     </div>
   </div>
 
-<script type="module" src="/modules/main.js"></script>
+  <script type="module" src="/modules/main.js"></script>
 </body>
 </html>
-
-
