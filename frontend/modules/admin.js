@@ -216,7 +216,7 @@ async function loadAdminRecentReports() {
       adminReportsTable.textContent = 'Kunde inte ladda senaste rapporter.';
     }
   } catch (err) {
-    console.error('loadAdminRecentReports error', err);
+    console.error('loadAdminRecentReports error:', err);
     adminReportsTable.textContent = 'Fel vid hämtning.';
   }
 }
@@ -416,6 +416,42 @@ function renderCustomerDetails(c) {
 }
 
 // ---------------------------------------------------------
+// Hjälp: plocka ut äldre "Datum: .. Tid: .. Belopp: .. Länk: .."-mönster
+// ur beskrivningsfältet (för gamla rapporter).
+// ---------------------------------------------------------
+function parseLegacyDescription(details) {
+  if (!details) return null;
+
+  let text = details;
+  const result = {};
+
+  const dateRe = /Datum:\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i;
+  const timeRe = /Tid:\s*([0-9]{1,2}:[0-9]{2})/i;
+  const amountRe = /Belopp:\s*([0-9]+(?:[.,][0-9]+)?)/i;
+  const linkRe = /Länk:\s*(\S+)/i;
+
+  const dateMatch = details.match(dateRe);
+  const timeMatch = details.match(timeRe);
+  const amountMatch = details.match(amountRe);
+  const linkMatch = details.match(linkRe);
+
+  if (dateMatch) result.date = dateMatch[1];
+  if (timeMatch) result.time = timeMatch[1];
+  if (amountMatch) result.amount = amountMatch[1];
+  if (linkMatch) result.link = linkMatch[1];
+
+  // Ta bort dessa bitar ur själva texten
+  text = text.replace(dateRe, '');
+  text = text.replace(timeRe, '');
+  text = text.replace(amountRe, '');
+  text = text.replace(linkRe, '');
+  text = text.replace(/\s+/g, ' ').trim();
+
+  result.text = text || null;
+  return result;
+}
+
+// ---------------------------------------------------------
 // Rendera rapport-detaljer (klick från listan "Senaste rapporter")
 // ---------------------------------------------------------
 function renderReportDetails(r) {
@@ -428,10 +464,38 @@ function renderReportDetails(r) {
       : '';
 
   const occurred = r.occurredAt ? new Date(r.occurredAt) : null;
-  const occurredStr =
+  let occurredStr =
     occurred && !isNaN(occurred.getTime())
       ? occurred.toLocaleString('sv-SE')
       : null;
+
+  // Plocka ev. ut datum/tid/belopp/länk ur äldre "ihopsmetad" beskrivning
+  const legacy =
+    r.details && typeof r.details === 'string'
+      ? parseLegacyDescription(r.details)
+      : null;
+
+  if (!occurredStr && legacy && (legacy.date || legacy.time)) {
+    const parts = [];
+    if (legacy.date) parts.push(legacy.date);
+    if (legacy.time) parts.push(legacy.time);
+    occurredStr = parts.join(' ');
+  }
+
+  // Belopp: använd riktiga fält först, annars ev. extraherat värde
+  let amountDisplay = r.amount;
+  if ((amountDisplay === null || amountDisplay === undefined) && legacy && legacy.amount) {
+    amountDisplay = legacy.amount;
+  }
+
+  // Länk: använd counterpartyLink om det finns, annars ev. länk i beskrivningen
+  const counterpartyLink = r.counterpartyLink || (legacy && legacy.link) || null;
+
+  // Beskrivning: rensad text om vi lyckats plocka ut datum/belopp/länk, annars original
+  let descriptionText = r.details;
+  if (legacy && legacy.text !== null) {
+    descriptionText = legacy.text;
+  }
 
   let html = '';
   html += `<h3 style="margin:0 0 4px;font-size:14px;">Detaljer för rapport</h3>`;
@@ -458,23 +522,23 @@ function renderReportDetails(r) {
     r.status || '–'
   )}</div>`;
 
-  if (r.amount) {
+  if (amountDisplay !== null && amountDisplay !== undefined) {
     html += `<div class="tiny"><strong>Belopp:</strong> ${escapeHtml(
-      r.amount
+      String(amountDisplay)
     )} ${escapeHtml(r.currency || 'SEK')}</div>`;
   }
 
-  if (r.counterpartyLink) {
+  if (counterpartyLink) {
     html += `<div class="tiny"><strong>Motpart/annonslänk:</strong> <a href="${escapeHtml(
-      r.counterpartyLink
+      counterpartyLink
     )}" target="_blank" rel="noopener noreferrer">${escapeHtml(
-      r.counterpartyLink
+      counterpartyLink
     )}</a></div>`;
   }
 
-  if (r.details) {
+  if (descriptionText) {
     html += `<div class="tiny" style="margin-top:6px;"><strong>Beskrivning:</strong><br/>${escapeHtml(
-      r.details
+      descriptionText
     )}</div>`;
   }
 
