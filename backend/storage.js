@@ -65,16 +65,56 @@ async function createRating(item) {
 
 /** Skapa en rapport (kopplad till kund och ev. rating/transaction) */
 async function createReport(data) {
+  // data kan innehålla:
+  // reportedCustomerId (obligatorisk)
+  // ratingId, transactionId (valfria)
+  // reason
+  // details / description
+  // evidenceUrl / evidenceLink
+  // occurredAt (datum/tid för händelsen)
+  // amount / amountSek
+  // currency
+  // counterpartyLink
+  // reporterConsent (checkbox)
+  // verificationId
+
+  const occurredAt = data.occurredAt ? new Date(data.occurredAt) : null;
+
+  // Belopp kan komma som number/string eller under nyckeln "amountSek"
+  let amountValue = null;
+  if (data.amount !== undefined && data.amount !== null && data.amount !== '') {
+    amountValue = data.amount;
+  } else if (
+    data.amountSek !== undefined &&
+    data.amountSek !== null &&
+    data.amountSek !== ''
+  ) {
+    amountValue = data.amountSek;
+  }
+
   await prisma.report.create({
     data: {
       reportedCustomerId: data.reportedCustomerId,
       ratingId: data.ratingId || null,
       transactionId: data.transactionId || null,
+
       reason: data.reason,
-      details: data.details || null,
-      evidenceUrl: data.evidenceUrl || null,
+      details: data.details || data.description || null,
+
+      evidenceUrl: data.evidenceUrl || data.evidenceLink || null,
+      verificationId: data.verificationId || null,
+
+      occurredAt,
+      amount: amountValue,
+      currency: data.currency || 'SEK',
+
+      counterpartyLink: data.counterpartyLink || null,
+      reporterConsent: data.reporterConsent === true,
+
+      // status blir default (OPEN) enligt schema.prisma
     },
   });
+
   return { ok: true };
 }
 
@@ -361,7 +401,8 @@ async function upsertTraderaProfile(customerId, payload) {
  * }
  */
 async function saveTraderaOrders(externalProfileId, orders) {
-  if (!Array.isArray(orders) || orders.length === 0) return { ok: true, count: 0 };
+  if (!Array.isArray(orders) || orders.length === 0)
+    return { ok: true, count: 0 };
 
   let savedCount = 0;
 
@@ -500,10 +541,19 @@ async function adminListRecentReports(limit = 20) {
     reason: r.reason,
     status: r.status,
     createdAt: r.createdAt.toISOString(),
+
     subjectRef: r.reportedCustomer?.subjectRef || null,
     fullName: r.reportedCustomer?.fullName || null,
+
+    // Alla viktiga fält från rapporten:
+    details: r.details || null,
+    evidenceUrl: r.evidenceUrl || null,
+    verificationId: r.verificationId || null,
+    occurredAt: r.occurredAt ? r.occurredAt.toISOString() : null,
     amount: r.amount ? r.amount.toString() : null,
     currency: r.currency || 'SEK',
+    counterpartyLink: r.counterpartyLink || null,
+    reporterConsent: r.reporterConsent ?? null,
   }));
 }
 

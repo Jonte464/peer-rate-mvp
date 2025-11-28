@@ -13,6 +13,7 @@ const ratingsRoutes = require('./routes/ratingsRoutes');
 const customersRoutes = require('./routes/customersRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const traderaRoutes = require('./routes/traderaRoutes'); // NYTT
 
 const prisma = new PrismaClient();
 
@@ -80,6 +81,7 @@ app.use(
 app.use('/api', ratingsRoutes);
 app.use('/api', customersRoutes);
 app.use('/api', authRoutes);
+app.use('/api/tradera', traderaRoutes); // NYTT: /api/tradera/...
 app.use('/api/admin', adminRoutes);
 
 // --- Health ---

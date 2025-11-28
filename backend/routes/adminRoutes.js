@@ -159,8 +159,8 @@ router.get('/customers', async (req, res) => {
 
 /** DELETE /api/admin/customers/:id – radera kund + relaterade data (admin) */
 router.delete('/customers/:id', async (req, res) => {
-  const idNum = Number(req.params.id);
-  if (!idNum || Number.isNaN(idNum)) {
+  const id = req.params.id;
+  if (!id) {
     return res
       .status(400)
       .json({ ok: false, error: 'Ogiltigt kund-ID.' });
@@ -168,7 +168,7 @@ router.delete('/customers/:id', async (req, res) => {
 
   try {
     const customer = await prisma.customer.findUnique({
-      where: { id: idNum },
+      where: { id },
     });
 
     if (!customer) {
@@ -177,38 +177,35 @@ router.delete('/customers/:id', async (req, res) => {
         .json({ ok: false, error: 'Kunden hittades inte.' });
     }
 
-    const subjectRef =
-      customer.subjectRef || (customer.email || '').toLowerCase();
+    await prisma.$transaction(async (tx) => {
+      // Barn-tabeller som pekar på kunden måste bort först
+      await tx.rating.deleteMany({ where: { customerId: id } });
+      await tx.report.deleteMany({ where: { reportedCustomerId: id } });
+      await tx.transaction.deleteMany({ where: { customerId: id } });
+      await tx.score.deleteMany({ where: { customerId: id } });
 
-    // Ta bort relaterade ratings (baserat på subjectRef om det finns)
-    if (subjectRef) {
-      try {
-        await prisma.rating.deleteMany({
-          where: { subjectRef },
-        });
-      } catch (err) {
-        console.warn(
-          '[DELETE /api/admin/customers/:id] kunde inte radera ratings via subjectRef:',
-          err
-        );
-      }
+      // Deals där kunden är säljare eller köpare
+      await tx.deal.deleteMany({
+        where: {
+          OR: [{ sellerId: id }, { buyerId: id }],
+        },
+      });
 
-      // Ta bort relaterade rapporter om modellen har subjectRef
-      try {
-        await prisma.report.deleteMany({
-          where: { subjectRef },
-        });
-      } catch (err) {
-        console.warn(
-          '[DELETE /api/admin/customers/:id] kunde inte radera rapporter via subjectRef:',
-          err
-        );
-      }
-    }
+      // Traderaordrar + annonser + externa profiler
+      await tx.traderaOrder.deleteMany({
+        where: {
+          externalProfile: { customerId: id },
+        },
+      });
+      await tx.listing.deleteMany({
+        where: {
+          externalProfile: { customerId: id },
+        },
+      });
+      await tx.externalProfile.deleteMany({ where: { customerId: id } });
 
-    // Till sist: ta bort kunden
-    await prisma.customer.delete({
-      where: { id: idNum },
+      // Till sist: kunden själv
+      await tx.customer.delete({ where: { id } });
     });
 
     res.json({ ok: true });
