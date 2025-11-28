@@ -18,7 +18,7 @@ async function getOrCreateCustomerBySubjectRef(subjectRef) {
 
 /** Skapa rating och returnera ids */
 async function createRating(item) {
-  // item: { subjectRef, rating, comment, raterName, proofRef, createdAt, ratingSource? }
+  // item: { subjectRef, rating, comment, raterName, raterEmail?, proofRef, createdAt, ratingSource?/source? }
   const customer = await getOrCreateCustomerBySubjectRef(item.subjectRef);
 
   // Dubblettspärr 24h per raterName (om satt)
@@ -44,9 +44,16 @@ async function createRating(item) {
       customerId: customer.id,
       score: item.rating,
       text: item.comment || null,
+
+      // Vem gav omdömet?
       raterName: item.raterName || null,
+      raterEmail: item.raterEmail || null,
+
+      // Verifierings-info
       proofRef: item.proofRef || null,
-      ratingSource: item.ratingSource || 'OTHER', // ⬅️ NYTT
+
+      // Källa (Blocket, Tradera, Tiptap, …)
+      ratingSource: item.ratingSource || item.source || 'OTHER',
 
       ...(item.createdAt ? { createdAt: new Date(item.createdAt) } : {}),
     },
@@ -87,26 +94,56 @@ async function listRatingsBySubjectRef(subjectRef) {
       score: true,
       text: true,
       raterName: true,
+      raterEmail: true,
       proofRef: true,
-      ratingSource: true,              // ⬅️ NYTT
+      ratingSource: true,
       createdAt: true,
       customer: { select: { subjectRef: true } },
     },
   });
 
-  return rows.map((r) => ({
-    id: r.id,
-    subject: r.customer?.subjectRef || subjectRef,
-    rating: r.score,
-    comment: r.text || '',
-    raterMasked: r.raterName || null,
-    hasProof: !!(r.proofRef && r.proofRef.length > 0),
-    proofHash: null,
-    createdAt: r.createdAt.toISOString(),
+  return rows.map((r) => {
+    const subject = r.customer?.subjectRef || subjectRef;
+    const hasProof = !!(r.proofRef && r.proofRef.length > 0);
 
-    // Skicka med källan till frontend
-    ratingSource: r.ratingSource || 'OTHER',
-  }));
+    // Maskad variant om vi vill dölja hela mejlen
+    let raterMasked = null;
+    if (r.raterName) {
+      raterMasked = r.raterName;
+    } else if (r.raterEmail) {
+      const [local, domain] = r.raterEmail.split('@');
+      if (local && domain) {
+        const maskedLocal =
+          local.length <= 2
+            ? local[0] + '*'
+            : local[0] +
+              '*'.repeat(Math.max(1, local.length - 2)) +
+              local.slice(-1);
+        raterMasked = `${maskedLocal}@${domain}`;
+      } else {
+        raterMasked = r.raterEmail;
+      }
+    }
+
+    return {
+      id: r.id,
+      subject,
+      rating: r.score,
+      comment: r.text || '',
+
+      // Rådata – dessa använder vi i UI för "av <namn>"
+      raterName: r.raterName || null,
+      raterEmail: r.raterEmail || null,
+      raterMasked,
+
+      hasProof,
+      proofHash: null,
+      createdAt: r.createdAt.toISOString(),
+
+      // Källa till betyget
+      ratingSource: r.ratingSource || 'OTHER',
+    };
+  });
 }
 
 /** Snitt */
@@ -135,18 +172,45 @@ async function listRecentRatings(limit = 20) {
     include: { customer: { select: { subjectRef: true } } },
   });
 
-  return rows.map((r) => ({
-    id: r.id,
-    subject: r.customer?.subjectRef || '(unknown)',
-    rating: r.score,
-    comment: r.text || '',
-    raterMasked: r.raterName || null,
-    hasProof: !!(r.proofRef && r.proofRef.length > 0),
-    proofHash: null,
-    createdAt: r.createdAt.toISOString(),
+  return rows.map((r) => {
+    const subject = r.customer?.subjectRef || '(unknown)';
+    const hasProof = !!(r.proofRef && r.proofRef.length > 0);
 
-    ratingSource: r.ratingSource || 'OTHER',
-  }));
+    let raterMasked = null;
+    if (r.raterName) {
+      raterMasked = r.raterName;
+    } else if (r.raterEmail) {
+      const [local, domain] = r.raterEmail.split('@');
+      if (local && domain) {
+        const maskedLocal =
+          local.length <= 2
+            ? local[0] + '*'
+            : local[0] +
+              '*'.repeat(Math.max(1, local.length - 2)) +
+              local.slice(-1);
+        raterMasked = `${maskedLocal}@${domain}`;
+      } else {
+        raterMasked = r.raterEmail;
+      }
+    }
+
+    return {
+      id: r.id,
+      subject,
+      rating: r.score,
+      comment: r.text || '',
+
+      raterName: r.raterName || null,
+      raterEmail: r.raterEmail || null,
+      raterMasked,
+
+      hasProof,
+      proofHash: null,
+      createdAt: r.createdAt.toISOString(),
+
+      ratingSource: r.ratingSource || 'OTHER',
+    };
+  });
 }
 
 /** Skapa kund i kundregistret */
