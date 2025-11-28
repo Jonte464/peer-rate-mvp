@@ -298,7 +298,7 @@ app.post('/api/tradera/connect', async (req, res) => {
 });
 
 /* -------------------------------------------------------
-   Tradera-summary (MVP: bara meta, inga ordrar än)
+   Tradera-summary – nu med riktiga ordrar
    ------------------------------------------------------- */
 app.get('/api/tradera/summary', async (req, res) => {
   try {
@@ -339,8 +339,23 @@ app.get('/api/tradera/summary', async (req, res) => {
       });
     }
 
-    // MVP: vi har ännu ingen TraderaOrder-tabell, så vi returnerar tom lista
-    const orders = [];
+    // Hämta ordrar kopplade till denna Tradera-profil
+    const ordersRaw = await prisma.traderaOrder.findMany({
+      where: { externalProfileId: profile.id },
+      orderBy: { completedAt: 'desc' },
+      take: limit,
+    });
+
+    const orders = ordersRaw.map((o) => ({
+      id: o.id,
+      title: o.title,
+      role: o.role, // BUYER/SELLER
+      amount: o.amount ? o.amount.toString() : null,
+      currency: o.currency || 'SEK',
+      counterpartyAlias: o.counterpartyAlias,
+      counterpartyEmail: o.counterpartyEmail,
+      completedAt: o.completedAt,
+    }));
 
     const dtoProfile = {
       username: profile.username,
