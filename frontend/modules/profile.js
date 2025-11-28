@@ -635,10 +635,7 @@ async function loadMyRating() {
       set('profile-score-count', String(info.count || 0));
       const fill = document.getElementById('profile-score-bar');
       if (fill) {
-        const pct = Math.max(
-          0,
-          Math.min(100, (info.average / 5) * 100)
-        );
+        const pct = Math.max(0, Math.min(100, (info.average / 5) * 100));
         fill.style.width = `${pct}%`;
       }
     }
@@ -659,12 +656,34 @@ async function loadMyRating() {
             ? ''
             : d.toLocaleString('sv-SE');
 
-          const score = r.rating || r.score || '';
-          const rater =
-            (r.raterName || r.rater || '').toString().trim() || 'Okänd';
-          const sourceLabel = mapRatingSourceLabel(
-            r.source || r.ratingSource || r.sourceLabel
-          );
+          const score = r.rating ?? r.score ?? '';
+
+          // --- NY LOGIK FÖR "av X" ---
+          const rawName = ((r.raterName || r.rater) ?? '').toString().trim();
+          const rawEmail = (r.raterEmail ?? '').toString().trim();
+
+          const sourceRaw = r.source || r.ratingSource || r.sourceLabel;
+          const sourceLabel = mapRatingSourceLabel(sourceRaw);
+
+          let rater = rawName || rawEmail;
+
+          // Snygg fallback per källa om vi saknar namn/mejl
+          if (!rater) {
+            if (sourceRaw === 'BLOCKET') {
+              rater = 'Blocket-användare';
+            } else if (sourceRaw === 'TRADERA') {
+              rater = 'Tradera-användare';
+            } else if (sourceRaw === 'AIRBNB') {
+              rater = 'Airbnb-användare';
+            } else if (sourceRaw === 'HUSKNUTEN') {
+              rater = 'Husknuten-användare';
+            } else if (sourceRaw === 'TIPTAP') {
+              rater = 'Tiptap-användare';
+            } else {
+              rater = 'Okänd';
+            }
+          }
+          // --- SLUT NY LOGIK ---
 
           const metaParts = [];
           if (rater) metaParts.push(`av ${rater}`);
@@ -692,6 +711,8 @@ async function loadMyRating() {
 
 // ----------------------
 // Initiera profilsidan
+// ----------------------
+
 // ----------------------
 export async function initProfilePage() {
   console.log('initProfilePage');
