@@ -1,3 +1,4 @@
+// backend/server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -7,6 +8,9 @@ const helmet = require('helmet');
 const compression = require('compression');
 const { PrismaClient } = require('@prisma/client');
 const { connectBlocketProfile } = require('./services/blocketService');
+
+// 🔐 Nytt: krypterings-helper
+const { encryptSecret } = require('./crypto');
 
 // Routes
 const ratingsRoutes = require('./routes/ratingsRoutes');
@@ -236,13 +240,16 @@ app.post('/api/external/blocket/connect', async (req, res) => {
 });
 
 /* -------------------------------------------------------
-   Tradera-koppling (MVP: spara bara användarnamn)
+   Tradera-koppling (MVP: spara användarnamn + ev. krypterat lösenord)
    ------------------------------------------------------- */
 app.post('/api/tradera/connect', async (req, res) => {
   try {
     const body = req.body || {};
     const emailTrim = String(body.email || '').trim().toLowerCase();
     const usernameTrim = String(body.username || '').trim();
+    const passwordRaw =
+      typeof body.password === 'string' ? body.password : '';
+    const passwordTrim = passwordRaw.trim();
 
     if (!emailTrim || !usernameTrim) {
       return res
@@ -262,6 +269,21 @@ app.post('/api/tradera/connect', async (req, res) => {
         .json({ ok: false, error: 'Kund hittades inte.' });
     }
 
+    // Förbered ev. krypterat lösenord om ett lösen skickats in
+    let encryptedPassword = null;
+    if (passwordTrim) {
+      try {
+        encryptedPassword = encryptSecret(passwordTrim);
+      } catch (encErr) {
+        console.error('Misslyckades att kryptera Tradera-lösenord', encErr);
+        return res.status(500).json({
+          ok: false,
+          error:
+            'Tekniskt fel vid hantering av Tradera-uppgifter. Försök igen senare.',
+        });
+      }
+    }
+
     let profile = await prisma.externalProfile.findFirst({
       where: {
         customerId: customer.id,
@@ -275,6 +297,8 @@ app.post('/api/tradera/connect', async (req, res) => {
         data: {
           username: usernameTrim,
           status: 'ACTIVE',
+          // Uppdatera endast encryptedPassword om vi faktiskt fått ett nytt
+          ...(encryptedPassword ? { encryptedPassword } : {}),
         },
       });
     } else {
@@ -284,9 +308,13 @@ app.post('/api/tradera/connect', async (req, res) => {
           platform: 'TRADERA',
           username: usernameTrim,
           status: 'ACTIVE',
+          encryptedPassword,
         },
       });
     }
+
+    // TODO: Här senare: trigga headless-scraper i bakgrunden
+    // t.ex. queueTraderaSync(profile.id);
 
     return res.json({ ok: true, profileId: profile.id });
   } catch (err) {
@@ -360,7 +388,7 @@ app.get('/api/tradera/summary', async (req, res) => {
     const dtoProfile = {
       username: profile.username,
       email: null,
-      externalUserId: null,
+      externalUserId: profile.externalUserId || null,
       accountCreatedAt: null,
       feedbackScore: null,
       feedbackCountPositive: null,
