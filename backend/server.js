@@ -11,9 +11,11 @@ const { connectBlocketProfile } = require('./services/blocketService');
 // 🔐 Krypteringshjälpare för Tradera-lösenord
 const { encryptSecret } = require('./services/secretService');
 
-// Tradera-service: synka riktiga ordrar in i TraderaOrder-tabellen
-const { syncTraderaForEmail } = require('./services/traderaService');
-
+// Tradera-service: sync + import
+const {
+  syncTraderaForEmail,
+  importTraderaOrdersForEmail,
+} = require('./services/traderaService');
 
 // Routes
 const ratingsRoutes = require('./routes/ratingsRoutes');
@@ -493,7 +495,7 @@ app.post('/api/tradera/mock-orders', async (req, res) => {
 });
 
 /* -------------------------------------------------------
-   Tradera SYNC-NOW – trigga scraping + lagring i DB
+   Tradera SYNC-NOW – placeholder sync (ingen riktig scraping i PROD)
    ------------------------------------------------------- */
 app.post('/api/tradera/sync-now', async (req, res) => {
   try {
@@ -516,9 +518,47 @@ app.post('/api/tradera/sync-now', async (req, res) => {
     return res.status(500).json({
       ok: false,
       error:
+        err && err.message ? err.message : 'Kunde inte synka Tradera-data.',
+    });
+  }
+});
+
+/* -------------------------------------------------------
+   Tradera IMPORT – ta emot ordrar som JSON
+   ------------------------------------------------------- */
+app.post('/api/tradera/import', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const emailQ = String(body.email || '').trim().toLowerCase();
+    const orders = Array.isArray(body.orders) ? body.orders : [];
+
+    if (!emailQ) {
+      return res
+        .status(400)
+        .json({ ok: false, error: 'Saknar email i request body.' });
+    }
+
+    if (!orders.length) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Saknar orders i request body (orders måste vara en lista).',
+      });
+    }
+
+    const result = await importTraderaOrdersForEmail(emailQ, orders);
+
+    return res.json({
+      ok: true,
+      ...result,
+    });
+  } catch (err) {
+    console.error('Tradera import error', err);
+    return res.status(500).json({
+      ok: false,
+      error:
         err && err.message
           ? err.message
-          : 'Kunde inte synka Tradera-data.',
+          : 'Kunde inte importera Tradera-ordrar.',
     });
   }
 });
