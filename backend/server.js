@@ -11,6 +11,10 @@ const { connectBlocketProfile } = require('./services/blocketService');
 // 🔐 Krypteringshjälpare för Tradera-lösenord
 const { encryptSecret } = require('./services/secretService');
 
+// Tradera-service: synka riktiga ordrar in i TraderaOrder-tabellen
+const { syncTraderaForEmail } = require('./services/traderaService');
+
+
 // Routes
 const ratingsRoutes = require('./routes/ratingsRoutes');
 const customersRoutes = require('./routes/customersRoutes');
@@ -484,6 +488,37 @@ app.post('/api/tradera/mock-orders', async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: 'Kunde inte skapa mock-Traderaordrar.',
+    });
+  }
+});
+
+/* -------------------------------------------------------
+   Tradera SYNC-NOW – trigga scraping + lagring i DB
+   ------------------------------------------------------- */
+app.post('/api/tradera/sync-now', async (req, res) => {
+  try {
+    const emailQ = String(req.body.email || '').trim().toLowerCase();
+
+    if (!emailQ) {
+      return res
+        .status(400)
+        .json({ ok: false, error: 'Saknar email i request body.' });
+    }
+
+    const result = await syncTraderaForEmail(emailQ);
+
+    return res.json({
+      ok: true,
+      ...result,
+    });
+  } catch (err) {
+    console.error('Tradera sync-now error', err);
+    return res.status(500).json({
+      ok: false,
+      error:
+        err && err.message
+          ? err.message
+          : 'Kunde inte synka Tradera-data.',
     });
   }
 });

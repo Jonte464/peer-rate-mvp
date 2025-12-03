@@ -1,6 +1,5 @@
 // backend/services/secretService.js
-// Wrapper runt den generella krypteringsmodulen (backend/crypto.js)
-// Används t.ex. för att kryptera Tradera-lösenord m.m.
+// Tunn wrapper runt backend/crypto.js så all kryptering använder APP_ENCRYPTION_KEY
 
 const { encryptSecret, decryptSecret } = require('../crypto');
 

@@ -1,21 +1,21 @@
 // backend/crypto.js
 // Enkel helper för att kryptera/dekryptera hemligheter (t.ex. externa lösenord)
-// med en serverhemlighet i APP_ENCRYPTION_KEY (i .env)
+// med en serverhemlighet i APP_ENCRYPTION_KEY (i .env / Render).
 
 const crypto = require('crypto');
 
 const ALGO = 'aes-256-gcm';
 
-// Härdar/”sträcker” vi nyckeln från APP_ENCRYPTION_KEY till 32 bytes (AES-256)
+// Härder/”sträcker” vi nyckeln från APP_ENCRYPTION_KEY till 32 bytes
 function getKey() {
   const secret = process.env.APP_ENCRYPTION_KEY || '';
   if (!secret) {
     throw new Error(
-      'APP_ENCRYPTION_KEY saknas. Sätt en stark hemlighet i .env innan du använder kryptering.'
+      'APP_ENCRYPTION_KEY saknas. Sätt en stark hemlighet i .env/Render innan du använder kryptering.'
     );
   }
-  // Gör om hemligheten till en 32-bytes nyckel via SHA-256
-  return crypto.createHash('sha256').update(secret, 'utf8').digest(); // 32 bytes
+  // 32 bytes nyckel via SHA-256 på din hemlighet
+  return crypto.createHash('sha256').update(secret, 'utf8').digest();
 }
 
 /**
