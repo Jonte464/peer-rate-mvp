@@ -6,7 +6,7 @@ const crypto = require('crypto');
 
 const ALGO = 'aes-256-gcm';
 
-// Härder/”sträcker” vi nyckeln från APP_ENCRYPTION_KEY till 32 bytes
+// Härdar/”sträcker” vi nyckeln från APP_ENCRYPTION_KEY till 32 bytes (AES-256)
 function getKey() {
   const secret = process.env.APP_ENCRYPTION_KEY || '';
   if (!secret) {
@@ -14,6 +14,7 @@ function getKey() {
       'APP_ENCRYPTION_KEY saknas. Sätt en stark hemlighet i .env innan du använder kryptering.'
     );
   }
+  // Gör om hemligheten till en 32-bytes nyckel via SHA-256
   return crypto.createHash('sha256').update(secret, 'utf8').digest(); // 32 bytes
 }
 
