@@ -1,4 +1,3 @@
-// backend/server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -9,8 +8,8 @@ const compression = require('compression');
 const { PrismaClient } = require('@prisma/client');
 const { connectBlocketProfile } = require('./services/blocketService');
 
-// 🔐 Nytt: krypterings-helper
-const { encryptSecret } = require('./crypto');
+// 🔐 Krypteringshjälpare för Tradera-lösenord
+const { encryptSecret } = require('./services/secretService');
 
 // Routes
 const ratingsRoutes = require('./routes/ratingsRoutes');
@@ -240,16 +239,14 @@ app.post('/api/external/blocket/connect', async (req, res) => {
 });
 
 /* -------------------------------------------------------
-   Tradera-koppling (MVP: spara användarnamn + ev. krypterat lösenord)
+   Tradera-koppling – sparar användarnamn + krypterat lösenord (valfritt)
    ------------------------------------------------------- */
 app.post('/api/tradera/connect', async (req, res) => {
   try {
     const body = req.body || {};
     const emailTrim = String(body.email || '').trim().toLowerCase();
     const usernameTrim = String(body.username || '').trim();
-    const passwordRaw =
-      typeof body.password === 'string' ? body.password : '';
-    const passwordTrim = passwordRaw.trim();
+    const passwordRaw = String(body.password || '').trim();
 
     if (!emailTrim || !usernameTrim) {
       return res
@@ -269,20 +266,8 @@ app.post('/api/tradera/connect', async (req, res) => {
         .json({ ok: false, error: 'Kund hittades inte.' });
     }
 
-    // Förbered ev. krypterat lösenord om ett lösen skickats in
-    let encryptedPassword = null;
-    if (passwordTrim) {
-      try {
-        encryptedPassword = encryptSecret(passwordTrim);
-      } catch (encErr) {
-        console.error('Misslyckades att kryptera Tradera-lösenord', encErr);
-        return res.status(500).json({
-          ok: false,
-          error:
-            'Tekniskt fel vid hantering av Tradera-uppgifter. Försök igen senare.',
-        });
-      }
-    }
+    // Kryptera lösenordet om vi har ett
+    const encryptedPassword = passwordRaw ? encryptSecret(passwordRaw) : null;
 
     let profile = await prisma.externalProfile.findFirst({
       where: {
@@ -291,30 +276,29 @@ app.post('/api/tradera/connect', async (req, res) => {
       },
     });
 
+    const dataUpdate = {
+      username: usernameTrim,
+      status: 'ACTIVE',
+    };
+
+    if (encryptedPassword) {
+      dataUpdate.encryptedPassword = encryptedPassword;
+    }
+
     if (profile) {
       profile = await prisma.externalProfile.update({
         where: { id: profile.id },
-        data: {
-          username: usernameTrim,
-          status: 'ACTIVE',
-          // Uppdatera endast encryptedPassword om vi faktiskt fått ett nytt
-          ...(encryptedPassword ? { encryptedPassword } : {}),
-        },
+        data: dataUpdate,
       });
     } else {
       profile = await prisma.externalProfile.create({
         data: {
           customerId: customer.id,
           platform: 'TRADERA',
-          username: usernameTrim,
-          status: 'ACTIVE',
-          encryptedPassword,
+          ...dataUpdate,
         },
       });
     }
-
-    // TODO: Här senare: trigga headless-scraper i bakgrunden
-    // t.ex. queueTraderaSync(profile.id);
 
     return res.json({ ok: true, profileId: profile.id });
   } catch (err) {
@@ -326,7 +310,7 @@ app.post('/api/tradera/connect', async (req, res) => {
 });
 
 /* -------------------------------------------------------
-   Tradera-summary – nu med riktiga ordrar
+   Tradera-summary – hämtar profil + sparade TraderaOrder-rader
    ------------------------------------------------------- */
 app.get('/api/tradera/summary', async (req, res) => {
   try {
@@ -408,6 +392,98 @@ app.get('/api/tradera/summary', async (req, res) => {
     return res.status(500).json({
       ok: false,
       error: 'Serverfel vid hämtning av Tradera-data',
+    });
+  }
+});
+
+/* -------------------------------------------------------
+   Tradera MOCK: skapa några testordrar för den kopplade profilen
+   (används bara för att testa UI/databaskedjan)
+   ------------------------------------------------------- */
+app.post('/api/tradera/mock-orders', async (req, res) => {
+  try {
+    const emailQ = String(req.body.email || '').trim().toLowerCase();
+
+    if (!emailQ) {
+      return res
+        .status(400)
+        .json({ ok: false, error: 'Saknar email i request body.' });
+    }
+
+    const customer = await prisma.customer.findFirst({
+      where: {
+        OR: [{ subjectRef: emailQ }, { email: emailQ }],
+      },
+    });
+
+    if (!customer) {
+      return res.status(404).json({ ok: false, error: 'Kund hittades inte' });
+    }
+
+    const profile = await prisma.externalProfile.findFirst({
+      where: {
+        customerId: customer.id,
+        platform: 'TRADERA',
+      },
+    });
+
+    if (!profile) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Ingen Tradera-profil kopplad till denna kund.',
+      });
+    }
+
+    const now = new Date();
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
+    const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
+
+    // Rensa ev. gamla mock-ordrar för att undvika dubletter
+    await prisma.traderaOrder.deleteMany({
+      where: { externalProfileId: profile.id },
+    });
+
+    // Skapa några exempelordrar
+    const created = await prisma.traderaOrder.createMany({
+      data: [
+        {
+          externalProfileId: profile.id,
+          traderaOrderId: 'MOCK-' + Date.now() + '-1',
+          traderaItemId: 'ITEM-123',
+          title: 'Mock: Nintendo Switch-spel',
+          amount: 350,
+          currency: 'SEK',
+          role: 'SELLER',
+          counterpartyAlias: 'Köpare123',
+          counterpartyEmail: 'kopare@example.com',
+          completedAt: twoDaysAgo,
+          rawJson: {},
+        },
+        {
+          externalProfileId: profile.id,
+          traderaOrderId: 'MOCK-' + Date.now() + '-2',
+          traderaItemId: 'ITEM-456',
+          title: 'Mock: Lego-paket',
+          amount: 220,
+          currency: 'SEK',
+          role: 'BUYER',
+          counterpartyAlias: 'SäljareABC',
+          counterpartyEmail: 'saljare@example.com',
+          completedAt: tenDaysAgo,
+          rawJson: {},
+        },
+      ],
+    });
+
+    return res.json({
+      ok: true,
+      createdCount: created.count || 0,
+    });
+  } catch (err) {
+    console.error('Tradera mock-orders error', err);
+    return res.status(500).json({
+      ok: false,
+      error: 'Kunde inte skapa mock-Traderaordrar.',
     });
   }
 });
