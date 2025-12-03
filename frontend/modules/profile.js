@@ -752,6 +752,7 @@ async function initTraderaSection() {
   const usernameInput = document.getElementById('tradera-username-input');
   const passwordInput = document.getElementById('tradera-password-input');
   const connectBtn = document.getElementById('tradera-connect-btn');
+  const mockBtn = document.getElementById('tradera-mock-btn');
   const noticeId = 'tradera-notice';
 
   let customerEmail = null;
@@ -769,6 +770,7 @@ async function initTraderaSection() {
 
   if (!customerEmail) {
     if (connectBtn) connectBtn.disabled = true;
+    if (mockBtn) mockBtn.disabled = true;
     showNotification(
       'error',
       'Kunde inte hämta din profil-e-post. Ladda om sidan och försök igen.',
@@ -833,6 +835,56 @@ async function initTraderaSection() {
         );
       } finally {
         connectBtn.disabled = false;
+      }
+    });
+  }
+
+  // Ny knapp: skapa demoaffärer via /api/tradera/mock-orders
+  if (mockBtn) {
+    mockBtn.addEventListener('click', async () => {
+      mockBtn.disabled = true;
+      showNotification(
+        'success',
+        'Skapar demoaffärer från Tradera...',
+        noticeId
+      );
+
+      try {
+        const res = await fetch('/api/tradera/mock-orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: customerEmail }),
+        });
+
+        let data = null;
+        try {
+          data = await res.json();
+        } catch {
+          data = null;
+        }
+
+        if (!res.ok || !data || data.ok === false) {
+          const msg =
+            (data && (data.error || data.message)) ||
+            'Kunde inte skapa demoaffärer.';
+          showNotification('error', msg, noticeId);
+        } else {
+          showNotification(
+            'success',
+            'Demoaffärer har skapats. Listan uppdateras nu.',
+            noticeId
+          );
+          await loadTraderaSummaryForEmail(customerEmail);
+        }
+      } catch (err) {
+        console.error('Tradera mock-orders error (frontend)', err);
+        showNotification(
+          'error',
+          'Tekniskt fel vid skapande av demoaffärer.',
+          noticeId
+        );
+      } finally {
+        mockBtn.disabled = false;
       }
     });
   }
