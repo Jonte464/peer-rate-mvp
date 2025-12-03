@@ -1,4 +1,4 @@
-// profile.js – Hanterar profilvisning, avatarer och profil-UI
+// profile.js – Hanterar profilvisning, avatarer, profil-UI och Tradera-koppling
 
 import { el, showNotification } from './utils.js';
 import auth, { login, logout } from './auth.js';
@@ -420,7 +420,7 @@ function renderPRating(avg) {
 
   row.innerHTML = '';
   const valRaw = Number(avg);
-  const val = Math.max(0, Math.min(5, Number.isNaN(valRaw) ? 0 : valRaw));
+  const val = Math.max(0, Math.min(5, isNaN(valRaw) ? 0 : valRaw));
 
   for (let i = 1; i <= 5; i++) {
     let cls = 'rating-p';
@@ -436,7 +436,7 @@ function renderPRating(avg) {
   }
 
   if (text) {
-    if (!avg || Number.isNaN(valRaw)) {
+    if (!avg || isNaN(valRaw)) {
       text.textContent = 'Inga omdömen ännu.';
     } else {
       text.textContent = `Din nuvarande rating är ${val.toFixed(1)} / 5.`;
@@ -505,9 +505,9 @@ async function loadProfileData() {
     if (!customer) return;
 
     const set = (id, value) => {
-      const node = document.getElementById(id);
-      if (!node) return;
-      node.textContent =
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent =
         value === undefined || value === null || value === '' ? '-' : String(value);
     };
 
@@ -547,7 +547,7 @@ async function loadProfileData() {
 }
 
 // ----------------------
-// Hämta och rendera EXTERN data (adress/fordon/fastigheter)
+// Hämta och rendera EXTERN data
 // ----------------------
 async function loadExternalData() {
   try {
@@ -563,15 +563,15 @@ async function loadExternalData() {
     let anyVisible = false;
 
     const setAndToggle = (id, value) => {
-      const node = document.getElementById(id);
-      if (!node) return;
-      const li = node.closest && node.closest('li');
+      const el = document.getElementById(id);
+      if (!el) return;
+      const li = el.closest && el.closest('li');
 
       if (value === undefined || value === null || value === '') {
-        node.textContent = '';
+        el.textContent = '';
         if (li) li?.classList.add('hidden');
       } else {
-        node.textContent = String(value);
+        el.textContent = String(value);
         if (li) li?.classList.remove('hidden');
         anyVisible = true;
       }
@@ -612,207 +612,233 @@ async function loadExternalData() {
 }
 
 // ----------------------
-// Hämta och rendera TRADERA-data
+// Tradera-koppling (frontend)
 // ----------------------
-async function loadTraderaData(user) {
+
+async function loadTraderaSummaryForEmail(email) {
+  const usernameLabel = document.getElementById('tradera-username-label');
+  const lastSyncedEl = document.getElementById('tradera-last-synced');
+  const ordersList = document.getElementById('tradera-orders-list');
+  const ordersSection = document.getElementById('tradera-orders-section');
+
+  if (!ordersList) return;
+
+  // Nollställ
+  if (usernameLabel) usernameLabel.textContent = '–';
+  if (lastSyncedEl) lastSyncedEl.textContent = '–';
+  ordersList.innerHTML = '<div class="tiny muted">Hämtar Tradera-data...</div>';
+
+  if (!email) {
+    ordersList.innerHTML =
+      '<div class="tiny muted">Kunde inte hitta din e-postadress för Tradera-koppling.</div>';
+    return;
+  }
+
   try {
-    const section = document.getElementById('tradera-section');
-    if (!section) return;
+    const res = await fetch(`/api/tradera/summary?email=${encodeURIComponent(email)}`);
+    let data = null;
+    try {
+      data = await res.json();
+    } catch {
+      data = null;
+    }
 
-    if (!user || !user.email) {
-      section.classList.add('hidden');
+    if (!res.ok || !data) {
+      console.error('Tradera summary response not OK', res.status, data);
+      ordersList.innerHTML =
+        '<div class="tiny muted">Kunde inte hämta Tradera-data just nu.</div>';
       return;
     }
 
-    const email = String(user.email || '').trim().toLowerCase();
-    if (!email) {
-      section.classList.add('hidden');
+    if (data.ok === false) {
+      const msg =
+        data.error || data.message || 'Kunde inte hämta Tradera-data.';
+      ordersList.innerHTML = `<div class="tiny muted">${msg}</div>`;
       return;
     }
 
-    const params = new URLSearchParams();
-    params.set('email', email);
-    params.set('limit', '50');
-
-    const res = await fetch(`/api/tradera/summary?${params.toString()}`);
-    if (!res.ok) {
-      console.error('Tradera summary error status', res.status);
-      section.classList.add('hidden');
-      return;
-    }
-
-    const data = await res.json().catch(() => null);
-    if (!data || data.ok === false || !data.hasTradera) {
-      // Inget kopplat Tradera-konto → håll sektionen dold
-      section.classList.add('hidden');
+    if (!data.hasTradera) {
+      ordersList.innerHTML =
+        '<div class="tiny muted">Inget Tradera-konto är kopplat ännu.</div>';
       return;
     }
 
     const profile = data.profile || {};
     const orders = Array.isArray(data.orders) ? data.orders : [];
 
-    const set = (id, value) => {
-      const node = document.getElementById(id);
-      if (!node) return;
-      node.textContent =
-        value === undefined || value === null || value === '' ? '–' : String(value);
-    };
+    if (usernameLabel) {
+      usernameLabel.textContent = profile.username || '–';
+    }
 
-    const formatDate = (iso) => {
-      if (!iso) return '–';
-      const d = new Date(iso);
-      if (isNaN(d.getTime())) return '–';
-      return d.toLocaleDateString('sv-SE');
-    };
-
-    set('tradera-username', profile.username || '–');
-    set('tradera-email', profile.email || '–');
-    set('tradera-userId', profile.externalUserId || '–');
-    set('tradera-account-created', formatDate(profile.accountCreatedAt));
-    set('tradera-feedback-score', profile.feedbackScore ?? '–');
-    set('tradera-feedback-positive', profile.feedbackCountPositive ?? '–');
-    set('tradera-feedback-negative', profile.feedbackCountNegative ?? '–');
-    set(
-      'tradera-last-synced',
-      profile.lastSyncedAt
-        ? new Date(profile.lastSyncedAt).toLocaleString('sv-SE')
-        : '–'
-    );
-
-    const listEl = document.getElementById('tradera-orders-list');
-    const emptyEl = document.getElementById('tradera-orders-empty');
-    if (!listEl) return;
+    if (lastSyncedEl) {
+      if (profile.lastSyncedAt) {
+        const d = new Date(profile.lastSyncedAt);
+        lastSyncedEl.textContent = isNaN(d.getTime())
+          ? String(profile.lastSyncedAt)
+          : d.toLocaleString('sv-SE');
+      } else {
+        lastSyncedEl.textContent = '–';
+      }
+    }
 
     if (!orders.length) {
-      listEl.innerHTML = '';
-      if (emptyEl) emptyEl.classList.remove('hidden');
-      section.classList.remove('hidden');
+      ordersList.innerHTML =
+        '<div class="tiny muted">Inga avslutade Tradera-affärer har registrerats ännu.</div>';
       return;
     }
 
-    if (emptyEl) emptyEl.classList.add('hidden');
+    if (ordersSection) {
+      ordersSection.classList.remove('hidden');
+    }
 
     let html = '';
     orders.forEach((o) => {
-      const dateStr = o.completedAt
-        ? new Date(o.completedAt).toLocaleString('sv-SE')
-        : '';
-      const roleLabel = o.role === 'BUYER' ? 'Köpare' : 'Säljare';
-      const amountStr = o.amount
-        ? `${o.amount} ${o.currency || 'SEK'}`
-        : '-';
-      const counterparty =
-        o.counterpartyAlias ||
-        o.counterpartyEmail ||
-        '';
+      const title = o.title || '(utan titel)';
+      const roleRaw = (o.role || '').toUpperCase();
+      const roleLabel =
+        roleRaw === 'BUYER'
+          ? 'Köpare'
+          : roleRaw === 'SELLER'
+          ? 'Säljare'
+          : '';
+
+      const amount =
+        o.amount && o.currency
+          ? `${o.amount} ${o.currency}`
+          : o.amount
+          ? String(o.amount)
+          : '';
+
+      let dateStr = '';
+      if (o.completedAt) {
+        const d = new Date(o.completedAt);
+        if (!isNaN(d.getTime())) {
+          dateStr = d.toLocaleDateString('sv-SE');
+        }
+      }
+
+      const tags = [];
+      if (roleLabel) tags.push(roleLabel);
+      if (amount) tags.push(amount);
+      if (dateStr) tags.push(dateStr);
+      if (o.counterpartyAlias) tags.push(`Motpart: ${o.counterpartyAlias}`);
+
+      const tagsHtml = tags
+        .map((t) => `<span class="tradera-tag">${t}</span>`)
+        .join(' ');
 
       html += `
         <div class="tradera-order-row">
-          <div class="tradera-order-title">${o.title || '(okänd artikel)'}</div>
+          <div class="tradera-order-title">${title}</div>
           <div class="tradera-order-meta">
-            <span class="tradera-tag">${roleLabel}</span>
-            ${amountStr !== '-' ? `<span class="tradera-tag">${amountStr}</span>` : ''}
-            ${counterparty ? `<span class="tradera-tag">Motpart: ${counterparty}</span>` : ''}
-            ${dateStr ? `<span class="tradera-tag">${dateStr}</span>` : ''}
+            ${tagsHtml}
           </div>
         </div>
       `;
     });
 
-    listEl.innerHTML = html;
-    section.classList.remove('hidden');
+    ordersList.innerHTML = html;
   } catch (err) {
-    console.error('Kunde inte ladda Tradera-data', err);
-    const section = document.getElementById('tradera-section');
-    if (section) section.classList.add('hidden');
+    console.error('Kunde inte ladda Tradera-summary', err);
+    ordersList.innerHTML =
+      '<div class="tiny muted">Tekniskt fel vid hämtning av Tradera-data.</div>';
   }
 }
 
-// ----------------------
-// Koppla Tradera-konto (knapp på Min profil)
-// ----------------------
-function initTraderaConnect(user) {
-  const btn = document.getElementById('tradera-connect-btn');
-  if (!btn) return;
+async function initTraderaSection() {
+  const card = document.getElementById('tradera-card');
+  if (!card) return;
 
-  // Ingen inloggad användare → gör inget (knappen visas ändå, men gör inget)
-  if (!user || !user.email) {
-    btn.addEventListener('click', () => {
-      showNotification(
-        'error',
-        'Logga in först för att koppla ditt Tradera-konto.',
-        'tradera-connect-status'
-      );
-    });
+  const usernameInput = document.getElementById('tradera-username-input');
+  const passwordInput = document.getElementById('tradera-password-input');
+  const connectBtn = document.getElementById('tradera-connect-btn');
+  const noticeId = 'tradera-notice';
+
+  let customerEmail = null;
+
+  try {
+    const customer = await api.getCurrentCustomer();
+    if (customer) {
+      customerEmail = (customer.email || customer.subjectRef || '')
+        .trim()
+        .toLowerCase();
+    }
+  } catch (err) {
+    console.error('Kunde inte hämta currentCustomer för Tradera', err);
+  }
+
+  if (!customerEmail) {
+    if (connectBtn) connectBtn.disabled = true;
+    showNotification(
+      'error',
+      'Kunde inte hämta din profil-e-post. Ladda om sidan och försök igen.',
+      noticeId
+    );
     return;
   }
 
-  btn.addEventListener('click', async () => {
-    const usernameInput = document.getElementById('tradera-connect-username');
-    const statusId = 'tradera-connect-status';
+  if (connectBtn) {
+    connectBtn.addEventListener('click', async () => {
+      const username = (usernameInput?.value || '').trim();
+      const password = passwordInput?.value || '';
 
-    const username =
-      (usernameInput && usernameInput.value && usernameInput.value.trim()) || '';
-
-    if (!username) {
-      showNotification(
-        'error',
-        'Fyll i ditt Tradera-användarnamn.',
-        statusId
-      );
-      return;
-    }
-
-    btn.disabled = true;
-    const statusNode = document.getElementById(statusId);
-    if (statusNode) {
-      statusNode.textContent = 'Kopplar Tradera-konto...';
-    }
-
-    try {
-      const res = await fetch('/api/tradera/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: user.email,
-          username,
-        }),
-      });
-
-      let data = {};
-      try {
-        data = await res.json();
-      } catch (e) {
-        // ignore
-      }
-
-      if (!res.ok || !data.ok) {
-        const msg =
-          data?.error || 'Kunde inte koppla Tradera-konto. Försök igen.';
-        showNotification('error', msg, statusId);
-        btn.disabled = false;
+      if (!username) {
+        showNotification(
+          'error',
+          'Ange ditt Tradera-användarnamn.',
+          noticeId
+        );
         return;
       }
 
-      showNotification(
-        'success',
-        'Tradera-kontot är kopplat. Uppdaterar vy...',
-        statusId
-      );
+      connectBtn.disabled = true;
 
-      // Hämta om Tradera-blocket så att det visas
-      await loadTraderaData(user);
-    } catch (err) {
-      console.error('Tradera connect error', err);
-      showNotification(
-        'error',
-        'Tekniskt fel vid koppling. Försök igen om en stund.',
-        statusId
-      );
-    } finally {
-      btn.disabled = false;
-    }
-  });
+      try {
+        const res = await fetch('/api/tradera/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: customerEmail,
+            username,
+            password: password || undefined,
+          }),
+        });
+
+        let data = null;
+        try {
+          data = await res.json();
+        } catch {
+          data = null;
+        }
+
+        if (!res.ok || !data || data.ok === false) {
+          const msg =
+            (data && (data.error || data.message)) ||
+            'Kunde inte koppla Tradera-kontot.';
+          showNotification('error', msg, noticeId);
+        } else {
+          showNotification(
+            'success',
+            'Tradera-kontot är kopplat/uppdaterat.',
+            noticeId
+          );
+          await loadTraderaSummaryForEmail(customerEmail);
+        }
+      } catch (err) {
+        console.error('Tradera connect error (frontend)', err);
+        showNotification(
+          'error',
+          'Tekniskt fel vid koppling mot Tradera.',
+          noticeId
+        );
+      } finally {
+        connectBtn.disabled = false;
+      }
+    });
+  }
+
+  // Ladda ev. befintlig Tradera-data vid init
+  await loadTraderaSummaryForEmail(customerEmail);
 }
 
 // ----------------------
@@ -828,9 +854,9 @@ async function loadMyRating() {
     }
 
     const set = (id, value) => {
-      const node = document.getElementById(id);
-      if (!node) return;
-      node.textContent =
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent =
         value === undefined || value === null || value === '' ? '-' : String(value);
     };
 
@@ -914,6 +940,7 @@ async function loadMyRating() {
 // ----------------------
 // Initiera profilsidan
 // ----------------------
+
 export async function initProfilePage() {
   console.log('initProfilePage');
   const form = document.getElementById('login-form');
@@ -940,16 +967,12 @@ export async function initProfilePage() {
       if (profileRoot) profileRoot.classList.remove('hidden');
       updateUserBadge(user);
       updateAvatars(user);
-
-      // Initiera Tradera-knappen nu när vi vet vem som är inloggad
-      initTraderaConnect(user);
-
       try {
         await Promise.all([
           loadProfileData(),
           loadExternalData(),
-          loadTraderaData(user),
           loadMyRating(),
+          initTraderaSection(),
         ]);
       } catch (err) {
         console.error('profile data loaders error', err);
