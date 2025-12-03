@@ -1,4 +1,4 @@
-<!doctype html>
+<!doctype html> 
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -364,7 +364,7 @@
       color:transparent;
     }
 
-    /* Tradera-block */
+    /* Tradera-block (kan återanvändas om vi vill styla listan annorlunda) */
     .tradera-orders{
       margin-top:10px;
       font-size:13px;
@@ -528,68 +528,43 @@
         </ul>
       </section>
 
-      <!-- Koppla externa konton -->
-      <section class="card" id="external-connect-section">
-        <h2>Koppla externa konton</h2>
+      <!-- Tradera-koppling (NYTT, ersätter gamla external-connect + tradera-section) -->
+      <section class="card" id="tradera-card">
+        <h2>Tradera-koppling</h2>
         <p class="tiny muted">
-          Här kan du koppla dina konton på externa plattformar till PeerRate.
+          Koppla ditt Tradera-konto för att visa avslutade affärer som en del av ditt förtroendeunderlag.
+          Dina Tradera-uppgifter används endast för att hämta information kopplad till dina affärer.
         </p>
 
-        <label for="tradera-connect-username" class="tiny" style="margin-top:4px;">
-          Tradera-användarnamn
-        </label>
-        <input
-          id="tradera-connect-username"
-          type="text"
-          placeholder="Ditt Tradera-användarnamn"
-        />
+        <div class="row">
+          <div>
+            <label for="tradera-username-input">Tradera-användarnamn</label>
+            <input id="tradera-username-input" type="text" placeholder="Ditt Tradera-användarnamn" />
+          </div>
+          <div>
+            <label for="tradera-password-input">Tradera-lösenord (valfritt)</label>
+            <input id="tradera-password-input" type="password" placeholder="Ditt Tradera-lösenord" />
+            <p class="tiny muted">
+              Lösenordet lagras krypterat. Lämna tomt om du bara vill spara användarnamnet.
+            </p>
+          </div>
+        </div>
 
-        <button
-          class="secondary"
-          type="button"
-          id="tradera-connect-btn"
-          style="margin-top:10px;"
-        >
-          Koppla Tradera-konto
-        </button>
+        <div class="row" style="margin-top:8px;">
+          <button type="button" class="primary" id="tradera-connect-btn">
+            Koppla / uppdatera Tradera-konto
+          </button>
+        </div>
 
-        <p id="tradera-connect-status" class="tiny muted" style="margin-top:6px;"></p>
-      </section>
+        <p id="tradera-notice" class="tiny muted" style="margin-top:8px;"></p>
 
-      <!-- Tradera -->
-      <section class="card hidden" id="tradera-section">
-        <h2>Tradera</h2>
-        <p class="tiny muted">
-          Här visas information från ditt Tradera-konto (t.ex. avslutade affärer och omdömen)
-          när du har kopplat ditt konto till PeerRate.
-        </p>
+        <hr style="margin:16px 0;border:none;border-top:1px solid rgba(0,0,0,.06);" />
 
+        <h3>Översikt</h3>
         <ul class="profile-list">
           <li>
             <span class="profile-label">Användarnamn</span>
-            <span class="profile-value" id="tradera-username">–</span>
-          </li>
-          <li>
-            <span class="profile-label">E-post</span>
-            <span class="profile-value" id="tradera-email">–</span>
-          </li>
-          <li>
-            <span class="profile-label">Tradera-ID</span>
-            <span class="profile-value" id="tradera-userId">–</span>
-          </li>
-          <li>
-            <span class="profile-label">Konto sedan</span>
-            <span class="profile-value" id="tradera-account-created">–</span>
-          </li>
-          <li>
-            <span class="profile-label">Tradera-omdöme</span>
-            <span class="profile-value" id="tradera-feedback-score">–</span>
-          </li>
-          <li>
-            <span class="profile-label">Positiva / Negativa</span>
-            <span class="profile-value">
-              <span id="tradera-feedback-positive">–</span> / <span id="tradera-feedback-negative">–</span>
-            </span>
+            <span class="profile-value" id="tradera-username-label">–</span>
           </li>
           <li>
             <span class="profile-label">Senast synkad</span>
@@ -597,11 +572,10 @@
           </li>
         </ul>
 
-        <h3 style="margin-top:14px;font-size:15px;">Avslutade affärer</h3>
-        <p class="tiny muted" id="tradera-orders-empty">
-          Inga avslutade Tradera-affärer har hämtats ännu.
-        </p>
-        <div id="tradera-orders-list" class="tradera-orders"></div>
+        <div id="tradera-orders-section" style="margin-top:12px;">
+          <h3>Avslutade affärer från Tradera</h3>
+          <div id="tradera-orders-list" class="ratings-list"></div>
+        </div>
       </section>
 
       <!-- Mitt omdöme -->
