@@ -1,4 +1,8 @@
 // backend/services/blocketService.js
+// ----------------------------------
+// Blocket-funktionalitet är PAUSAD i denna version.
+// Denna fil behåller samma API men gör ingen riktig scraping.
+
 const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
 const { performInitialBlocketSync } = require('./blocketScraper.js');
@@ -6,33 +10,21 @@ const { performInitialBlocketSync } = require('./blocketScraper.js');
 const prisma = new PrismaClient();
 
 const ALGO = 'aes-256-ctr';
-const ENC_KEY = process.env.BLOCKET_ENCRYPTION_KEY; // Måste vara exakt 32 tecken!
+const ENC_KEY = process.env.BLOCKET_ENCRYPTION_KEY || "00000000000000000000000000000000";
 
-if (!ENC_KEY || ENC_KEY.length !== 32) {
-  console.warn(
-    '⚠️ BLOCKET_ENCRYPTION_KEY saknas eller har fel längd (måste vara exakt 32 tecken).'
-  );
-}
-
-/**
- * Kryptera Blocket-lösenord säkert
- */
+// Kryptering (behövs om en användare skulle råka fylla i Blocket-data)
 function encrypt(text) {
-  const iv = crypto.randomBytes(16); // unik IV per lösenord
+  const iv = crypto.randomBytes(16);
   const cipher = crypto.createCipheriv(ALGO, Buffer.from(ENC_KEY), iv);
   const encrypted = Buffer.concat([cipher.update(text, 'utf8'), cipher.final()]);
-
-  return JSON.stringify({
-    iv: iv.toString('hex'),
-    content: encrypted.toString('hex'),
-  });
+  return JSON.stringify({ iv: iv.toString('hex'), content: encrypted.toString('hex') });
 }
 
-/**
- * Skapa Blocket-profil i DB + trigga första synk
- */
+// Dummy connect-funktion
 async function connectBlocketProfile(customerId, username, password) {
-  const encryptedPassword = encrypt(password);
+  console.log("ℹ️ Blocket-koppling är avstängd. Sparar endast meta-data i DB.");
+
+  const encryptedPassword = encrypt(password || "");
 
   const profile = await prisma.externalProfile.create({
     data: {
@@ -40,20 +32,16 @@ async function connectBlocketProfile(customerId, username, password) {
       platform: 'BLOCKET',
       username,
       encryptedPassword,
-      status: 'ACTIVE',
-    },
+      status: 'INACTIVE'
+    }
   });
 
-  // Kör initial sync (login + cookies + listings)
-  try {
-    await performInitialBlocketSync(profile.id);
-  } catch (err) {
-    console.error('Initial Blocket sync failed:', err);
-  }
+  // Kör dummy sync
+  await performInitialBlocketSync(profile.id);
 
   return profile;
 }
 
 module.exports = {
-  connectBlocketProfile,
+  connectBlocketProfile
 };
