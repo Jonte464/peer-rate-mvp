@@ -11,7 +11,7 @@
     "dev": "nodemon backend/server.js",
     "start": "node backend/server.js",
     "start:prod": "prisma migrate deploy && node backend/server.js",
-    "postinstall": "prisma generate && npx playwright install chromium",
+    "postinstall": "prisma generate",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:dev": "prisma migrate dev",
     "prisma:generate": "prisma generate"
@@ -19,14 +19,14 @@
   "dependencies": {
     "@prisma/client": "^6.18.0",
     "bcryptjs": "^3.0.3",
+    "cheerio": "^1.0.0",
     "compression": "1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "express-rate-limit": "^8.1.0",
     "helmet": "7.2.0",
-    "joi": "^18.0.1",
-    "playwright": "^1.57.0"
+    "joi": "^18.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.0",
