@@ -1,3 +1,5 @@
+// v1.1 – Tradera summary extended
+
 // profile.js – Hanterar profilvisning, avatarer, profil-UI och Tradera-koppling
 
 import { el, showNotification } from './utils.js';
@@ -626,7 +628,8 @@ async function loadTraderaSummaryForEmail(email) {
   // Nollställ
   if (usernameLabel) usernameLabel.textContent = '–';
   if (lastSyncedEl) lastSyncedEl.textContent = '–';
-  ordersList.innerHTML = '<div class="tiny muted">Hämtar Tradera-data...</div>';
+  ordersList.innerHTML =
+    '<div class="tiny muted">Hämtar Tradera-data...</div>';
 
   if (!email) {
     ordersList.innerHTML =
@@ -635,7 +638,9 @@ async function loadTraderaSummaryForEmail(email) {
   }
 
   try {
-    const res = await fetch(`/api/tradera/summary?email=${encodeURIComponent(email)}`);
+    const res = await fetch(
+      `/api/tradera/summary?email=${encodeURIComponent(email)}`
+    );
     let data = null;
     try {
       data = await res.json();
@@ -665,6 +670,10 @@ async function loadTraderaSummaryForEmail(email) {
 
     const profile = data.profile || {};
     const orders = Array.isArray(data.orders) ? data.orders : [];
+    const summary = data.summary || {};
+    const totalOrders = summary.totalOrders ?? orders.length ?? 0;
+    const ratedOrders = summary.ratedOrders ?? 0;
+    const unratedOrders = summary.unratedOrders ?? Math.max(0, totalOrders - ratedOrders);
 
     if (usernameLabel) {
       usernameLabel.textContent = profile.username || '–';
@@ -681,6 +690,7 @@ async function loadTraderaSummaryForEmail(email) {
       }
     }
 
+    // Inga affärer alls
     if (!orders.length) {
       ordersList.innerHTML =
         '<div class="tiny muted">Inga avslutade Tradera-affärer har registrerats ännu.</div>';
@@ -692,6 +702,20 @@ async function loadTraderaSummaryForEmail(email) {
     }
 
     let html = '';
+
+    // Översiktsrad högst upp
+    html += `
+      <div class="tiny muted" style="margin-bottom:8px;">
+        Du har totalt <strong>${totalOrders}</strong> registrerade Tradera-affärer.
+        ${
+          unratedOrders > 0
+            ? ` <strong>${unratedOrders}</strong> av dem saknar fortfarande omdöme.`
+            : ' Alla registrerade affärer har redan fått ett omdöme.'
+        }
+      </div>
+    `;
+
+    // Lista med affärer
     orders.forEach((o) => {
       const title = o.title || '(utan titel)';
       const roleRaw = (o.role || '').toUpperCase();
@@ -722,6 +746,13 @@ async function loadTraderaSummaryForEmail(email) {
       if (amount) tags.push(amount);
       if (dateStr) tags.push(dateStr);
       if (o.counterpartyAlias) tags.push(`Motpart: ${o.counterpartyAlias}`);
+
+      // Ny info: om affären har/inte har omdöme
+      if (o.hasRating) {
+        tags.push('Har omdöme');
+      } else {
+        tags.push('Omdöme saknas');
+      }
 
       const tagsHtml = tags
         .map((t) => `<span class="tradera-tag">${t}</span>`)
