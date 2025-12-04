@@ -292,6 +292,7 @@ export async function initTraderaSection() {
   const passwordInput = document.getElementById('tradera-password-input');
   const connectBtn = document.getElementById('tradera-connect-btn');
   const mockBtn = document.getElementById('tradera-mock-btn');
+  const syncBtn = document.getElementById('tradera-sync-btn');
   const noticeId = 'tradera-notice';
 
   let customerEmail = null;
@@ -310,6 +311,7 @@ export async function initTraderaSection() {
   if (!customerEmail) {
     if (connectBtn) connectBtn.disabled = true;
     if (mockBtn) mockBtn.disabled = true;
+    if (syncBtn) syncBtn.disabled = true;
     showNotification(
       'error',
       'Kunde inte hämta din profil-e-post. Ladda om sidan och försök igen.',
@@ -318,6 +320,7 @@ export async function initTraderaSection() {
     return;
   }
 
+  // Koppla / uppdatera Tradera-konto (spara username + ev. krypterat lösen)
   if (connectBtn) {
     connectBtn.addEventListener('click', async () => {
       const username = (usernameInput?.value || '').trim();
@@ -378,7 +381,7 @@ export async function initTraderaSection() {
     });
   }
 
-  // Ny knapp: skapa demoaffärer via /api/tradera/mock-orders
+  // Demoaffärer (mock) – kan vara kvar för test
   if (mockBtn) {
     mockBtn.addEventListener('click', async () => {
       mockBtn.disabled = true;
@@ -424,6 +427,66 @@ export async function initTraderaSection() {
         );
       } finally {
         mockBtn.disabled = false;
+      }
+    });
+  }
+
+  // 🔁 NYTT: Synka riktiga Tradera-affärer via scrapern
+  if (syncBtn) {
+    syncBtn.addEventListener('click', async () => {
+      syncBtn.disabled = true;
+      showNotification(
+        'success',
+        'Försöker synka riktiga Tradera-affärer...',
+        noticeId
+      );
+
+      try {
+        const res = await fetch('/api/tradera/sync-now', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: customerEmail }),
+        });
+
+        let data = null;
+        try {
+          data = await res.json();
+        } catch {
+          data = null;
+        }
+
+        if (!res.ok || !data || data.ok === false) {
+          const msg =
+            (data &&
+              (data.error ||
+                (data.result && data.result.message))) ||
+            'Kunde inte synka riktiga Tradera-affärer.';
+          showNotification('error', msg, noticeId);
+        } else {
+          const r = data.result || {};
+          const msgParts = [];
+          if (typeof r.created === 'number') {
+            msgParts.push(`${r.created} nya affärer`);
+          }
+          if (typeof r.updated === 'number') {
+            msgParts.push(`${r.updated} uppdaterade affärer`);
+          }
+          const baseMsg =
+            msgParts.length > 0
+              ? `Synk klar: ${msgParts.join(', ')}.`
+              : 'Synk klar.';
+          showNotification('success', baseMsg, noticeId);
+          await loadTraderaSummaryForEmail(customerEmail);
+        }
+      } catch (err) {
+        console.error('Tradera sync-now error (frontend)', err);
+        showNotification(
+          'error',
+          'Tekniskt fel vid synk av Tradera-affärer.',
+          noticeId
+        );
+      } finally {
+        syncBtn.disabled = false;
       }
     });
   }
