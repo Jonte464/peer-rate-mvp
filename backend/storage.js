@@ -452,6 +452,7 @@ async function saveTraderaOrders(externalProfileId, orders) {
 /**
  * Hämta Tradera-data för en kund via subjectRef (e-post).
  * Detta ska användas av "Min profil" för att rendera Tradera-blocket.
+ * Vi begränsar oss till de senaste 12 månaderna.
  */
 async function getTraderaSummaryBySubjectRef(subjectRef, opts = {}) {
   const customer = await prisma.customer.findUnique({
@@ -475,8 +476,16 @@ async function getTraderaSummaryBySubjectRef(subjectRef, opts = {}) {
 
   const take = typeof opts.limit === 'number' ? opts.limit : 50;
 
+  const now = new Date();
+  const twelveMonthsAgo = new Date(now);
+  twelveMonthsAgo.setFullYear(now.getFullYear() - 1);
+
   const orders = await prisma.traderaOrder.findMany({
-    where: { externalProfileId: externalProfile.id },
+    where: {
+      externalProfileId: externalProfile.id,
+      // Bara senaste 12 månaderna
+      completedAt: { gte: twelveMonthsAgo },
+    },
     orderBy: { completedAt: 'desc' },
     take,
   });
@@ -507,12 +516,22 @@ async function getTraderaSummaryBySubjectRef(subjectRef, opts = {}) {
     counterpartyAlias: o.counterpartyAlias || null,
     counterpartyEmail: o.counterpartyEmail || null,
     completedAt: o.completedAt ? o.completedAt.toISOString() : null,
+    // I nästa steg kan vi sätta hasRating=true om vi kopplar mot rating-tabellen.
+    hasRating: false,
   }));
+
+  const totalOrders = mappedOrders.length;
+  const summary = {
+    totalOrders,
+    ratedOrders: 0, // TODO: kan räknas mot rating-tabellen i ett senare steg
+    unratedOrders: totalOrders,
+  };
 
   return {
     hasTradera: true,
     profile,
     orders: mappedOrders,
+    summary,
   };
 }
 
