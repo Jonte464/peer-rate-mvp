@@ -317,6 +317,7 @@ app.post('/api/tradera/connect', async (req, res) => {
 
 /* -------------------------------------------------------
    Tradera-summary – hämtar profil + sparade TraderaOrder-rader
+   + markerar vilka affärer som redan har omdömen
    ------------------------------------------------------- */
 app.get('/api/tradera/summary', async (req, res) => {
   try {
@@ -354,26 +355,56 @@ app.get('/api/tradera/summary', async (req, res) => {
         hasTradera: false,
         profile: null,
         orders: [],
+        summary: {
+          totalOrders: 0,
+          ratedOrders: 0,
+          unratedOrders: 0,
+        },
       });
     }
 
-    // Hämta ordrar kopplade till denna Tradera-profil
     const ordersRaw = await prisma.traderaOrder.findMany({
       where: { externalProfileId: profile.id },
       orderBy: { completedAt: 'desc' },
       take: limit,
     });
 
+    const traderaIds = ordersRaw
+      .map((o) => o.traderaOrderId)
+      .filter((id) => !!id);
+
+    let ratingMap = new Map();
+    if (traderaIds.length > 0) {
+      const ratings = await prisma.rating.findMany({
+        where: {
+          proofRef: { in: traderaIds },
+        },
+        select: { id: true, proofRef: true },
+      });
+
+      ratingMap = new Map();
+      for (const r of ratings) {
+        if (!r.proofRef) continue;
+        ratingMap.set(r.proofRef, true);
+      }
+    }
+
     const orders = ordersRaw.map((o) => ({
       id: o.id,
+      traderaOrderId: o.traderaOrderId,
       title: o.title,
-      role: o.role, // BUYER/SELLER
+      role: o.role,
       amount: o.amount ? o.amount.toString() : null,
       currency: o.currency || 'SEK',
       counterpartyAlias: o.counterpartyAlias,
       counterpartyEmail: o.counterpartyEmail,
       completedAt: o.completedAt,
+      hasRating: !!(o.traderaOrderId && ratingMap.get(o.traderaOrderId)),
     }));
+
+    const totalOrders = orders.length;
+    const ratedOrders = orders.filter((o) => o.hasRating).length;
+    const unratedOrders = Math.max(0, totalOrders - ratedOrders);
 
     const dtoProfile = {
       username: profile.username,
@@ -392,6 +423,11 @@ app.get('/api/tradera/summary', async (req, res) => {
       profile: dtoProfile,
       orders,
       limit,
+      summary: {
+        totalOrders,
+        ratedOrders,
+        unratedOrders,
+      },
     });
   } catch (err) {
     console.error('Tradera summary error', err);
