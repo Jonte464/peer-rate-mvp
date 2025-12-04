@@ -14,6 +14,8 @@ const customersRoutes = require('./routes/customersRoutes');
 const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const integrationsRoutes = require('./routes/integrationsRoutes');
+const externalDataRoutes = require('./routes/externalDataRoutes');
+const blocketRoutes = require('./routes/blocketRoutes');
 
 const app = express();
 
@@ -68,6 +70,10 @@ app.use('/api', ratingsRoutes);
 app.use('/api', customersRoutes);
 app.use('/api', authRoutes);
 app.use('/api/admin', adminRoutes);
+
+// Nya uppdelade routers
+app.use('/api', externalDataRoutes);
+app.use('/api', blocketRoutes);
 app.use('/api', integrationsRoutes);
 
 // --- Health ---

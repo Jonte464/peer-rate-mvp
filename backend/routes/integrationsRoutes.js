@@ -1,10 +1,9 @@
 // backend/routes/integrationsRoutes.js
-// Hanterar externa integrationer: extern data, Blocket, Tradera, m.m.
+// Hanterar Tradera-integrationer (koppling, summary, mock, sync, import)
 
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 
-const { connectBlocketProfile } = require('../services/blocketService');
 // Kryptering för Tradera-lösenord
 const { encryptSecret } = require('../services/secretService');
 // Tradera-service: sync + import
@@ -13,157 +12,8 @@ const {
   importTraderaOrdersForEmail,
 } = require('../services/traderaService');
 
-// Endast det vi behöver härifrån storage
-const { findCustomerBySubjectRef } = require('../storage');
-
-// Hjälpfunktioner
-const {
-  extractAddressPartsFromCustomer,
-  buildExternalDataResponse,
-} = require('../helpers');
-
-// PAP API service (adressverifiering)
-const { lookupAddressWithPapApi } = require('../services/papApiService');
-
 const prisma = new PrismaClient();
 const router = express.Router();
-
-/**
- * GET /api/customers/external-data
- * Hämtar ENDAST extern data. Ingen fallback till profilen.
- *
- * OBS: Denna router monteras under /api i server.js,
- * så här använder vi bara "/customers/external-data".
- */
-router.get('/customers/external-data', async (req, res) => {
-  try {
-    const emailOrSubject = String(req.query.email || '').trim().toLowerCase();
-    if (!emailOrSubject) {
-      return res.status(400).json({ ok: false, error: 'Saknar email' });
-    }
-
-    const customer = await prisma.customer.findFirst({
-      where: {
-        OR: [{ subjectRef: emailOrSubject }, { email: emailOrSubject }],
-      },
-    });
-
-    if (!customer) {
-      return res.status(404).json({ ok: false, error: 'Kund hittades inte' });
-    }
-
-    const { street, number, zipcode, city } =
-      extractAddressPartsFromCustomer(customer);
-
-    let validatedAddress = null;
-    let addressStatus = 'NO_EXTERNAL_DATA';
-    let vehiclesCount = null;
-    let propertiesCount = null;
-
-    if (street || zipcode || city) {
-      try {
-        const externalAddress = await lookupAddressWithPapApi({
-          street,
-          number,
-          zipcode,
-          city,
-        });
-
-        if (externalAddress && typeof externalAddress === 'object') {
-          const addrObj =
-            externalAddress.normalizedAddress ||
-            externalAddress.address ||
-            externalAddress;
-
-          const extStreet =
-            addrObj.street ||
-            addrObj.addressStreet ||
-            addrObj.gatuadress ||
-            null;
-          const extZip =
-            addrObj.zipcode ||
-            addrObj.postalCode ||
-            addrObj.postnr ||
-            null;
-          const extCity =
-            addrObj.city ||
-            addrObj.postort ||
-            addrObj.addressCity ||
-            null;
-
-          const parts = [extStreet, extZip, extCity].filter(Boolean);
-          if (parts.length) {
-            validatedAddress = parts.join(', ');
-          }
-
-          vehiclesCount =
-            externalAddress.vehiclesCount ??
-            externalAddress.vehicleCount ??
-            externalAddress.vehicles ??
-            null;
-
-          propertiesCount =
-            externalAddress.propertiesCount ??
-            externalAddress.propertyCount ??
-            externalAddress.properties ??
-            null;
-
-          if (validatedAddress) {
-            addressStatus = externalAddress.status
-              ? String(externalAddress.status).toUpperCase()
-              : externalAddress.matchStatus
-              ? String(externalAddress.matchStatus).toUpperCase()
-              : 'VERIFIED';
-          } else {
-            addressStatus = 'NO_ADDRESS_IN_RESPONSE';
-          }
-        }
-      } catch (err) {
-        console.error('PAP API lookup failed', err);
-        addressStatus = 'LOOKUP_FAILED';
-      }
-    } else {
-      addressStatus = 'NO_ADDRESS_INPUT';
-    }
-
-    const now = new Date().toISOString();
-
-    return res.json({
-      ok: true,
-      vehiclesCount,
-      propertiesCount,
-      lastUpdated: now,
-      validatedAddress,
-      addressStatus,
-    });
-  } catch (err) {
-    console.error('external-data error', err);
-    return res.status(500).json({ ok: false, error: 'Internt serverfel' });
-  }
-});
-
-/* -------------------------------------------------------
-   Blocket-koppling (extern)
-   ------------------------------------------------------- */
-router.post('/external/blocket/connect', async (req, res) => {
-  try {
-    const { customerId, username, password } = req.body;
-
-    if (!customerId || !username || !password) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    const profile = await connectBlocketProfile(customerId, username, password);
-
-    res.json({
-      success: true,
-      profile,
-    });
-  } catch (err) {
-    console.error('Blocket connect error:', err);
-    res.status(500).json({ error: 'Failed to connect Blocket profile' });
-  }
-});
 
 /* -------------------------------------------------------
    Tradera-koppling – sparar användarnamn + krypterat lösenord (valfritt)
@@ -516,60 +366,6 @@ router.post('/tradera/import', async (req, res) => {
         err && err.message
           ? err.message
           : 'Kunde inte importera Tradera-ordrar.',
-    });
-  }
-});
-
-/* -------------------------------------------------------
-   Hämta extern data (DEMO) baserat på profil
-   ------------------------------------------------------- */
-router.get('/profile/external-demo', async (req, res) => {
-  try {
-    const subjectQ = String(req.query.subject || '').trim().toLowerCase();
-
-    let customer = null;
-    if (req.user && req.user.id) {
-      customer = await prisma.customer.findUnique({
-        where: { id: req.user.id },
-      });
-    } else if (subjectQ) {
-      customer = await findCustomerBySubjectRef(subjectQ);
-    } else {
-      return res.status(401).json({
-        ok: false,
-        error:
-          'Ej inloggad. Ange subject som queryparameter för publik lookup.',
-      });
-    }
-
-    if (!customer)
-      return res.status(404).json({ ok: false, error: 'Kund saknas' });
-
-    const { street, number, zipcode, city } =
-      extractAddressPartsFromCustomer(customer);
-
-    let externalAddress = null;
-    try {
-      if (street || zipcode || city) {
-        externalAddress = await lookupAddressWithPapApi({
-          street,
-          number,
-          zipcode,
-          city,
-        });
-      }
-    } catch (err) {
-      console.error('PAP API lookup failed', err);
-      externalAddress = null;
-    }
-
-    const payload = buildExternalDataResponse(customer, externalAddress);
-    return res.json(payload);
-  } catch (err) {
-    console.error('External demo error', err);
-    return res.status(500).json({
-      ok: false,
-      error: 'Serverfel vid extern hämtning',
     });
   }
 });
