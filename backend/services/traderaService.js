@@ -1,7 +1,7 @@
 // backend/services/traderaService.js
 //
 // Hanterar Tradera-profiler (ExternalProfile) och import av ordrar
-// + (valfritt) scraping i icke-produktionsmiljö.
+// + (valfritt) scraping via Playwright.
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
@@ -9,9 +9,8 @@ const prisma = new PrismaClient();
 const { decryptSecret } = require('./secretService');
 const { fetchTraderaOrdersViaScraping } = require('./traderaImporter');
 
-// Scraping är AV i produktion – kan slås på i dev/stage med env-variabel
+// 💡 Ny logik: scraping kan köras i produktion om TRADERA_SCRAPING_ENABLED = "true"
 const ENABLE_SCRAPING =
-  process.env.NODE_ENV !== 'production' &&
   String(process.env.TRADERA_SCRAPING_ENABLED || '').toLowerCase() === 'true';
 
 /**
@@ -49,15 +48,14 @@ async function findTraderaProfileForCustomer(customerId) {
 
 /**
  * Synka Tradera-data för en given profil (ExternalProfile).
- * PROD: returnerar bara ett meddelande om att automatisk scraping är avstängd.
- * DEV/STAGE: kan använda fetchTraderaOrdersViaScraping.
+ * PROD/DEV: styrs av env-variabeln TRADERA_SCRAPING_ENABLED.
  */
 async function syncTraderaForProfile(profile) {
   if (!profile) {
     throw new Error('TraderaService: profil saknas');
   }
 
-  // 🔒 Blockera scraping i produktion
+  // 🔒 Blockera scraping om inte env-flaggan är satt
   if (!ENABLE_SCRAPING) {
     return {
       ok: false,
@@ -65,7 +63,8 @@ async function syncTraderaForProfile(profile) {
       created: 0,
       updated: 0,
       totalScraped: 0,
-      message: 'Automatisk Tradera-import är inte aktiverad i produktion ännu.',
+      message:
+        'Automatisk Tradera-import är inte aktiverad. Sätt TRADERA_SCRAPING_ENABLED=true för att slå på.',
     };
   }
 
@@ -277,9 +276,7 @@ async function importTraderaOrdersForEmail(emailOrSubject, orders) {
     if (typeof raw.amount === 'number') {
       amount = raw.amount;
     } else if (typeof raw.amount === 'string') {
-      const n = Number(
-        raw.amount.replace(/\s+/g, '').replace(',', '.')
-      );
+      const n = Number(raw.amount.replace(/\s+/g, '').replace(',', '.'));
       amount = Number.isNaN(n) ? null : n;
     }
 

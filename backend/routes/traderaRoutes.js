@@ -1,13 +1,15 @@
 // backend/routes/traderaRoutes.js
 //
-// API-endpoints för att hämta Tradera-data till "Min profil".
-// Just nu: endast läsning (summary + orders) från vår egen databas.
-// Själva inloggningen mot Tradera/Developer API bygger vi i ett senare steg.
+// API-endpoints för att hämta och synka Tradera-data till "Min profil".
+// Just nu: summary + sync-now (scraping).
+//
+// Själva scraping-logiken ligger i services/traderaService.js
 
 const express = require('express');
 const Joi = require('joi');
 const { getTraderaSummaryBySubjectRef } = require('../storage');
 const { normSubject } = require('../helpers');
+const { syncTraderaForEmail } = require('../services/traderaService');
 
 const router = express.Router();
 
@@ -27,37 +29,6 @@ const summaryQuerySchema = Joi.object({
 
    Anropas från "Min profil" i frontend, t.ex:
    /api/tradera/summary?email=kundensmejl@example.com
-
-   Svarsexempel:
-   {
-     ok: true,
-     hasTradera: true,
-     profile: {
-       username: "...",
-       email: "...",
-       externalUserId: "...",
-       accountCreatedAt: "...",
-       feedbackScore: 4.9,
-       feedbackCountPositive: 120,
-       feedbackCountNegative: 3,
-       lastSyncedAt: "2025-11-28T10:00:00.000Z"
-     },
-     orders: [
-       {
-         id: "...",
-         traderaOrderId: "...",
-         traderaItemId: "...",
-         title: "iPhone 13",
-         amount: "2500.00",
-         currency: "SEK",
-         role: "SELLER",
-         counterpartyAlias: "köpar123",
-         counterpartyEmail: null,
-         completedAt: "2025-10-01T12:34:00.000Z"
-       },
-       ...
-     ]
-   }
    ------------------------------------------------------- */
 router.get('/tradera/summary', async (req, res) => {
   const { error, value } = summaryQuerySchema.validate(req.query);
@@ -91,6 +62,57 @@ router.get('/tradera/summary', async (req, res) => {
     return res
       .status(500)
       .json({ ok: false, error: 'Kunde inte hämta Tradera-data.' });
+  }
+});
+
+/* -------------------------------------------------------
+   POST /api/tradera/sync-now
+   Trigga en "live"-synk från Tradera via scrapern.
+
+   Body:
+   {
+     "email": "kundensmejl@example.com"
+   }
+
+   Returnerar t.ex.:
+   {
+     ok: true,
+     result: {
+       ok: true/false,
+       created: 3,
+       updated: 1,
+       totalScraped: 4,
+       message?: "..."
+     }
+   }
+   ------------------------------------------------------- */
+const syncBodySchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+router.post('/tradera/sync-now', async (req, res) => {
+  const { error, value } = syncBodySchema.validate(req.body || {});
+  if (error) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Ogiltig body. E-post krävs för att synka Tradera.',
+    });
+  }
+
+  const emailTrim = String(value.email || '').trim().toLowerCase();
+
+  try {
+    const result = await syncTraderaForEmail(emailTrim);
+    return res.json({ ok: true, result });
+  } catch (e) {
+    console.error('[POST /api/tradera/sync-now] error:', e);
+    return res.status(500).json({
+      ok: false,
+      error:
+        e && e.message
+          ? e.message
+          : 'Kunde inte synka Tradera-data just nu.',
+    });
   }
 });
 
