@@ -3,11 +3,15 @@
 // API-endpoints för att hämta och synka Tradera-data till "Min profil".
 // Just nu: summary + sync-now (scraping).
 //
-// Själva scraping-logiken ligger i services/traderaService.js
+// Lagringslogiken ligger i backend/storage.tradera.js
+// Scraping-logiken ligger i services/traderaService.js
 
 const express = require('express');
 const Joi = require('joi');
-const { getTraderaSummaryBySubjectRef } = require('../storage');
+
+// 🔁 Viktigt: hämta från storage.tradera.js (nya filen)
+const { getTraderaSummaryBySubjectRef } = require('../storage.tradera');
+
 const { normSubject } = require('../helpers');
 const { syncTraderaForEmail } = require('../services/traderaService');
 
@@ -51,11 +55,10 @@ router.get('/tradera/summary', async (req, res) => {
       limit,
     });
 
+    // Skicka vidare hela objektet (hasTradera, profile, orders, summary)
     return res.json({
       ok: true,
-      hasTradera: summary.hasTradera,
-      profile: summary.profile,
-      orders: summary.orders,
+      ...summary,
     });
   } catch (e) {
     console.error('[GET /api/tradera/summary] error:', e);
