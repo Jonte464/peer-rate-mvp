@@ -1,7 +1,8 @@
 // backend/services/traderaApiService.js
 //
 // Tradera SOAP API-klient för PublicService.
-// Här skickar vi AppId och AppKey i SOAP-headern enligt dokumentationen.
+// Vi skickar AppId och AppKey i SOAP-headern enligt dokumentationen
+// och har extra loggning för att se HTTP-status och ev. feltext.
 
 const soap = require('soap');
 
@@ -28,15 +29,6 @@ async function getSoapClient() {
 
   const client = await soap.createClientAsync(WSDL_URL);
 
-  // Enligt dokumentationen ska headers se ut så här:
-  // <AuthenticationHeader xmlns="http://api.tradera.com">
-  //   <AppId>int</AppId>
-  //   <AppKey>string</AppKey>
-  // </AuthenticationHeader>
-  // <ConfigurationHeader xmlns="http://api.tradera.com">
-  //   <Sandbox>int</Sandbox>
-  // </ConfigurationHeader>
-
   const headers = {
     AuthenticationHeader: {
       AppId: APP_ID,
@@ -59,13 +51,51 @@ async function testApiConnection() {
     const client = await getSoapClient();
 
     // GetCategories tar inga parametrar
-    const [result] = await client.GetCategoriesAsync({});
+    const [result, rawResponse, rawRequest, soapHeader] =
+      await client.GetCategoriesAsync({});
 
     console.log('✅ Tradera API test OK (GetCategories)');
-    return result;
+    // Logga lite meta för felsökning framöver
+    console.log('Tradera rawResponse length:', rawResponse?.length || 0);
+    return {
+      result,
+      meta: {
+        hasRawResponse: !!rawResponse,
+        hasRawRequest: !!rawRequest,
+        hasSoapHeader: !!soapHeader,
+      },
+    };
   } catch (err) {
-    console.error('❌ Tradera API test error:', err);
-    throw err;
+    // Här försöker vi plocka ut så mycket info som möjligt
+    console.error('❌ Tradera API test error (full):', err);
+
+    let httpStatus = null;
+    let httpBody = null;
+
+    // node-soap brukar lägga HTTP-responsen på err.response / err.body
+    if (err && err.response && err.response.statusCode) {
+      httpStatus = err.response.statusCode;
+    }
+    if (err && err.body) {
+      httpBody = err.body;
+    } else if (err && err.response && err.response.body) {
+      httpBody = err.response.body;
+    }
+
+    // Begränsa längden så vi inte spränger loggarna
+    if (typeof httpBody === 'string' && httpBody.length > 1000) {
+      httpBody = httpBody.slice(0, 1000) + '... (truncated)';
+    }
+
+    const messageParts = ['Tradera API http error'];
+    if (httpStatus) messageParts.push(`status=${httpStatus}`);
+    if (httpBody) messageParts.push(`body=${httpBody}`);
+
+    const wrapped = new Error(messageParts.join(' | '));
+    wrapped.httpStatus = httpStatus;
+    wrapped.httpBody = httpBody;
+
+    throw wrapped;
   }
 }
 
