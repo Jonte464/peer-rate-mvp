@@ -1,4 +1,4 @@
-<!doctype html>
+<!doctype html> 
 <html lang="sv">
 <head>
   <meta charset="utf-8" />
@@ -161,9 +161,25 @@
       <section class="card">
         <div class="row" style="align-items:center;justify-content:space-between;">
           <h2 style="margin-bottom:0;">Översikt</h2>
-          <button id="admin-logout-btn" type="button" class="secondary" style="flex:0 0 auto;width:auto;">
-            Logga ut admin
-          </button>
+          <div style="display:flex;gap:8px;flex:0 0 auto;">
+            <!-- NY KNAPP: Öppna PeerRate Agent -->
+            <button
+              type="button"
+              class="secondary"
+              style="width:auto;"
+              onclick="window.location.href='agent.html'">
+              Öppna PeerRate Agent
+            </button>
+
+            <!-- Befintlig logga ut-knapp -->
+            <button
+              id="admin-logout-btn"
+              type="button"
+              class="secondary"
+              style="width:auto;">
+              Logga ut admin
+            </button>
+          </div>
         </div>
         <p class="tiny muted">Snabb överblick över PeerRate-data.</p>
         <div class="stats-grid">
