@@ -1,21 +1,26 @@
 // backend/routes/traderaRoutes.js
 //
 // API-endpoints för att hämta och synka Tradera-data till "Min profil".
+// - summary: hämta lagrade ordrar
+// - sync-now: (valfritt) scraping via Playwright
+// - api-test: testa kontakt mot Tradera SOAP API
+// - import-json: importera ordrar (t.ex. från lokalt script eller SOAP-anrop)
 //
 // Lagringslogiken ligger i backend/storage.tradera.js
-// Scraping-/import-logik ligger i services/traderaService.js
+// Import-logiken ligger i services/traderaService.js
 
 const express = require('express');
 const Joi = require('joi');
 
-// 🔁 Viktigt: hämta från storage.tradera.js (nya filen)
 const { getTraderaSummaryBySubjectRef } = require('../storage.tradera');
-
 const { normSubject } = require('../helpers');
+
 const {
   syncTraderaForEmail,
   importTraderaOrdersForEmail,
 } = require('../services/traderaService');
+
+const { testApiConnection } = require('../services/traderaApiService');
 
 const router = express.Router();
 
@@ -50,14 +55,12 @@ router.get('/tradera/summary', async (req, res) => {
   const limit = value.limit;
 
   try {
-    // Vi använder samma normalisering som vid registrering/login.
     const subjectRef = normSubject(emailTrim);
 
     const summary = await getTraderaSummaryBySubjectRef(subjectRef, {
       limit,
     });
 
-    // Skicka vidare hela objektet (hasTradera, profile, orders, summary)
     return res.json({
       ok: true,
       ...summary,
@@ -77,18 +80,6 @@ router.get('/tradera/summary', async (req, res) => {
    Body:
    {
      "email": "kundensmejl@example.com"
-   }
-
-   Returnerar t.ex.:
-   {
-     ok: true,
-     result: {
-       ok: true/false,
-       created: 3,
-       updated: 1,
-       totalScraped: 4,
-       message?: "..."
-     }
    }
    ------------------------------------------------------- */
 const syncBodySchema = Joi.object({
@@ -122,82 +113,105 @@ router.post('/tradera/sync-now', async (req, res) => {
 });
 
 /* -------------------------------------------------------
-   POST /api/tradera/import-json
-   Importera Tradera-ordrar via JSON (t.ex. från Tradera API eller
-   ett lokalt script).
+   GET /api/tradera/api-test
+   Testar om vi kan nå Tradera SOAP API
+   ------------------------------------------------------- */
+router.get('/tradera/api-test', async (_req, res) => {
+  try {
+    const result = await testApiConnection();
+    return res.json({ ok: true, message: 'API-anslutning OK', result });
+  } catch (err) {
+    console.error('[GET /api/tradera/api-test] error:', err);
+    return res.status(500).json({
+      ok: false,
+      error: 'Kunde inte ansluta till Tradera API',
+      details: err?.message || 'Okänt fel',
+    });
+  }
+});
 
-   Body:
+/* -------------------------------------------------------
+   POST /api/tradera/import-json
+   Importera Tradera-ordrar "utifrån" utan att köra scraping i produktion.
+
+   Tanken är att du kan:
+   - köra ett lokalt script (Playwright eller SOAP)
+   - hämta alla ordrar
+   - skicka dem hit i JSON-format
+
+   Body-exempel:
    {
-     "email": "kundensmejl@example.com",
+     "email": "jonathan@example.com",
      "orders": [
        {
-         "traderaOrderId": "12345",
-         "traderaItemId": "98765",
-         "title": "Artikel",
-         "amount": 123.45,
+         "traderaOrderId": "123456",
+         "traderaItemId": "987654",
+         "title": "Sony WH-1000XM4",
+         "amount": "1299.00",
          "currency": "SEK",
-         "role": "BUYER" | "SELLER",
-         "counterpartyAlias": "...",
-         "counterpartyEmail": "...",
-         "completedAt": "2024-01-01T12:34:56Z",
-         "rawJson": { ... valfri extra data ... }
-       },
-       ...
+         "role": "BUYER",              // eller "SELLER"
+         "counterpartyAlias": "Säljare123",
+         "counterpartyEmail": "saljare@example.com",
+         "completedAt": "2024-11-01T12:34:56Z"
+       }
      ]
    }
    ------------------------------------------------------- */
-
 const importBodySchema = Joi.object({
   email: Joi.string().email().required(),
-  orders: Joi.array().items(Joi.object().unknown(true)).min(1).required(),
+  orders: Joi.array()
+    .items(
+      Joi.object({
+        traderaOrderId: Joi.alternatives(
+          Joi.string().min(1),
+          Joi.number().integer()
+        ).required(),
+        traderaItemId: Joi.alternatives(
+          Joi.string().allow(''),
+          Joi.number().integer()
+        ).optional(),
+        title: Joi.string().allow('', null).optional(),
+        amount: Joi.alternatives(Joi.string(), Joi.number()).optional(),
+        currency: Joi.string().max(10).optional(),
+        role: Joi.string().valid('BUYER', 'SELLER').optional(),
+        counterpartyAlias: Joi.string().allow('', null).optional(),
+        counterpartyEmail: Joi.string().email().allow('', null).optional(),
+        completedAt: Joi.string().allow('', null).optional(),
+        // tillåt extra fält som vi bara stoppar i rawJson
+      }).unknown(true)
+    )
+    .min(1)
+    .required(),
 });
 
 router.post('/tradera/import-json', async (req, res) => {
-  const { error, value } = importBodySchema.validate(req.body || {});
+  const { error, value } = importBodySchema.validate(req.body || {}, {
+    abortEarly: false,
+  });
+
   if (error) {
     return res.status(400).json({
       ok: false,
-      error: 'Ogiltig body. E-post och minst en order krävs.',
-      details: error.details?.map((d) => d.message),
+      error: 'Ogiltigt format på Tradera-ordrar.',
+      details: error.details.map((d) => d.message),
     });
   }
 
   const emailTrim = String(value.email || '').trim().toLowerCase();
-  const orders = value.orders;
+  const orders = value.orders || [];
 
   try {
     const result = await importTraderaOrdersForEmail(emailTrim, orders);
     return res.json({
       ok: true,
+      message: 'Tradera-ordrar importerade.',
       result,
     });
   } catch (e) {
     console.error('[POST /api/tradera/import-json] error:', e);
     return res.status(500).json({
       ok: false,
-      error:
-        e && e.message
-          ? e.message
-          : 'Kunde inte importera Tradera-ordrar just nu.',
-    });
-  }
-});
-
-// -------------------------------------------------------
-// GET /api/tradera/api-test
-// Testar om vi kan nå Tradera SOAP API
-// -------------------------------------------------------
-const { testApiConnection } = require('../services/traderaApiService');
-
-router.get('/tradera/api-test', async (req, res) => {
-  try {
-    const result = await testApiConnection();
-    return res.json({ ok: true, message: 'API-anslutning OK', result });
-  } catch (err) {
-    return res.status(500).json({
-      ok: false,
-      error: 'Kunde inte ansluta till Tradera API',
-      details: err?.message,
+      error: e?.message || 'Kunde inte importera Tradera-ordrar.',
     });
   }
 });
