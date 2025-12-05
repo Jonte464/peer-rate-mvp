@@ -2,81 +2,119 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>PeerRate Agent</title>
+  <title>PeerRate Agent – Inställningar</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Enkel bas-stil, försöker hålla oss kompatibla med befintliga css-filer -->
+  <!-- Återanvänd din vanliga stil -->
   <link rel="stylesheet" href="./style.css" />
 
   <style>
-    /* Lite extra stil bara för denna sida */
+    :root {
+      --brand-orange:#f6a94b;
+      --brand-card:#fbf2e6;
+      --brand-border:#eadfce;
+      --brand-ink:#1e1830;
+      --brand-ink-d:#4a425e;
+      --brand-purple:#1b1533;
+    }
+
+    * { box-sizing: border-box; }
+
     body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #0b1120;
-      color: #e5e7eb;
       margin: 0;
-      padding: 0;
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      color: var(--brand-ink);
+      background: var(--brand-orange);
     }
 
-    .agent-page {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 1.5rem;
+    .agent-page-wrap {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 16px;
     }
 
-    .agent-header {
-      margin-bottom: 1.5rem;
+    .agent-card-shell {
+      width: 100%;
+      max-width: 960px;
+      background: var(--brand-card);
+      border-radius: 24px;
+      border: 1px solid var(--brand-border);
+      box-shadow: 0 18px 45px rgba(0,0,0,.12);
+      padding: 20px 22px 24px;
     }
 
-    .agent-header h1 {
-      font-size: 1.8rem;
-      margin-bottom: 0.5rem;
+    .agent-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+
+    .agent-title {
+      font-size: 22px;
+      font-weight: 800;
+      margin: 0;
+    }
+
+    .agent-sub {
+      font-size: 13px;
+      color: var(--brand-ink-d);
+      margin: 4px 0 0;
     }
 
     .agent-layout {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-      margin-bottom: 1.5rem;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 14px;
+      margin-bottom: 16px;
     }
 
-    .agent-card {
-      background: #020617;
-      border-radius: 0.75rem;
-      padding: 1rem 1.25rem;
-      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.7);
-      border: 1px solid #1f2937;
+    .agent-panel {
+      background: #fff;
+      border-radius: 18px;
+      border: 1px solid rgba(0,0,0,.05);
+      padding: 14px 14px 16px;
     }
 
-    .agent-card h2 {
-      font-size: 1.2rem;
-      margin-top: 0;
-      margin-bottom: 0.75rem;
+    .agent-panel h2 {
+      margin: 0 0 6px;
+      font-size: 16px;
+    }
+
+    .agent-panel-desc {
+      font-size: 12px;
+      color: var(--brand-ink-d);
+      margin: 0 0 10px;
     }
 
     .agent-section {
-      margin-bottom: 0.75rem;
+      margin-bottom: 10px;
     }
 
     .agent-section-title {
-      font-size: 0.9rem;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .05em;
-      color: #9ca3af;
-      margin-bottom: 0.35rem;
+      letter-spacing: .06em;
+      color: var(--brand-ink-d);
+      margin-bottom: 4px;
     }
 
     .agent-option {
       display: flex;
       align-items: flex-start;
-      gap: 0.5rem;
-      margin-bottom: 0.4rem;
-      font-size: 0.9rem;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: var(--brand-ink-d);
     }
 
     .agent-option input[type="checkbox"] {
-      margin-top: 0.15rem;
+      margin-top: 1px;
     }
 
     .agent-option label {
@@ -85,64 +123,122 @@
 
     .agent-textarea {
       width: 100%;
-      min-height: 80px;
-      border-radius: 0.5rem;
-      border: 1px solid #374151;
-      background: #020617;
-      color: #e5e7eb;
-      padding: 0.5rem 0.6rem;
-      font-size: 0.9rem;
+      min-height: 70px;
+      border-radius: 12px;
+      border: 1px solid #d9cbb7;
+      background: #fff;
+      color: var(--brand-ink);
+      padding: 8px 10px;
+      font-size: 12px;
       resize: vertical;
+      font-family: inherit;
     }
 
     .agent-summary-card {
-      margin-top: 1rem;
-      background: #020617;
-      border-radius: 0.75rem;
-      padding: 0.9rem 1.1rem;
-      border: 1px solid #1d4ed8;
+      background: #fff;
+      border-radius: 18px;
+      border: 1px solid rgba(0,0,0,.05);
+      padding: 12px 14px 16px;
+      margin-top: 4px;
     }
 
-    .agent-summary-card h3 {
-      margin-top: 0;
-      margin-bottom: 0.5rem;
-      font-size: 1rem;
+    .agent-summary-title {
+      font-size: 14px;
+      font-weight: 700;
+      margin: 0 0 4px;
     }
 
-    .agent-summary-list {
-      font-size: 0.9rem;
+    .agent-summary-text {
+      font-size: 12px;
+      color: var(--brand-ink-d);
       line-height: 1.4;
-      color: #d1d5db;
     }
 
     .agent-pill-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.4rem;
-      margin-top: 0.35rem;
+      gap: 4px;
+      margin-top: 6px;
     }
 
     .agent-pill {
-      padding: 0.15rem 0.45rem;
+      padding: 2px 8px;
       border-radius: 999px;
-      border: 1px solid #4b5563;
-      font-size: 0.75rem;
-      color: #9ca3af;
-      background: #020617;
+      border: 1px solid #d1c4b8;
+      font-size: 11px;
+      background: #fff7f0;
+      color: var(--brand-ink-d);
+    }
+
+    .agent-prompt-box {
+      margin-top: 14px;
+      background: #fff;
+      border-radius: 18px;
+      border: 1px solid rgba(0,0,0,.05);
+      padding: 12px 14px 16px;
+    }
+
+    .agent-prompt-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .agent-prompt-header h3 {
+      margin: 0;
+      font-size: 14px;
+    }
+
+    .agent-prompt-note {
+      font-size: 11px;
+      color: var(--brand-ink-d);
+      margin: 0 0 6px;
+    }
+
+    .agent-prompt-textarea {
+      width: 100%;
+      min-height: 90px;
+      border-radius: 12px;
+      border: 1px solid #d9cbb7;
+      background: #fffaf4;
+      color: var(--brand-ink);
+      padding: 8px 10px;
+      font-size: 12px;
+      resize: vertical;
+      font-family: inherit;
+    }
+
+    .agent-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 0;
+      background: var(--brand-purple);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .agent-btn:hover {
+      filter: brightness(1.05);
     }
 
     .agent-footer {
-      margin-top: 1rem;
-      font-size: 0.8rem;
-      color: #9ca3af;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--brand-ink-d);
     }
 
     .agent-footer code {
-      font-size: 0.8rem;
-      background: #020617;
-      padding: 0.15rem 0.3rem;
-      border-radius: 0.25rem;
-      border: 1px solid #1f2937;
+      font-size: 11px;
+      background: rgba(0,0,0,.03);
+      padding: 1px 3px;
+      border-radius: 4px;
     }
 
     @media (max-width: 900px) {
@@ -153,168 +249,174 @@
   </style>
 </head>
 <body>
-  <div class="agent-page">
-    <header class="agent-header">
-      <h1>PeerRate Agent – Regler & Automatisering</h1>
-      <p style="max-width: 700px; font-size: 0.9rem; color:#d1d5db;">
-        Här ställer du in hur din PeerRate-agent ska bete sig. Block 1 styr vilka
-        <strong>regler & “prompt-profil”</strong> agenten följer. Block 2 styr
-        vilka <strong>automatiska beteenden</strong> som ska vara aktiva
-        (t.ex. trådhantering, kodskydd m.m.).
-      </p>
-    </header>
-
-    <main class="agent-layout">
-      <!-- BLOCK 1: Regler / Promptprofil -->
-      <section class="agent-card" id="rules-card">
-        <h2>Block 1 – Regler / Promptprofil</h2>
-
-        <div class="agent-section">
-          <div class="agent-section-title">Allmän stil & språk</div>
-          <div class="agent-option">
-            <input type="checkbox" id="rule-simple-language" checked />
-            <label for="rule-simple-language">
-              Förklara alltid saker <strong>väldigt enkelt</strong> (nybörjarnivå)
-              och dela upp i små steg.
-            </label>
-          </div>
-          <div class="agent-option">
-            <input type="checkbox" id="rule-max-3-steps" checked />
-            <label for="rule-max-3-steps">
-              Ge max <strong>3 steg åt gången</strong> och fråga alltid om jag vill
-              ha nästa 3 steg.
-            </label>
-          </div>
+  <div class="agent-page-wrap">
+    <div class="agent-card-shell">
+      <header class="agent-header-bar">
+        <div>
+          <h1 class="agent-title">PeerRate Agent – inställningar</h1>
+          <p class="agent-sub">
+            Ställ in vilka regler och automatiska beteenden din utvecklar-/AI-agent ska följa.
+          </p>
         </div>
+      </header>
 
-        <div class="agent-section">
-          <div class="agent-section-title">Kod & säkerhet</div>
-          <div class="agent-option">
-            <input type="checkbox" id="rule-no-hallucinations" checked />
-            <label for="rule-no-hallucinations">
-              Minimera hallucinationer: om information saknas – fråga istället
-              för att hitta på.
-            </label>
-          </div>
-          <div class="agent-option">
-            <input type="checkbox" id="rule-full-blocks" checked />
-            <label for="rule-full-blocks">
-              Ge alltid <strong>hela kodblock eller hela filer</strong> som kan
-              kopieras rakt in i VS Code utan pill.
-            </label>
-          </div>
-          <div class="agent-option">
-            <input type="checkbox" id="rule-ask-for-current-code" checked />
-            <label for="rule-ask-for-current-code">
-              Be alltid först om <strong>nuvarande kod</strong> innan du ger ny
-              kod, så vi aldrig skriver över viktiga uppdateringar.
-            </label>
-          </div>
-        </div>
+      <main class="agent-layout">
+        <!-- BLOCK 1: Regler / Promptprofil -->
+        <section class="agent-panel" id="rules-card">
+          <h2>Block 1 – Regler & stil</h2>
+          <p class="agent-panel-desc">
+            Här väljer du hur agenten ska skriva, tänka och förhålla sig till kod.
+          </p>
 
-        <div class="agent-section">
-          <div class="agent-section-title">Mentorskap & “smarthet”</div>
-          <div class="agent-option">
-            <input type="checkbox" id="rule-mentor-mode" checked />
-            <label for="rule-mentor-mode">
-              Agera som <strong>mentor</strong>: rätta mina slarviga promptar,
-              föreslå smartare lösningar innan du följer min första idé.
-            </label>
+          <div class="agent-section">
+            <div class="agent-section-title">Språk & pedagogik</div>
+            <div class="agent-option">
+              <input type="checkbox" id="rule-simple-language" checked />
+              <label for="rule-simple-language">
+                Förklara alltid saker <strong>väldigt enkelt</strong> (nybörjarnivå)
+                och dela upp i små steg.
+              </label>
+            </div>
+            <div class="agent-option">
+              <input type="checkbox" id="rule-max-3-steps" checked />
+              <label for="rule-max-3-steps">
+                Ge max <strong>3 steg åt gången</strong> och fråga om jag vill ha nästa 3 steg.
+              </label>
+            </div>
           </div>
-          <div class="agent-option">
-            <input type="checkbox" id="rule-dependency-warnings" checked />
-            <label for="rule-dependency-warnings">
-              Varna om en ändring kan påverka annan kod (beroenden, routes,
-              databasen m.m.).
-            </label>
-          </div>
-        </div>
 
-        <div class="agent-section">
-          <div class="agent-section-title">Egna regler (valfritt)</div>
-          <textarea
-            id="rule-custom"
-            class="agent-textarea"
-            placeholder="Skriv egna regler eller önskemål, t.ex. 'agera alltid försiktigt med databasen', 'prioritera Tradera-modulen' osv."
-          ></textarea>
+          <div class="agent-section">
+            <div class="agent-section-title">Kod & säkerhet</div>
+            <div class="agent-option">
+              <input type="checkbox" id="rule-no-hallucinations" checked />
+              <label for="rule-no-hallucinations">
+                Minimera <strong>hallucinationer</strong>: om information saknas, fråga istället för att hitta på.
+              </label>
+            </div>
+            <div class="agent-option">
+              <input type="checkbox" id="rule-full-blocks" checked />
+              <label for="rule-full-blocks">
+                Ge alltid <strong>hela kodblock eller hela filer</strong> som kan klistras in direkt i VS Code.
+              </label>
+            </div>
+            <div class="agent-option">
+              <input type="checkbox" id="rule-ask-for-current-code" checked />
+              <label for="rule-ask-for-current-code">
+                Be alltid först om <strong>nuvarande kod</strong> innan du föreslår ny kod.
+              </label>
+            </div>
+          </div>
+
+          <div class="agent-section">
+            <div class="agent-section-title">Mentorskap</div>
+            <div class="agent-option">
+              <input type="checkbox" id="rule-mentor-mode" checked />
+              <label for="rule-mentor-mode">
+                Agera som <strong>mentor</strong>: rätta slarviga promptar och föreslå smartare lösningar.
+              </label>
+            </div>
+            <div class="agent-option">
+              <input type="checkbox" id="rule-dependency-warnings" checked />
+              <label for="rule-dependency-warnings">
+                Varna om en ändring kan påverka andra delar (beroenden, routes, databas m.m.).
+              </label>
+            </div>
+          </div>
+
+          <div class="agent-section">
+            <div class="agent-section-title">Egna regler (valfritt)</div>
+            <textarea
+              id="rule-custom"
+              class="agent-textarea"
+              placeholder="Skriv egna regler eller önskemål, t.ex. 'prioritera Tradera-modulen', 'var extra försiktig med databasen' osv."
+            ></textarea>
+          </div>
+        </section>
+
+        <!-- BLOCK 2: Automatiseringar -->
+        <section class="agent-panel" id="automation-card">
+          <h2>Block 2 – Automatiseringar</h2>
+          <p class="agent-panel-desc">
+            Här väljer du vad agenten ska göra automatiskt, t.ex. trådhantering och git-hjälp.
+          </p>
+
+          <div class="agent-section">
+            <div class="agent-section-title">Trådar & kontext</div>
+            <div class="agent-option">
+              <input type="checkbox" id="auto-thread-length" checked />
+              <label for="auto-thread-length">
+                Föreslå <strong>ny tråd</strong> + kort sammanfattning när en konversation blir lång/tung.
+              </label>
+            </div>
+            <div class="agent-option">
+              <input type="checkbox" id="auto-carry-summary" checked />
+              <label for="auto-carry-summary">
+                För alltid över <strong>nyckelinformation (manifest)</strong> till nästa tråd.
+              </label>
+            </div>
+          </div>
+
+          <div class="agent-section">
+            <div class="agent-section-title">Kod & utveckling</div>
+            <div class="agent-option">
+              <input type="checkbox" id="auto-git-commands" checked />
+              <label for="auto-git-commands">
+                Avsluta större ändringar med <strong>färdiga Git-kommandon</strong> (PowerShell) för deploy.
+              </label>
+            </div>
+            <div class="agent-option">
+              <input type="checkbox" id="auto-vscode-friendly" checked />
+              <label for="auto-vscode-friendly">
+                Anpassa alltid instruktioner till <strong>VS Code + GitHub + Render prod</strong>.
+              </label>
+            </div>
+          </div>
+
+          <div class="agent-section">
+            <div class="agent-section-title">Framtida automatiseringar</div>
+            <textarea
+              id="automation-custom"
+              class="agent-textarea"
+              placeholder="Skriv idéer för framtida automation, t.ex. 'kolla Render-loggar', 'förslag på refaktorering' osv."
+            ></textarea>
+          </div>
+        </section>
+      </main>
+
+      <!-- Sammanfattning + genererad prompt -->
+      <section class="agent-summary-card">
+        <h3 class="agent-summary-title">Aktiv agentprofil (översikt)</h3>
+        <div class="agent-summary-text" id="agent-summary-text">
+          Välj regler och automatiseringar ovan så visas här en enkel sammanfattning.
         </div>
+        <div class="agent-pill-row" id="agent-pill-row"></div>
       </section>
 
-      <!-- BLOCK 2: Automatisering -->
-      <section class="agent-card" id="automation-card">
-        <h2>Block 2 – Automatisering & beteenden</h2>
-
-        <div class="agent-section">
-          <div class="agent-section-title">Tråd & kontext</div>
-          <div class="agent-option">
-            <input type="checkbox" id="auto-thread-length" checked />
-            <label for="auto-thread-length">
-              Föreslå <strong>ny tråd</strong> och skapa en kort sammanfattning
-              när en konversation börjar bli lång eller tung.
-            </label>
-          </div>
-          <div class="agent-option">
-            <input type="checkbox" id="auto-carry-summary" checked />
-            <label for="auto-carry-summary">
-              För alltid över <strong>nyckelinformation (manifest)</strong> till
-              nästa tråd automatiskt.
-            </label>
-          </div>
+      <section class="agent-prompt-box">
+        <div class="agent-prompt-header">
+          <h3>Genererad agent-prompt</h3>
+          <button type="button" class="agent-btn" id="copy-prompt-btn">
+            Kopiera till urklipp
+          </button>
         </div>
-
-        <div class="agent-section">
-          <div class="agent-section-title">Kod & utveckling</div>
-          <div class="agent-option">
-            <input type="checkbox" id="auto-git-commands" checked />
-            <label for="auto-git-commands">
-              Avsluta varje större ändring med <strong>färdiga Git-kommandon</strong>
-              (PowerShell) som jag kan kopiera för deploy.
-            </label>
-          </div>
-          <div class="agent-option">
-            <input type="checkbox" id="auto-vscode-friendly" checked />
-            <label for="auto-vscode-friendly">
-              Anpassa alltid instruktioner till att jag använder
-              <strong>VS Code + GitHub + Render prod</strong>.
-            </label>
-          </div>
-        </div>
-
-        <div class="agent-section">
-          <div class="agent-section-title">Framtida automatiseringar</div>
-          <textarea
-            id="automation-custom"
-            class="agent-textarea"
-            placeholder="Skriv idéer för framtida automatisering, t.ex. 'automatiskt sammanfatta git diff', 'kolla Render-loggar', 'förslag på refaktoreringar' osv."
-          ></textarea>
-        </div>
+        <p class="agent-prompt-note">
+          Texten nedan kan användas som <code>system-prompt</code> i en ChatGPT-tråd eller via API när du vill
+          aktivera denna profil.
+        </p>
+        <textarea
+          id="agent-prompt-output"
+          class="agent-prompt-textarea"
+          readonly
+        ></textarea>
       </section>
-    </main>
 
-    <!-- Sammanfattning av aktiva inställningar -->
-    <section class="agent-summary-card">
-      <h3>Aktiv agentprofil (översikt)</h3>
-      <div class="agent-summary-list" id="agent-summary-text">
-        Välj regler och automatiseringar i blocken ovan, så ser du här en enkel
-        sammanfattning av hur din PeerRate-agent kommer att bete sig.
+      <div class="agent-footer">
+        Denna sida är ett kontrollcenter för din framtida PeerRate-agent. Själva AI-kopplingen görs senare via
+        OpenAI API, men här designar du reglerna och beteendet.
       </div>
-
-      <div class="agent-pill-row" id="agent-pill-row">
-        <!-- Små “piller-taggar” fylls i via JavaScript -->
-      </div>
-    </section>
-
-    <footer class="agent-footer">
-      Denna sida är ett <strong>kontrollcenter</strong> för din framtida PeerRate-agent.
-      Själva “hjärnan” (AI) kopplas senare på via OpenAI API, men gränssnittet och
-      reglerna kan vi designa redan nu.
-      <br />
-      Senare kan denna profil skickas in som <code>system-prompt</code> till din
-      agent via API.
-    </footer>
+    </div>
   </div>
 
-  <!-- Enkel modul för att hantera UI (kommer i nästa steg) -->
   <script type="module" src="./modules/agent.js"></script>
 </body>
 </html>

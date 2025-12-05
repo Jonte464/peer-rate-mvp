@@ -1,9 +1,8 @@
 // frontend/modules/agent.js
 //
-// Enkel första version av logik för PeerRate Agent UI.
-// Just nu finns ingen koppling till OpenAI API.
-// Vi fokuserar bara på att läsa av valet av regler + automation
-// och visa en tydlig sammanfattning.
+// Hanterar UI-logiken för PeerRate Agent-inställningar.
+// Ingen AI-koppling ännu – vi bygger bara profiltexten
+// som senare kan användas som system-prompt.
 
 function el(id) {
   return document.getElementById(id);
@@ -11,104 +10,99 @@ function el(id) {
 
 const summaryTextEl = el('agent-summary-text');
 const pillRowEl = el('agent-pill-row');
+const promptOutputEl = el('agent-prompt-output');
+const copyBtn = el('copy-prompt-btn');
 
-// Alla “regler” vi vill bevaka
 const ruleConfig = [
   {
     id: 'rule-simple-language',
-    label: 'Förklara saker väldigt enkelt (nybörjarnivå).',
+    label: 'Förklara alltid saker väldigt enkelt (nybörjarnivå) och dela upp i små steg.',
     pill: 'Enkelt språk',
-    group: 'Regler',
   },
   {
     id: 'rule-max-3-steps',
-    label: 'Ge max 3 steg åt gången och fråga om nästa.',
+    label: 'Ge max 3 steg åt gången och fråga om jag vill ha nästa 3 steg.',
     pill: 'Max 3 steg',
-    group: 'Regler',
   },
   {
     id: 'rule-no-hallucinations',
-    label: 'Minimera hallucinationer, fråga när information saknas.',
+    label: 'Minimera hallucinationer: om information saknas ska agenten fråga istället för att hitta på.',
     pill: 'Anti-hallucination',
-    group: 'Kod & säkerhet',
   },
   {
     id: 'rule-full-blocks',
-    label: 'Leverera hela kodblock/filer som kan klistras in direkt.',
+    label: 'Ge alltid hela kodblock eller hela filer som kan klistras in direkt i VS Code.',
     pill: 'Hela kodblock',
-    group: 'Kod & säkerhet',
   },
   {
     id: 'rule-ask-for-current-code',
-    label: 'Be alltid om nuvarande kod innan du ger ny kod.',
+    label: 'Be alltid först om nuvarande kod innan ny kod föreslås.',
     pill: 'Be om aktuell kod',
-    group: 'Kod & säkerhet',
   },
   {
     id: 'rule-mentor-mode',
-    label: 'Agera mentor och föreslå smartare lösningar.',
+    label: 'Agera som mentor: rätta slarviga promptar och föreslå smartare lösningar före blind lydnad.',
     pill: 'Mentor-läge',
-    group: 'Mentorskap',
   },
   {
     id: 'rule-dependency-warnings',
-    label: 'Varna om ändringar kan påverka beroenden/andra delar.',
+    label: 'Varna när ändringar kan påverka beroenden, andra filer, routes eller databasen.',
     pill: 'Beroendevarningar',
-    group: 'Mentorskap',
   },
 ];
 
-// Alla “automatiseringar” vi vill bevaka
 const automationConfig = [
   {
     id: 'auto-thread-length',
     label:
-      'Föreslå ny tråd + sammanfattning när konversationen blir lång/tung.',
+      'Föreslå ny tråd och skapa en kort sammanfattning när en konversation börjar bli lång eller “tung”.',
     pill: 'Automatisk trådhantering',
-    group: 'Tråd & kontext',
   },
   {
     id: 'auto-carry-summary',
-    label: 'För över nyckelinformation automatiskt till nästa tråd.',
+    label: 'För alltid över nyckelinformation (manifest) till nästa tråd.',
     pill: 'För över manifest',
-    group: 'Tråd & kontext',
   },
   {
     id: 'auto-git-commands',
     label:
-      'Avsluta ändringar med färdiga Git-kommandon (PowerShell) för deploy.',
+      'Avsluta större ändringar med färdiga Git-kommandon (PowerShell) för att pusha till GitHub/Render prod.',
     pill: 'Git-kommando i slutet',
-    group: 'Kod & utveckling',
   },
   {
     id: 'auto-vscode-friendly',
     label:
-      'Anpassa alltid instruktioner till VS Code + GitHub + Render prod.',
+      'Anpassa alltid instruktioner till att användaren kör VS Code + GitHub + Render (peer-rate-prod).',
     pill: 'VS Code + Render',
-    group: 'Kod & utveckling',
   },
 ];
 
-// Läser alla checkboxar + fritext och uppdaterar sammanfattningen
-function updateSummary() {
+// Lite HTML-escaping för trygg rendering i sammanfattningen
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// Bygg sammanfattning + piller + prompttext
+function updateSummaryAndPrompt() {
   const activeRules = [];
   const activeAutomations = [];
   const pills = [];
 
-  // Regler
   for (const cfg of ruleConfig) {
     const checkbox = el(cfg.id);
     if (checkbox && checkbox.checked) {
-      activeRules.push({ group: cfg.group, text: cfg.label });
+      activeRules.push(cfg.label);
       pills.push(cfg.pill);
     }
   }
 
-  // Automatiseringar
   for (const cfg of automationConfig) {
     const checkbox = el(cfg.id);
     if (checkbox && checkbox.checked) {
-      activeAutomations.push({ group: cfg.group, text: cfg.label });
+      activeAutomations.push(cfg.label);
       pills.push(cfg.pill);
     }
   }
@@ -116,36 +110,30 @@ function updateSummary() {
   const customRules = (el('rule-custom')?.value || '').trim();
   const customAutomation = (el('automation-custom')?.value || '').trim();
 
+  // --- Sammanfattning (visuell) ---
   let lines = [];
 
   if (activeRules.length > 0) {
     lines.push('<strong>Aktiva regler:</strong>');
-    lines = lines.concat(
-      activeRules.map(
-        (r) => `• (${r.group}) ${escapeHtml(r.text)}`
-      )
-    );
+    for (const text of activeRules) {
+      lines.push(`• ${escapeHtml(text)}`);
+    }
   } else {
     lines.push('Inga regler är aktiverade ännu.');
   }
 
   if (activeAutomations.length > 0) {
     lines.push('<br /><strong>Aktiva automatiseringar:</strong>');
-    lines = lines.concat(
-      activeAutomations.map(
-        (a) => `• (${a.group}) ${escapeHtml(a.text)}`
-      )
-    );
+    for (const text of activeAutomations) {
+      lines.push(`• ${escapeHtml(text)}`);
+    }
   } else {
-    lines.push(
-      '<br />Inga automatiseringar är aktiverade ännu.'
-    );
+    lines.push('<br />Inga automatiseringar är aktiverade ännu.');
   }
 
   if (customRules) {
     lines.push(
-      '<br /><strong>Egna regler:</strong><br />' +
-        escapeHtml(customRules)
+      '<br /><strong>Egna regler:</strong><br />' + escapeHtml(customRules)
     );
   }
 
@@ -158,25 +146,87 @@ function updateSummary() {
 
   summaryTextEl.innerHTML = lines.join('<br />');
 
-  // Uppdatera små “pills”
+  // Piller-taggar
   pillRowEl.innerHTML = '';
-  for (const pillText of pills) {
+  for (const pill of pills) {
     const span = document.createElement('span');
     span.className = 'agent-pill';
-    span.textContent = pillText;
+    span.textContent = pill;
     pillRowEl.appendChild(span);
+  }
+
+  // --- Genererad prompttext (för ChatGPT/API) ---
+
+  const promptParts = [];
+
+  promptParts.push(
+    'Du är en AI-assistent kopplad till projektet PeerRate (peerrate.ai). ' +
+      'Du hjälper till med utveckling, kod, design och resonemang kring PeerRate-plattformen. ' +
+      'Användaren är nybörjare och du ska vara mycket tydlig och pedagogisk.'
+  );
+
+  if (activeRules.length > 0) {
+    promptParts.push(
+      '\n\nFöljande regler ska du alltid följa:\n- ' +
+        activeRules.join('\n- ')
+    );
+  }
+
+  if (activeAutomations.length > 0) {
+    promptParts.push(
+      '\n\nFöljande automatiska beteenden ska du efterlikna i dina svar (så långt det går i denna miljö):\n- ' +
+        activeAutomations.join('\n- ')
+    );
+  }
+
+  if (customRules) {
+    promptParts.push('\n\nYtterligare särskilda regler:\n' + customRules);
+  }
+
+  if (customAutomation) {
+    promptParts.push(
+      '\n\nIdéer/önskemål för automatisering som du ska ta hänsyn till när du planerar arbetssättet:\n' +
+        customAutomation
+    );
+  }
+
+  promptParts.push(
+    '\n\nNär du ger instruktioner om kod ska du i möjligaste mån ge hela kodblock eller hela filer ' +
+      'som användaren kan klistra direkt in i VS Code. ' +
+      'Avsluta gärna större ändringar med förslag på git-kommandon (PowerShell) för att pusha till main.'
+  );
+
+  promptOutputEl.value = promptParts.join('');
+}
+
+// Kopiera prompt till urklipp
+function copyPromptToClipboard() {
+  const text = promptOutputEl.value || '';
+  if (!text.trim()) {
+    alert('Det finns ingen genererad prompt att kopiera ännu.');
+    return;
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        alert('Prompten är kopierad till urklipp.');
+      })
+      .catch(() => {
+        // Fallback
+        promptOutputEl.select();
+        document.execCommand('copy');
+        alert('Prompten är kopierad (fallback-läge).');
+      });
+  } else {
+    // Äldre fallback
+    promptOutputEl.select();
+    document.execCommand('copy');
+    alert('Prompten är kopierad (fallback-läge).');
   }
 }
 
-// Enkel HTML-escaping
-function escapeHtml(str) {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-// Sätt event-lyssnare
 function init() {
   const allIds = [
     ...ruleConfig.map((r) => r.id),
@@ -188,15 +238,16 @@ function init() {
   for (const id of allIds) {
     const element = el(id);
     if (!element) continue;
-
-    const eventName =
-      element.tagName === 'TEXTAREA' ? 'input' : 'change';
-
-    element.addEventListener(eventName, updateSummary);
+    const eventName = element.tagName === 'TEXTAREA' ? 'input' : 'change';
+    element.addEventListener(eventName, updateSummaryAndPrompt);
   }
 
-  // Kör en första uppdatering så att sidan inte ser tom ut
-  updateSummary();
+  if (copyBtn) {
+    copyBtn.addEventListener('click', copyPromptToClipboard);
+  }
+
+  // Init första gången
+  updateSummaryAndPrompt();
 }
 
 document.addEventListener('DOMContentLoaded', init);
