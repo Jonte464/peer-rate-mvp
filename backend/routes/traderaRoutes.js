@@ -183,4 +183,23 @@ router.post('/tradera/import-json', async (req, res) => {
   }
 });
 
+// -------------------------------------------------------
+// GET /api/tradera/api-test
+// Testar om vi kan nå Tradera SOAP API
+// -------------------------------------------------------
+const { testApiConnection } = require('../services/traderaApiService');
+
+router.get('/tradera/api-test', async (req, res) => {
+  try {
+    const result = await testApiConnection();
+    return res.json({ ok: true, message: 'API-anslutning OK', result });
+  } catch (err) {
+    return res.status(500).json({
+      ok: false,
+      error: 'Kunde inte ansluta till Tradera API',
+      details: err?.message,
+    });
+  }
+});
+
 module.exports = router;
