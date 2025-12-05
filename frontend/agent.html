@@ -5,7 +5,6 @@
   <title>PeerRate Agent – Inställningar</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Återanvänd din vanliga stil -->
   <link rel="stylesheet" href="./style.css" />
 
   <style>
@@ -110,7 +109,7 @@
       gap: 8px;
       margin-bottom: 4px;
       font-size: 13px;
-      color: var(--brand-ink); /* mörk text */
+      color: var(--brand-ink);
     }
 
     .agent-option input[type="checkbox"] {
@@ -178,7 +177,7 @@
 
     .agent-summary-text {
       font-size: 12px;
-      color: var(--brand-ink); /* mörkare text */
+      color: var(--brand-ink);
       line-height: 1.4;
     }
 
@@ -299,7 +298,7 @@
           <div class="agent-section">
             <div class="agent-section-title">Språk & pedagogik</div>
 
-            <!-- Ny dropdown: Kunskapsnivå -->
+            <!-- Kunskapsnivå -->
             <div class="agent-select-group">
               <span class="agent-select-label">Kunskapsnivå</span>
               <select id="level-select" class="agent-select">
@@ -309,30 +308,34 @@
               </select>
             </div>
 
-            <!-- Ny dropdown: Svarstyp / grounding -->
+            <!-- Svarstyp / grounding -->
             <div class="agent-select-group">
               <span class="agent-select-label">Hur ska svaren vara grundade?</span>
               <select id="answer-style-select" class="agent-select">
                 <option value="reflective" selected>
-                  Reflekterande / hypotetiska svar (mer resonemang, ibland spekulativa)
+                  Reflekterande / hypotetiska (mycket resonemang)
                 </option>
                 <option value="strict">
-                  Strikta, icke-hallucinerande svar (så korrekt som möjligt, tydlig käll/logik-förankring)
+                  Strikta, icke-hallucinerande (så korrekt som möjligt)
                 </option>
               </select>
             </div>
 
-            <div class="agent-option" style="margin-top:6px;">
-              <input type="checkbox" id="rule-simple-language" checked />
-              <label for="rule-simple-language">
-                Förklara alltid saker <strong>väldigt enkelt</strong> (särskilt vid nivån “Nybörjare”) och dela upp i små steg.
-              </label>
-            </div>
-            <div class="agent-option">
-              <input type="checkbox" id="rule-max-3-steps" checked />
-              <label for="rule-max-3-steps">
-                Ge max <strong>3 steg åt gången</strong> och fråga om jag vill ha nästa 3 steg.
-              </label>
+            <!-- NY: Max antal steg per svar -->
+            <div class="agent-select-group">
+              <span class="agent-select-label">Max antal steg per svar</span>
+              <select id="steps-select" class="agent-select">
+                <option value="1">1 steg</option>
+                <option value="2">2 steg</option>
+                <option value="3" selected>3 steg</option>
+                <option value="4">4 steg</option>
+                <option value="5">5 steg</option>
+                <option value="6">6 steg</option>
+                <option value="7">7 steg</option>
+                <option value="8">8 steg</option>
+                <option value="9">9 steg</option>
+                <option value="10">10 steg</option>
+              </select>
             </div>
           </div>
 
@@ -360,6 +363,17 @@
 
           <div class="agent-section">
             <div class="agent-section-title">Mentorskap</div>
+
+            <!-- NY: Mentor-nivå -->
+            <div class="agent-select-group">
+              <span class="agent-select-label">Mentor-nivå</span>
+              <select id="mentor-level-select" class="agent-select">
+                <option value="soft" selected>Mjuk coach (stödjande, försiktig feedback)</option>
+                <option value="balanced">Balans (ärlig men vänlig)</option>
+                <option value="direct">Direkt (väldigt tydlig och rakt på sak)</option>
+              </select>
+            </div>
+
             <div class="agent-option">
               <input type="checkbox" id="rule-mentor-mode" checked />
               <label for="rule-mentor-mode">
@@ -393,6 +407,18 @@
 
           <div class="agent-section">
             <div class="agent-section-title">Trådar & kontext</div>
+
+            <!-- NY: När föreslå ny tråd -->
+            <div class="agent-select-group">
+              <span class="agent-select-label">När ska ny tråd föreslås?</span>
+              <select id="thread-threshold-select" class="agent-select">
+                <option value="manual">Endast när användaren ber om det</option>
+                <option value="short">När tråden blivit ganska lång (~30 meddelanden)</option>
+                <option value="medium" selected>Vid längre trådar (~60 meddelanden)</option>
+                <option value="long">Först vid väldigt långa trådar (~100+ meddelanden)</option>
+              </select>
+            </div>
+
             <div class="agent-option">
               <input type="checkbox" id="auto-thread-length" checked />
               <label for="auto-thread-length">
@@ -409,6 +435,17 @@
 
           <div class="agent-section">
             <div class="agent-section-title">Kod & utveckling</div>
+
+            <!-- NY: Hur ofta ge git-kommandon -->
+            <div class="agent-select-group">
+              <span class="agent-select-label">Git-kommandon i svar</span>
+              <select id="git-mode-select" class="agent-select">
+                <option value="always" selected>Alltid föreslå git-kommandon efter ändringar</option>
+                <option value="big">Endast vid större kodändringar</option>
+                <option value="never">Föreslå inte git-kommandon automatiskt</option>
+              </select>
+            </div>
+
             <div class="agent-option">
               <input type="checkbox" id="auto-git-commands" checked />
               <label for="auto-git-commands">

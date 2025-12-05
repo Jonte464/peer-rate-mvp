@@ -15,17 +15,6 @@ const copyBtn = el('copy-prompt-btn');
 
 const ruleConfig = [
   {
-    id: 'rule-simple-language',
-    label:
-      'Förklara alltid saker väldigt enkelt och dela upp i små steg, särskilt vid kunskapsnivån “Nybörjare”.',
-    pill: 'Enkelt språk',
-  },
-  {
-    id: 'rule-max-3-steps',
-    label: 'Ge max 3 steg åt gången och fråga om användaren vill ha nästa 3 steg.',
-    pill: 'Max 3 steg',
-  },
-  {
     id: 'rule-no-hallucinations',
     label:
       'Minimera hallucinationer: om information saknas ska agenten fråga istället för att hitta på.',
@@ -97,10 +86,9 @@ function updateSummaryAndPrompt() {
   const activeAutomations = [];
   const pills = [];
 
-  // Dropdown: kunskapsnivå
+  // Kunskapsnivå
   const levelSelect = el('level-select');
   const levelValue = levelSelect ? levelSelect.value : 'beginner';
-
   let levelText;
   if (levelValue === 'beginner') {
     levelText = 'Användaren betraktas som nybörjare.';
@@ -110,19 +98,75 @@ function updateSummaryAndPrompt() {
     levelText = 'Användaren har expertnivå (mer komprimerade förklaringar är okej).';
   }
 
-  // Dropdown: stil på svar / grounding
+  // Svarsstil / grounding
   const styleSelect = el('answer-style-select');
   const styleValue = styleSelect ? styleSelect.value : 'reflective';
-
   let styleText;
   if (styleValue === 'reflective') {
     styleText =
-      'Svar ska gärna innehålla resonemang, reflektioner och hypotetiska alternativ – men fortfarande vara rimliga.';
+      'Svar ska innehålla resonemang, reflektioner och ibland hypotetiska alternativ – men fortfarande vara rimliga.';
   } else {
     styleText =
-      'Svar ska vara så strikta och icke-hallucinerande som möjligt, bygga på tydlig logik och, när det är relevant, hänvisa till källor eller tydliga antaganden.';
+      'Svar ska vara så strikta och icke-hallucinerande som möjligt, bygga på tydlig logik och markera osäkerhet tydligt.';
   }
 
+  // Max antal steg per svar
+  const stepsSelect = el('steps-select');
+  const stepsValue = stepsSelect ? stepsSelect.value : '3';
+  const stepsText =
+    'Agenten ska normalt dela upp instruktioner i högst ' +
+    stepsValue +
+    ' tydliga steg per svar.';
+
+  // Mentor-nivå
+  const mentorSelect = el('mentor-level-select');
+  const mentorValue = mentorSelect ? mentorSelect.value : 'soft';
+  let mentorLevelText;
+  if (mentorValue === 'soft') {
+    mentorLevelText =
+      'Mentorstil: mjuk coach, stödjande och försiktig feedback.';
+  } else if (mentorValue === 'balanced') {
+    mentorLevelText =
+      'Mentorstil: balanserad – ärlig men vänlig, tydlig utan att vara hård.';
+  } else {
+    mentorLevelText =
+      'Mentorstil: direkt – väldigt tydlig och rakt på sak, men fortfarande respektfull.';
+  }
+
+  // När föreslå ny tråd
+  const threadSelect = el('thread-threshold-select');
+  const threadValue = threadSelect ? threadSelect.value : 'medium';
+  let threadText;
+  if (threadValue === 'manual') {
+    threadText =
+      'Ny tråd föreslås endast när användaren uttryckligen ber om det.';
+  } else if (threadValue === 'short') {
+    threadText =
+      'Ny tråd kan föreslås redan vid kortare trådar (ca 30 meddelanden).';
+  } else if (threadValue === 'medium') {
+    threadText =
+      'Ny tråd föreslås vid medellånga trådar (ca 60 meddelanden).';
+  } else {
+    threadText =
+      'Ny tråd föreslås först vid väldigt långa trådar (ca 100+ meddelanden).';
+  }
+
+  // Git-kommandon
+  const gitSelect = el('git-mode-select');
+  const gitValue = gitSelect ? gitSelect.value : 'always';
+  let gitText;
+  if (gitValue === 'always') {
+    gitText =
+      'Efter kodändringar ska git-kommandon nästan alltid föreslås som avslutning.';
+  } else if (gitValue === 'big') {
+    gitText =
+      'Git-kommandon föreslås främst vid större kodändringar eller när nya filer tillkommer.';
+  } else {
+    gitText =
+      'Git-kommandon föreslås normalt inte automatiskt, om inte användaren ber om det.';
+  }
+
+  // Checkbox-regler
   for (const cfg of ruleConfig) {
     const checkbox = el(cfg.id);
     if (checkbox && checkbox.checked) {
@@ -131,6 +175,7 @@ function updateSummaryAndPrompt() {
     }
   }
 
+  // Checkbox-automationer
   for (const cfg of automationConfig) {
     const checkbox = el(cfg.id);
     if (checkbox && checkbox.checked) {
@@ -145,12 +190,23 @@ function updateSummaryAndPrompt() {
   // --- Sammanfattning (visuell) ---
   const lines = [];
 
-  // Kunskapsnivå & stil först
   lines.push(
     '<strong>Kunnande:</strong> ' + escapeHtml(levelText)
   );
   lines.push(
     '<br /><strong>Svarstyp:</strong> ' + escapeHtml(styleText)
+  );
+  lines.push(
+    '<br /><strong>Steg per svar:</strong> ' + escapeHtml(stepsText)
+  );
+  lines.push(
+    '<br /><strong>Mentorskap:</strong> ' + escapeHtml(mentorLevelText)
+  );
+  lines.push(
+    '<br /><strong>Trådhantering:</strong> ' + escapeHtml(threadText)
+  );
+  lines.push(
+    '<br /><strong>Git-hantering:</strong> ' + escapeHtml(gitText)
   );
 
   if (activeRules.length > 0) {
@@ -158,8 +214,6 @@ function updateSummaryAndPrompt() {
     for (const text of activeRules) {
       lines.push('• ' + escapeHtml(text));
     }
-  } else {
-    lines.push('<br />Inga regler är aktiverade ännu.');
   }
 
   if (activeAutomations.length > 0) {
@@ -167,8 +221,6 @@ function updateSummaryAndPrompt() {
     for (const text of activeAutomations) {
       lines.push('• ' + escapeHtml(text));
     }
-  } else {
-    lines.push('<br />Inga automatiseringar är aktiverade ännu.');
   }
 
   if (customRules) {
@@ -223,7 +275,7 @@ function updateSummaryAndPrompt() {
     );
   }
 
-  // Stil / grounding
+  // Svarsstil
   if (styleValue === 'reflective') {
     promptParts.push(
       '\n\nSvarsstil: Var reflekterande och resonemangsdriven. ' +
@@ -232,10 +284,27 @@ function updateSummaryAndPrompt() {
   } else {
     promptParts.push(
       '\n\nSvarsstil: Var så strikt och icke-hallucinerande som möjligt. ' +
-        'Om du är osäker ska du säga det. Bygg svaren på tydlig logik, pålitlig kunskap och markera tydligt när något är en uppskattning eller begränsad kunskap.'
+        'Om du är osäker ska du säga det. Bygg svaren på tydlig logik, pålitlig kunskap och markera tydligt när något är en uppskattning.'
     );
   }
 
+  // Steg per svar
+  promptParts.push(
+    '\n\nSteg per svar: Försök normalt dela upp instruktioner i högst ' +
+      stepsValue +
+      ' tydliga steg per svar, om inte användaren ber om något annat.'
+  );
+
+  // Mentorstil
+  promptParts.push('\n\n' + mentorLevelText);
+
+  // Trådhantering
+  promptParts.push('\n\nTrådhantering: ' + threadText);
+
+  // Git-hantering
+  promptParts.push('\n\nGit-hantering: ' + gitText);
+
+  // Checkbox-regler
   if (activeRules.length > 0) {
     promptParts.push(
       '\n\nFöljande regler ska du alltid följa:\n- ' +
@@ -243,6 +312,7 @@ function updateSummaryAndPrompt() {
     );
   }
 
+  // Checkbox-automationer
   if (activeAutomations.length > 0) {
     promptParts.push(
       '\n\nFöljande automatiska beteenden ska du efterlikna i dina svar (så långt det går i denna miljö):\n- ' +
@@ -265,7 +335,8 @@ function updateSummaryAndPrompt() {
   promptParts.push(
     '\n\nNär du ger instruktioner om kod ska du i möjligaste mån ge hela kodblock eller hela filer ' +
       'som användaren kan klistra direkt in i VS Code. ' +
-      'Avsluta gärna större ändringar med förslag på git-kommandon (PowerShell) för att pusha till main.'
+      'Avsluta gärna större ändringar med förslag på git-kommandon (PowerShell) för att pusha till main – ' +
+      'om detta inte strider mot inställningen för git-hantering ovan.'
   );
 
   promptOutputEl.value = promptParts.join('');
@@ -305,22 +376,22 @@ function init() {
     'automation-custom',
     'level-select',
     'answer-style-select',
+    'steps-select',
+    'mentor-level-select',
+    'thread-threshold-select',
+    'git-mode-select',
   ];
 
   for (const id of allIds) {
     const element = el(id);
     if (!element) continue;
 
-    const eventName =
-      element.tagName === 'TEXTAREA' || element.tagName === 'SELECT'
-        ? 'input'
-        : 'change';
-
-    // För select är det bättre med 'change'
-    if (element.tagName === 'SELECT') {
+    if (element.tagName === 'TEXTAREA') {
+      element.addEventListener('input', updateSummaryAndPrompt);
+    } else if (element.tagName === 'SELECT') {
       element.addEventListener('change', updateSummaryAndPrompt);
     } else {
-      element.addEventListener(eventName, updateSummaryAndPrompt);
+      element.addEventListener('change', updateSummaryAndPrompt);
     }
   }
 
