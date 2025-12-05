@@ -106,19 +106,23 @@
 
     .agent-option {
       display: flex;
-      align-items: flex-start;
-      gap: 6px;
+      align-items: center;
+      gap: 8px;
       margin-bottom: 4px;
-      font-size: 12px;
-      color: var(--brand-ink-d);
+      font-size: 13px;
+      color: var(--brand-ink); /* mörk text */
     }
 
     .agent-option input[type="checkbox"] {
-      margin-top: 1px;
+      width: 18px;
+      height: 18px;
+      transform: scale(1.15);
+      margin: 0;
     }
 
     .agent-option label {
       cursor: pointer;
+      line-height: 1.4;
     }
 
     .agent-textarea {
@@ -131,6 +135,30 @@
       padding: 8px 10px;
       font-size: 12px;
       resize: vertical;
+      font-family: inherit;
+    }
+
+    .agent-select-group {
+      margin-top: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--brand-ink);
+    }
+
+    .agent-select-label {
+      font-weight: 600;
+    }
+
+    .agent-select {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #d9cbb7;
+      background: #fff;
+      color: var(--brand-ink);
+      padding: 6px 10px;
+      font-size: 12px;
       font-family: inherit;
     }
 
@@ -150,7 +178,7 @@
 
     .agent-summary-text {
       font-size: 12px;
-      color: var(--brand-ink-d);
+      color: var(--brand-ink); /* mörkare text */
       line-height: 1.4;
     }
 
@@ -270,11 +298,34 @@
 
           <div class="agent-section">
             <div class="agent-section-title">Språk & pedagogik</div>
-            <div class="agent-option">
+
+            <!-- Ny dropdown: Kunskapsnivå -->
+            <div class="agent-select-group">
+              <span class="agent-select-label">Kunskapsnivå</span>
+              <select id="level-select" class="agent-select">
+                <option value="beginner" selected>Nybörjare</option>
+                <option value="intermediate">Medel</option>
+                <option value="expert">Expert</option>
+              </select>
+            </div>
+
+            <!-- Ny dropdown: Svarstyp / grounding -->
+            <div class="agent-select-group">
+              <span class="agent-select-label">Hur ska svaren vara grundade?</span>
+              <select id="answer-style-select" class="agent-select">
+                <option value="reflective" selected>
+                  Reflekterande / hypotetiska svar (mer resonemang, ibland spekulativa)
+                </option>
+                <option value="strict">
+                  Strikta, icke-hallucinerande svar (så korrekt som möjligt, tydlig käll/logik-förankring)
+                </option>
+              </select>
+            </div>
+
+            <div class="agent-option" style="margin-top:6px;">
               <input type="checkbox" id="rule-simple-language" checked />
               <label for="rule-simple-language">
-                Förklara alltid saker <strong>väldigt enkelt</strong> (nybörjarnivå)
-                och dela upp i små steg.
+                Förklara alltid saker <strong>väldigt enkelt</strong> (särskilt vid nivån “Nybörjare”) och dela upp i små steg.
               </label>
             </div>
             <div class="agent-option">
