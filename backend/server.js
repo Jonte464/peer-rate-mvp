@@ -16,6 +16,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const integrationsRoutes = require('./routes/integrationsRoutes');
 const externalDataRoutes = require('./routes/externalDataRoutes');
 const blocketRoutes = require('./routes/blocketRoutes');
+const traderaRoutes = require('./routes/traderaRoutes'); // 👈 NY
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', externalDataRoutes);
 app.use('/api', blocketRoutes);
 app.use('/api', integrationsRoutes);
+app.use('/api', traderaRoutes); // 👈 NY – alla /api/tradera/* hamnar här
 
 // --- Health ---
 app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }));
