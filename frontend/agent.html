@@ -295,10 +295,10 @@
             Här väljer du hur agenten ska skriva, tänka och förhålla sig till kod.
           </p>
 
+          <!-- Språk & pedagogik -->
           <div class="agent-section">
             <div class="agent-section-title">Språk & pedagogik</div>
 
-            <!-- Kunskapsnivå -->
             <div class="agent-select-group">
               <span class="agent-select-label">Kunskapsnivå</span>
               <select id="level-select" class="agent-select">
@@ -308,7 +308,6 @@
               </select>
             </div>
 
-            <!-- Svarstyp / grounding -->
             <div class="agent-select-group">
               <span class="agent-select-label">Hur ska svaren vara grundade?</span>
               <select id="answer-style-select" class="agent-select">
@@ -321,7 +320,6 @@
               </select>
             </div>
 
-            <!-- NY: Max antal steg per svar -->
             <div class="agent-select-group">
               <span class="agent-select-label">Max antal steg per svar</span>
               <select id="steps-select" class="agent-select">
@@ -339,6 +337,40 @@
             </div>
           </div>
 
+          <!-- Svarslayout -->
+          <div class="agent-section">
+            <div class="agent-section-title">Svarslayout</div>
+
+            <div class="agent-select-group">
+              <span class="agent-select-label">Svarslängd</span>
+              <select id="answer-length-select" class="agent-select">
+                <option value="short">Kort (komprimerat)</option>
+                <option value="medium" selected>Medel (balans)</option>
+                <option value="long">Långt (mycket detaljer)</option>
+              </select>
+            </div>
+
+            <div class="agent-select-group">
+              <span class="agent-select-label">Format</span>
+              <select id="answer-format-select" class="agent-select">
+                <option value="steps" selected>Steg-för-steg lista</option>
+                <option value="summary-details">Sammanfattning överst, detaljer under</option>
+                <option value="code-first">Kod först, sedan förklaring</option>
+                <option value="explanation-first">Förklaring först, sedan kod</option>
+              </select>
+            </div>
+
+            <div class="agent-select-group">
+              <span class="agent-select-label">Exempelnivå</span>
+              <select id="example-level-select" class="agent-select">
+                <option value="none">Inga exempel</option>
+                <option value="some" selected>Några exempel vid behov</option>
+                <option value="many">Många exempel / use-cases</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Kod & säkerhet -->
           <div class="agent-section">
             <div class="agent-section-title">Kod & säkerhet</div>
             <div class="agent-option">
@@ -359,18 +391,36 @@
                 Be alltid först om <strong>nuvarande kod</strong> innan du föreslår ny kod.
               </label>
             </div>
+
+            <div class="agent-select-group">
+              <span class="agent-select-label">Hur ska oklarheter hanteras?</span>
+              <select id="uncertainty-select" class="agent-select">
+                <option value="ask" selected>Ställ följdfrågor hellre än att anta</option>
+                <option value="assume-annotated">Gör rimliga antaganden men markera dem tydligt</option>
+                <option value="minimal-assumptions">Gör så få antaganden som möjligt, lämna hellre öppet</option>
+              </select>
+            </div>
           </div>
 
+          <!-- Mentorskap & initiativ -->
           <div class="agent-section">
-            <div class="agent-section-title">Mentorskap</div>
+            <div class="agent-section-title">Mentorskap & initiativ</div>
 
-            <!-- NY: Mentor-nivå -->
             <div class="agent-select-group">
               <span class="agent-select-label">Mentor-nivå</span>
               <select id="mentor-level-select" class="agent-select">
-                <option value="soft" selected>Mjuk coach (stödjande, försiktig feedback)</option>
+                <option value="soft" selected>Mjuk coach (stödjande)</option>
                 <option value="balanced">Balans (ärlig men vänlig)</option>
-                <option value="direct">Direkt (väldigt tydlig och rakt på sak)</option>
+                <option value="direct">Direkt (rakt på sak)</option>
+              </select>
+            </div>
+
+            <div class="agent-select-group">
+              <span class="agent-select-label">Initiativnivå</span>
+              <select id="initiative-select" class="agent-select">
+                <option value="follow" selected>Följ order – föreslå sällan annat</option>
+                <option value="balanced">Balans – föreslå förbättringar när det är vettigt</option>
+                <option value="proactive">Väldigt proaktiv – kom med egna idéer och förbättringar</option>
               </select>
             </div>
 
@@ -388,6 +438,7 @@
             </div>
           </div>
 
+          <!-- Egna regler -->
           <div class="agent-section">
             <div class="agent-section-title">Egna regler (valfritt)</div>
             <textarea
@@ -400,21 +451,21 @@
 
         <!-- BLOCK 2: Automatiseringar -->
         <section class="agent-panel" id="automation-card">
-          <h2>Block 2 – Automatiseringar</h2>
+          <h2>Block 2 – Automatiseringar & scope</h2>
           <p class="agent-panel-desc">
-            Här väljer du vad agenten ska göra automatiskt, t.ex. trådhantering och git-hjälp.
+            Här väljer du vad agenten ska göra automatiskt, och vad den ska låta bli att röra.
           </p>
 
+          <!-- Trådar & kontext -->
           <div class="agent-section">
             <div class="agent-section-title">Trådar & kontext</div>
 
-            <!-- NY: När föreslå ny tråd -->
             <div class="agent-select-group">
               <span class="agent-select-label">När ska ny tråd föreslås?</span>
               <select id="thread-threshold-select" class="agent-select">
                 <option value="manual">Endast när användaren ber om det</option>
-                <option value="short">När tråden blivit ganska lång (~30 meddelanden)</option>
-                <option value="medium" selected>Vid längre trådar (~60 meddelanden)</option>
+                <option value="short">Vid kortare trådar (~30 meddelanden)</option>
+                <option value="medium" selected>Vid medellånga trådar (~60 meddelanden)</option>
                 <option value="long">Först vid väldigt långa trådar (~100+ meddelanden)</option>
               </select>
             </div>
@@ -433,10 +484,80 @@
             </div>
           </div>
 
+          <!-- Kodstil & kvalitet -->
           <div class="agent-section">
-            <div class="agent-section-title">Kod & utveckling</div>
+            <div class="agent-section-title">Kodstil & kvalitet</div>
 
-            <!-- NY: Hur ofta ge git-kommandon -->
+            <div class="agent-select-group">
+              <span class="agent-select-label">Kodstil / ambitionsnivå</span>
+              <select id="code-style-select" class="agent-select">
+                <option value="simple" selected>Så enkelt som möjligt</option>
+                <option value="balanced">Balans – rimligt strukturerat</option>
+                <option value="advanced">Avancerat – gärna patterns och abstrahering</option>
+              </select>
+            </div>
+
+            <div class="agent-select-group">
+              <span class="agent-select-label">Testnivå</span>
+              <select id="tests-select" class="agent-select">
+                <option value="none">Inga tester om inte jag ber om det</option>
+                <option value="basic" selected>Föreslå enkla tester vid större ändringar</option>
+                <option value="plan">Försök alltid skissa en teststrategi</option>
+              </select>
+            </div>
+
+            <div class="agent-select-group">
+              <span class="agent-select-label">Logging / felsökning</span>
+              <select id="logging-select" class="agent-select">
+                <option value="minimal" selected>Minimal logging</option>
+                <option value="diagnostic">Lägg gärna till extra logging för felsökning</option>
+                <option value="avoid">Undvik logging om det inte behövs</option>
+              </select>
+            </div>
+
+            <div class="agent-select-group">
+              <span class="agent-select-label">Felhantering i kod</span>
+              <select id="error-handling-select" class="agent-select">
+                <option value="minimal">Minimal (happy path)</option>
+                <option value="standard" selected>Standard (rimlig felhantering)</option>
+                <option value="defensive">Defensiv (validera mycket, flera kontroller)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Scope-begränsningar -->
+          <div class="agent-section">
+            <div class="agent-section-title">Scope – vad agenten INTE ska göra</div>
+            <div class="agent-option">
+              <input type="checkbox" id="scope-no-db-schema" />
+              <label for="scope-no-db-schema">
+                Ändra inte databas-schema (Prisma/Neon) om jag inte uttryckligen ber om det.
+              </label>
+            </div>
+            <div class="agent-option">
+              <input type="checkbox" id="scope-no-auth" />
+              <label for="scope-no-auth">
+                Rör inte autentisering/säkerhetslogik utan tydligt godkännande.
+              </label>
+            </div>
+            <div class="agent-option">
+              <input type="checkbox" id="scope-no-major-ui" />
+              <label for="scope-no-major-ui">
+                Gör inga stora UI-ombyggnader – håll dig till små förbättringar.
+              </label>
+            </div>
+            <div class="agent-option">
+              <input type="checkbox" id="scope-no-new-deps" />
+              <label for="scope-no-new-deps">
+                Lägg inte till nya externa beroenden (npm-paket) utan att först föreslå dem och vänta på OK.
+              </label>
+            </div>
+          </div>
+
+          <!-- Git & risk / sammanfattning -->
+          <div class="agent-section">
+            <div class="agent-section-title">Git & riskmedvetenhet</div>
+
             <div class="agent-select-group">
               <span class="agent-select-label">Git-kommandon i svar</span>
               <select id="git-mode-select" class="agent-select">
@@ -447,21 +568,36 @@
             </div>
 
             <div class="agent-option">
-              <input type="checkbox" id="auto-git-commands" checked />
-              <label for="auto-git-commands">
-                Avsluta större ändringar med <strong>färdiga Git-kommandon</strong> (PowerShell) för deploy.
+              <input type="checkbox" id="toggle-show-risks" />
+              <label for="toggle-show-risks">
+                Visa alltid en kort sektion om <strong>risker / saker att tänka på</strong> vid större förändringar.
               </label>
             </div>
             <div class="agent-option">
-              <input type="checkbox" id="auto-vscode-friendly" checked />
-              <label for="auto-vscode-friendly">
-                Anpassa alltid instruktioner till <strong>VS Code + GitHub + Render prod</strong>.
+              <input type="checkbox" id="toggle-final-summary" />
+              <label for="toggle-final-summary">
+                Avsluta längre svar med en <strong>kort sammanfattning</strong>.
               </label>
             </div>
           </div>
 
+          <!-- Presets (konceptuellt) -->
           <div class="agent-section">
-            <div class="agent-section-title">Framtida automatiseringar</div>
+            <div class="agent-section-title">Övergripande “personlighet”</div>
+            <div class="agent-select-group">
+              <span class="agent-select-label">Preset (beskrivning)</span>
+              <select id="preset-select" class="agent-select">
+                <option value="none" selected>Ingen särskild preset (använd inställningarna ovan)</option>
+                <option value="safe-beginner">Trygg nybörjar-mode</option>
+                <option value="build-fast">Bygg kod snabbt</option>
+                <option value="code-review">Kod-review-läge (fokusera på granskning)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Egna automationer -->
+          <div class="agent-section">
+            <div class="agent-section-title">Egna automatiseringsidéer</div>
             <textarea
               id="automation-custom"
               class="agent-textarea"

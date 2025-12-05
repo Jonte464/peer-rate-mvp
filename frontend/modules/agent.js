@@ -86,9 +86,11 @@ function updateSummaryAndPrompt() {
   const activeAutomations = [];
   const pills = [];
 
-  // Kunskapsnivå
-  const levelSelect = el('level-select');
-  const levelValue = levelSelect ? levelSelect.value : 'beginner';
+  // ===== Språk & pedagogik =====
+  const levelValue = (el('level-select') || {}).value || 'beginner';
+  const styleValue = (el('answer-style-select') || {}).value || 'reflective';
+  const stepsValue = (el('steps-select') || {}).value || '3';
+
   let levelText;
   if (levelValue === 'beginner') {
     levelText = 'Användaren betraktas som nybörjare.';
@@ -98,9 +100,6 @@ function updateSummaryAndPrompt() {
     levelText = 'Användaren har expertnivå (mer komprimerade förklaringar är okej).';
   }
 
-  // Svarsstil / grounding
-  const styleSelect = el('answer-style-select');
-  const styleValue = styleSelect ? styleSelect.value : 'reflective';
   let styleText;
   if (styleValue === 'reflective') {
     styleText =
@@ -110,17 +109,66 @@ function updateSummaryAndPrompt() {
       'Svar ska vara så strikta och icke-hallucinerande som möjligt, bygga på tydlig logik och markera osäkerhet tydligt.';
   }
 
-  // Max antal steg per svar
-  const stepsSelect = el('steps-select');
-  const stepsValue = stepsSelect ? stepsSelect.value : '3';
   const stepsText =
     'Agenten ska normalt dela upp instruktioner i högst ' +
     stepsValue +
     ' tydliga steg per svar.';
 
-  // Mentor-nivå
-  const mentorSelect = el('mentor-level-select');
-  const mentorValue = mentorSelect ? mentorSelect.value : 'soft';
+  // ===== Svarslayout =====
+  const lengthValue = (el('answer-length-select') || {}).value || 'medium';
+  const formatValue = (el('answer-format-select') || {}).value || 'steps';
+  const exampleValue = (el('example-level-select') || {}).value || 'some';
+
+  let lengthText;
+  if (lengthValue === 'short') {
+    lengthText = 'Svarslängd: korta, komprimerade svar.';
+  } else if (lengthValue === 'medium') {
+    lengthText = 'Svarslängd: medellånga svar med balans mellan korthet och detaljer.';
+  } else {
+    lengthText = 'Svarslängd: gärna längre svar med mycket detaljer och förklaringar.';
+  }
+
+  let formatText;
+  if (formatValue === 'steps') {
+    formatText = 'Format: steg-för-steg-lista.';
+  } else if (formatValue === 'summary-details') {
+    formatText = 'Format: kort sammanfattning överst, detaljer under.';
+  } else if (formatValue === 'code-first') {
+    formatText = 'Format: visa kod först, sedan förklaring.';
+  } else {
+    formatText = 'Format: först förklaring, sedan kod.';
+  }
+
+  let exampleText;
+  if (exampleValue === 'none') {
+    exampleText = 'Exempel: undvik exempel om inte användaren ber om det.';
+  } else if (exampleValue === 'some') {
+    exampleText = 'Exempel: ge några exempel när det hjälper förståelsen.';
+  } else {
+    exampleText = 'Exempel: ge gärna många exempel och use-cases.';
+  }
+
+  // ===== Kod & säkerhet / oklarheter =====
+  const uncertaintyValue =
+    (el('uncertainty-select') || {}).value || 'ask';
+  let uncertaintyText;
+  if (uncertaintyValue === 'ask') {
+    uncertaintyText =
+      'Vid oklarheter: ställ följdfrågor istället för att anta.';
+  } else if (uncertaintyValue === 'assume-annotated') {
+    uncertaintyText =
+      'Vid oklarheter: gör rimliga antaganden, men markera dem tydligt.';
+  } else {
+    uncertaintyText =
+      'Vid oklarheter: gör så få antaganden som möjligt, lämna hellre öppna frågor.';
+  }
+
+  // ===== Mentorskap & initiativ =====
+  const mentorValue =
+    (el('mentor-level-select') || {}).value || 'soft';
+  const initiativeValue =
+    (el('initiative-select') || {}).value || 'follow';
+
   let mentorLevelText;
   if (mentorValue === 'soft') {
     mentorLevelText =
@@ -133,9 +181,21 @@ function updateSummaryAndPrompt() {
       'Mentorstil: direkt – väldigt tydlig och rakt på sak, men fortfarande respektfull.';
   }
 
-  // När föreslå ny tråd
-  const threadSelect = el('thread-threshold-select');
-  const threadValue = threadSelect ? threadSelect.value : 'medium';
+  let initiativeText;
+  if (initiativeValue === 'follow') {
+    initiativeText =
+      'Initiativnivå: följ användarens instruktioner ganska strikt, föreslå bara alternativ när något verkar uppenbart problematiskt.';
+  } else if (initiativeValue === 'balanced') {
+    initiativeText =
+      'Initiativnivå: balans – följ instruktioner men föreslå förbättringar när de är tydligt vettiga.';
+  } else {
+    initiativeText =
+      'Initiativnivå: väldigt proaktiv – kom gärna med egna idéer, förbättringar och frågor.';
+  }
+
+  // ===== Trådar & kontext =====
+  const threadValue =
+    (el('thread-threshold-select') || {}).value || 'medium';
   let threadText;
   if (threadValue === 'manual') {
     threadText =
@@ -151,9 +211,79 @@ function updateSummaryAndPrompt() {
       'Ny tråd föreslås först vid väldigt långa trådar (ca 100+ meddelanden).';
   }
 
-  // Git-kommandon
-  const gitSelect = el('git-mode-select');
-  const gitValue = gitSelect ? gitSelect.value : 'always';
+  // ===== Kodstil & kvalitet =====
+  const codeStyleValue =
+    (el('code-style-select') || {}).value || 'simple';
+  const testsValue = (el('tests-select') || {}).value || 'basic';
+  const loggingValue =
+    (el('logging-select') || {}).value || 'minimal';
+  const errorHandlingValue =
+    (el('error-handling-select') || {}).value || 'standard';
+
+  let codeStyleText;
+  if (codeStyleValue === 'simple') {
+    codeStyleText =
+      'Kodstil: så enkel som möjligt, hellre lite enklare än överdesignad.';
+  } else if (codeStyleValue === 'balanced') {
+    codeStyleText =
+      'Kodstil: balans – rimligt strukturerad och underhållbar.';
+  } else {
+    codeStyleText =
+      'Kodstil: avancerad – gärna patterns, abstraktioner och hög kodkvalitet.';
+  }
+
+  let testsText;
+  if (testsValue === 'none') {
+    testsText =
+      'Tester: skapa normalt sett inga tester om inte användaren ber om det.';
+  } else if (testsValue === 'basic') {
+    testsText =
+      'Tester: föreslå enkla tester eller testidéer vid större ändringar.';
+  } else {
+    testsText =
+      'Tester: försök alltid skissa en teststrategi eller lämpliga tester.';
+  }
+
+  let loggingText;
+  if (loggingValue === 'minimal') {
+    loggingText = 'Logging: minimal – bara det nödvändigaste.';
+  } else if (loggingValue === 'diagnostic') {
+    loggingText =
+      'Logging: gärna extra logging för felsökning där det är rimligt.';
+  } else {
+    loggingText =
+      'Logging: undvik ny logging om det inte verkligen behövs.';
+  }
+
+  let errorHandlingText;
+  if (errorHandlingValue === 'minimal') {
+    errorHandlingText =
+      'Felhantering: minimal, fokus på happy path.';
+  } else if (errorHandlingValue === 'standard') {
+    errorHandlingText =
+      'Felhantering: standard – rimlig och balanserad felhantering.';
+  } else {
+    errorHandlingText =
+      'Felhantering: defensiv – validera mycket och lägg in fler kontroller.';
+  }
+
+  // ===== Scope-begränsningar =====
+  const scopeNoDb = !!(el('scope-no-db-schema') || {}).checked;
+  const scopeNoAuth = !!(el('scope-no-auth') || {}).checked;
+  const scopeNoUI = !!(el('scope-no-major-ui') || {}).checked;
+  const scopeNoDeps = !!(el('scope-no-new-deps') || {}).checked;
+
+  const scopeLines = [];
+  if (scopeNoDb) scopeLines.push('Ändra inte databas-schema utan uttryckligt OK.');
+  if (scopeNoAuth) scopeLines.push('Rör inte autentisering/säkerhetslogik utan tydligt godkännande.');
+  if (scopeNoUI) scopeLines.push('Gör inga större UI-ombyggnader, bara små förbättringar.');
+  if (scopeNoDeps) scopeLines.push('Lägg inte till nya externa beroenden utan att först få OK.');
+
+  // ===== Git & risk =====
+  const gitValue = (el('git-mode-select') || {}).value || 'always';
+  const showRisks = !!(el('toggle-show-risks') || {}).checked;
+  const finalSummary = !!(el('toggle-final-summary') || {}).checked;
+
   let gitText;
   if (gitValue === 'always') {
     gitText =
@@ -163,10 +293,24 @@ function updateSummaryAndPrompt() {
       'Git-kommandon föreslås främst vid större kodändringar eller när nya filer tillkommer.';
   } else {
     gitText =
-      'Git-kommandon föreslås normalt inte automatiskt, om inte användaren ber om det.';
+      'Git-kommandon föreslås normalt inte automatiskt om inte användaren ber om det.';
   }
 
-  // Checkbox-regler
+  // ===== Preset =====
+  const presetValue = (el('preset-select') || {}).value || 'none';
+  let presetText = '';
+  if (presetValue === 'safe-beginner') {
+    presetText =
+      'Preset: trygg nybörjar-mode – prioritera tydlighet, säkerhet och små steg.';
+  } else if (presetValue === 'build-fast') {
+    presetText =
+      'Preset: bygg kod snabbt – var mer pragmatisk, föreslå lösningar som fungerar snabbt (utan att offra säkerhet).';
+  } else if (presetValue === 'code-review') {
+    presetText =
+      'Preset: kod-review – fokusera mer på granskning och förbättring av befintlig kod än på helt ny funktionalitet.';
+  }
+
+  // ===== Checkbox-regler & automationer =====
   for (const cfg of ruleConfig) {
     const checkbox = el(cfg.id);
     if (checkbox && checkbox.checked) {
@@ -175,7 +319,6 @@ function updateSummaryAndPrompt() {
     }
   }
 
-  // Checkbox-automationer
   for (const cfg of automationConfig) {
     const checkbox = el(cfg.id);
     if (checkbox && checkbox.checked) {
@@ -187,27 +330,35 @@ function updateSummaryAndPrompt() {
   const customRules = (el('rule-custom')?.value || '').trim();
   const customAutomation = (el('automation-custom')?.value || '').trim();
 
-  // --- Sammanfattning (visuell) ---
+  // ===== Sammanfattning (visuell) =====
   const lines = [];
 
-  lines.push(
-    '<strong>Kunnande:</strong> ' + escapeHtml(levelText)
-  );
-  lines.push(
-    '<br /><strong>Svarstyp:</strong> ' + escapeHtml(styleText)
-  );
-  lines.push(
-    '<br /><strong>Steg per svar:</strong> ' + escapeHtml(stepsText)
-  );
-  lines.push(
-    '<br /><strong>Mentorskap:</strong> ' + escapeHtml(mentorLevelText)
-  );
-  lines.push(
-    '<br /><strong>Trådhantering:</strong> ' + escapeHtml(threadText)
-  );
-  lines.push(
-    '<br /><strong>Git-hantering:</strong> ' + escapeHtml(gitText)
-  );
+  lines.push('<strong>Kunnande:</strong> ' + escapeHtml(levelText));
+  lines.push('<br /><strong>Svarstyp:</strong> ' + escapeHtml(styleText));
+  lines.push('<br /><strong>Steg per svar:</strong> ' + escapeHtml(stepsText));
+  lines.push('<br /><strong>Svarslängd:</strong> ' + escapeHtml(lengthText));
+  lines.push('<br /><strong>Format:</strong> ' + escapeHtml(formatText));
+  lines.push('<br /><strong>Exempelnivå:</strong> ' + escapeHtml(exampleText));
+  lines.push('<br /><strong>Otydlighet:</strong> ' + escapeHtml(uncertaintyText));
+  lines.push('<br /><strong>Mentorskap:</strong> ' + escapeHtml(mentorLevelText));
+  lines.push('<br /><strong>Initiativ:</strong> ' + escapeHtml(initiativeText));
+  lines.push('<br /><strong>Trådhantering:</strong> ' + escapeHtml(threadText));
+  lines.push('<br /><strong>Kodstil:</strong> ' + escapeHtml(codeStyleText));
+  lines.push('<br /><strong>Tester:</strong> ' + escapeHtml(testsText));
+  lines.push('<br /><strong>Logging:</strong> ' + escapeHtml(loggingText));
+  lines.push('<br /><strong>Felhantering:</strong> ' + escapeHtml(errorHandlingText));
+  lines.push('<br /><strong>Git:</strong> ' + escapeHtml(gitText));
+
+  if (scopeLines.length > 0) {
+    lines.push('<br /><strong>Scope-begränsningar:</strong>');
+    for (const s of scopeLines) {
+      lines.push('• ' + escapeHtml(s));
+    }
+  }
+
+  if (presetText) {
+    lines.push('<br /><strong>Preset:</strong> ' + escapeHtml(presetText));
+  }
 
   if (activeRules.length > 0) {
     lines.push('<br /><strong>Aktiva regler:</strong>');
@@ -236,6 +387,18 @@ function updateSummaryAndPrompt() {
     );
   }
 
+  if (showRisks) {
+    lines.push(
+      '<br /><strong>Riskmedvetenhet:</strong> Agenten ska vid större ändringar alltid nämna risker/saker att tänka på.'
+    );
+  }
+
+  if (finalSummary) {
+    lines.push(
+      '<br /><strong>Sammanfattning:</strong> Agenten ska avsluta längre svar med en kort sammanfattning.'
+    );
+  }
+
   summaryTextEl.innerHTML = lines.join('<br />');
 
   // Piller-taggar
@@ -247,8 +410,7 @@ function updateSummaryAndPrompt() {
     pillRowEl.appendChild(span);
   }
 
-  // --- Genererad prompttext (för ChatGPT/API) ---
-
+  // ===== Genererad prompttext (för ChatGPT/API) =====
   const promptParts = [];
 
   // Grundintroduktion
@@ -257,7 +419,7 @@ function updateSummaryAndPrompt() {
       'Du hjälper till med utveckling, kod, design och resonemang kring PeerRate-plattformen.'
   );
 
-  // Nivå
+  // Kunskapsnivå
   if (levelValue === 'beginner') {
     promptParts.push(
       '\n\nKunskapsnivå: Användaren är nybörjare. ' +
@@ -275,7 +437,7 @@ function updateSummaryAndPrompt() {
     );
   }
 
-  // Svarsstil
+  // Svarsstil / grounding
   if (styleValue === 'reflective') {
     promptParts.push(
       '\n\nSvarsstil: Var reflekterande och resonemangsdriven. ' +
@@ -295,16 +457,44 @@ function updateSummaryAndPrompt() {
       ' tydliga steg per svar, om inte användaren ber om något annat.'
   );
 
-  // Mentorstil
+  // Svarslayout
+  promptParts.push('\n\n' + lengthText);
+  promptParts.push('\n' + formatText);
+  promptParts.push('\n' + exampleText);
+
+  // Otydlighet
+  promptParts.push('\n\nOtydlighet/oklarheter: ' + uncertaintyText);
+
+  // Mentorskap & initiativ
   promptParts.push('\n\n' + mentorLevelText);
+  promptParts.push('\n' + initiativeText);
 
   // Trådhantering
   promptParts.push('\n\nTrådhantering: ' + threadText);
 
+  // Kodstil & kvalitet
+  promptParts.push('\n\n' + codeStyleText);
+  promptParts.push('\n' + testsText);
+  promptParts.push('\n' + loggingText);
+  promptParts.push('\n' + errorHandlingText);
+
+  // Scope-begränsningar
+  if (scopeLines.length > 0) {
+    promptParts.push(
+      '\n\nScope-begränsningar (respektera dessa och be om tillstånd innan du bryter mot dem):\n- ' +
+        scopeLines.join('\n- ')
+    );
+  }
+
   // Git-hantering
   promptParts.push('\n\nGit-hantering: ' + gitText);
 
-  // Checkbox-regler
+  // Preset
+  if (presetText) {
+    promptParts.push('\n\nPreset (övergripande roll): ' + presetText);
+  }
+
+  // Regler & automationer
   if (activeRules.length > 0) {
     promptParts.push(
       '\n\nFöljande regler ska du alltid följa:\n- ' +
@@ -312,7 +502,6 @@ function updateSummaryAndPrompt() {
     );
   }
 
-  // Checkbox-automationer
   if (activeAutomations.length > 0) {
     promptParts.push(
       '\n\nFöljande automatiska beteenden ska du efterlikna i dina svar (så långt det går i denna miljö):\n- ' +
@@ -328,6 +517,18 @@ function updateSummaryAndPrompt() {
     promptParts.push(
       '\n\nIdéer/önskemål för automatisering som du ska ta hänsyn till när du planerar arbetssättet:\n' +
         customAutomation
+    );
+  }
+
+  if (showRisks) {
+    promptParts.push(
+      '\n\nVid större förändringar ska du alltid inkludera en kort sektion om risker/saker att tänka på.'
+    );
+  }
+
+  if (finalSummary) {
+    promptParts.push(
+      '\n\nVid längre svar ska du avsluta med en mycket kort sammanfattning.'
     );
   }
 
@@ -370,16 +571,36 @@ function copyPromptToClipboard() {
 
 function init() {
   const allIds = [
+    // checkbox-regler
     ...ruleConfig.map((r) => r.id),
     ...automationConfig.map((a) => a.id),
+    // textareas
     'rule-custom',
     'automation-custom',
+    // dropdowns
     'level-select',
     'answer-style-select',
     'steps-select',
+    'answer-length-select',
+    'answer-format-select',
+    'example-level-select',
+    'uncertainty-select',
     'mentor-level-select',
+    'initiative-select',
     'thread-threshold-select',
+    'code-style-select',
+    'tests-select',
+    'logging-select',
+    'error-handling-select',
     'git-mode-select',
+    'preset-select',
+    // scope & toggles
+    'scope-no-db-schema',
+    'scope-no-auth',
+    'scope-no-major-ui',
+    'scope-no-new-deps',
+    'toggle-show-risks',
+    'toggle-final-summary',
   ];
 
   for (const id of allIds) {
