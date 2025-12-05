@@ -1,11 +1,12 @@
 // v1.2 – Tradera summary + enkla betygsformulär per affär
 
-// profile.js – Hanterar profilvisning, avatarer, profil-UI och Tradera-koppling
+// profile.js – Hanterar profilvisning, avatarer, profil-UI och Tradera-/eBay-koppling
 
 import { el, showNotification } from './utils.js';
 import auth, { login, logout } from './auth.js';
 import api from './api.js';
 import { initTraderaSection } from './profileTradera.js';
+import { initEbaySection } from './profileEbay.js';
 import { renderPRating, loadMyRating } from './profileRatings.js';
 import { initRatingForm } from './ratingForm.js';
 export { initRatingLogin } from './ratingForm.js'; // vidareexport för /lamna-betyg-sidan
@@ -339,6 +340,7 @@ export async function initProfilePage() {
           loadExternalData(),
           loadMyRating(),
           initTraderaSection(),
+          initEbaySection(),
         ]);
       } catch (err) {
         console.error('profile data loaders error', err);
