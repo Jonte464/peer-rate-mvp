@@ -1,5 +1,5 @@
-// backend/routes/integrationsRoutes.js
-// Hanterar Tradera-integrationer (koppling, summary, mock, sync, import)
+// backend/routes/integrationsRoutes.js 
+// Hanterar integrationer: Tradera (koppling, summary, mock, sync, import) + eBay (auth-skelett)
 
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
@@ -11,6 +11,12 @@ const {
   syncTraderaForEmail,
   importTraderaOrdersForEmail,
 } = require('../services/traderaService');
+
+// eBay-service: auth-URL + callback-hantering (MVP-skelett)
+const {
+  buildEbayAuthUrlForCustomer,
+  handleEbayCallback,
+} = require('../services/ebayService');
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -367,6 +373,94 @@ router.post('/tradera/import', async (req, res) => {
           ? err.message
           : 'Kunde inte importera Tradera-ordrar.',
     });
+  }
+});
+
+/* -------------------------------------------------------
+   eBay – auth-skelett (koppla konto via OAuth)
+   ------------------------------------------------------- */
+
+/**
+ * POST /integrations/ebay/connect
+ * Input: { email }
+ * Gör:
+ *  - Slår upp kund via email
+ *  - Bygger en eBay-OAuth-URL för den kunden
+ * Output:
+ *  - { ok: true, redirectUrl }
+ * Frontend kan sedan göra: window.location = redirectUrl
+ */
+router.post('/ebay/connect', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const emailTrim = String(body.email || '').trim().toLowerCase();
+
+    if (!emailTrim) {
+      return res
+        .status(400)
+        .json({ ok: false, error: 'Saknar e-post i request body.' });
+    }
+
+    const customer = await prisma.customer.findFirst({
+      where: {
+        OR: [{ subjectRef: emailTrim }, { email: emailTrim }],
+      },
+    });
+
+    if (!customer) {
+      return res
+        .status(404)
+        .json({ ok: false, error: 'Kund hittades inte.' });
+    }
+
+    const { redirectUrl } = buildEbayAuthUrlForCustomer(customer.id);
+
+    return res.json({
+      ok: true,
+      redirectUrl,
+    });
+  } catch (err) {
+    console.error('eBay connect error', err);
+    return res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte skapa eBay-auth-URL.' });
+  }
+});
+
+/**
+ * GET /integrations/ebay/callback
+ * Hit kommer eBay efter att användaren loggat in och godkänt vår app.
+ * Query-parametrar: ?code=...&state=...
+ *
+ * Just nu:
+ *  - Verifierar att code + state finns
+ *  - Använder ebayService för att verifiera state och koppla till customerId
+ *  - BYTER INTE code -> token ännu (det gör vi i nästa steg)
+ */
+router.get('/ebay/callback', async (req, res) => {
+  try {
+    const code = String(req.query.code || '').trim();
+    const state = String(req.query.state || '').trim();
+
+    if (!code || !state) {
+      return res
+        .status(400)
+        .json({ ok: false, error: 'Saknar code eller state i callback.' });
+    }
+
+    const result = await handleEbayCallback({ code, state });
+
+    return res.json({
+      ok: true,
+      ...result,
+      message:
+        'eBay callback mottagen. Token-utbyte och lagring implementeras i nästa steg.',
+    });
+  } catch (err) {
+    console.error('eBay callback error', err);
+    return res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte hantera eBay-callback.' });
   }
 });
 
