@@ -1,4 +1,4 @@
-// backend/routes/integrationsRoutes.js 
+// backend/routes/integrationsRoutes.js  
 // Hanterar integrationer: Tradera (koppling, summary, mock, sync, import) + eBay (auth-skelett)
 
 const express = require('express');
@@ -383,12 +383,6 @@ router.post('/tradera/import', async (req, res) => {
 /**
  * POST /integrations/ebay/connect
  * Input: { email }
- * Gör:
- *  - Slår upp kund via email
- *  - Bygger en eBay-OAuth-URL för den kunden
- * Output:
- *  - { ok: true, redirectUrl }
- * Frontend kan sedan göra: window.location = redirectUrl
  */
 router.post('/ebay/connect', async (req, res) => {
   try {
@@ -429,13 +423,7 @@ router.post('/ebay/connect', async (req, res) => {
 
 /**
  * GET /integrations/ebay/callback
- * Hit kommer eBay efter att användaren loggat in och godkänt vår app.
  * Query-parametrar: ?code=...&state=...
- *
- * Just nu:
- *  - Verifierar att code + state finns
- *  - Använder ebayService för att verifiera state och koppla till customerId
- *  - BYTER INTE code -> token ännu (det gör vi i nästa steg)
  */
 router.get('/ebay/callback', async (req, res) => {
   try {
