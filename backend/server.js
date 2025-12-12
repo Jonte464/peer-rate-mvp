@@ -8,15 +8,24 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 
-// Routes
-const ratingsRoutes = require('./routes/ratingsRoutes');
-const customersRoutes = require('./routes/customersRoutes');
-const authRoutes = require('./routes/authRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-const integrationsRoutes = require('./routes/integrationsRoutes');
-const externalDataRoutes = require('./routes/externalDataRoutes');
-const blocketRoutes = require('./routes/blocketRoutes');
-const traderaRoutes = require('./routes/traderaRoutes'); // 👈 NY
+// Helper: gör så att app.use klarar både router och { router } / { default }
+function pickRouter(mod) {
+  if (!mod) return mod;
+  if (typeof mod === 'function') return mod;         // Express Router är en function
+  if (mod.default && typeof mod.default === 'function') return mod.default;
+  if (mod.router && typeof mod.router === 'function') return mod.router;
+  return mod; // fall back (om det fortfarande är fel -> vi ser vilken fil som är problemet)
+}
+
+// Routes (wrap med pickRouter)
+const ratingsRoutes = pickRouter(require('./routes/ratingsRoutes'));
+const customersRoutes = pickRouter(require('./routes/customersRoutes'));
+const authRoutes = pickRouter(require('./routes/authRoutes'));
+const adminRoutes = pickRouter(require('./routes/adminRoutes'));
+const integrationsRoutes = pickRouter(require('./routes/integrationsRoutes'));
+const externalDataRoutes = pickRouter(require('./routes/externalDataRoutes'));
+const blocketRoutes = pickRouter(require('./routes/blocketRoutes'));
+const traderaRoutes = pickRouter(require('./routes/traderaRoutes'));
 
 const app = express();
 
@@ -76,7 +85,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', externalDataRoutes);
 app.use('/api', blocketRoutes);
 app.use('/api', integrationsRoutes);
-app.use('/api', traderaRoutes); // 👈 NY – alla /api/tradera/* hamnar här
+app.use('/api', traderaRoutes);
 
 // --- Health ---
 app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }));
@@ -90,12 +99,6 @@ app.get('/health', (_req, res) => {
     uptimeSec: Math.round(process.uptime()),
   });
 });
-
-// Enkel auth-middleware (för framtida bruk)
-function requireAuth(req, res, next) {
-  if (req.user && req.user.id) return next();
-  return res.status(401).json({ ok: false, error: 'Ej inloggad' });
-}
 
 // --- Fallback: SPA --- (lägg allra sist)
 app.get('*', (_req, res) => {
