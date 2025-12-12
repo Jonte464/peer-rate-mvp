@@ -377,14 +377,11 @@ router.post('/tradera/import', async (req, res) => {
 });
 
 /* -------------------------------------------------------
-   eBay – auth-skelett (koppla konto via OAuth)
+   eBay – OAuth (koppla konto via OAuth)
    ------------------------------------------------------- */
 
-/**
- * POST /integrations/ebay/connect
- * Input: { email }
- */
-router.post('/ebay/connect', async (req, res) => {
+// Gemensam handler så vi kan ha flera URL-varianter (alias)
+async function ebayConnectHandler(req, res) {
   try {
     const body = req.body || {};
     const emailTrim = String(body.email || '').trim().toLowerCase();
@@ -402,30 +399,21 @@ router.post('/ebay/connect', async (req, res) => {
     });
 
     if (!customer) {
-      return res
-        .status(404)
-        .json({ ok: false, error: 'Kund hittades inte.' });
+      return res.status(404).json({ ok: false, error: 'Kund hittades inte.' });
     }
 
     const { redirectUrl } = buildEbayAuthUrlForCustomer(customer.id);
 
-    return res.json({
-      ok: true,
-      redirectUrl,
-    });
+    return res.json({ ok: true, redirectUrl });
   } catch (err) {
     console.error('eBay connect error', err);
     return res
       .status(500)
       .json({ ok: false, error: 'Kunde inte skapa eBay-auth-URL.' });
   }
-});
+}
 
-/**
- * GET /integrations/ebay/callback
- * Query-parametrar: ?code=...&state=...
- */
-router.get('/ebay/callback', async (req, res) => {
+async function ebayCallbackHandler(req, res) {
   try {
     const code = String(req.query.code || '').trim();
     const state = String(req.query.state || '').trim();
@@ -438,18 +426,31 @@ router.get('/ebay/callback', async (req, res) => {
 
     const result = await handleEbayCallback({ code, state });
 
-    return res.json({
-      ok: true,
-      ...result,
-      message:
-        'eBay callback mottagen. Token-utbyte och lagring implementeras i nästa steg.',
-    });
+    return res.json({ ok: true, ...result });
   } catch (err) {
     console.error('eBay callback error', err);
     return res
       .status(500)
-      .json({ ok: false, error: 'Kunde inte hantera eBay-callback.' });
+      .json({ ok: false, error: err?.message || 'Kunde inte hantera eBay-callback.' });
   }
-});
+}
 
-module.exports = router;
+/**
+ * POST /api/ebay/connect
+ */
+router.post('/ebay/connect', ebayConnectHandler);
+
+/**
+ * POST /api/integrations/ebay/connect  (alias för äldre env / portalkonfig)
+ */
+router.post('/integrations/ebay/connect', ebayConnectHandler);
+
+/**
+ * GET /api/ebay/callback
+ */
+router.get('/ebay/callback', ebayCallbackHandler);
+
+/**
+ * GET /api/integrations/ebay/callback  (alias för äldre env / portalkonfig)
+ */
+router.get('/integrations/ebay/callback', ebayCallbackHandler);
