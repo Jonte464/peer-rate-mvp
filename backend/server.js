@@ -8,6 +8,9 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 
+// -----------------------------
+// Router-diagnostik (för Render)
+// -----------------------------
 function resolveRouter(mod) {
   if (!mod) return mod;
 
@@ -27,7 +30,6 @@ function assertRouter(name, mod) {
   const r = resolveRouter(mod);
   if (typeof r === 'function') return r;
 
-  // Logga exakt vad vi fick
   const type = r === null ? 'null' : typeof r;
   const keys = r && typeof r === 'object' ? Object.keys(r) : [];
   console.error(`❌ ROUTE EXPORT ERROR: ${name} is not an Express router (function).`);
@@ -37,7 +39,7 @@ function assertRouter(name, mod) {
   process.exit(1);
 }
 
-// ---- Ladda routes (diagnostik)
+// ---- Ladda routes (med diagnostik)
 const ratingsRoutes = assertRouter('ratingsRoutes', require('./routes/ratingsRoutes'));
 const customersRoutes = assertRouter('customersRoutes', require('./routes/customersRoutes'));
 const authRoutes = assertRouter('authRoutes', require('./routes/authRoutes'));
@@ -53,7 +55,9 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
 const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
+const corsOrigin = process.env.CORS_ORIGIN || '*';
 
+// Lita på proxy (Render)
 app.set('trust proxy', 1);
 
 // --- Middleware ---
@@ -77,7 +81,6 @@ app.use((req, res, next) => {
 });
 
 // CORS
-const corsOrigin = process.env.CORS_ORIGIN || '*';
 app.use(cors({ origin: corsOrigin }));
 
 // Statik (frontend)
@@ -94,7 +97,9 @@ app.use(
   })
 );
 
+// -----------------------------
 // Routes
+// -----------------------------
 app.use('/api', ratingsRoutes);
 app.use('/api', customersRoutes);
 app.use('/api', authRoutes);
@@ -104,14 +109,38 @@ app.use('/api', blocketRoutes);
 app.use('/api', integrationsRoutes);
 app.use('/api', traderaRoutes);
 
+// -----------------------------
 // Health
+// -----------------------------
 app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }));
 
-// SPA fallback
+app.get('/health', (_req, res) => {
+  res.status(200).json({
+    ok: true,
+    time: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'development',
+    port: PORT,
+    corsOrigin,
+    uptimeSec: Math.round(process.uptime()),
+  });
+});
+
+// -----------------------------
+// Error handler (viktigt: före SPA fallback)
+// -----------------------------
+app.use((err, _req, res, _next) => {
+  console.error('❌ Unhandled server error:', err);
+  res.status(500).json({ ok: false, error: 'Internal server error' });
+});
+
+// -----------------------------
+// SPA fallback (lägg ALLRA SIST)
+// -----------------------------
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
+// --- Start ---
 app.listen(PORT, HOST, () => {
   console.log(`PeerRate PROD running on ${HOST}:${PORT}`);
 });
