@@ -21,7 +21,6 @@ const EBAY_TOKEN_HOST =
 // Scopes (kan utökas senare)
 const SCOPES = [
   'https://api.ebay.com/oauth/api_scope',
-  'https://api.ebay.com/oauth/api_scope/buy.order.readonly',
 ];
 
 function buildEbayAuthUrlForCustomer(customerId) {
