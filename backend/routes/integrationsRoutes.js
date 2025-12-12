@@ -454,3 +454,5 @@ router.get('/ebay/callback', ebayCallbackHandler);
  * GET /api/integrations/ebay/callback  (alias för äldre env / portalkonfig)
  */
 router.get('/integrations/ebay/callback', ebayCallbackHandler);
+
+module.exports = router;
