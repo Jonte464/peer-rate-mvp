@@ -1,4 +1,4 @@
-// backend/server.js — App-bootstrap för PeerRate API
+// backend/server.js — App-bootstrap för PeerRate API (med diagnostik)
 
 require('dotenv').config();
 const express = require('express');
@@ -8,24 +8,44 @@ const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
 
-// Helper: gör så att app.use klarar både router och { router } / { default }
-function pickRouter(mod) {
+function resolveRouter(mod) {
   if (!mod) return mod;
-  if (typeof mod === 'function') return mod;         // Express Router är en function
-  if (mod.default && typeof mod.default === 'function') return mod.default;
+
+  // Express Router är en function
+  if (typeof mod === 'function') return mod;
+
+  // Vanliga varianter
   if (mod.router && typeof mod.router === 'function') return mod.router;
-  return mod; // fall back (om det fortfarande är fel -> vi ser vilken fil som är problemet)
+  if (mod.default && typeof mod.default === 'function') return mod.default;
+  if (mod.default && mod.default.router && typeof mod.default.router === 'function')
+    return mod.default.router;
+
+  return mod; // fallback
 }
 
-// Routes (wrap med pickRouter)
-const ratingsRoutes = pickRouter(require('./routes/ratingsRoutes'));
-const customersRoutes = pickRouter(require('./routes/customersRoutes'));
-const authRoutes = pickRouter(require('./routes/authRoutes'));
-const adminRoutes = pickRouter(require('./routes/adminRoutes'));
-const integrationsRoutes = pickRouter(require('./routes/integrationsRoutes'));
-const externalDataRoutes = pickRouter(require('./routes/externalDataRoutes'));
-const blocketRoutes = pickRouter(require('./routes/blocketRoutes'));
-const traderaRoutes = pickRouter(require('./routes/traderaRoutes'));
+function assertRouter(name, mod) {
+  const r = resolveRouter(mod);
+  if (typeof r === 'function') return r;
+
+  // Logga exakt vad vi fick
+  const type = r === null ? 'null' : typeof r;
+  const keys = r && typeof r === 'object' ? Object.keys(r) : [];
+  console.error(`❌ ROUTE EXPORT ERROR: ${name} is not an Express router (function).`);
+  console.error(`   typeof = ${type}`);
+  console.error(`   keys   = ${JSON.stringify(keys)}`);
+  console.error(`   hint   = File should end with: module.exports = router;`);
+  process.exit(1);
+}
+
+// ---- Ladda routes (diagnostik)
+const ratingsRoutes = assertRouter('ratingsRoutes', require('./routes/ratingsRoutes'));
+const customersRoutes = assertRouter('customersRoutes', require('./routes/customersRoutes'));
+const authRoutes = assertRouter('authRoutes', require('./routes/authRoutes'));
+const adminRoutes = assertRouter('adminRoutes', require('./routes/adminRoutes'));
+const integrationsRoutes = assertRouter('integrationsRoutes', require('./routes/integrationsRoutes'));
+const externalDataRoutes = assertRouter('externalDataRoutes', require('./routes/externalDataRoutes'));
+const blocketRoutes = assertRouter('blocketRoutes', require('./routes/blocketRoutes'));
+const traderaRoutes = assertRouter('traderaRoutes', require('./routes/traderaRoutes'));
 
 const app = express();
 
@@ -34,7 +54,6 @@ const PORT = process.env.PORT || 3001;
 const HOST = '0.0.0.0';
 const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
 
-// Lita på proxy (Render/Vercel/NGINX m.m.)
 app.set('trust proxy', 1);
 
 // --- Middleware ---
@@ -75,37 +94,24 @@ app.use(
   })
 );
 
-// Koppla in routes
+// Routes
 app.use('/api', ratingsRoutes);
 app.use('/api', customersRoutes);
 app.use('/api', authRoutes);
 app.use('/api/admin', adminRoutes);
-
-// Nya uppdelade routers
 app.use('/api', externalDataRoutes);
 app.use('/api', blocketRoutes);
 app.use('/api', integrationsRoutes);
 app.use('/api', traderaRoutes);
 
-// --- Health ---
+// Health
 app.get('/healthz', (_req, res) => res.status(200).json({ ok: true }));
-app.get('/health', (_req, res) => {
-  res.status(200).json({
-    ok: true,
-    time: new Date().toISOString(),
-    env: process.env.NODE_ENV || 'development',
-    port: PORT,
-    corsOrigin,
-    uptimeSec: Math.round(process.uptime()),
-  });
-});
 
-// --- Fallback: SPA --- (lägg allra sist)
+// SPA fallback
 app.get('*', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
-// --- Start ---
 app.listen(PORT, HOST, () => {
   console.log(`PeerRate PROD running on ${HOST}:${PORT}`);
 });
