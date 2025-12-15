@@ -49,6 +49,9 @@ const externalDataRoutes = assertRouter('externalDataRoutes', require('./routes/
 const blocketRoutes = assertRouter('blocketRoutes', require('./routes/blocketRoutes'));
 const traderaRoutes = assertRouter('traderaRoutes', require('./routes/traderaRoutes'));
 
+// ✅ NYTT: eBay data routes (orders etc)
+const ebayRoutes = assertRouter('ebayRoutes', require('./routes/ebayRoutes'));
+
 const app = express();
 
 // --- Config ---
@@ -108,6 +111,9 @@ app.use('/api', externalDataRoutes);
 app.use('/api', blocketRoutes);
 app.use('/api', integrationsRoutes);
 app.use('/api', traderaRoutes);
+
+// ✅ NYTT: mounta eBay endpoints under /api
+app.use('/api', ebayRoutes);
 
 // -----------------------------
 // Health
