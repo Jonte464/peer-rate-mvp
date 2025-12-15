@@ -18,7 +18,10 @@ const EBAY_TOKEN_HOST =
   EBAY_ENV === 'SANDBOX' ? 'api.sandbox.ebay.com' : 'api.ebay.com';
 
 // Scopes (kan utökas senare)
-const SCOPES = ['https://api.ebay.com/oauth/api_scope'];
+const SCOPES = [
+  'https://api.ebay.com/oauth/api_scope',
+  'https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly',
+];
 
 // ---------- base64url helpers (URL-säkra) ----------
 function toBase64Url(str) {
