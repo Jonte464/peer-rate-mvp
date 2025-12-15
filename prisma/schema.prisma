@@ -129,8 +129,6 @@ model Score {
 
 /**
  * Rapport om misstänkt bedrägeri/avvikelse.
- * Här lagras samtliga fält från "Rapportera misstänkt bedrägeri",
- * inkl. tidpunkt, belopp, valfri länk, samtycke och bilagor.
  */
 model Report {
   id String @id @default(uuid())
@@ -211,7 +209,7 @@ model User {
 }
 
 /**
- * NYTT: Externa profiler (Blocket, Tradera m.fl.)
+ * Externa profiler (Blocket, Tradera, eBay m.fl.)
  */
 model ExternalProfile {
   id           String               @id @default(uuid())
@@ -224,9 +222,17 @@ model ExternalProfile {
   // Generellt extern-id (t.ex. Tradera userId)
   externalUserId       String?
 
-  // Autentisering via token (t.ex. från Tradera Developer Program)
+  // (Legacy/generellt) - kan användas för enklare tokens, men för eBay använder vi fälten nedan
   authToken            String?
   authTokenExpiresAt   DateTime?
+
+  // ✅ NYTT: Krypterade OAuth-tokens (eBay nu, men kan användas även för andra plattformar)
+  accessTokenEnc       String?
+  refreshTokenEnc      String?
+  accessTokenExpiresAt DateTime?
+  refreshTokenExpiresAt DateTime?
+  scopes               String?
+  tokenType            String?
 
   // Rå profil-data från extern plattform (t.ex. feedback, ratings, osv.)
   profileJson          Json?
@@ -249,14 +255,14 @@ model ExternalProfile {
 }
 
 /**
- * NYTT: Annons/snapshot från extern plattform (t.ex. Blocket-annons)
+ * Annons/snapshot från extern plattform (t.ex. Blocket-annons)
  */
 model Listing {
   id                String          @id @default(uuid())
   externalProfileId String
   externalProfile   ExternalProfile @relation(fields: [externalProfileId], references: [id])
 
-  externalListingId String         // Annons-ID på Blocket (om vi kan plocka ut det)
+  externalListingId String
   title             String
   price             Int?
   currency          String?        @default("SEK")
@@ -273,7 +279,7 @@ model Listing {
 }
 
 /**
- * NYTT: Affärshändelse (Deal) – underlag för omdömen
+ * Affärshändelse (Deal) – underlag för omdömen
  */
 model Deal {
   id        String     @id @default(uuid())
@@ -297,7 +303,6 @@ model Deal {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now())
 
-  // En deal kan ha flera ratings (köpare ↔ säljare)
   ratings Rating[]
 
   @@index([sellerId])
@@ -307,14 +312,13 @@ model Deal {
 }
 
 /**
- * NYTT: TraderaOrder – avslutade affärer från Tradera, kopplade till ExternalProfile (TRADERA)
+ * TraderaOrder – avslutade affärer från Tradera, kopplade till ExternalProfile (TRADERA)
  */
 model TraderaOrder {
   id                String          @id @default(uuid())
   externalProfileId String
   externalProfile   ExternalProfile @relation(fields: [externalProfileId], references: [id])
 
-  // Order/affärs-id på Tradera
   traderaOrderId    String
   traderaItemId     String?
   title             String
@@ -322,16 +326,13 @@ model TraderaOrder {
   amount            Decimal? @db.Decimal(12, 2)
   currency          String?  @default("SEK")
 
-  // Om vår kund var köpare eller säljare i affären
   role              TraderaOrderRole @default(SELLER)
 
-  // Motpartens info
   counterpartyAlias String?
   counterpartyEmail String?
 
   completedAt       DateTime?
 
-  // Rå data från Tradera (kan innehålla extra fält)
   rawJson           Json?
 
   createdAt         DateTime @default(now())
@@ -346,7 +347,6 @@ model TraderaOrder {
  * Enum-typer
  */
 
-// Roll i Tradera-affär
 enum TraderaOrderRole {
   BUYER
   SELLER
@@ -368,47 +368,43 @@ enum ReportStatus {
   REJECTED
 }
 
-// NYTT: externa plattformar (Blocket nu, Tradera m.fl.)
+// Externa plattformar
 enum ExternalPlatform {
   BLOCKET
   TRADERA
+  EBAY
 }
 
-// NYTT: status för extern profil
 enum ExternalProfileStatus {
   ACTIVE
   DISABLED
   ERROR
 }
 
-// NYTT: status för annons/listing
 enum ListingStatus {
-  ACTIVE      // Annonsen ligger ute
-  SOLD        // Markerad som såld / avslutad
-  REMOVED     // Försvunnen / borttagen
+  ACTIVE
+  SOLD
+  REMOVED
 }
 
-// NYTT: status för deal
 enum DealStatus {
   PENDING_RATING
   RATED
   FLAGGED
 }
 
-// NYTT: varifrån dealen kommer
 enum DealSource {
   BLOCKET_SCRAPE
   MANUAL
   PARTNER_API
 }
 
-// NYTT: varifrån ett betyg kommer
 enum RatingSource {
   BLOCKET
   TRADERA
   AIRBNB
   HUSKNUTEN
   TIPTAP
-  HUSKNUTEN_TIPTAP // legacy – finns kvar i DB för gamla rader
+  HUSKNUTEN_TIPTAP
   OTHER
 }

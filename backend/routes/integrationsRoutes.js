@@ -1,18 +1,19 @@
-// backend/routes/integrationsRoutes.js  
-// Hanterar integrationer: Tradera (koppling, summary, mock, sync, import) + eBay (auth-skelett)
+// backend/routes/integrationsRoutes.js
+// Hanterar integrationer: Tradera (koppling, summary, mock, sync, import) + eBay (OAuth)
 
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 
-// Kryptering för Tradera-lösenord
+// Kryptering (vi använder samma som för Tradera-lösenord)
 const { encryptSecret } = require('../services/secretService');
+
 // Tradera-service: sync + import
 const {
   syncTraderaForEmail,
   importTraderaOrdersForEmail,
 } = require('../services/traderaService');
 
-// eBay-service: auth-URL + callback-hantering (MVP-skelett)
+// eBay-service: auth-URL + callback-hantering
 const {
   buildEbayAuthUrlForCustomer,
   handleEbayCallback,
@@ -44,29 +45,17 @@ router.post('/tradera/connect', async (req, res) => {
     });
 
     if (!customer) {
-      return res
-        .status(404)
-        .json({ ok: false, error: 'Kund hittades inte.' });
+      return res.status(404).json({ ok: false, error: 'Kund hittades inte.' });
     }
 
-    // Kryptera lösenordet om vi har ett
     const encryptedPassword = passwordRaw ? encryptSecret(passwordRaw) : null;
 
     let profile = await prisma.externalProfile.findFirst({
-      where: {
-        customerId: customer.id,
-        platform: 'TRADERA',
-      },
+      where: { customerId: customer.id, platform: 'TRADERA' },
     });
 
-    const dataUpdate = {
-      username: usernameTrim,
-      status: 'ACTIVE',
-    };
-
-    if (encryptedPassword) {
-      dataUpdate.encryptedPassword = encryptedPassword;
-    }
+    const dataUpdate = { username: usernameTrim, status: 'ACTIVE' };
+    if (encryptedPassword) dataUpdate.encryptedPassword = encryptedPassword;
 
     if (profile) {
       profile = await prisma.externalProfile.update({
@@ -75,11 +64,7 @@ router.post('/tradera/connect', async (req, res) => {
       });
     } else {
       profile = await prisma.externalProfile.create({
-        data: {
-          customerId: customer.id,
-          platform: 'TRADERA',
-          ...dataUpdate,
-        },
+        data: { customerId: customer.id, platform: 'TRADERA', ...dataUpdate },
       });
     }
 
@@ -93,26 +78,20 @@ router.post('/tradera/connect', async (req, res) => {
 });
 
 /* -------------------------------------------------------
-   Tradera-summary – hämtar profil + sparade TraderaOrder-rader
-   + markerar vilka affärer som redan har omdömen
+   Tradera-summary
    ------------------------------------------------------- */
 router.get('/tradera/summary', async (req, res) => {
   try {
     const emailQ = String(req.query.email || '').trim().toLowerCase();
     const limitRaw = Number(req.query.limit || 50);
-    const limit = Math.max(
-      1,
-      Math.min(200, Number.isNaN(limitRaw) ? 50 : limitRaw)
-    );
+    const limit = Math.max(1, Math.min(200, Number.isNaN(limitRaw) ? 50 : limitRaw));
 
     if (!emailQ) {
       return res.status(400).json({ ok: false, error: 'Saknar email' });
     }
 
     const customer = await prisma.customer.findFirst({
-      where: {
-        OR: [{ subjectRef: emailQ }, { email: emailQ }],
-      },
+      where: { OR: [{ subjectRef: emailQ }, { email: emailQ }] },
     });
 
     if (!customer) {
@@ -120,10 +99,7 @@ router.get('/tradera/summary', async (req, res) => {
     }
 
     const profile = await prisma.externalProfile.findFirst({
-      where: {
-        customerId: customer.id,
-        platform: 'TRADERA',
-      },
+      where: { customerId: customer.id, platform: 'TRADERA' },
     });
 
     if (!profile) {
@@ -132,11 +108,7 @@ router.get('/tradera/summary', async (req, res) => {
         hasTradera: false,
         profile: null,
         orders: [],
-        summary: {
-          totalOrders: 0,
-          ratedOrders: 0,
-          unratedOrders: 0,
-        },
+        summary: { totalOrders: 0, ratedOrders: 0, unratedOrders: 0 },
       });
     }
 
@@ -146,16 +118,12 @@ router.get('/tradera/summary', async (req, res) => {
       take: limit,
     });
 
-    const traderaIds = ordersRaw
-      .map((o) => o.traderaOrderId)
-      .filter((id) => !!id);
+    const traderaIds = ordersRaw.map((o) => o.traderaOrderId).filter((id) => !!id);
 
     let ratingMap = new Map();
     if (traderaIds.length > 0) {
       const ratings = await prisma.rating.findMany({
-        where: {
-          proofRef: { in: traderaIds },
-        },
+        where: { proofRef: { in: traderaIds } },
         select: { id: true, proofRef: true },
       });
 
@@ -200,11 +168,7 @@ router.get('/tradera/summary', async (req, res) => {
       profile: dtoProfile,
       orders,
       limit,
-      summary: {
-        totalOrders,
-        ratedOrders,
-        unratedOrders,
-      },
+      summary: { totalOrders, ratedOrders, unratedOrders },
     });
   } catch (err) {
     console.error('Tradera summary error', err);
@@ -216,23 +180,18 @@ router.get('/tradera/summary', async (req, res) => {
 });
 
 /* -------------------------------------------------------
-   Tradera MOCK: skapa några testordrar för den kopplade profilen
-   (används bara för att testa UI/databaskedjan)
+   Tradera MOCK
    ------------------------------------------------------- */
 router.post('/tradera/mock-orders', async (req, res) => {
   try {
     const emailQ = String(req.body.email || '').trim().toLowerCase();
 
     if (!emailQ) {
-      return res
-        .status(400)
-        .json({ ok: false, error: 'Saknar email i request body.' });
+      return res.status(400).json({ ok: false, error: 'Saknar email i request body.' });
     }
 
     const customer = await prisma.customer.findFirst({
-      where: {
-        OR: [{ subjectRef: emailQ }, { email: emailQ }],
-      },
+      where: { OR: [{ subjectRef: emailQ }, { email: emailQ }] },
     });
 
     if (!customer) {
@@ -240,10 +199,7 @@ router.post('/tradera/mock-orders', async (req, res) => {
     }
 
     const profile = await prisma.externalProfile.findFirst({
-      where: {
-        customerId: customer.id,
-        platform: 'TRADERA',
-      },
+      where: { customerId: customer.id, platform: 'TRADERA' },
     });
 
     if (!profile) {
@@ -257,12 +213,8 @@ router.post('/tradera/mock-orders', async (req, res) => {
     const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000);
     const tenDaysAgo = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000);
 
-    // Rensa ev. gamla mock-ordrar för att undvika dubletter
-    await prisma.traderaOrder.deleteMany({
-      where: { externalProfileId: profile.id },
-    });
+    await prisma.traderaOrder.deleteMany({ where: { externalProfileId: profile.id } });
 
-    // Skapa några exempelordrar
     const created = await prisma.traderaOrder.createMany({
       data: [
         {
@@ -294,50 +246,36 @@ router.post('/tradera/mock-orders', async (req, res) => {
       ],
     });
 
-    return res.json({
-      ok: true,
-      createdCount: created.count || 0,
-    });
+    return res.json({ ok: true, createdCount: created.count || 0 });
   } catch (err) {
     console.error('Tradera mock-orders error', err);
-    return res.status(500).json({
-      ok: false,
-      error: 'Kunde inte skapa mock-Traderaordrar.',
-    });
+    return res.status(500).json({ ok: false, error: 'Kunde inte skapa mock-Traderaordrar.' });
   }
 });
 
 /* -------------------------------------------------------
-   Tradera SYNC-NOW – placeholder sync (ingen riktig scraping i PROD)
+   Tradera SYNC-NOW
    ------------------------------------------------------- */
 router.post('/tradera/sync-now', async (req, res) => {
   try {
     const emailQ = String(req.body.email || '').trim().toLowerCase();
-
     if (!emailQ) {
-      return res
-        .status(400)
-        .json({ ok: false, error: 'Saknar email i request body.' });
+      return res.status(400).json({ ok: false, error: 'Saknar email i request body.' });
     }
 
     const result = await syncTraderaForEmail(emailQ);
-
-    return res.json({
-      ok: true,
-      ...result,
-    });
+    return res.json({ ok: true, ...result });
   } catch (err) {
     console.error('Tradera sync-now error', err);
     return res.status(500).json({
       ok: false,
-      error:
-        err && err.message ? err.message : 'Kunde inte synka Tradera-data.',
+      error: err && err.message ? err.message : 'Kunde inte synka Tradera-data.',
     });
   }
 });
 
 /* -------------------------------------------------------
-   Tradera IMPORT – ta emot ordrar som JSON
+   Tradera IMPORT
    ------------------------------------------------------- */
 router.post('/tradera/import', async (req, res) => {
   try {
@@ -346,11 +284,8 @@ router.post('/tradera/import', async (req, res) => {
     const orders = Array.isArray(body.orders) ? body.orders : [];
 
     if (!emailQ) {
-      return res
-        .status(400)
-        .json({ ok: false, error: 'Saknar email i request body.' });
+      return res.status(400).json({ ok: false, error: 'Saknar email i request body.' });
     }
-
     if (!orders.length) {
       return res.status(400).json({
         ok: false,
@@ -359,19 +294,12 @@ router.post('/tradera/import', async (req, res) => {
     }
 
     const result = await importTraderaOrdersForEmail(emailQ, orders);
-
-    return res.json({
-      ok: true,
-      ...result,
-    });
+    return res.json({ ok: true, ...result });
   } catch (err) {
     console.error('Tradera import error', err);
     return res.status(500).json({
       ok: false,
-      error:
-        err && err.message
-          ? err.message
-          : 'Kunde inte importera Tradera-ordrar.',
+      error: err && err.message ? err.message : 'Kunde inte importera Tradera-ordrar.',
     });
   }
 });
@@ -387,15 +315,11 @@ async function ebayConnectHandler(req, res) {
     const emailTrim = String(body.email || '').trim().toLowerCase();
 
     if (!emailTrim) {
-      return res
-        .status(400)
-        .json({ ok: false, error: 'Saknar e-post i request body.' });
+      return res.status(400).json({ ok: false, error: 'Saknar e-post i request body.' });
     }
 
     const customer = await prisma.customer.findFirst({
-      where: {
-        OR: [{ subjectRef: emailTrim }, { email: emailTrim }],
-      },
+      where: { OR: [{ subjectRef: emailTrim }, { email: emailTrim }] },
     });
 
     if (!customer) {
@@ -403,13 +327,10 @@ async function ebayConnectHandler(req, res) {
     }
 
     const { redirectUrl } = buildEbayAuthUrlForCustomer(customer.id);
-
     return res.json({ ok: true, redirectUrl });
   } catch (err) {
     console.error('eBay connect error', err);
-    return res
-      .status(500)
-      .json({ ok: false, error: 'Kunde inte skapa eBay-auth-URL.' });
+    return res.status(500).json({ ok: false, error: 'Kunde inte skapa eBay-auth-URL.' });
   }
 }
 
@@ -419,19 +340,91 @@ async function ebayCallbackHandler(req, res) {
     const state = String(req.query.state || '').trim();
 
     if (!code || !state) {
-      return res
-        .status(400)
-        .json({ ok: false, error: 'Saknar code eller state i callback.' });
+      return res.status(400).json({ ok: false, error: 'Saknar code eller state i callback.' });
     }
 
     const result = await handleEbayCallback({ code, state });
+    const customerId = result.customerId;
 
-    return res.json({ ok: true, ...result });
+    if (!customerId) {
+      return res.status(400).json({ ok: false, error: 'Kunde inte läsa customerId från state.' });
+    }
+
+    // Hämta customer så vi kan sätta ett stabilt username (ExternalProfile kräver username)
+    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+    if (!customer) {
+      return res.status(404).json({ ok: false, error: 'Kund hittades inte för customerId i callback.' });
+    }
+
+    // Kryptera tokens innan vi sparar
+    const accessTokenEnc = result.accessToken ? encryptSecret(result.accessToken) : null;
+    const refreshTokenEnc = result.refreshToken ? encryptSecret(result.refreshToken) : null;
+
+    const now = new Date();
+
+    const accessTokenExpiresAt =
+      typeof result.expiresIn === 'number' && result.expiresIn > 0
+        ? new Date(now.getTime() + result.expiresIn * 1000)
+        : null;
+
+    const refreshTokenExpiresAt =
+      typeof result.refreshTokenExpiresIn === 'number' && result.refreshTokenExpiresIn > 0
+        ? new Date(now.getTime() + result.refreshTokenExpiresIn * 1000)
+        : null;
+
+    // Upsert (via find + update/create)
+    let profile = await prisma.externalProfile.findFirst({
+      where: { customerId, platform: 'EBAY' },
+    });
+
+    const username =
+      (customer.email || customer.subjectRef || '').trim().toLowerCase() || `customer-${customer.id.slice(0, 8)}`;
+
+    const dataUpdate = {
+      username,
+      status: 'ACTIVE',
+      accessTokenEnc,
+      refreshTokenEnc,
+      accessTokenExpiresAt,
+      refreshTokenExpiresAt,
+      scopes: result.scopes || null,
+      tokenType: result.tokenType || null,
+      lastSyncedAt: null,
+    };
+
+    if (profile) {
+      profile = await prisma.externalProfile.update({
+        where: { id: profile.id },
+        data: dataUpdate,
+      });
+    } else {
+      profile = await prisma.externalProfile.create({
+        data: {
+          customerId,
+          platform: 'EBAY',
+          ...dataUpdate,
+        },
+      });
+    }
+
+    // ✅ Svara utan råa tokens
+    return res.json({
+      ok: true,
+      customerId,
+      externalProfileId: profile.id,
+      statePayload: result.statePayload,
+      scopes: result.scopes || null,
+      tokenType: result.tokenType || null,
+      expiresIn: result.expiresIn || null,
+      refreshTokenExpiresIn: result.refreshTokenExpiresIn || null,
+      accessTokenSnippet: result.accessTokenSnippet || null,
+      refreshTokenSnippet: result.refreshTokenSnippet || null,
+      hasRefreshToken: !!result.refreshToken,
+      savedToDb: true,
+    });
   } catch (err) {
     console.error('eBay callback error', err);
-    return res
-      .status(500)
-      .json({ ok: false, error: err?.message || 'Kunde inte hantera eBay-callback.' });
+    return res.status(500).json({ ok: false, error: err?.message || 'Kunde inte hantera eBay-callback.' });
   }
 }
 
@@ -441,7 +434,7 @@ async function ebayCallbackHandler(req, res) {
 router.post('/ebay/connect', ebayConnectHandler);
 
 /**
- * POST /api/integrations/ebay/connect  (alias för äldre env / portalkonfig)
+ * POST /api/integrations/ebay/connect (alias)
  */
 router.post('/integrations/ebay/connect', ebayConnectHandler);
 
@@ -451,7 +444,7 @@ router.post('/integrations/ebay/connect', ebayConnectHandler);
 router.get('/ebay/callback', ebayCallbackHandler);
 
 /**
- * GET /api/integrations/ebay/callback  (alias för äldre env / portalkonfig)
+ * GET /api/integrations/ebay/callback (alias)
  */
 router.get('/integrations/ebay/callback', ebayCallbackHandler);
 

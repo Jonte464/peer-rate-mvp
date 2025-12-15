@@ -19,9 +19,7 @@ const EBAY_TOKEN_HOST =
   EBAY_ENV === 'SANDBOX' ? 'api.sandbox.ebay.com' : 'api.ebay.com';
 
 // Scopes (kan utökas senare)
-const SCOPES = [
-  'https://api.ebay.com/oauth/api_scope',
-];
+const SCOPES = ['https://api.ebay.com/oauth/api_scope'];
 
 function buildEbayAuthUrlForCustomer(customerId) {
   if (!EBAY_CLIENT_ID || !EBAY_REDIRECT_URI) {
@@ -97,10 +95,15 @@ function httpPostForm({ host, path, headers, form }) {
 
 async function exchangeCodeForTokens(code) {
   if (!EBAY_CLIENT_ID || !EBAY_CLIENT_SECRET || !EBAY_REDIRECT_URI) {
-    throw new Error('EBAY_CLIENT_ID/EBAY_CLIENT_SECRET/EBAY_REDIRECT_URI saknas i env');
+    throw new Error(
+      'EBAY_CLIENT_ID/EBAY_CLIENT_SECRET/EBAY_REDIRECT_URI saknas i env'
+    );
   }
 
-  const basic = Buffer.from(`${EBAY_CLIENT_ID}:${EBAY_CLIENT_SECRET}`, 'utf8').toString('base64');
+  const basic = Buffer.from(
+    `${EBAY_CLIENT_ID}:${EBAY_CLIENT_SECRET}`,
+    'utf8'
+  ).toString('base64');
 
   // eBay: POST https://api.ebay.com/identity/v1/oauth2/token
   const tokenJson = await httpPostForm({
@@ -119,6 +122,10 @@ async function exchangeCodeForTokens(code) {
   return tokenJson;
 }
 
+/**
+ * Returnerar tokens + metadata.
+ * OBS: vi ska INTE skicka ut råa tokens till frontend. Routes-filen ansvarar för det.
+ */
 async function handleEbayCallback({ code, state }) {
   const decoded = decodeState(state);
   const customerId = decoded.customerId || null;
@@ -126,7 +133,6 @@ async function handleEbayCallback({ code, state }) {
   // Token-utbyte
   const token = await exchangeCodeForTokens(code);
 
-  // Vi returnerar "snippets" så du kan verifiera utan att vi råkar logga tokens överallt.
   const accessToken = token.access_token || '';
   const refreshToken = token.refresh_token || '';
 
@@ -137,10 +143,15 @@ async function handleEbayCallback({ code, state }) {
     tokenType: token.token_type || null,
     expiresIn: token.expires_in || null,
     refreshTokenExpiresIn: token.refresh_token_expires_in || null,
+
+    // Råa tokens (ska bara användas server-side för att spara i DB)
+    accessToken,
+    refreshToken,
+
+    // Snippets för debug i browsern (säker-ish)
     accessTokenSnippet: accessToken ? accessToken.slice(0, 12) + '...' : null,
     refreshTokenSnippet: refreshToken ? refreshToken.slice(0, 12) + '...' : null,
     hasRefreshToken: !!refreshToken,
-    // OBS: vi sparar i DB i nästa steg (så vi kan verifiera först)
   };
 }
 
