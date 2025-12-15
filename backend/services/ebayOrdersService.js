@@ -1,5 +1,5 @@
 // backend/services/ebayOrdersService.js
-// Hämtar eBay-ordrar med ett giltigt User Access Token
+// Hämtar eBay-ordrar (Buy Order API)
 
 const EBAY_ENV = (process.env.EBAY_ENV || 'PRODUCTION').toUpperCase();
 
