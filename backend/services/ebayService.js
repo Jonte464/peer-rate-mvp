@@ -14,12 +14,34 @@ const EBAY_AUTH_BASE =
     ? 'https://auth.sandbox.ebay.com/oauth2/authorize'
     : 'https://auth.ebay.com/oauth2/authorize';
 
-// Token-endpoint (Identity API)
 const EBAY_TOKEN_HOST =
   EBAY_ENV === 'SANDBOX' ? 'api.sandbox.ebay.com' : 'api.ebay.com';
 
 // Scopes (kan utökas senare)
 const SCOPES = ['https://api.ebay.com/oauth/api_scope'];
+
+// ---------- base64url helpers (URL-säkra) ----------
+function toBase64Url(str) {
+  // base64 -> base64url (byt tecken + / och ta bort padding =)
+  return Buffer.from(str, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+}
+
+function fromBase64Url(b64url) {
+  // base64url -> base64 (återställ tecken och padding)
+  const b64 = String(b64url || '')
+    .replace(/-/g, '+')
+    .replace(/_/g, '/');
+
+  const padLen = (4 - (b64.length % 4)) % 4;
+  const padded = b64 + '='.repeat(padLen);
+
+  return Buffer.from(padded, 'base64').toString('utf8');
+}
+// -----------------------------------------------
 
 function buildEbayAuthUrlForCustomer(customerId) {
   if (!EBAY_CLIENT_ID || !EBAY_REDIRECT_URI) {
@@ -27,7 +49,7 @@ function buildEbayAuthUrlForCustomer(customerId) {
   }
 
   const statePayload = JSON.stringify({ customerId, ts: Date.now() });
-  const state = Buffer.from(statePayload, 'utf8').toString('base64');
+  const state = toBase64Url(statePayload);
 
   const qs = querystring.stringify({
     response_type: 'code',
@@ -42,7 +64,7 @@ function buildEbayAuthUrlForCustomer(customerId) {
 
 function decodeState(state) {
   try {
-    const json = Buffer.from(state, 'base64').toString('utf8');
+    const json = fromBase64Url(state);
     return JSON.parse(json);
   } catch {
     throw new Error('Ogiltigt state-värde i eBay-callback');
@@ -80,7 +102,7 @@ function httpPostForm({ host, path, headers, form }) {
           try {
             const json = JSON.parse(data);
             resolve(json);
-          } catch (e) {
+          } catch {
             reject(new Error('Kunde inte tolka JSON från eBay token-endpoint'));
           }
         });
@@ -105,7 +127,6 @@ async function exchangeCodeForTokens(code) {
     'utf8'
   ).toString('base64');
 
-  // eBay: POST https://api.ebay.com/identity/v1/oauth2/token
   const tokenJson = await httpPostForm({
     host: EBAY_TOKEN_HOST,
     path: '/identity/v1/oauth2/token',
@@ -122,15 +143,10 @@ async function exchangeCodeForTokens(code) {
   return tokenJson;
 }
 
-/**
- * Returnerar tokens + metadata.
- * OBS: vi ska INTE skicka ut råa tokens till frontend. Routes-filen ansvarar för det.
- */
 async function handleEbayCallback({ code, state }) {
   const decoded = decodeState(state);
   const customerId = decoded.customerId || null;
 
-  // Token-utbyte
   const token = await exchangeCodeForTokens(code);
 
   const accessToken = token.access_token || '';
@@ -144,11 +160,9 @@ async function handleEbayCallback({ code, state }) {
     expiresIn: token.expires_in || null,
     refreshTokenExpiresIn: token.refresh_token_expires_in || null,
 
-    // Råa tokens (ska bara användas server-side för att spara i DB)
     accessToken,
     refreshToken,
 
-    // Snippets för debug i browsern (säker-ish)
     accessTokenSnippet: accessToken ? accessToken.slice(0, 12) + '...' : null,
     refreshTokenSnippet: refreshToken ? refreshToken.slice(0, 12) + '...' : null,
     hasRefreshToken: !!refreshToken,
