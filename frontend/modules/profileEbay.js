@@ -1,13 +1,10 @@
 // frontend/modules/profileEbay.js
-// Alternativ A (fortsättning): Visa kopplingsstatus + hämta/rendera eBay-ordrar
+// Hanterar eBay-kopplingen + visar eBay-ordrar på "Min profil"
+// Viktigt: eBay login/consent får ofta INTE visas i iframe (Wix). Vi öppnar därför i ny flik vid behov.
 
 import { showNotification } from './utils.js';
 import auth from './auth.js';
 
-/**
- * Hämtar e-post för nuvarande inloggade användare.
- * Försöker först med user.email, annars subjectRef.
- */
 function getCurrentUserEmail() {
   try {
     const user = auth.getUser();
@@ -23,25 +20,31 @@ function getCurrentUserEmail() {
   }
 }
 
+function isInIframe() {
+  try {
+    return window.self !== window.top;
+  } catch {
+    // Om browsern blockerar access till window.top → vi antar att vi är i iframe
+    return true;
+  }
+}
+
 function safeText(v) {
   if (v === undefined || v === null || v === '') return '–';
   return String(v);
 }
 
-function formatDateTime(iso) {
+function formatDate(iso) {
   if (!iso) return '–';
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return String(iso);
-    return d.toLocaleString('sv-SE');
+    return d.toLocaleString('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit' });
   } catch {
     return String(iso);
   }
 }
 
-/**
- * Rendera orders på sidan
- */
 function renderOrders(container, data) {
   if (!container) return;
 
@@ -57,12 +60,9 @@ function renderOrders(container, data) {
 
   const rows = orders.map((o) => {
     const orderId = safeText(o?.orderId || o?.order_id || o?.id);
-    const created = formatDateTime(
-      o?.creationDate || o?.creation_date || o?.createdDate || o?.creation_date_time
-    );
+    const created = formatDate(o?.creationDate || o?.creation_date || o?.createdDate);
     const status = safeText(o?.orderStatus || o?.order_status || o?.status);
 
-    // eBay kan ha pricingSummary.total som { value, currency }
     const amountObj = o?.pricingSummary?.total || o?.totalAmount || o?.total;
     const amount =
       amountObj && typeof amountObj === 'object'
@@ -88,75 +88,21 @@ function renderOrders(container, data) {
   `;
 }
 
-/**
- * Uppdatera enkel statusrad i eBay-sektionen:
- * - Kopplad: Ja/Nej
- * - Senast uppdaterad
- */
-function renderStatus({ statusLineEl, isConnected, lastSyncedAt }) {
-  if (!statusLineEl) return;
-
-  const connectedText = isConnected ? 'Ja' : 'Nej';
-  const lastText = lastSyncedAt ? formatDateTime(lastSyncedAt) : '–';
-
-  statusLineEl.innerHTML = `
-    <span class="chip">Kopplad: ${connectedText}</span>
-    <span class="chip">Senast uppdaterad: ${lastText}</span>
-  `;
-}
-
-/**
- * Hämtar status från backend (kräver ny endpoint, se nedan)
- */
-async function fetchEbayStatus(email) {
-  const resp = await fetch(`/api/ebay/status?email=${encodeURIComponent(email)}`);
-  const json = await resp.json().catch(() => null);
-
-  if (!resp.ok || !json || json.ok === false) {
-    const msg =
-      (json && (json.error || json.message)) ||
-      `Kunde inte läsa eBay-status (HTTP ${resp.status}).`;
-    throw new Error(msg);
-  }
-  return json;
-}
-
-/**
- * Hämtar orders från backend
- */
-async function fetchEbayOrders(email) {
-  const resp = await fetch(`/api/ebay/orders?email=${encodeURIComponent(email)}`);
-  const json = await resp.json().catch(() => null);
-
-  if (!resp.ok || !json || json.ok === false) {
-    const msg =
-      (json && (json.error || json.message)) ||
-      `Kunde inte hämta eBay-ordrar (HTTP ${resp.status}).`;
-    throw new Error(msg);
-  }
-  return json;
-}
-
-/**
- * Initierar eBay-sektionen om rätt element finns i DOM.
- * Förväntar sig:
- *  - Knapp id="ebay-connect-btn"
- *  - Knapp id="ebay-orders-btn"
- *  - Status-element id="ebay-status"
- *  - Statusrad id="ebay-status-line" (ny i HTML)
- *  - Lista id="ebay-orders-list"
- */
 export async function initEbaySection() {
   try {
     const connectBtn = document.getElementById('ebay-connect-btn');
     const ordersBtn = document.getElementById('ebay-orders-btn');
-    const statusElId = 'ebay-status';
-    const statusLineEl = document.getElementById('ebay-status-line');
     const ordersList = document.getElementById('ebay-orders-list');
+    const statusElId = 'ebay-status';
 
     if (!connectBtn && !ordersBtn) return;
 
     const email = getCurrentUserEmail();
+
+    // Standard: enable (vi styr sen om vi saknar email)
+    if (connectBtn) connectBtn.disabled = false;
+    if (ordersBtn) ordersBtn.disabled = false;
+
     if (!email) {
       if (connectBtn) {
         connectBtn.disabled = true;
@@ -166,27 +112,7 @@ export async function initEbaySection() {
         ordersBtn.disabled = true;
         ordersBtn.textContent = 'Logga in för att hämta ordrar';
       }
-      renderStatus({ statusLineEl, isConnected: false, lastSyncedAt: null });
       return;
-    }
-
-    // 1) Läs status direkt när sidan laddas (om endpoint finns)
-    try {
-      const s = await fetchEbayStatus(email);
-      renderStatus({
-        statusLineEl,
-        isConnected: !!s.isConnected,
-        lastSyncedAt: s.lastSyncedAt || null,
-      });
-
-      // Om inte kopplad → disable “Hämta ordrar”
-      if (ordersBtn) ordersBtn.disabled = !s.isConnected;
-    } catch (e) {
-      // Om status-endpoint saknas eller fel → visa neutral status men låt UI fungera
-      console.warn('eBay status not available yet:', e?.message);
-      renderStatus({ statusLineEl, isConnected: false, lastSyncedAt: null });
-      // Låt orders-knappen vara enabled (vi låter backend avgöra)
-      if (ordersBtn) ordersBtn.disabled = false;
     }
 
     // ---------- KOPPLA EBAY ----------
@@ -198,9 +124,9 @@ export async function initEbaySection() {
       }
 
       connectBtn.addEventListener('click', async () => {
+        const originalText = connectBtn.textContent;
         try {
           connectBtn.disabled = true;
-          const originalText = connectBtn.textContent;
           connectBtn.textContent = 'Kopplar eBay...';
 
           const response = await fetch('/api/integrations/ebay/connect', {
@@ -221,7 +147,23 @@ export async function initEbaySection() {
             return;
           }
 
-          window.location.href = data.redirectUrl;
+          const url = data.redirectUrl;
+
+          // VIKTIGT: Om vi kör i Wix/iframe → öppna i ny flik (eBay blockerar ofta iframe)
+          if (isInIframe()) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+            showNotification(
+              'success',
+              'eBay öppnades i en ny flik. Slutför kopplingen där och kom sedan tillbaka hit.',
+              statusElId
+            );
+            connectBtn.disabled = false;
+            connectBtn.textContent = originalText;
+            return;
+          }
+
+          // Annars kan vi navigera direkt
+          window.location.href = url;
         } catch (err) {
           console.error('eBay connect frontend error', err);
           showNotification(
@@ -230,7 +172,7 @@ export async function initEbaySection() {
             statusElId
           );
           connectBtn.disabled = false;
-          connectBtn.textContent = 'Koppla eBay-konto';
+          connectBtn.textContent = originalText;
         }
       });
     }
@@ -239,34 +181,39 @@ export async function initEbaySection() {
     if (ordersBtn && !ordersBtn._ebayOrdersBound) {
       ordersBtn._ebayOrdersBound = true;
 
+      if (!ordersBtn.textContent || ordersBtn.textContent.trim() === '') {
+        ordersBtn.textContent = 'Hämta eBay-ordrar';
+      }
+
       ordersBtn.addEventListener('click', async () => {
+        const originalText = ordersBtn.textContent;
         try {
           ordersBtn.disabled = true;
-          const originalText = ordersBtn.textContent;
           ordersBtn.textContent = 'Hämtar eBay-ordrar...';
 
-          const json = await fetchEbayOrders(email);
+          const resp = await fetch(`/api/ebay/orders?email=${encodeURIComponent(email)}`);
+          const json = await resp.json().catch(() => null);
+
+          if (!resp.ok || !json || json.ok === false) {
+            const msg =
+              (json && (json.error || json.message)) ||
+              `Kunde inte hämta eBay-ordrar (HTTP ${resp.status}).`;
+            showNotification('error', msg, statusElId);
+            ordersBtn.disabled = false;
+            ordersBtn.textContent = originalText;
+            return;
+          }
 
           renderOrders(ordersList, json.data);
           showNotification('success', 'eBay-ordrar uppdaterade.', statusElId);
-
-          // Uppdatera status igen efter hämtning (så “Senast uppdaterad” blir rätt)
-          try {
-            const s = await fetchEbayStatus(email);
-            renderStatus({
-              statusLineEl,
-              isConnected: !!s.isConnected,
-              lastSyncedAt: s.lastSyncedAt || null,
-            });
-          } catch (_) {}
 
           ordersBtn.disabled = false;
           ordersBtn.textContent = originalText;
         } catch (err) {
           console.error('eBay orders frontend error', err);
-          showNotification('error', err?.message || 'Tekniskt fel när vi hämtade eBay-ordrar.', statusElId);
+          showNotification('error', 'Tekniskt fel när vi hämtade eBay-ordrar.', statusElId);
           ordersBtn.disabled = false;
-          ordersBtn.textContent = 'Hämta eBay-ordrar';
+          ordersBtn.textContent = originalText;
         }
       });
     }
