@@ -306,16 +306,18 @@ router.post('/tradera/import', async (req, res) => {
 
 /* -------------------------------------------------------
    eBay – OAuth (koppla konto via OAuth)
+   Alternativ A: Spara token i DB (ExternalProfile.authToken + profileJson)
    ------------------------------------------------------- */
 
-// Gemensam handler så vi kan ha flera URL-varianter (alias)
 async function ebayConnectHandler(req, res) {
   try {
     const body = req.body || {};
     const emailTrim = String(body.email || '').trim().toLowerCase();
 
     if (!emailTrim) {
-      return res.status(400).json({ ok: false, error: 'Saknar e-post i request body.' });
+      return res
+        .status(400)
+        .json({ ok: false, error: 'Saknar e-post i request body.' });
     }
 
     const customer = await prisma.customer.findFirst({
@@ -330,7 +332,9 @@ async function ebayConnectHandler(req, res) {
     return res.json({ ok: true, redirectUrl });
   } catch (err) {
     console.error('eBay connect error', err);
-    return res.status(500).json({ ok: false, error: 'Kunde inte skapa eBay-auth-URL.' });
+    return res
+      .status(500)
+      .json({ ok: false, error: 'Kunde inte skapa eBay-auth-URL.' });
   }
 }
 
@@ -340,56 +344,64 @@ async function ebayCallbackHandler(req, res) {
     const state = String(req.query.state || '').trim();
 
     if (!code || !state) {
-      return res.status(400).json({ ok: false, error: 'Saknar code eller state i callback.' });
+      return res
+        .status(400)
+        .json({ ok: false, error: 'Saknar code eller state i callback.' });
     }
 
+    // 1) Byt code -> tokens
     const result = await handleEbayCallback({ code, state });
+
     const customerId = result.customerId;
+    const accessToken = result.accessToken;
+    const refreshToken = result.refreshToken;
 
     if (!customerId) {
-      return res.status(400).json({ ok: false, error: 'Kunde inte läsa customerId från state.' });
+      return res.status(400).json({ ok: false, error: 'Saknar customerId i state.' });
+    }
+    if (!accessToken) {
+      return res.status(500).json({ ok: false, error: 'Saknar accessToken från eBay.' });
     }
 
-    // Hämta customer så vi kan sätta ett stabilt username (ExternalProfile kräver username)
-    const customer = await prisma.customer.findUnique({ where: { id: customerId } });
-    if (!customer) {
-      return res.status(404).json({ ok: false, error: 'Kund hittades inte för customerId i callback.' });
-    }
-
-    // Kryptera tokens innan vi sparar
-    const accessTokenEnc = result.accessToken ? encryptSecret(result.accessToken) : null;
-    const refreshTokenEnc = result.refreshToken ? encryptSecret(result.refreshToken) : null;
-
+    // 2) Spara i DB på ställen som /api/ebay/orders faktiskt kan läsa
     const now = new Date();
+    const expiresInSec = Number(result.expiresIn || 0);
+    const refreshExpiresInSec = Number(result.refreshTokenExpiresIn || 0);
 
-    const accessTokenExpiresAt =
-      typeof result.expiresIn === 'number' && result.expiresIn > 0
-        ? new Date(now.getTime() + result.expiresIn * 1000)
-        : null;
+    const authTokenExpiresAt =
+      expiresInSec > 0 ? new Date(Date.now() + expiresInSec * 1000) : null;
 
-    const refreshTokenExpiresAt =
-      typeof result.refreshTokenExpiresIn === 'number' && result.refreshTokenExpiresIn > 0
-        ? new Date(now.getTime() + result.refreshTokenExpiresIn * 1000)
-        : null;
+    // Vi sparar refresh token krypterat (bra praxis)
+    const refreshTokenEncrypted = refreshToken ? encryptSecret(refreshToken) : null;
 
-    // Upsert (via find + update/create)
+    // Hämta / skapa ExternalProfile för EBAY
     let profile = await prisma.externalProfile.findFirst({
       where: { customerId, platform: 'EBAY' },
+      orderBy: { createdAt: 'desc' },
     });
 
-    const username =
-      (customer.email || customer.subjectRef || '').trim().toLowerCase() || `customer-${customer.id.slice(0, 8)}`;
-
     const dataUpdate = {
-      username,
+      // username krävs i din modell – vi sätter en enkel placeholder nu.
+      // (Sen kan vi byta till riktigt eBay-user senare.)
+      username: profile?.username || 'ebay',
       status: 'ACTIVE',
-      accessTokenEnc,
-      refreshTokenEnc,
-      accessTokenExpiresAt,
-      refreshTokenExpiresAt,
-      scopes: result.scopes || null,
-      tokenType: result.tokenType || null,
-      lastSyncedAt: null,
+
+      // ✅ Här lägger vi access token där ebayRoutes letar först:
+      authToken: accessToken,
+      authTokenExpiresAt,
+
+      // ✅ Här sparar vi extra info (utan att exponera raw tokens okrypterat)
+      profileJson: {
+        provider: 'ebay',
+        tokenType: result.tokenType || null,
+        scopes: result.scopes || null,
+        obtainedAt: now.toISOString(),
+        expiresIn: expiresInSec || null,
+        refreshTokenExpiresIn: refreshExpiresInSec || null,
+        refreshTokenEncrypted: refreshTokenEncrypted || null,
+      },
+
+      lastSyncedAt: now,
     };
 
     if (profile) {
@@ -407,45 +419,20 @@ async function ebayCallbackHandler(req, res) {
       });
     }
 
-    // ✅ Svara utan råa tokens
-    return res.json({
-      ok: true,
-      customerId,
-      externalProfileId: profile.id,
-      statePayload: result.statePayload,
-      scopes: result.scopes || null,
-      tokenType: result.tokenType || null,
-      expiresIn: result.expiresIn || null,
-      refreshTokenExpiresIn: result.refreshTokenExpiresIn || null,
-      accessTokenSnippet: result.accessTokenSnippet || null,
-      refreshTokenSnippet: result.refreshTokenSnippet || null,
-      hasRefreshToken: !!result.refreshToken,
-      savedToDb: true,
-    });
+    // 3) Redirect tillbaka till profilen istället för att visa JSON-sidan (mycket bättre UX)
+    // Om du vill se JSON istället, byt till: return res.json({ ok:true, ... });
+    return res.redirect('/profile.html?ebay=connected');
   } catch (err) {
     console.error('eBay callback error', err);
-    return res.status(500).json({ ok: false, error: err?.message || 'Kunde inte hantera eBay-callback.' });
+    return res
+      .status(500)
+      .json({ ok: false, error: err?.message || 'Kunde inte hantera eBay-callback.' });
   }
 }
 
-/**
- * POST /api/ebay/connect
- */
+// Routes (vi behåller både nya och “alias” så inget gammalt går sönder)
 router.post('/ebay/connect', ebayConnectHandler);
-
-/**
- * POST /api/integrations/ebay/connect (alias)
- */
 router.post('/integrations/ebay/connect', ebayConnectHandler);
 
-/**
- * GET /api/ebay/callback
- */
 router.get('/ebay/callback', ebayCallbackHandler);
-
-/**
- * GET /api/integrations/ebay/callback (alias)
- */
 router.get('/integrations/ebay/callback', ebayCallbackHandler);
-
-module.exports = router;
