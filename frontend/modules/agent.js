@@ -12,6 +12,11 @@ const summaryTextEl = el('agent-summary-text');
 const pillRowEl = el('agent-pill-row');
 const promptOutputEl = el('agent-prompt-output');
 const copyBtn = el('copy-prompt-btn');
+// ===== Agent-chat UI =====
+const agentUserInputEl = el('agent-user-input');
+const agentSendBtn = el('agent-send-btn');
+const agentResponseEl = el('agent-response');
+
 
 const ruleConfig = [
   {
@@ -541,6 +546,58 @@ function updateSummaryAndPrompt() {
   );
 
   promptOutputEl.value = promptParts.join('');
+    // Spara prompten så chat-sidan kan använda den
+  try {
+    localStorage.setItem('peerRateAgentSystemPrompt', promptOutputEl.value || '');
+  } catch {}
+}
+
+// ==============================
+// Skicka fråga till PeerRate-agenten
+// ==============================
+async function sendQuestionToAgent() {
+  const systemPrompt = promptOutputEl?.value || '';
+  const userPrompt = agentUserInputEl?.value || '';
+
+  if (!systemPrompt.trim()) {
+    alert('Ingen agent-prompt är genererad ännu.');
+    return;
+  }
+
+  if (!userPrompt.trim()) {
+    alert('Skriv en fråga till agenten först.');
+    return;
+  }
+
+  agentResponseEl.style.display = 'block';
+  agentResponseEl.textContent = '⏳ Tänker...';
+
+  try {
+    const res = await fetch('/api/agent/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        systemPrompt,
+        userPrompt,
+      }),
+    });
+
+    const json = await res.json();
+
+    if (!json.ok) {
+      agentResponseEl.textContent =
+        '❌ Fel från agenten:\n' + (json.error || 'Okänt fel');
+      return;
+    }
+
+    agentResponseEl.textContent = json.answer || '(Inget svar)';
+  } catch (err) {
+    console.error('Agent chat error', err);
+    agentResponseEl.textContent =
+      '❌ Kunde inte nå agenten. Se konsolen för detaljer.';
+  }
 }
 
 // Kopiera prompt till urklipp
@@ -618,6 +675,11 @@ function init() {
 
   if (copyBtn) {
     copyBtn.addEventListener('click', copyPromptToClipboard);
+  }
+
+  // Agent-chat
+  if (agentSendBtn) {
+    agentSendBtn.addEventListener('click', sendQuestionToAgent);
   }
 
   // Init första gången
