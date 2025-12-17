@@ -51,6 +51,7 @@ const traderaRoutes = assertRouter('traderaRoutes', require('./routes/traderaRou
 
 // ✅ NYTT: eBay data routes (orders etc)
 const ebayRoutes = assertRouter('ebayRoutes', require('./routes/ebayRoutes'));
+const agentRoutes = assertRouter('agentRoutes', require('./routes/agentRoutes'));
 
 const app = express();
 
@@ -114,6 +115,8 @@ app.use('/api', traderaRoutes);
 
 // ✅ NYTT: mounta eBay endpoints under /api
 app.use('/api', ebayRoutes);
+app.use('/api', agentRoutes);
+
 
 // -----------------------------
 // Health
