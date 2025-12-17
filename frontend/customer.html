@@ -4,231 +4,304 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Registrera dig – PeerRate</title>
+
+  <!-- PeerRate tema (orange / lila) -->
+  <link rel="stylesheet" href="/css/pr-theme.css" />
+
   <style>
-    :root{
-      --brand-orange:#f6a94b;
-      --brand-card:#fbf2e6;
-      --brand-accent:#bfe9e6;
-      --brand-border:#eadfce;
-      --brand-ink:#1e1830;
-      --brand-ink-d:#4a425e;
-      --brand-purple:#1b1533;
-      --ok:#0b7a65;
-      --err:#9b1c1c;
+    /* Topbar (samma som index) */
+    .pr-shell { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+    .pr-topbar{
+      padding: 18px 0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: color-mix(in srgb, var(--pr-bg) 92%, transparent);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(0,0,0,.06);
     }
-    *{box-sizing:border-box;}
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
-      color:var(--brand-ink);
-      background:transparent;
+    .pr-topbar-inner{
+      display:flex; align-items:center; justify-content:space-between; gap:14px;
     }
-    .wrap{
-      max-width:720px;
-      margin:40px auto 60px;
-      padding:0 16px 40px;
+    .pr-brand{
+      display:flex; align-items:center; gap:12px;
+      text-decoration:none;
     }
-    h1{
-      margin:0 0 6px;
-      font-size:32px;
+    .pr-title{
+      font-weight:700; font-size:22px; color:var(--pr-purple);
+      line-height:1;
+    }
+    .pr-tagline{
+      font-size:12px; color:var(--pr-muted); margin-top:2px;
+    }
+    .pr-nav{
+      display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    }
+    .pr-nav a{
+      color: var(--pr-purple);
+      text-decoration:none;
+      font-weight:600;
+      opacity:.92;
+    }
+    .pr-nav a:hover{ opacity:1; text-decoration: underline; }
+    .pr-nav .pr-cta{
+      margin-left: 6px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: var(--pr-purple);
+      color: #fff;
+      text-decoration:none;
+      font-weight:700;
+      box-shadow: var(--pr-shadow);
+    }
+    .pr-nav .pr-cta:hover{ filter: brightness(.96); text-decoration:none; }
+
+    .pr-logo-wrap{
+      width:42px; height:42px;
+      display:flex; align-items:center; justify-content:center;
+      border-radius:14px;
+      background: rgba(255,255,255,.55);
+      border: 1px solid rgba(0,0,0,.06);
+      box-shadow: 0 10px 20px rgba(0,0,0,.10);
+      overflow:hidden;
+    }
+    .pr-logo-svg{ width:34px; height:34px; display:block; }
+
+    /* Sida-layout */
+    .page{
+      padding: 34px 0 50px;
+    }
+    .page h1{
+      margin: 0 0 8px;
+      font-size: 42px;
+      color: var(--pr-purple);
+      letter-spacing: -0.02em;
     }
     .lead{
-      margin:0 0 18px;
-      font-size:15px;
-      color:var(--brand-ink-d);
+      margin: 0 0 18px;
+      color: var(--pr-muted);
+      max-width: 80ch;
+      font-size: 14px;
     }
-    label{
-      display:block;
-      font-weight:700;
-      margin:12px 0 6px;
-      font-size:14px;
-    }
-    input,select,textarea,button{
-      width:100%;
-      padding:11px 14px;
-      border-radius:12px;
-      border:1px solid #d9cbb7;
-      background:#fff;
-      color:var(--brand-ink);
-      font:inherit;
-    }
-    input::placeholder,textarea::placeholder{color:#9b8f87}
-    .row{display:flex;gap:10px;flex-wrap:wrap;}
-    .row>*{flex:1;}
-    .muted{color:var(--brand-ink-d);font-size:13px;}
-    .tiny{font-size:12px;}
-    .card{
-      background:var(--brand-card);
-      border:1px solid var(--brand-border);
-      border-radius:18px;
-      padding:18px 16px 22px;
-      box-shadow:0 8px 22px rgba(0,0,0,.06);
-    }
-    button.primary{
-      background:var(--brand-purple);
-      color:#fff;
-      border:0;
-      cursor:pointer;
-      font-weight:800;
-      margin-top:16px;
-    }
-    button.primary:hover{filter:brightness(1.05);}
+
+    /* Form-card (använder pr-theme's uttryck men gör den lite bredare) */
+    .form-wrap{ max-width: 860px; margin: 0 auto; }
+    .tiny{ font-size: 12px; color: var(--pr-muted); }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+    .row > *{ flex:1; min-width: 220px; }
 
     .notice{
       display:none;
       margin-top:12px;
       border-radius:12px;
       padding:10px 14px;
-      font-weight:600;
-      border:1px solid transparent;
+      font-weight:700;
+      border:1px solid rgba(0,0,0,.08);
+      background:#fff;
       font-size:14px;
     }
-    .notice.ok{
-      display:block;
-      background:#e7f5f1;
-      border-color:#bde6db;
-      color:var(--ok);
-    }
-    .notice.err{
-      display:block;
-      background:#fdecec;
-      border-color:#f6c4c4;
-      color:var(--err);
-    }
+    .notice.ok{ display:block; border-color: rgba(46,197,182,.45); }
+    .notice.err{ display:block; border-color: rgba(155,28,28,.35); }
 
     @media (max-width:600px){
-      .wrap{margin:20px auto 40px;padding:0 12px 32px;}
-      h1{font-size:26px;}
+      .page{ padding: 20px 0 40px; }
+      .page h1{ font-size: 30px; }
+      .row > *{ min-width: 100%; }
     }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <h1>Registrera dig</h1>
-    <p class="lead">
-      Här registrerar du dig så att du kan komma igång och bygga upp en profil med bra omdömen samt betygsätta andra.
-    </p>
 
-    <section class="card">
-      <form id="customer-form" autocomplete="off">
-        <div class="row">
-          <div>
-            <label for="cust-firstName">Förnamn</label>
-            <input id="cust-firstName" name="firstName" type="text" placeholder="Erik" required />
-          </div>
-          <div>
-            <label for="cust-lastName">Efternamn</label>
-            <input id="cust-lastName" name="lastName" type="text" placeholder="Example" required />
-          </div>
+  <!-- TOPBAR -->
+  <div class="pr-topbar">
+    <div class="pr-shell pr-topbar-inner">
+      <a class="pr-brand" href="/#top">
+        <div class="pr-logo-wrap" aria-hidden="true">
+          <!-- Inline logo (ingen extern fil behövs) -->
+          <svg class="pr-logo-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="PeerRate">
+            <defs>
+              <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#2EC5B6"/>
+                <stop offset="1" stop-color="#1EAFA3"/>
+              </linearGradient>
+            </defs>
+            <path d="M32 6c10 0 22 4 22 16 0 22-16 34-22 36C26 56 10 44 10 22 10 10 22 6 32 6z" fill="url(#g)"/>
+            <path d="M26 18h11c6 0 10 4 10 10s-4 10-10 10h-4v8h-7V18zm11 7h-4v6h4c2 0 3-1 3-3s-1-3-3-3z" fill="#ffffff"/>
+          </svg>
         </div>
-
-        <label for="cust-personalNumber">Personnummer (10–12 siffror)</label>
-        <input
-          id="cust-personalNumber"
-          name="personalNumber"
-          type="text"
-          inputmode="numeric"
-          pattern="[0-9]{10,12}"
-          placeholder="198001011234"
-          required
-        />
-
-        <label for="cust-email">E-post</label>
-        <input id="cust-email" name="email" type="email" placeholder="erik@example.com" required />
-
-        <label for="cust-emailConfirm">Bekräfta e-post</label>
-        <input id="cust-emailConfirm" name="emailConfirm" type="email" placeholder="Upprepa e-postadressen" required />
-
-        <label for="cust-password">Lösenord</label>
-        <input id="cust-password" name="password" type="password" placeholder="Minst 8 tecken" required minlength="8" />
-
-        <label for="cust-passwordConfirm">Bekräfta lösenord</label>
-        <input
-          id="cust-passwordConfirm"
-          name="passwordConfirm"
-          type="password"
-          placeholder="Upprepa lösenord"
-          required
-          minlength="8"
-        />
-        <p class="tiny muted">
-          Spara ditt lösenord – senare kan du logga in med BankID istället, men tills dess används detta.
-        </p>
-
-        <label for="cust-phone">Telefon (valfritt)</label>
-        <input id="cust-phone" name="phone" type="tel" placeholder="+46 70 123 45 67" />
-
-        <label for="cust-addressStreet">Gatuadress</label>
-        <input id="cust-addressStreet" name="addressStreet" type="text" placeholder="Exempelgatan 1" />
-
-        <div class="row">
-          <div>
-            <label for="cust-addressZip">Postnummer</label>
-            <input id="cust-addressZip" name="addressZip" type="text" placeholder="123 45" />
-          </div>
-          <div>
-            <label for="cust-addressCity">Ort</label>
-            <input id="cust-addressCity" name="addressCity" type="text" placeholder="Exempelstad" />
-          </div>
+        <div>
+          <div class="pr-title">PeerRate</div>
+          <div class="pr-tagline">Betyg med vibe. För dig, av dig.</div>
         </div>
+      </a>
 
-        <label for="cust-country">Land</label>
-        <input id="cust-country" name="country" type="text" placeholder="Sverige" />
-
-        <!-- Samtycke till inhämtning från tredje part -->
-        <div style="margin-top:16px;">
-          <label class="tiny" style="font-weight:600;display:flex;align-items:flex-start;gap:8px;">
-            <input
-              id="cust-thirdPartyConsent"
-              name="thirdPartyConsent"
-              type="checkbox"
-              style="width:auto;margin-top:3px;"
-              required
-            />
-            <span>
-              Jag samtycker till att PeerRate får inhämta och behandla uppgifter om mig från externa register
-              och andra tredjepartsleverantörer i syfte att verifiera min identitet, mina fordons- och/eller
-              fastighetsinnehav samt för att motverka bedrägerier och missbruk av tjänsten. Exempel på sådana
-              källor är Transportstyrelsen (fordonsuppgifter), Lantmäteriet (fastighetsuppgifter) och
-              motsvarande registerleverantörer. Jag är medveten om att sådan inhämtning alltid sker i enlighet
-              med gällande lagstiftning, inklusive dataskyddsregler (GDPR), samt de avtal som finns mellan
-              PeerRate och respektive registerhållare. Jag kan när som helst återkalla mitt samtycke genom att
-              kontakta PeerRate, men förstår att det kan påverka möjligheten att använda tjänsten fullt ut.
-            </span>
-          </label>
-        </div>
-
-        <!-- Godkännande av användarvillkor och integritetspolicy -->
-        <div style="margin-top:12px;">
-          <label class="tiny" style="font-weight:600;display:flex;align-items:flex-start;gap:8px;">
-            <input
-              id="cust-termsAccepted"
-              name="termsAccepted"
-              type="checkbox"
-              style="width:auto;margin-top:3px;"
-              required
-            />
-            <span>
-              Jag har läst och godkänner
-              <a href="https://www.peerrate.ai/användarvillkor" target="_blank" rel="noopener noreferrer">
-                användarvillkoren
-              </a>
-              och
-              <a href="https://www.peerrate.ai/integritetspolicy" target="_blank" rel="noopener noreferrer">
-                integritetspolicyn
-              </a>
-              för PeerRate.
-            </span>
-          </label>
-        </div>
-
-        <button type="submit" class="primary">Spara registrering</button>
-
-        <div id="cust-notice" class="notice"></div>
-      </form>
-    </section>
+      <nav class="pr-nav" aria-label="Huvudmeny">
+        <a href="/#top">Hem</a>
+        <a href="/customer.html">Registrera dig</a>
+        <a href="/#rate">Lämna betyg</a>
+        <a href="/profile.html">Min profil</a>
+        <a href="/#how">Hur det fungerar?</a>
+        <a href="/#contact">Övrigt</a>
+        <a class="pr-cta" href="/customer.html">Starta</a>
+      </nav>
+    </div>
   </div>
 
-<script type="module" src="/modules/main.js"></script>
+  <main class="page">
+    <div class="pr-shell">
+      <div class="form-wrap">
+        <h1>Registrera dig</h1>
+        <p class="lead">
+          Här registrerar du dig så att du kan komma igång och bygga upp en profil med bra omdömen samt betygsätta andra.
+        </p>
+
+        <section class="pr-card">
+          <form id="customer-form" autocomplete="off">
+
+            <div class="row">
+              <div class="pr-field">
+                <label class="pr-label" for="cust-firstName">Förnamn</label>
+                <input class="pr-input" id="cust-firstName" name="firstName" type="text" placeholder="Erik" required />
+              </div>
+              <div class="pr-field">
+                <label class="pr-label" for="cust-lastName">Efternamn</label>
+                <input class="pr-input" id="cust-lastName" name="lastName" type="text" placeholder="Example" required />
+              </div>
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="cust-personalNumber">Personnummer (10–12 siffror)</label>
+              <input
+                class="pr-input"
+                id="cust-personalNumber"
+                name="personalNumber"
+                type="text"
+                inputmode="numeric"
+                pattern="[0-9]{10,12}"
+                placeholder="198001011234"
+                required
+              />
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="cust-email">E-post</label>
+              <input class="pr-input" id="cust-email" name="email" type="email" placeholder="erik@example.com" required />
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="cust-emailConfirm">Bekräfta e-post</label>
+              <input class="pr-input" id="cust-emailConfirm" name="emailConfirm" type="email" placeholder="Upprepa e-postadressen" required />
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="cust-password">Lösenord</label>
+              <input class="pr-input" id="cust-password" name="password" type="password" placeholder="Minst 8 tecken" required minlength="8" />
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="cust-passwordConfirm">Bekräfta lösenord</label>
+              <input
+                class="pr-input"
+                id="cust-passwordConfirm"
+                name="passwordConfirm"
+                type="password"
+                placeholder="Upprepa lösenord"
+                required
+                minlength="8"
+              />
+              <p class="tiny">
+                Spara ditt lösenord – senare kan du logga in med BankID istället, men tills dess används detta.
+              </p>
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="cust-phone">Telefon (valfritt)</label>
+              <input class="pr-input" id="cust-phone" name="phone" type="tel" placeholder="+46 70 123 45 67" />
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="cust-addressStreet">Gatuadress</label>
+              <input class="pr-input" id="cust-addressStreet" name="addressStreet" type="text" placeholder="Exempelgatan 1" />
+            </div>
+
+            <div class="row">
+              <div class="pr-field">
+                <label class="pr-label" for="cust-addressZip">Postnummer</label>
+                <input class="pr-input" id="cust-addressZip" name="addressZip" type="text" placeholder="123 45" />
+              </div>
+              <div class="pr-field">
+                <label class="pr-label" for="cust-addressCity">Ort</label>
+                <input class="pr-input" id="cust-addressCity" name="addressCity" type="text" placeholder="Exempelstad" />
+              </div>
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="cust-country">Land</label>
+              <input class="pr-input" id="cust-country" name="country" type="text" placeholder="Sverige" />
+            </div>
+
+            <!-- Samtycke till inhämtning från tredje part -->
+            <div style="margin-top:14px;">
+              <label class="tiny" style="font-weight:700;display:flex;align-items:flex-start;gap:10px;color:var(--pr-purple);">
+                <input
+                  id="cust-thirdPartyConsent"
+                  name="thirdPartyConsent"
+                  type="checkbox"
+                  style="width:auto;margin-top:3px;"
+                  required
+                />
+                <span style="color:var(--pr-purple-900);font-weight:600;">
+                  Jag samtycker till att PeerRate får inhämta och behandla uppgifter om mig från externa register
+                  och andra tredjepartsleverantörer i syfte att verifiera min identitet, mina fordons- och/eller
+                  fastighetsinnehav samt för att motverka bedrägerier och missbruk av tjänsten. Exempel på sådana
+                  källor är Transportstyrelsen (fordonsuppgifter), Lantmäteriet (fastighetsuppgifter) och
+                  motsvarande registerleverantörer. Jag är medveten om att sådan inhämtning alltid sker i enlighet
+                  med gällande lagstiftning, inklusive dataskyddsregler (GDPR), samt de avtal som finns mellan
+                  PeerRate och respektive registerhållare. Jag kan när som helst återkalla mitt samtycke genom att
+                  kontakta PeerRate, men förstår att det kan påverka möjligheten att använda tjänsten fullt ut.
+                </span>
+              </label>
+            </div>
+
+            <!-- Godkännande av användarvillkor och integritetspolicy -->
+            <div style="margin-top:12px;">
+              <label class="tiny" style="font-weight:700;display:flex;align-items:flex-start;gap:10px;color:var(--pr-purple);">
+                <input
+                  id="cust-termsAccepted"
+                  name="termsAccepted"
+                  type="checkbox"
+                  style="width:auto;margin-top:3px;"
+                  required
+                />
+                <span style="color:var(--pr-purple-900);font-weight:600;">
+                  Jag har läst och godkänner
+                  <a href="https://www.peerrate.ai/användarvillkor" target="_blank" rel="noopener noreferrer">användarvillkoren</a>
+                  och
+                  <a href="https://www.peerrate.ai/integritetspolicy" target="_blank" rel="noopener noreferrer">integritetspolicyn</a>
+                  för PeerRate.
+                </span>
+              </label>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+              <button type="submit" class="pr-btn pr-btn-primary">Spara registrering</button>
+              <a class="pr-btn pr-btn-ghost" href="/#rate">Jag har redan konto</a>
+            </div>
+
+            <div id="cust-notice" class="notice"></div>
+          </form>
+        </section>
+
+        <div style="text-align:center;color:var(--pr-muted);font-size:12px;margin-top:18px;">
+          © 2025 by PeerRate.
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="/modules/main.js"></script>
 </body>
 </html>
