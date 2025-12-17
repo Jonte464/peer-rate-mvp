@@ -408,3 +408,37 @@ enum RatingSource {
   HUSKNUTEN_TIPTAP
   OTHER
 }
+
+model AgentConversation {
+  id           String        @id @default(cuid())
+  customerId   String?
+  customer     Customer?     @relation(fields: [customerId], references: [id])
+  title        String?
+  systemPrompt String?       @db.Text
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  messages     AgentMessage[]
+
+  @@index([customerId])
+  @@index([createdAt])
+}
+
+model AgentMessage {
+  id              String            @id @default(cuid())
+  conversationId  String
+  conversation    AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role            String            // "user" | "assistant"
+  content         String            @db.Text
+  model           String?
+  promptTokens    Int?
+  completionTokens Int?
+  totalTokens     Int?
+
+  createdAt       DateTime          @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
+}
