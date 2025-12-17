@@ -436,3 +436,5 @@ router.post('/integrations/ebay/connect', ebayConnectHandler);
 
 router.get('/ebay/callback', ebayCallbackHandler);
 router.get('/integrations/ebay/callback', ebayCallbackHandler);
+
+module.exports = router;
