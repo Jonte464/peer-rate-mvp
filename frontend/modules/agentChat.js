@@ -24,12 +24,16 @@ function setStatus(msg) {
   statusText.textContent = msg || '';
 }
 
+function scrollToBottom() {
+  chatLog.scrollTop = chatLog.scrollHeight;
+}
+
 function addBubble(role, text) {
   const div = document.createElement('div');
   div.className = `bubble ${role === 'user' ? 'user' : 'assistant'}`;
   div.textContent = text || '';
   chatLog.appendChild(div);
-  chatLog.scrollTop = chatLog.scrollHeight;
+  scrollToBottom();
 }
 
 function loadChatLog() {
@@ -40,6 +44,7 @@ function loadChatLog() {
     if (!m || !m.role) continue;
     addBubble(m.role, m.text || '');
   }
+  scrollToBottom();
 }
 
 function saveChatLogEntry(role, text) {
@@ -57,7 +62,9 @@ function clearChatLog() {
 
 function loadSystemPrompt() {
   const sp = localStorage.getItem(LS_SYSTEM_PROMPT_KEY) || '';
-  systemEl.value = sp.trim() || '(Ingen sparad system-prompt ännu. Gå till inställningar och ändra något.)';
+  systemEl.value =
+    sp.trim() ||
+    '(Ingen sparad system-prompt ännu. Gå till inställningar och ändra något.)';
 }
 
 async function sendMessage() {
@@ -84,10 +91,11 @@ async function sendMessage() {
         systemPrompt: systemPrompt || 'Du är en hjälpsam assistent.',
         userPrompt,
       }),
-      credentials: 'include'
+      credentials: 'include',
     });
 
     const json = await res.json().catch(() => null);
+
     if (!json || json.ok === false) {
       const err = json?.error || `HTTP ${res.status}`;
       addBubble('assistant', `❌ Fel: ${err}`);
@@ -109,7 +117,8 @@ async function sendMessage() {
     setStatus('Nätverksfel.');
   } finally {
     sendBtn.disabled = false;
-    setTimeout(() => setStatus(''), 1400);
+    setTimeout(() => setStatus(''), 1200);
+    scrollToBottom();
   }
 }
 
@@ -125,9 +134,11 @@ function init() {
     setTimeout(() => setStatus(''), 900);
   });
 
-  // Ctrl+Enter för att skicka
+  // ChatGPT-likt:
+  // Enter = skicka
+  // Shift+Enter = ny rad
   userEl.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
@@ -137,6 +148,10 @@ function init() {
   window.addEventListener('storage', (e) => {
     if (e.key === LS_SYSTEM_PROMPT_KEY) loadSystemPrompt();
   });
+
+  // Starta med fokus i input
+  userEl.focus();
+  scrollToBottom();
 }
 
 document.addEventListener('DOMContentLoaded', init);

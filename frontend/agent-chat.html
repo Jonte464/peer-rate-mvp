@@ -21,6 +21,7 @@
 
     body {
       margin: 0;
+      padding: 0; /* viktigt: nollar padding från style.css */
       font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
       color: var(--brand-ink);
       background: var(--brand-orange);
@@ -30,10 +31,12 @@
       min-height: 100vh;
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      padding: 40px 16px;
+      align-items: stretch;
+      padding: 16px;
     }
 
+    /* Gör kortet till en "app-yta" som kan scrolla i chatlog,
+       men där composer sitter kvar längst ned. */
     .shell {
       width: 100%;
       max-width: 960px;
@@ -41,7 +44,15 @@
       border-radius: 24px;
       border: 1px solid var(--brand-border);
       box-shadow: 0 18px 45px rgba(0,0,0,.12);
-      padding: 20px 22px 24px;
+      padding: 16px 16px 14px;
+
+      display: flex;
+      flex-direction: column;
+
+      /* tar nästan hela skärmen */
+      height: calc(100vh - 32px);
+      min-height: 520px;
+      overflow: hidden;
     }
 
     .topbar {
@@ -49,7 +60,7 @@
       justify-content: space-between;
       align-items: flex-start;
       gap: 12px;
-      margin-bottom: 14px;
+      padding: 4px 6px 10px;
     }
 
     .title {
@@ -79,31 +90,36 @@
       cursor: pointer;
       white-space: nowrap;
       text-decoration: none;
+      height: 36px;
     }
     .btn:hover { filter: brightness(1.05); }
 
-    .panel {
+    .btn-secondary {
       background: #fff;
-      border-radius: 18px;
+      color: var(--brand-purple);
+      border: 1px solid rgba(0,0,0,.12);
+    }
+
+    /* Systemprompten: gör den hopfällbar för att ge mer plats åt chatten */
+    details.system {
+      margin: 0 6px 10px;
+      background: #fff;
+      border-radius: 16px;
       border: 1px solid rgba(0,0,0,.06);
-      padding: 14px;
+      padding: 10px 12px;
     }
 
-    .row {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-      margin-top: 12px;
-    }
-
-    .label {
-      font-size: 11px;
+    details.system summary {
+      cursor: pointer;
+      font-size: 12px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: .06em;
       color: var(--brand-ink-d);
-      margin: 0 0 4px;
+      list-style: none;
     }
+
+    details.system summary::-webkit-details-marker { display:none; }
 
     textarea {
       width: 100%;
@@ -114,34 +130,22 @@
       padding: 10px 10px;
       font-size: 13px;
       resize: vertical;
-      min-height: 84px;
       font-family: inherit;
     }
 
-    .actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      flex-wrap: wrap;
+    textarea[readonly] {
+      min-height: 84px;
     }
 
-    .btn-secondary {
-      background: #fff;
-      color: var(--brand-purple);
-      border: 1px solid rgba(0,0,0,.12);
-    }
-
-    .status {
-      font-size: 12px;
-      color: var(--brand-ink-d);
-    }
-
+    /* Själva chatloggen: tar all ledig höjd, scrollar */
     .chatlog {
-      margin-top: 12px;
+      flex: 1;
+      margin: 0 6px 10px;
       background: #fff;
       border-radius: 18px;
       border: 1px solid rgba(0,0,0,.06);
       padding: 14px;
+      overflow-y: auto;
     }
 
     .bubble {
@@ -167,11 +171,62 @@
       border: 1px solid rgba(0,0,0,.08);
     }
 
+    /* Composer längst ned (som ChatGPT) */
+    .composer {
+      margin: 0 6px;
+      background: #fff;
+      border-radius: 18px;
+      border: 1px solid rgba(0,0,0,.06);
+      padding: 12px;
+    }
+
+    .composer-top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+
+    .label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--brand-ink-d);
+      margin: 0;
+    }
+
+    .status {
+      font-size: 12px;
+      color: var(--brand-ink-d);
+      min-height: 16px;
+      text-align: right;
+    }
+
+    #userPrompt {
+      min-height: 64px;
+      resize: none;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+
     .hint {
       font-size: 12px;
       color: var(--brand-ink-d);
-      margin-top: 10px;
+      margin: 10px 6px 0;
       line-height: 1.35;
+    }
+
+    @media (max-width: 520px) {
+      .shell { height: calc(100vh - 32px); }
+      #userPrompt { min-height: 72px; }
     }
   </style>
 </head>
@@ -189,30 +244,31 @@
         <a class="btn" href="/agent.html">⬅ Till inställningar</a>
       </div>
 
-      <section class="panel">
-        <div class="row">
-          <div>
-            <div class="label">System-prompt (från inställningar)</div>
-            <textarea id="systemPrompt" readonly></textarea>
-          </div>
-
-          <div>
-            <div class="label">Skriv till agenten</div>
-            <textarea id="userPrompt" placeholder="Säg hej på svenska."></textarea>
-          </div>
-
-          <div class="actions">
-            <button class="btn" id="sendBtn" type="button">Skicka</button>
-            <button class="btn btn-secondary" id="clearBtn" type="button">Rensa logg</button>
-            <span class="status" id="statusText"></span>
-          </div>
+      <details class="system" open>
+        <summary>System-prompt (från inställningar)</summary>
+        <div style="margin-top:8px;">
+          <textarea id="systemPrompt" readonly></textarea>
         </div>
-      </section>
+      </details>
 
       <section class="chatlog" id="chatLog"></section>
 
+      <section class="composer">
+        <div class="composer-top">
+          <div class="label">Skriv till agenten</div>
+          <span class="status" id="statusText"></span>
+        </div>
+
+        <textarea id="userPrompt" placeholder="Säg hej på svenska."></textarea>
+
+        <div class="actions">
+          <button class="btn" id="sendBtn" type="button">Skicka</button>
+          <button class="btn btn-secondary" id="clearBtn" type="button">Rensa logg</button>
+        </div>
+      </section>
+
       <div class="hint">
-        Tips: Gå till inställningar och ändra regler → kom tillbaka hit → skicka nytt meddelande för att se skillnaden.
+        Tips: Enter = skicka, Shift+Enter = ny rad. (Som ChatGPT.)
       </div>
     </div>
   </div>
