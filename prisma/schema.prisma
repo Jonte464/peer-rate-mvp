@@ -12,11 +12,11 @@ datasource db {
  * Kunder/användare (registrera dig-formuläret)
  */
 model Customer {
-  id             String   @id @default(uuid())
-  subjectRef     String   @unique        // används som "konto-id", vi sätter detta = email (lowercase)
+  id             String  @id @default(uuid())
+  subjectRef     String  @unique // används som "konto-id", vi sätter detta = email (lowercase)
   fullName       String?
-  personalNumber String?  @unique
-  email          String?  @unique
+  personalNumber String? @unique
+  email          String? @unique
   phone          String?
   addressStreet  String?
   addressZip     String?
@@ -24,7 +24,7 @@ model Customer {
   country        String?
 
   // NYTT: lösenord (hashat, aldrig klartext)
-  passwordHash   String?
+  passwordHash String?
 
   // NYTT: samtycke till inhämtning från tredje part
   thirdPartyConsent Boolean @default(false)
@@ -36,14 +36,15 @@ model Customer {
   reports       Report[]      @relation("CustomerReports")
   score         Score?
   transactions  Transaction[]
-  termsAccepted Boolean @default(false)
+  termsAccepted Boolean       @default(false)
 
   // NYTT: externa profiler (Blocket, Tradera m.fl.)
   externalProfiles ExternalProfile[]
 
   // NYTT: affärshändelser (deals) där kunden är säljare eller köpare
-  dealsAsSeller Deal[] @relation("CustomerDealsAsSeller")
-  dealsAsBuyer  Deal[] @relation("CustomerDealsAsBuyer")
+  dealsAsSeller      Deal[]              @relation("CustomerDealsAsSeller")
+  dealsAsBuyer       Deal[]              @relation("CustomerDealsAsBuyer")
+  agentConversations AgentConversation[]
 }
 
 /**
@@ -58,9 +59,9 @@ model Transaction {
   externalRef String?
   evidenceUrl String?
 
-  ratings     Rating[]
-  reports     Report[]
-  customer    Customer  @relation(fields: [customerId], references: [id])
+  ratings  Rating[]
+  reports  Report[]
+  customer Customer @relation(fields: [customerId], references: [id])
 
   @@index([customerId])
 }
@@ -74,7 +75,7 @@ model Rating {
   transactionId String?
 
   // NYTT: koppling till affärshändelse (Deal)
-  dealId        String?
+  dealId String?
 
   // Betyg 1–5
   score Int
@@ -105,7 +106,7 @@ model Rating {
   transaction Transaction? @relation(fields: [transactionId], references: [id])
 
   // NYTT: relation till Deal
-  deal        Deal?        @relation(fields: [dealId], references: [id])
+  deal Deal? @relation(fields: [dealId], references: [id])
 
   // En rating kan ha 0..n rapporter kopplade
   reports Report[]
@@ -194,7 +195,7 @@ model ReportFile {
   data      Bytes
   createdAt DateTime @default(now())
 
-  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  report Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@index([reportId])
 }
@@ -212,43 +213,43 @@ model User {
  * Externa profiler (Blocket, Tradera, eBay m.fl.)
  */
 model ExternalProfile {
-  id           String               @id @default(uuid())
-  customerId   String
-  customer     Customer             @relation(fields: [customerId], references: [id])
+  id         String   @id @default(uuid())
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
 
-  platform     ExternalPlatform
-  username     String
+  platform ExternalPlatform
+  username String
 
   // Generellt extern-id (t.ex. Tradera userId)
-  externalUserId       String?
+  externalUserId String?
 
   // (Legacy/generellt) - kan användas för enklare tokens, men för eBay använder vi fälten nedan
-  authToken            String?
-  authTokenExpiresAt   DateTime?
+  authToken          String?
+  authTokenExpiresAt DateTime?
 
   // ✅ NYTT: Krypterade OAuth-tokens (eBay nu, men kan användas även för andra plattformar)
-  accessTokenEnc       String?
-  refreshTokenEnc      String?
-  accessTokenExpiresAt DateTime?
+  accessTokenEnc        String?
+  refreshTokenEnc       String?
+  accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
-  scopes               String?
-  tokenType            String?
+  scopes                String?
+  tokenType             String?
 
   // Rå profil-data från extern plattform (t.ex. feedback, ratings, osv.)
-  profileJson          Json?
+  profileJson Json?
 
   // Alternativ C: vi kan lagra ett krypterat lösenord + cookies (t.ex. för Blocket-scrape)
-  encryptedPassword    String?
-  cookiesJson          Json?
+  encryptedPassword String?
+  cookiesJson       Json?
 
-  status       ExternalProfileStatus @default(ACTIVE)
+  status ExternalProfileStatus @default(ACTIVE)
 
   lastSyncedAt DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  listings       Listing[]
-  traderaOrders  TraderaOrder[]
+  listings      Listing[]
+  traderaOrders TraderaOrder[]
 
   @@index([customerId])
   @@index([platform, username])
@@ -265,14 +266,14 @@ model Listing {
   externalListingId String
   title             String
   price             Int?
-  currency          String?        @default("SEK")
+  currency          String?       @default("SEK")
   status            ListingStatus
 
-  url               String?
-  firstSeenAt       DateTime       @default(now())
-  lastSeenAt        DateTime       @default(now())
+  url         String?
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
 
-  deals             Deal[]
+  deals Deal[]
 
   @@index([externalProfileId])
   @@index([externalListingId])
@@ -282,26 +283,26 @@ model Listing {
  * Affärshändelse (Deal) – underlag för omdömen
  */
 model Deal {
-  id        String     @id @default(uuid())
+  id String @id @default(uuid())
 
   listingId String?
-  listing   Listing?   @relation(fields: [listingId], references: [id])
+  listing   Listing? @relation(fields: [listingId], references: [id])
 
-  sellerId  String
-  seller    Customer   @relation("CustomerDealsAsSeller", fields: [sellerId], references: [id])
+  sellerId String
+  seller   Customer @relation("CustomerDealsAsSeller", fields: [sellerId], references: [id])
 
-  buyerId   String?
-  buyer     Customer?  @relation("CustomerDealsAsBuyer", fields: [buyerId], references: [id])
+  buyerId String?
+  buyer   Customer? @relation("CustomerDealsAsBuyer", fields: [buyerId], references: [id])
 
-  source    DealSource @default(BLOCKET_SCRAPE)
-  status    DealStatus @default(PENDING_RATING)
+  source DealSource @default(BLOCKET_SCRAPE)
+  status DealStatus @default(PENDING_RATING)
 
   blocketTitle String?
   blocketPrice Int?
 
-  completedAt  DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
 
   ratings Rating[]
 
@@ -319,24 +320,24 @@ model TraderaOrder {
   externalProfileId String
   externalProfile   ExternalProfile @relation(fields: [externalProfileId], references: [id])
 
-  traderaOrderId    String
-  traderaItemId     String?
-  title             String
+  traderaOrderId String
+  traderaItemId  String?
+  title          String
 
-  amount            Decimal? @db.Decimal(12, 2)
-  currency          String?  @default("SEK")
+  amount   Decimal? @db.Decimal(12, 2)
+  currency String?  @default("SEK")
 
-  role              TraderaOrderRole @default(SELLER)
+  role TraderaOrderRole @default(SELLER)
 
   counterpartyAlias String?
   counterpartyEmail String?
 
-  completedAt       DateTime?
+  completedAt DateTime?
 
-  rawJson           Json?
+  rawJson Json?
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([externalProfileId])
   @@index([traderaOrderId])
@@ -410,34 +411,34 @@ enum RatingSource {
 }
 
 model AgentConversation {
-  id           String        @id @default(cuid())
+  id           String    @id @default(cuid())
   customerId   String?
-  customer     Customer?     @relation(fields: [customerId], references: [id])
+  customer     Customer? @relation(fields: [customerId], references: [id])
   title        String?
-  systemPrompt String?       @db.Text
+  systemPrompt String?   @db.Text
 
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  messages     AgentMessage[]
+  messages AgentMessage[]
 
   @@index([customerId])
   @@index([createdAt])
 }
 
 model AgentMessage {
-  id              String            @id @default(cuid())
-  conversationId  String
-  conversation    AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  id             String            @id @default(cuid())
+  conversationId String
+  conversation   AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  role            String            // "user" | "assistant"
-  content         String            @db.Text
-  model           String?
-  promptTokens    Int?
+  role             String // "user" | "assistant"
+  content          String  @db.Text
+  model            String?
+  promptTokens     Int?
   completionTokens Int?
-  totalTokens     Int?
+  totalTokens      Int?
 
-  createdAt       DateTime          @default(now())
+  createdAt DateTime @default(now())
 
   @@index([conversationId])
   @@index([createdAt])
