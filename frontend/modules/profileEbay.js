@@ -1,6 +1,5 @@
 // frontend/modules/profileEbay.js
-// Hanterar eBay-kopplingen + visar eBay-ordrar på "Min profil"
-// Viktigt: eBay login/consent får ofta INTE visas i iframe (Wix). Vi öppnar därför i ny flik vid behov.
+// Hanterar eBay-kopplingen + visar eBay-ordrar på "Min profil" (Alternativ A)
 
 import { showNotification } from './utils.js';
 import auth from './auth.js';
@@ -20,15 +19,6 @@ function getCurrentUserEmail() {
   }
 }
 
-function isInIframe() {
-  try {
-    return window.self !== window.top;
-  } catch {
-    // Om browsern blockerar access till window.top → vi antar att vi är i iframe
-    return true;
-  }
-}
-
 function safeText(v) {
   if (v === undefined || v === null || v === '') return '–';
   return String(v);
@@ -39,7 +29,7 @@ function formatDate(iso) {
   try {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return String(iso);
-    return d.toLocaleString('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    return d.toLocaleDateString('sv-SE', { year: 'numeric', month: '2-digit', day: '2-digit' });
   } catch {
     return String(iso);
   }
@@ -88,21 +78,37 @@ function renderOrders(container, data) {
   `;
 }
 
+function redirectTop(url) {
+  // Viktigt: eBay funkar ofta inte i iframe → försök top först.
+  try {
+    if (window.top && window.top !== window) {
+      window.top.location.href = url;
+      return;
+    }
+  } catch (_) {
+    // cross-origin iframe kan kasta – fall tillbaka till ny flik
+  }
+
+  // Om inte iframe eller om top redirect blockas: öppna i ny flik
+  try {
+    const w = window.open(url, '_blank', 'noopener,noreferrer');
+    if (w) return;
+  } catch (_) {}
+
+  // Sista fallback: samma fönster
+  window.location.href = url;
+}
+
 export async function initEbaySection() {
   try {
     const connectBtn = document.getElementById('ebay-connect-btn');
     const ordersBtn = document.getElementById('ebay-orders-btn');
-    const ordersList = document.getElementById('ebay-orders-list');
     const statusElId = 'ebay-status';
+    const ordersList = document.getElementById('ebay-orders-list');
 
     if (!connectBtn && !ordersBtn) return;
 
     const email = getCurrentUserEmail();
-
-    // Standard: enable (vi styr sen om vi saknar email)
-    if (connectBtn) connectBtn.disabled = false;
-    if (ordersBtn) ordersBtn.disabled = false;
-
     if (!email) {
       if (connectBtn) {
         connectBtn.disabled = true;
@@ -115,19 +121,23 @@ export async function initEbaySection() {
       return;
     }
 
-    // ---------- KOPPLA EBAY ----------
+    // Visa en liten “kopplad”-notis om vi precis kommit tillbaka från callback
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      if (params.get('ebay') === 'connected') {
+        showNotification('success', 'eBay-koppling klar. Klicka “Hämta eBay-ordrar”.', statusElId);
+      }
+    } catch (_) {}
+
+    // ----- KOPPLA EBAY -----
     if (connectBtn && !connectBtn._ebayClickBound) {
       connectBtn._ebayClickBound = true;
 
-      if (!connectBtn.textContent || connectBtn.textContent.trim() === '') {
-        connectBtn.textContent = 'Koppla eBay-konto';
-      }
-
       connectBtn.addEventListener('click', async () => {
-        const originalText = connectBtn.textContent;
         try {
           connectBtn.disabled = true;
-          connectBtn.textContent = 'Kopplar eBay...';
+          const originalText = connectBtn.textContent || 'Koppla eBay-konto';
+          connectBtn.textContent = 'Öppnar eBay...';
 
           const response = await fetch('/api/integrations/ebay/connect', {
             method: 'POST',
@@ -147,48 +157,25 @@ export async function initEbaySection() {
             return;
           }
 
-          const url = data.redirectUrl;
-
-          // VIKTIGT: Om vi kör i Wix/iframe → öppna i ny flik (eBay blockerar ofta iframe)
-          if (isInIframe()) {
-            window.open(url, '_blank', 'noopener,noreferrer');
-            showNotification(
-              'success',
-              'eBay öppnades i en ny flik. Slutför kopplingen där och kom sedan tillbaka hit.',
-              statusElId
-            );
-            connectBtn.disabled = false;
-            connectBtn.textContent = originalText;
-            return;
-          }
-
-          // Annars kan vi navigera direkt
-          window.location.href = url;
+          // ✅ Viktigt: öppna i top/ny flik så eBay inte blockas av iframe
+          redirectTop(data.redirectUrl);
         } catch (err) {
           console.error('eBay connect frontend error', err);
-          showNotification(
-            'error',
-            'Tekniskt fel vid eBay-koppling. Försök igen om en stund.',
-            statusElId
-          );
+          showNotification('error', 'Tekniskt fel vid eBay-koppling.', statusElId);
           connectBtn.disabled = false;
-          connectBtn.textContent = originalText;
+          connectBtn.textContent = 'Koppla eBay-konto';
         }
       });
     }
 
-    // ---------- HÄMTA ORDERS ----------
+    // ----- HÄMTA ORDERS -----
     if (ordersBtn && !ordersBtn._ebayOrdersBound) {
       ordersBtn._ebayOrdersBound = true;
 
-      if (!ordersBtn.textContent || ordersBtn.textContent.trim() === '') {
-        ordersBtn.textContent = 'Hämta eBay-ordrar';
-      }
-
       ordersBtn.addEventListener('click', async () => {
-        const originalText = ordersBtn.textContent;
         try {
           ordersBtn.disabled = true;
+          const originalText = ordersBtn.textContent || 'Hämta eBay-ordrar';
           ordersBtn.textContent = 'Hämtar eBay-ordrar...';
 
           const resp = await fetch(`/api/ebay/orders?email=${encodeURIComponent(email)}`);
@@ -206,14 +193,13 @@ export async function initEbaySection() {
 
           renderOrders(ordersList, json.data);
           showNotification('success', 'eBay-ordrar uppdaterade.', statusElId);
-
           ordersBtn.disabled = false;
           ordersBtn.textContent = originalText;
         } catch (err) {
           console.error('eBay orders frontend error', err);
           showNotification('error', 'Tekniskt fel när vi hämtade eBay-ordrar.', statusElId);
           ordersBtn.disabled = false;
-          ordersBtn.textContent = originalText;
+          ordersBtn.textContent = 'Hämta eBay-ordrar';
         }
       });
     }
