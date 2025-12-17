@@ -17,11 +17,13 @@ const EBAY_AUTH_BASE =
 const EBAY_TOKEN_HOST =
   EBAY_ENV === 'SANDBOX' ? 'api.sandbox.ebay.com' : 'api.ebay.com';
 
-// Scopes (kan utökas senare)
+// Scopes (utökade så vi kan läsa ordrar både som säljare och köpare)
 const SCOPES = [
   'https://api.ebay.com/oauth/api_scope',
   'https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly',
+  'https://api.ebay.com/oauth/api_scope/buy.order.readonly',
 ];
+
 
 // ---------- base64url helpers (URL-säkra) ----------
 function toBase64Url(str) {
