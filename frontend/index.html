@@ -3,314 +3,693 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PeerRate – Lämna betyg</title>
+  <title>PeerRate – Betyg med vibe</title>
+
+  <!-- PeerRate tema (orange / lila som Wix-känslan) -->
+  <link rel="stylesheet" href="/css/pr-theme.css" />
+
   <style>
-    :root{
-      --brand-orange:#f6a94b;
-      --brand-card:#fbf2e6;
-      --brand-accent:#bfe9e6;
-      --brand-border:#eadfce;
-      --brand-ink:#1e1830;
-      --brand-ink-d:#4a425e;
-      --brand-purple:#1b1533;
-      --ok:#0b7a65;
-      --err:#9b1c1c;
-    }
-    *{box-sizing:border-box;}
+    /* ===== Extra styles för landningssidan (utan nya filer) ===== */
+    .pr-shell { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
 
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
-      color:var(--brand-ink);
-      background:transparent;
+    .pr-topbar{
+      padding: 18px 0;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: color-mix(in srgb, var(--pr-bg) 92%, transparent);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(0,0,0,.06);
     }
 
-    .wrap{
-      max-width:720px;
-      margin:40px auto 60px;
-      padding:0 16px 40px;
+    .pr-topbar-inner{
+      display:flex; align-items:center; justify-content:space-between; gap:14px;
     }
 
-    h1{
-      margin:0 0 6px;
-      font-size:32px;
+    .pr-brand{
+      display:flex; align-items:center; gap:10px;
+      text-decoration:none;
     }
-    h2{
-      margin:0 0 6px;
-      font-size:22px;
+    .pr-logo{
+      width:38px; height:38px; border-radius:12px;
+      background: var(--pr-teal);
+      box-shadow: 0 10px 20px rgba(0,0,0,.10);
     }
-    .lead{
-      margin:0 0 18px;
-      font-size:15px;
-      color:var(--brand-ink-d);
+    .pr-title{
+      font-weight:700; font-size:22px; color:var(--pr-purple);
+      line-height:1;
     }
-
-    label{
-      display:block;
-      font-weight:700;
-      margin:12px 0 6px;
-      font-size:14px;
-    }
-    input,select,textarea,button{
-      width:100%;
-      padding:11px 14px;
-      border-radius:12px;
-      border:1px solid #d9cbb7;
-      background:#fff;
-      color:var(--brand-ink);
-      font:inherit;
-    }
-    input::placeholder,textarea::placeholder{color:#9b8f87}
-    textarea{min-height:110px;resize:vertical;}
-
-    .row{display:flex;gap:10px;flex-wrap:wrap;}
-    .row>*{flex:1;}
-    .muted{color:var(--brand-ink-d);font-size:13px;}
-    .tiny{font-size:12px;}
-
-    .card{
-      background:var(--brand-card);
-      border:1px solid var(--brand-border);
-      border-radius:18px;
-      padding:18px 16px 22px;
-      box-shadow:0 8px 22px rgba(0,0,0,.06);
-      margin-bottom:16px;
+    .pr-tagline{
+      font-size:12px; color:var(--pr-muted); margin-top:2px;
     }
 
-    button.primary{
-      background:var(--brand-purple);
-      color:#fff;
-      border:0;
-      cursor:pointer;
-      font-weight:800;
-      margin-top:8px;
+    .pr-nav{
+      display:flex; align-items:center; gap:16px; flex-wrap:wrap;
     }
-    button.primary:hover{filter:brightness(1.05);}
-    button.secondary{
-      background:#fff;
-      color:var(--brand-ink);
-      border:1px solid var(--brand-border);
-      margin-top:8px;
-    }
-
-    .notice{
-      display:none;
-      margin-top:12px;
-      border-radius:12px;
-      padding:10px 14px;
+    .pr-nav a{
+      color: var(--pr-purple);
+      text-decoration:none;
       font-weight:600;
-      border:1px solid transparent;
-      font-size:14px;
+      opacity:.92;
     }
-    .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok);}
-    .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err);}
+    .pr-nav a:hover{ opacity:1; text-decoration: underline; }
 
-    .report-box{
-      display:none;
-      border:1px solid var(--brand-border);
-      background:#fff;
-      padding:12px;
-      border-radius:12px;
-      margin-top:8px;
+    .pr-nav .pr-cta{
+      margin-left: 6px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: var(--pr-purple);
+      color: #fff;
+      text-decoration:none;
+      font-weight:700;
+      box-shadow: var(--pr-shadow);
     }
-    .files-note{font-size:12px;color:var(--brand-ink-d);margin-top:6px}
-    .file-list{margin:6px 0 0;padding:0;list-style:none}
-    .file-list li{font-size:12px;color:var(--brand-ink-d)}
+    .pr-nav .pr-cta:hover{ filter: brightness(.96); text-decoration:none; }
 
-    .report-container #reportDetails{display:none;}
-    .report-container:has(#reportFlag:checked) #reportDetails{display:block;}
+    /* Hero */
+    .hero{
+      padding: 34px 0 10px;
+    }
+    .hero-grid{
+      display:grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 38px;
+      align-items: center;
+      padding: 26px 0 46px;
+    }
+    @media (max-width: 980px){
+      .hero-grid{ grid-template-columns: 1fr; gap: 22px; }
+    }
 
-    .hidden{display:none !important;}
+    .hero h1{
+      font-size: 56px;
+      line-height: 1.02;
+      margin: 10px 0 12px;
+      color: var(--pr-purple);
+      letter-spacing: -0.02em;
+    }
+    @media (max-width: 600px){
+      .hero h1{ font-size: 40px; }
+    }
+    .hero p{
+      font-size: 18px;
+      color: var(--pr-purple-900);
+      opacity: .95;
+      max-width: 640px;
+      margin: 0 0 18px;
+    }
 
-    /* Liten “inloggad”-badge */
+    .hero-actions{
+      display:flex; gap:12px; flex-wrap:wrap;
+      margin-top: 16px;
+    }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      padding: 12px 18px;
+      border-radius: 12px;
+      border: 0;
+      cursor: pointer;
+      font-weight: 800;
+      text-decoration:none;
+    }
+    .btn-primary{ background: var(--pr-purple); color:#fff; }
+    .btn-primary:hover{ filter: brightness(.96); }
+    .btn-ghost{
+      background: rgba(255,255,255,.55);
+      color: var(--pr-purple);
+      border: 1px solid rgba(0,0,0,.07);
+      font-weight:700;
+    }
+
+    .hero-badges{
+      display:flex; flex-wrap:wrap; gap:12px; margin-top: 18px;
+    }
+    .badge{
+      display:inline-flex; align-items:center; gap:8px;
+      background: rgba(255,255,255,.48);
+      padding: 10px 14px;
+      border-radius: 12px;
+      color: var(--pr-purple-900);
+      font-size: 14px;
+      border: 1px solid rgba(0,0,0,.06);
+    }
+    .dot{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--pr-teal);
+      box-shadow: 0 0 0 4px rgba(46,197,182,.18);
+    }
+
+    /* “Illustration”-kort (ersätter Wix-bilderna utan att vi behöver assets) */
+    .illustration{
+      background: rgba(255,255,255,.45);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 18px;
+      box-shadow: var(--pr-shadow);
+      padding: 22px;
+      min-height: 320px;
+      display:flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow:hidden;
+      position: relative;
+    }
+    .illu-big{
+      font-weight: 800;
+      color: var(--pr-purple);
+      font-size: 22px;
+      margin: 0 0 8px;
+    }
+    .illu-text{
+      color: var(--pr-muted);
+      font-size: 14px;
+      margin: 0 0 18px;
+      max-width: 46ch;
+    }
+    .illu-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 6px;
+    }
+    .illu-tile{
+      border-radius: 14px;
+      background: rgba(255,255,255,.70);
+      border: 1px solid rgba(0,0,0,.06);
+      padding: 12px;
+    }
+    .illu-tile b{ display:block; color: var(--pr-purple); margin-bottom: 4px; }
+    .illu-tile span{ color: var(--pr-muted); font-size: 12px; }
+
+    .illu-accent{
+      position:absolute;
+      right:-60px;
+      top:-60px;
+      width: 180px;
+      height: 180px;
+      border-radius: 999px;
+      background: rgba(46,197,182,.22);
+      filter: blur(0px);
+    }
+    .illu-accent2{
+      position:absolute;
+      left:-70px;
+      bottom:-70px;
+      width: 220px;
+      height: 220px;
+      border-radius: 999px;
+      background: rgba(30,22,51,.10);
+    }
+
+    /* Sektioner */
+    .section{
+      padding: 34px 0;
+    }
+    .section h2{
+      color: var(--pr-purple);
+      font-size: 34px;
+      margin: 0 0 10px;
+    }
+    .section p{
+      color: var(--pr-muted);
+      margin: 0 0 18px;
+      max-width: 80ch;
+    }
+
+    .feature-grid{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1100px){
+      .feature-grid{ grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px){
+      .feature-grid{ grid-template-columns: 1fr; }
+    }
+
+    .feature{
+      background: rgba(255,255,255,.50);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 18px;
+      box-shadow: var(--pr-shadow);
+      padding: 18px;
+    }
+    .feature h3{
+      margin: 0 0 6px;
+      color: var(--pr-purple);
+      font-size: 18px;
+    }
+    .feature .mini{
+      margin: 0;
+      color: var(--pr-muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .cta-band{
+      background: rgba(255,255,255,.50);
+      border: 1px solid rgba(0,0,0,.06);
+      border-radius: 22px;
+      box-shadow: var(--pr-shadow);
+      padding: 22px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap:wrap;
+    }
+    .cta-band h3{
+      margin:0;
+      color: var(--pr-purple);
+      font-size: 20px;
+    }
+
+    /* Rating/login-sektionen: vi behåller dina IDs så main.js fortsätter funka */
+    .pr-form-wrap{
+      max-width: 980px;
+      margin: 0 auto;
+    }
+
+    /* “Inloggad”-badge (behålls från din sida, men stylas lite) */
     .user-badge{
       display:flex;
       align-items:center;
-      gap:8px;
-      align-self:flex-end;
-      margin-bottom:12px;
-      padding:6px 10px;
-      border-radius:999px;
-      background:rgba(27,21,51,.06);
-      border:1px solid rgba(27,21,51,.08);
-      font-size:12px;
+      gap:10px;
+      margin: 0 0 12px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.55);
+      border: 1px solid rgba(0,0,0,.06);
+      font-size: 12px;
+      width: fit-content;
     }
     .user-avatar{
-      width:26px;
-      height:26px;
-      border-radius:50%;
-      background:var(--brand-purple);
-      color:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:12px;
-      font-weight:700;
+      width:28px;height:28px;border-radius:50%;
+      background: var(--pr-purple); color:#fff;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:800;
     }
-    .user-label{color:var(--brand-ink-d);}
-    .user-name{font-weight:700;}
+    .user-label{ color: var(--pr-muted); }
+    .user-name{ font-weight:800; color: var(--pr-purple); }
 
-    @media (max-width:600px){
-      .wrap{margin:20px auto 40px;padding:0 12px 32px;}
-      h1{font-size:26px;}
+    .hidden{ display:none !important; }
+
+    /* Footer */
+    .footer{
+      padding: 24px 0 40px;
+      color: var(--pr-muted);
+      font-size: 12px;
+      text-align:center;
+      opacity:.95;
     }
+
+    /* Ankare med lite “offset” pga sticky header */
+    .anchor { scroll-margin-top: 90px; }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
 
-    <!-- Inloggningsbadge -->
-    <div id="user-badge" class="user-badge hidden">
-      <div class="user-avatar" id="user-badge-avatar">PR</div>
-      <div>
-        <div class="user-label">Inloggad som</div>
-        <div class="user-name" id="user-badge-name">–</div>
-      </div>
-    </div>
-
-    <!-- LOGIN-KORT -->
-    <section class="card" id="login-card">
-      <h2>Logga in</h2>
-      <p class="muted">
-        Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.
-      </p>
-
-      <form id="rating-login-form" autocomplete="off">
-        <label for="login-email">E-post</label>
-        <input id="login-email" name="email" type="email" placeholder="erik@example.com" />
-
-        <label for="login-password">Lösenord</label>
-        <input id="login-password" name="password" type="password" placeholder="Ditt lösenord" />
-
-        <div class="row" style="margin-top:12px">
-          <button class="primary" type="submit" id="login-btn">Logga in</button>
+  <!-- TOPBAR -->
+  <div class="pr-topbar">
+    <div class="pr-shell pr-topbar-inner">
+      <a class="pr-brand" href="#top">
+        <div class="pr-logo" aria-hidden="true"></div>
+        <div>
+          <div class="pr-title">PeerRate</div>
+          <div class="pr-tagline">Betyg med vibe. För dig, av dig.</div>
         </div>
+      </a>
 
-        <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
-      </form>
-    </section>
-
-    <!-- LÄMNA BETYG -->
-<section class="card" id="rating-card">
-  <h2>Lämna ett betyg</h2>
-
-  <p class="tiny muted" id="rating-login-hint">
-    Du behöver logga in för att kunna lämna betyg.
-    Logga in ovan eller
-    <a href="/customer.html" target="_blank" rel="noopener noreferrer">registrera dig här</a>.
-  </p>
-
-
-      <!-- Denna wrapper visas bara när man är inloggad (styrt av script.js) -->
-      <div id="rating-form-wrapper" class="hidden">
-        <form id="rating-form" autocomplete="off">
-          <label for="subject">Vem betygsätter du? <span class="tiny">(användarnamn eller mejl)</span></label>
-          <input id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
-
-          <label for="rater">Ditt namn/mejl <span class="tiny">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span></label>
-          <input id="rater" name="rater" type="text" placeholder="" />
-
-          <label for="rating">Betyg (1–5)</label>
-          <select id="rating" name="score" required>
-            <option value="" disabled selected hidden>Välj betyg</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-          </select>
-
-          <!-- NYTT: källa för omdömet -->
-          <label for="ratingSource">Varifrån kommer betyget? <span class="tiny">(valfritt)</span></label>
-<select id="ratingSource" name="source">
-  <option value="" selected>Välj källa (valfritt)</option>
-  <option value="Blocket">Blocket</option>
-  <option value="Tradera">Tradera</option>
-  <option value="Airbnb">Airbnb</option>
-  <option value="Husknuten">Husknuten</option>
-  <option value="Tiptap">Tiptap</option>
-</select>
-
-
-          <label for="comment">Kommentar <span class="tiny">(valfritt)</span></label>
-          <textarea id="comment" name="comment" placeholder=""></textarea>
-
-          <label for="proofRef">Verifierings-ID <span class="tiny">(valfritt, t.ex. ordernr)</span></label>
-          <input id="proofRef" name="proofRef" type="text" placeholder="ORDER-123" />
-
-          <!-- RAPPORT-del (som tidigare) -->
-          <div class="report-container">
-            <div class="field" style="margin-top:12px">
-              <label style="font-weight:600">
-                <input type="checkbox" id="reportFlag" />
-                Rapportera misstänkt bedrägeri
-              </label>
-              <div class="muted tiny">Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.</div>
-            </div>
-
-            <div id="reportDetails" class="report-box">
-              <label for="reportReason">Typ av problem</label>
-              <select id="reportReason">
-                <option value="">Välj...</option>
-                <option>Misstänkt bedrägeri</option>
-                <option>Vilseledande identitet</option>
-                <option>Obetald/utebliven leverans</option>
-                <option>Falsk/felaktigt beskriven vara/tjänst</option>
-                <option>Otillåten betalningsmetod/chargeback-abuse</option>
-                <option>Annan oegentlighet</option>
-              </select>
-
-              <div class="row" style="margin-top:8px">
-                <div>
-                  <label for="reportDate">Datum</label>
-                  <input id="reportDate" type="date" />
-                </div>
-                <div>
-                  <label for="reportTime">Tid</label>
-                  <input id="reportTime" type="time" />
-                </div>
-              </div>
-
-              <div class="row" style="margin-top:8px">
-                <div>
-                  <label for="reportAmount">Belopp (SEK) <span class="tiny">(valfritt)</span></label>
-                  <input id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
-                </div>
-                <div>
-                  <label for="reportLink">Motpart/annonslänk <span class="tiny">(valfritt)</span></label>
-                  <input id="reportLink" type="url" placeholder="https://annons-eller-profil" />
-                </div>
-              </div>
-
-              <label for="reportText" style="margin-top:8px">Beskrivning</label>
-              <textarea id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp."></textarea>
-
-              <label for="evidenceUrl" style="margin-top:8px">Bevislänk <span class="tiny">(valfritt)</span></label>
-              <input type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
-
-              <label for="reportFiles" style="margin-top:8px">Ladda upp bevis <span class="tiny">(valfritt)</span></label>
-              <input id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
-              <div class="files-note">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
-              <ul id="fileList" class="file-list"></ul>
-
-              <label style="margin-top:8px;font-weight:600">
-                <input type="checkbox" id="reportConsent" />
-                Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
-              </label>
-            </div>
-          </div>
-
-          <div class="row" style="margin-top:12px">
-            <button class="primary" type="submit">Skicka betyg</button>
-            <button class="secondary" type="button" id="reset-form">Avbryt</button>
-          </div>
-
-          <div id="notice" class="notice"></div>
-        </form>
-      </div>
-    </section>
+      <nav class="pr-nav" aria-label="Huvudmeny">
+        <a href="#top">Hem</a>
+        <a href="/customer.html">Registrera dig</a>
+        <a href="#rate">Lämna betyg</a>
+        <a href="/profile.html">Min profil</a>
+        <a href="#how">Hur det fungerar?</a>
+        <a href="#contact">Övrigt</a>
+        <a class="pr-cta" href="#rate">Starta</a>
+      </nav>
+    </div>
   </div>
 
-<script type="module" src="/modules/main.js"></script>
+  <!-- HERO -->
+  <div id="top" class="hero anchor">
+    <div class="pr-shell hero-grid">
+      <div>
+        <h1>Din åsikt räknas. Alltid.</h1>
+        <p>
+          PeerRate kombinerar betyg från olika plattformar och standardiserar dem till ett
+          transaktionsbetyg. När betyg är kopplade till verkliga affärer blir förtroendet starkare –
+          och bra affärer blir enklare.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="/customer.html">Registrera dig</a>
+          <a class="btn btn-ghost" href="#rate">Logga in</a>
+        </div>
+
+        <div class="hero-badges" aria-label="Fördelar">
+          <div class="badge"><span class="dot" aria-hidden="true"></span> Säker och snabb</div>
+          <div class="badge"><span class="dot" aria-hidden="true"></span> Flexibel och dynamisk</div>
+          <div class="badge"><span class="dot" aria-hidden="true"></span> Transaktionsbaserad score</div>
+        </div>
+      </div>
+
+      <aside class="illustration" aria-label="Illustration">
+        <div class="illu-accent" aria-hidden="true"></div>
+        <div class="illu-accent2" aria-hidden="true"></div>
+
+        <div>
+          <p class="illu-big">Bra saker händer när du har kontrollen.</p>
+          <p class="illu-text">
+            Du har full kontroll över vilken data vi hämtar – och vi gör inget utan din vetskap.
+            Bygg en trovärdig historik baserad på riktiga transaktioner.
+          </p>
+
+          <div class="illu-grid">
+            <div class="illu-tile">
+              <b>Verifierat</b>
+              <span>Koppla omdömen till verkliga affärer</span>
+            </div>
+            <div class="illu-tile">
+              <b>Standardiserat</b>
+              <span>Samla betyg från flera plattformar</span>
+            </div>
+            <div class="illu-tile">
+              <b>Portabelt</b>
+              <span>Ta med din score mellan marknadsplatser</span>
+            </div>
+            <div class="illu-tile">
+              <b>Rättvist</b>
+              <span>Belönar bra beteenden över tid</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top: 16px;">
+          <a class="btn btn-primary" href="#how">Hur det funkar</a>
+          <a class="btn btn-ghost" href="/profile.html">Se min profil</a>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- HUR DET FUNKAR -->
+  <div id="how" class="section anchor">
+    <div class="pr-shell">
+      <h2>Hur det fungerar?</h2>
+      <p>
+        PeerRate kombinerar betyg från olika plattformar och standardiserar dessa för att ge ett
+        övergripande transaktionsbetyg. Då alla transaktioner är verifierade skapas ett trovärdigt betyg,
+        vilket ger mer transparens och ökar transaktioner.
+      </p>
+
+      <div class="cta-band">
+        <div>
+          <h3>Ta första steget mot en rättvisare score.</h3>
+          <div style="color:var(--pr-muted);font-size:13px;margin-top:4px;">
+            Registrera dig, koppla data och börja bygga förtroende.
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a class="btn btn-primary" href="/customer.html">Starta</a>
+          <a class="btn btn-ghost" href="#rate">Lämna betyg</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VAD VI GÖR -->
+  <div id="what" class="section anchor">
+    <div class="pr-shell">
+      <h2>Vad vi gör.</h2>
+      <p>
+        I en värld där digitala affärer sker dagligen utan att parterna nödvändigtvis känner varandra, är trovärdighet avgörande.
+        PeerRate hjälper användare att betygsätta varandra efter genomförda transaktioner – för en mer transparent och rättvis marknad.
+      </p>
+
+      <div class="feature-grid">
+        <div class="feature">
+          <h3>Betyg & Recensioner</h3>
+          <p class="mini">
+            Efter varje transaktion kan båda parter betygsätta varandra, vilket skapar en trovärdighetshistorik.
+          </p>
+        </div>
+        <div class="feature">
+          <h3>Dynamisk Transaktionsscore</h3>
+          <p class="mini">
+            Ju fler positiva omdömen, desto högre score – vilket stärker framtida affärsmöjligheter.
+          </p>
+        </div>
+        <div class="feature">
+          <h3>Belöningssystem</h3>
+          <p class="mini">
+            På sikt kan användare få en del av intäkterna när någon köper en transaktionsupplysning om dem.
+          </p>
+        </div>
+        <div class="feature">
+          <h3>Fungerar överallt</h3>
+          <p class="mini">
+            Kan användas för alla typer av transaktioner – från onlineköp till tjänsteuppdrag.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LÄMNA BETYG (behåller din befintliga funktion, men nu längre ner) -->
+  <div id="rate" class="section anchor">
+    <div class="pr-shell">
+      <h2>Lämna betyg</h2>
+      <p>
+        Logga in och lämna ett betyg. (Du kan också registrera dig om du inte redan har ett konto.)
+      </p>
+
+      <div class="pr-form-wrap">
+
+        <!-- Inloggningsbadge -->
+        <div id="user-badge" class="user-badge hidden">
+          <div class="user-avatar" id="user-badge-avatar">PR</div>
+          <div>
+            <div class="user-label">Inloggad som</div>
+            <div class="user-name" id="user-badge-name">–</div>
+          </div>
+        </div>
+
+        <!-- LOGIN-KORT -->
+        <section class="pr-card" id="login-card">
+          <h2>Logga in</h2>
+          <p style="margin:0 0 10px;color:var(--pr-muted);font-size:13px;">
+            Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.
+          </p>
+
+          <form id="rating-login-form" autocomplete="off">
+            <div class="pr-field">
+              <label class="pr-label" for="login-email">E-post</label>
+              <input class="pr-input" id="login-email" name="email" type="email" placeholder="erik@example.com" />
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="login-password">Lösenord</label>
+              <input class="pr-input" id="login-password" name="password" type="password" placeholder="Ditt lösenord" />
+            </div>
+
+            <div class="pr-actions">
+              <button class="pr-btn pr-btn-primary" type="submit" id="login-btn">Logga in</button>
+              <a class="pr-btn pr-btn-ghost" href="/customer.html">Registrera dig</a>
+            </div>
+
+            <p id="login-status" style="margin-top:10px;color:var(--pr-muted);font-size:12px;"></p>
+          </form>
+        </section>
+
+        <!-- LÄMNA BETYG -->
+        <section class="pr-card" id="rating-card">
+          <h2>Lämna ett betyg</h2>
+
+          <p id="rating-login-hint" style="margin:0 0 10px;color:var(--pr-muted);font-size:12px;">
+            Du behöver logga in för att kunna lämna betyg.
+            Logga in ovan eller
+            <a href="/customer.html" target="_blank" rel="noopener noreferrer">registrera dig här</a>.
+          </p>
+
+          <!-- Denna wrapper visas bara när man är inloggad (styrt av script/main.js) -->
+          <div id="rating-form-wrapper" class="hidden">
+            <form id="rating-form" autocomplete="off">
+
+              <div class="pr-field">
+                <label class="pr-label" for="subject">Vem betygsätter du? <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(användarnamn eller mejl)</span></label>
+                <input class="pr-input" id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
+              </div>
+
+              <div class="pr-field">
+                <label class="pr-label" for="rater">Ditt namn/mejl <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span></label>
+                <input class="pr-input" id="rater" name="rater" type="text" placeholder="" />
+              </div>
+
+              <div class="pr-field">
+                <label class="pr-label" for="rating">Betyg (1–5)</label>
+                <select class="pr-select" id="rating" name="score" required>
+                  <option value="" disabled selected hidden>Välj betyg</option>
+                  <option value="1">1</option>
+                  <option value="2">2</option>
+                  <option value="3">3</option>
+                  <option value="4">4</option>
+                  <option value="5">5</option>
+                </select>
+              </div>
+
+              <div class="pr-field">
+                <label class="pr-label" for="ratingSource">Varifrån kommer betyget? <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+                <select class="pr-select" id="ratingSource" name="source">
+                  <option value="" selected>Välj källa (valfritt)</option>
+                  <option value="Blocket">Blocket</option>
+                  <option value="Tradera">Tradera</option>
+                  <option value="Airbnb">Airbnb</option>
+                  <option value="Husknuten">Husknuten</option>
+                  <option value="Tiptap">Tiptap</option>
+                </select>
+              </div>
+
+              <div class="pr-field">
+                <label class="pr-label" for="comment">Kommentar <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+                <textarea class="pr-textarea" id="comment" name="comment" placeholder=""></textarea>
+              </div>
+
+              <div class="pr-field">
+                <label class="pr-label" for="proofRef">Verifierings-ID <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt, t.ex. ordernr)</span></label>
+                <input class="pr-input" id="proofRef" name="proofRef" type="text" placeholder="ORDER-123" />
+              </div>
+
+              <!-- Rapport-del (behålls) -->
+              <div style="margin-top:12px;">
+                <label style="font-weight:700;color:var(--pr-purple);">
+                  <input type="checkbox" id="reportFlag" />
+                  Rapportera misstänkt bedrägeri
+                </label>
+                <div style="color:var(--pr-muted);font-size:12px;">
+                  Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.
+                </div>
+
+                <div id="reportDetails" style="display:none;margin-top:10px;border:1px solid rgba(0,0,0,.08);background:#fff;padding:12px;border-radius:12px;">
+                  <div class="pr-field">
+                    <label class="pr-label" for="reportReason">Typ av problem</label>
+                    <select class="pr-select" id="reportReason">
+                      <option value="">Välj...</option>
+                      <option>Misstänkt bedrägeri</option>
+                      <option>Vilseledande identitet</option>
+                      <option>Obetald/utebliven leverans</option>
+                      <option>Falsk/felaktigt beskriven vara/tjänst</option>
+                      <option>Otillåten betalningsmetod/chargeback-abuse</option>
+                      <option>Annan oegentlighet</option>
+                    </select>
+                  </div>
+
+                  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:180px;">
+                      <label class="pr-label" for="reportDate">Datum</label>
+                      <input class="pr-input" id="reportDate" type="date" />
+                    </div>
+                    <div style="flex:1;min-width:180px;">
+                      <label class="pr-label" for="reportTime">Tid</label>
+                      <input class="pr-input" id="reportTime" type="time" />
+                    </div>
+                  </div>
+
+                  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+                    <div style="flex:1;min-width:180px;">
+                      <label class="pr-label" for="reportAmount">Belopp (SEK) <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+                      <input class="pr-input" id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
+                    </div>
+                    <div style="flex:1;min-width:180px;">
+                      <label class="pr-label" for="reportLink">Motpart/annonslänk <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+                      <input class="pr-input" id="reportLink" type="url" placeholder="https://annons-eller-profil" />
+                    </div>
+                  </div>
+
+                  <div class="pr-field" style="margin-top:8px;">
+                    <label class="pr-label" for="reportText">Beskrivning</label>
+                    <textarea class="pr-textarea" id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp."></textarea>
+                  </div>
+
+                  <div class="pr-field">
+                    <label class="pr-label" for="evidenceUrl">Bevislänk <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+                    <input class="pr-input" type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
+                  </div>
+
+                  <div class="pr-field">
+                    <label class="pr-label" for="reportFiles">Ladda upp bevis <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+                    <input class="pr-input" id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
+                    <div style="font-size:12px;color:var(--pr-muted);margin-top:6px">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
+                    <ul id="fileList" style="margin:6px 0 0;padding:0;list-style:none"></ul>
+
+                    <label style="margin-top:8px;font-weight:700;color:var(--pr-purple);display:block;">
+                      <input type="checkbox" id="reportConsent" />
+                      Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pr-actions" style="margin-top:14px;">
+                <button class="pr-btn pr-btn-primary" type="submit">Skicka betyg</button>
+                <button class="pr-btn pr-btn-ghost" type="button" id="reset-form">Avbryt</button>
+              </div>
+
+              <div id="notice" style="display:none;margin-top:12px;border-radius:12px;padding:10px 14px;font-weight:700;border:1px solid rgba(0,0,0,.08);background:#fff;"></div>
+            </form>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTACT / ÖVRIGT -->
+  <div id="contact" class="section anchor">
+    <div class="pr-shell">
+      <h2>Kontakt</h2>
+
+      <div class="feature-grid" style="grid-template-columns: 1fr 1fr;">
+        <div class="feature">
+          <h3>Hör av dig</h3>
+          <p class="mini" style="margin-bottom:10px;">
+            För frågor, partnerskap eller feedback:
+          </p>
+          <div style="font-size:13px;color:var(--pr-purple);font-weight:700;">hello@peerrate.ai</div>
+        </div>
+
+        <div class="feature">
+          <h3>Följ oss</h3>
+          <p class="mini">
+            Få reda på mer om hur vi förbättrar trovärdigheten i transaktioner.
+          </p>
+          <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+            <a class="btn btn-primary" href="/profile.html">Min profil</a>
+            <a class="btn btn-ghost" href="#top">Till toppen</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="footer">© 2025 by PeerRate.</div>
+    </div>
+  </div>
+
+  <!-- Behåll samma entrypoint så din befintliga JS fortsätter funka -->
+  <script type="module" src="/modules/main.js"></script>
+
+  <script>
+    // Visa/dölj report details utan :has (så det funkar i fler browsers)
+    (function(){
+      const flag = document.getElementById('reportFlag');
+      const box = document.getElementById('reportDetails');
+      if (!flag || !box) return;
+      const sync = () => { box.style.display = flag.checked ? 'block' : 'none'; };
+      flag.addEventListener('change', sync);
+      sync();
+    })();
+  </script>
+
 </body>
 </html>
