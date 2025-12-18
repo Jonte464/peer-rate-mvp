@@ -5,32 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PeerRate – Trust you can prove</title>
 
-  <!-- Behåll ert tema (knappar/form-styling mm) -->
   <link rel="stylesheet" href="/css/pr-theme.css" />
 
   <style>
-    /* =========================
-       World-inspirerad landing
-       ========================= */
-
     :root{
       --w-bg: #ffffff;
       --w-ink: #0f0f12;
       --w-muted: rgba(15,15,18,.64);
       --w-border: rgba(15,15,18,.10);
-      --w-card: rgba(255,255,255,.86);
-      --w-glass: rgba(255,255,255,.65);
       --w-shadow: 0 20px 70px rgba(0,0,0,.12);
       --w-radius: 22px;
-
-      /* layout */
       --w-max: 1180px;
 
-      /* accent (matcha hero-känslan) */
+      /* Mörkblå theme (matcha jordbild) */
+      --navy-1: #0b1633;
+      --navy-2: #0f2a66;
+      --navy-3: #1d4ed8;
+      --navy-glow: rgba(59,130,246,.25);
+
       --acc: #2ec5b6;
       --acc2: #7ed5ff;
 
-      /* Mikrointeraktions-dials */
       --ease: cubic-bezier(.2,.8,.2,1);
       --ms-fast: 80ms;
       --ms-med: 160ms;
@@ -45,7 +40,6 @@
       background: var(--w-bg);
       color: var(--w-ink);
     }
-
     a, button { transition: transform var(--ms-fast) var(--ease), filter var(--ms-med) var(--ease), opacity var(--ms-med) var(--ease); }
     a:active, button:active { transform: translateY(1px); }
     .soft-hover:hover { transform: translateY(-1px); }
@@ -57,7 +51,7 @@
     }
 
     /* =========================
-       TOP ROW – smalare + mer mot kanter
+       TOP ROW
        ========================= */
     .top-row{
       position: sticky;
@@ -69,14 +63,14 @@
     }
     .top-row .shell{
       max-width: 100%;
-      padding: 0 28px; /* mer mot kanterna */
+      padding: 0 28px;
     }
     .top-row-inner{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap: 14px;
-      padding: 10px 0; /* smalare */
+      padding: 10px 0;
     }
 
     .brand{
@@ -89,7 +83,6 @@
       min-width: 220px;
     }
 
-    /* Proffsigare logobadge (använder din PNG) */
     .logo-badge{
       width: 38px; height: 38px;
       border-radius: 999px;
@@ -140,6 +133,7 @@
       gap: 10px;
       min-width: 220px;
       justify-content: flex-end;
+      position: relative;
     }
 
     .lang-pill{
@@ -148,13 +142,39 @@
       gap: 8px;
       border: 1px solid var(--w-border);
       background: rgba(255,255,255,.78);
-      padding: 7px 10px; /* lite smalare */
+      padding: 7px 10px;
       border-radius: 999px;
       font-weight: 650;
       font-size: 13px;
       cursor: pointer;
     }
     .lang-pill:hover{ filter: brightness(0.98); }
+
+    /* NY: liten "inloggad som" uppe i topbaren (syns bara om inloggad) */
+    .top-user{
+      display:none;
+      align-items:center;
+      gap: 8px;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(11,22,51,.16);
+      background:
+        radial-gradient(260px 60px at 20% 50%, rgba(29,78,216,.10), transparent 60%),
+        rgba(255,255,255,.78);
+      font-size: 13px;
+      font-weight: 750;
+      color: rgba(11,22,51,.92);
+      white-space: nowrap;
+    }
+    .top-user .dot{
+      width: 8px; height: 8px; border-radius: 999px;
+      background: rgba(34,197,94,1);
+      box-shadow: 0 0 0 6px rgba(34,197,94,.12);
+    }
+    .top-user .name{ font-weight: 850; }
+    @media (max-width: 760px){
+      .top-user{ display:none !important; }
+    }
 
     .lang-menu{
       position: absolute;
@@ -167,6 +187,7 @@
       box-shadow: 0 18px 60px rgba(0,0,0,.12);
       padding: 8px;
       display:none;
+      z-index: 200;
     }
     .lang-menu button{
       width:100%;
@@ -215,10 +236,9 @@
       font-weight: 720;
     }
     .menu-link:hover{ background: rgba(15,15,18,.04); }
-    .menu-link span{ color: var(--w-muted); font-weight: 600; font-size: 13px; }
 
     /* =========================
-       HERO – fullskärm, riktig video
+       HERO
        ========================= */
     .hero{
       position: relative;
@@ -296,7 +316,6 @@
       flex-wrap: wrap;
       margin-top: 14px;
     }
-
     .btn{
       display:inline-flex;
       align-items:center;
@@ -316,13 +335,11 @@
       color: #0f0f12;
       box-shadow: 0 18px 60px rgba(0,0,0,.20);
     }
-    .btn-primary:hover{ filter: brightness(.98); }
     .btn-ghost{
       background: rgba(15,15,18,.18);
       color: rgba(255,255,255,.90);
       border: 1px solid rgba(255,255,255,.22);
     }
-    .btn-ghost:hover{ filter: brightness(1.05); }
 
     .hero-card{
       background: rgba(255,255,255,.10);
@@ -370,11 +387,10 @@
     }
 
     /* =========================
-       SEKTIONER
+       SECTION BASICS
        ========================= */
     .section{ padding: 70px 0; }
     @media (max-width: 680px){ .section{ padding: 54px 0; } }
-
     .section-title{
       font-size: 44px;
       letter-spacing: -0.03em;
@@ -383,7 +399,6 @@
       text-wrap: balance;
     }
     @media (max-width: 560px){ .section-title{ font-size: 34px; } }
-
     .section-lead{
       color: var(--w-muted);
       font-size: 16px;
@@ -391,14 +406,12 @@
       line-height: 1.6;
       margin: 0 0 22px;
     }
-
     .grid-3{
       display:grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 16px;
     }
     @media (max-width: 980px){ .grid-3{ grid-template-columns: 1fr; } }
-
     .w-card{
       border: 1px solid var(--w-border);
       border-radius: var(--w-radius);
@@ -410,7 +423,7 @@
     .w-card p{ margin: 0; color: var(--w-muted); line-height: 1.55; font-size: 14px; }
 
     /* =========================
-       Reputation Card flip
+       Reputation Card flip (oförändrad funktionalitet)
        ========================= */
     .flip-wrap{ perspective: 1100px; }
     .flip{
@@ -422,7 +435,6 @@
       transition: transform var(--ms-slow) var(--ease);
     }
     .flip.is-flipped{ transform: rotateY(180deg); }
-
     .flip-face{
       position:absolute;
       inset:0;
@@ -469,7 +481,7 @@
     .card-meta .m span{ display:block; color: var(--w-muted); font-size: 12px; margin-top: 4px; }
 
     /* =========================
-       Simulator – proffsigare graf + 1–5 med 5P
+       SIMULATOR – endast 5P + två reglage
        ========================= */
     .sim{
       border: 1px solid var(--w-border);
@@ -478,107 +490,144 @@
       box-shadow: 0 18px 70px rgba(0,0,0,.08);
       padding: 18px;
       display:grid;
-      grid-template-columns: 1.2fr .8fr;
+      grid-template-columns: 1.1fr .9fr;
       gap: 16px;
       align-items:center;
       max-width: 980px;
     }
     @media (max-width: 980px){ .sim{ grid-template-columns: 1fr; } }
-
     .sim h3{ margin:0 0 6px; }
     .sim p{ margin:0 0 12px; color: var(--w-muted); line-height:1.55; }
 
+    .slider-stack{
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+      margin-top: 10px;
+    }
     .slider-row{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap: 12px;
-      margin-top: 10px;
     }
-    input[type="range"]{
-      width:100%;
-      accent-color: #111;
-    }
+    input[type="range"]{ width:100%; accent-color: #111; }
 
     .trust-pill{
-      display:inline-flex;
+      display:flex;
       align-items:center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(0,0,0,.10);
-      background: rgba(255,255,255,.80);
-      font-weight: 850;
-      white-space:nowrap;
-      box-shadow: 0 10px 30px rgba(0,0,0,.06);
+      justify-content:space-between;
+      gap: 12px;
+      padding: 14px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(11,22,51,.14);
+      background:
+        radial-gradient(520px 90px at 18% 50%, rgba(29,78,216,.10), transparent 60%),
+        radial-gradient(520px 90px at 82% 50%, rgba(125,211,252,.08), transparent 60%),
+        rgba(255,255,255,.88);
+      box-shadow: 0 14px 50px rgba(0,0,0,.06);
     }
-    .trust-dot{
-      width:10px; height:10px; border-radius:999px;
-      background: var(--acc);
-      box-shadow: 0 0 0 6px rgba(46,197,182,.16);
+    .trust-left{
+      display:flex;
+      flex-direction:column;
+      gap: 6px;
+      min-width: 170px;
     }
-
-    .pbar{
-      display:inline-flex;
-      align-items:center;
-      gap: 4px;
-      padding: 6px 8px;
-      border-radius: 999px;
-      border: 1px solid rgba(0,0,0,.08);
-      background: rgba(15,15,18,.03);
+    .trust-title{
       font-weight: 900;
       letter-spacing: -.01em;
+      color: rgba(11,22,51,.92);
+    }
+    .trust-sub{
+      color: rgba(11,22,51,.62);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    /* STÖRRE 5P */
+    .pbar{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(11,22,51,.14);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.72));
     }
     .pbar .p{
-      width: 18px;
-      height: 18px;
-      border-radius: 6px;
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
       display:flex;
       align-items:center;
       justify-content:center;
-      font-size: 12px;
-      border: 1px solid rgba(0,0,0,.10);
-      background: rgba(255,255,255,.9);
-      color: rgba(15,15,18,.82);
-      transition: filter var(--ms-med) var(--ease), opacity var(--ms-med) var(--ease);
+      font-size: 20px;
+      font-weight: 950;
+      letter-spacing: -.02em;
+      border: 1px solid rgba(11,22,51,.16);
+      color: rgba(11,22,51,.78);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.78));
+      box-shadow: 0 10px 24px rgba(0,0,0,.05);
+      user-select:none;
     }
     .pbar .p.is-on{
+      color: rgba(255,255,255,.96);
+      border-color: rgba(11,22,51,.25);
       background:
-        radial-gradient(12px 12px at 30% 25%, rgba(46,197,182,.45), transparent 60%),
-        linear-gradient(135deg, rgba(46,197,182,.22), rgba(126,213,255,.18));
-      border-color: rgba(46,197,182,.35);
-      color: rgba(15,15,18,.92);
+        radial-gradient(24px 24px at 30% 25%, rgba(125,211,252,.35), transparent 62%),
+        radial-gradient(24px 24px at 70% 75%, rgba(29,78,216,.35), transparent 62%),
+        linear-gradient(135deg, var(--navy-1), var(--navy-2));
+      box-shadow:
+        0 14px 30px rgba(11,22,51,.26),
+        0 0 0 8px rgba(59,130,246,.08);
     }
 
-    .sparkPro{
+    .sim-meta{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
       width: 100%;
-      border-radius: 18px;
-      border: 1px solid rgba(0,0,0,.08);
+    }
+    .meta-box{
+      border: 1px solid rgba(11,22,51,.10);
+      border-radius: 16px;
       padding: 12px;
-      background:
-        radial-gradient(800px 220px at 20% 0%, rgba(46,197,182,.10), transparent 60%),
-        radial-gradient(700px 220px at 90% 30%, rgba(126,213,255,.08), transparent 60%),
-        rgba(255,255,255,.9);
-      box-shadow: 0 16px 60px rgba(0,0,0,.06);
+      background: rgba(255,255,255,.86);
+    }
+    .meta-box b{
+      display:block;
+      font-size: 16px;
+      letter-spacing: -.01em;
+      color: rgba(11,22,51,.92);
+    }
+    .meta-box span{
+      display:block;
+      margin-top: 4px;
+      font-size: 12px;
+      color: rgba(11,22,51,.62);
+      font-weight: 650;
     }
 
     /* =========================
-       Globe section – video över rubrik/tabell (ej bredvid)
+       GLOBE – större + contain så hela syns
        ========================= */
     .globe-hero{
-      width: min(1400px, 98vw);
+      width: min(1600px, 99vw);
       margin: 0 auto 26px;
-      border-radius: 30px;
+      border-radius: 34px;
       overflow: hidden;
       background: #000;
-      box-shadow: 0 30px 120px rgba(0,0,0,.18);
+      box-shadow: 0 40px 140px rgba(0,0,0,.20);
       border: 1px solid rgba(0,0,0,.10);
     }
     .globe-hero video{
       width: 100%;
-      height: min(62vh, 520px);
+      height: min(76vh, 640px);     /* högre så den får “mer ned” */
       display:block;
-      object-fit: cover;
+      object-fit: contain;          /* visar hela jordgloben */
+      background: #000;             /* letterboxing blir svart */
     }
 
     /* KPI table */
@@ -603,17 +652,44 @@
       font-weight: 700;
       background: rgba(0,0,0,.02);
     }
-    .kpi td b{
-      font-size: 16px;
-      letter-spacing: -.01em;
-    }
     .kpi tr:last-child td{ border-bottom: 0; }
 
-    /* White block for your existing forms */
     .white-block{ background: #fff; }
-
-    /* Ankare offset pga sticky topbar */
     .anchor { scroll-margin-top: 90px; }
+
+    /* =========================
+       SNYGG AVSKILJARE (efter globe-sektionen)
+       ========================= */
+    .divider{
+      padding: 10px 0 0;
+    }
+    .divider-line{
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(11,22,51,.22), rgba(125,211,252,.22), rgba(11,22,51,.22), transparent);
+      margin: 28px auto 0;
+      max-width: 980px;
+      position: relative;
+    }
+    .divider-line::after{
+      content:"";
+      position:absolute;
+      left:50%;
+      top: -14px;
+      transform: translateX(-50%);
+      width: 220px;
+      height: 28px;
+      border-radius: 999px;
+      background:
+        radial-gradient(90px 18px at 30% 50%, rgba(29,78,216,.14), transparent 70%),
+        radial-gradient(90px 18px at 70% 50%, rgba(125,211,252,.12), transparent 70%);
+      filter: blur(0.2px);
+      opacity: .9;
+    }
+
+    /* =========================
+       RATE – extra glapp mellan Logga in och Lämna betyg
+       ========================= */
+    #rating-card{ margin-top: 44px !important; }
 
     /* Footer */
     .footer{
@@ -622,32 +698,6 @@
       font-size: 12px;
       border-top: 1px solid var(--w-border);
     }
-
-    /* =========================
-       RATE – flytta "Inloggad som" till top-right
-       ========================= */
-    .rate-wrap{
-      position: relative;
-      max-width: 980px;
-      margin: 0 auto;
-    }
-    #user-badge{
-      position: absolute;
-      top: -54px;
-      right: 0;
-      margin: 0 !important;
-      z-index: 2;
-    }
-    @media (max-width: 680px){
-      #user-badge{
-        position: static;
-        margin-bottom: 14px !important;
-      }
-    }
-
-    /* Större glapp mellan Logga in och Lämna betyg */
-    #rating-card{ margin-top: 44px !important; }
-
   </style>
 </head>
 
@@ -667,6 +717,13 @@
       </a>
 
       <div class="top-actions">
+        <!-- NYTT: inloggad-pill bredvid SV -->
+        <div class="top-user" id="topUserPill" aria-live="polite">
+          <span class="dot" aria-hidden="true"></span>
+          <span>Inloggad:</span>
+          <span class="name" id="topUserName">–</span>
+        </div>
+
         <button class="lang-pill soft-hover" id="langBtn" type="button" aria-haspopup="true" aria-expanded="false">
           <span id="langLabel">SV</span>
           <span style="opacity:.6;">▾</span>
@@ -680,17 +737,15 @@
       </div>
     </div>
 
-    <!-- Language dropdown -->
     <div class="lang-menu" id="langMenu" role="menu" aria-label="Välj språk">
       <button type="button" data-lang="sv">Svenska (SV)</button>
       <button type="button" data-lang="en">English (EN)</button>
     </div>
 
-    <!-- Menu panel -->
     <nav class="menu-panel" id="menuPanel" aria-label="Meny">
       <div class="shell menu-panel-inner">
         <a class="menu-link" href="#how"><div data-i18n="menu_how">How it works</div><span>→</span></a>
-        <a class="menu-link" href="#sim"><div data-i18n="menu_sim">Se värdet direkt</div><span>→</span></a>
+        <a class="menu-link" href="#sim"><div>Se värdet direkt</div><span>→</span></a>
         <a class="menu-link" href="#globe"><div data-i18n="menu_globe">Global trust</div><span>→</span></a>
         <a class="menu-link" href="#rate"><div data-i18n="menu_rate">Leave a rating</div><span>→</span></a>
         <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Sign up</div><span>→</span></a>
@@ -720,30 +775,27 @@
     <div class="shell hero-content">
       <div class="hero-grid">
         <div>
-          <div class="hero-kicker" data-i18n="hero_kicker">Peer-to-peer reputation</div>
-          <h1 data-i18n="hero_h1">Trust you can prove.</h1>
-          <p data-i18n="hero_p">
+          <div class="hero-kicker">Peer-to-peer reputation</div>
+          <h1>Trust you can prove.</h1>
+          <p>
             PeerRate helps people carry verified reputation between marketplaces.
             Not vibes. Not claims. Real transactions, verified, and portable.
           </p>
 
           <div class="hero-cta">
-            <a class="btn btn-primary soft-hover" href="/customer.html" data-i18n="hero_cta_primary">Get started</a>
-            <!-- ÄNDRAT: Fråga om trust -> scroll till Se värdet direkt -->
+            <a class="btn btn-primary soft-hover" href="/customer.html">Get started</a>
             <a class="btn btn-ghost soft-hover" href="#sim">Fråga om trust</a>
           </div>
         </div>
 
         <aside class="hero-card">
-          <h3 data-i18n="hero_card_title">A reputation card you can share</h3>
-          <p class="mini" data-i18n="hero_card_p">
-            A compact proof of how you behave in P2P — across platforms.
-          </p>
+          <h3>A reputation card you can share</h3>
+          <p class="mini">A compact proof of how you behave in P2P — across platforms.</p>
 
           <div class="hero-metrics">
             <div class="metric">
               <b id="heroScore">4.6</b>
-              <span>Trust (1–5)</span>
+              <span>Förtroende (1–5)</span>
             </div>
             <div class="metric">
               <b id="heroTx">127</b>
@@ -755,41 +807,40 @@
     </div>
   </section>
 
-  <!-- WHITE BLOCK (text + features) -->
+  <!-- HOW -->
   <section id="how" class="section white-block anchor">
     <div class="shell">
-      <h2 class="section-title" data-i18n="how_title">A priority lane for trustworthy people online.</h2>
-      <p class="section-lead" data-i18n="how_lead">
+      <h2 class="section-title">A priority lane for trustworthy people online.</h2>
+      <p class="section-lead">
         PeerRate standardizes ratings and links them to real, verified transactions — so trust becomes measurable,
         portable and fair.
       </p>
 
       <div class="grid-3">
         <div class="w-card soft-hover">
-          <h3 data-i18n="f1_title">Verified</h3>
-          <p data-i18n="f1_p">Connect reputation to real transactions. Less fraud, fewer bad surprises.</p>
+          <h3>Verified</h3>
+          <p>Connect reputation to real transactions. Less fraud, fewer bad surprises.</p>
         </div>
         <div class="w-card soft-hover">
-          <h3 data-i18n="f2_title">Portable</h3>
-          <p data-i18n="f2_p">Bring your trust score across marketplaces instead of starting from zero.</p>
+          <h3>Portable</h3>
+          <p>Bring your trust score across marketplaces instead of starting from zero.</p>
         </div>
         <div class="w-card soft-hover">
-          <h3 data-i18n="f3_title">Explainable</h3>
-          <p data-i18n="f3_p">A clear breakdown of what affects your score — not a black box.</p>
+          <h3>Explainable</h3>
+          <p>A clear breakdown of what affects your score — not a black box.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Reputation Card + Simulator -->
+  <!-- SIM -->
   <section id="sim" class="section anchor">
     <div class="shell">
       <h2 class="section-title">Se värdet direkt.</h2>
-      <!-- borttagen "investor-friendly"-text -->
 
       <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;">
 
-        <!-- Reputation card flip (behåller funktionalitet) -->
+        <!-- Reputation card flip -->
         <div class="flip-wrap">
           <div class="flip soft-hover" id="repFlip" role="button" tabindex="0" aria-label="Flip reputation card">
             <div class="flip-face flip-front">
@@ -859,80 +910,68 @@
           </div>
         </div>
 
-        <!-- Simulator (ny proffsig graf + 5P) -->
+        <!-- Simulator – bara 5P + två sliders -->
         <div class="sim">
           <div>
-            <h3>Hur utvecklas förtroendet över tid?</h3>
+            <h3>Vad händer när fler lämnar omdömen – och de är bra?</h3>
             <p>
-              Dra reglaget för att simulera fler verifierade transaktioner.
-              Vi visar hur förtroendet kan röra sig mot 5P när historiken blir starkare.
+              Två reglage styr den totala nivån. Få omdömen + lågt snitt ger låg nivå.
+              Många omdömen + högt snitt ger 5P.
             </p>
 
-            <div class="slider-row">
-              <input id="txSlider" type="range" min="0" max="200" value="10" />
-              <div class="trust-pill" id="scorePill" aria-live="polite">
-                <span class="trust-dot" id="scoreDot" aria-hidden="true"></span>
-                <span>Förtroende</span>
-                <span id="simScore">4.6</span>
-                <span style="opacity:.6;">/ 5</span>
-
-                <span class="pbar" aria-label="5P rating">
-                  <span class="p is-on">P</span>
-                  <span class="p is-on">P</span>
-                  <span class="p is-on">P</span>
-                  <span class="p is-on">P</span>
-                  <span class="p">P</span>
-                </span>
+            <div class="slider-stack">
+              <div>
+                <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:6px;">
+                  <b>Antal omdömen</b>
+                  <span style="color:rgba(11,22,51,.62); font-weight:800;"><span id="simCount">10</span> st</span>
+                </div>
+                <div class="slider-row">
+                  <input id="countSlider" type="range" min="0" max="200" value="10" />
+                </div>
               </div>
-            </div>
 
-            <div style="margin-top:10px; color:var(--w-muted); font-size:13px;">
-              Tillagda verifierade transaktioner: <b id="simAdded">10</b>
+              <div>
+                <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:6px;">
+                  <b>Genomsnittligt omdöme</b>
+                  <span style="color:rgba(11,22,51,.62); font-weight:800;"><span id="simAvg">4.6</span> / 5</span>
+                </div>
+                <div class="slider-row">
+                  <input id="avgSlider" type="range" min="1" max="5" step="0.1" value="4.6" />
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="sparkPro">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
-              <b>Förtroende-utveckling</b>
-              <span style="color:var(--w-muted); font-size:12px;" id="simColorLabel">Låg risk</span>
+          <div>
+            <div class="trust-pill" aria-live="polite">
+              <div class="trust-left">
+                <div class="trust-title">Total nivå</div>
+                <div class="trust-sub">Kombination av volym + kvalitet</div>
+              </div>
+
+              <div class="pbar" aria-label="5P rating">
+                <div class="p is-on">P</div>
+                <div class="p is-on">P</div>
+                <div class="p is-on">P</div>
+                <div class="p is-on">P</div>
+                <div class="p">P</div>
+              </div>
             </div>
 
-            <!-- proffsigare SVG -->
-            <svg id="sparkSvg" viewBox="0 0 260 110" width="100%" height="110" xmlns="http://www.w3.org/2000/svg" aria-label="Förtroendegraf">
-              <defs>
-                <linearGradient id="gLine" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0" stop-color="rgba(46,197,182,1)"/>
-                  <stop offset="1" stop-color="rgba(126,213,255,1)"/>
-                </linearGradient>
-                <linearGradient id="gFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0" stop-color="rgba(46,197,182,.18)"/>
-                  <stop offset="1" stop-color="rgba(46,197,182,0)"/>
-                </linearGradient>
-              </defs>
+            <div class="sim-meta" style="margin-top:12px;">
+              <div class="meta-box">
+                <b id="simScore">4.6</b>
+                <span>Förtroende (1–5)</span>
+              </div>
+              <div class="meta-box">
+                <b id="simPCount">4</b>
+                <span>Fyllda P</span>
+              </div>
+            </div>
 
-              <!-- subtilt rutnät -->
-              <g opacity=".25" stroke="rgba(15,15,18,.12)" stroke-width="1">
-                <path d="M10 25 H250" />
-                <path d="M10 55 H250" />
-                <path d="M10 85 H250" />
-              </g>
-
-              <!-- area -->
-              <path id="sparkArea" d="M10 86 C55 78, 78 65, 110 58 C142 50, 175 44, 210 40 C232 38, 242 38, 250 38 L250 100 L10 100 Z"
-                    fill="url(#gFill)" />
-
-              <!-- line -->
-              <path id="sparkPath"
-                    d="M10 86 C55 78, 78 65, 110 58 C142 50, 175 44, 210 40 C232 38, 242 38, 250 38"
-                    fill="none" stroke="url(#gLine)" stroke-width="4" stroke-linecap="round"/>
-
-              <!-- dot -->
-              <circle id="sparkDot" cx="250" cy="38" r="6" fill="rgba(46,197,182,1)"/>
-              <circle id="sparkGlow" cx="250" cy="38" r="14" fill="rgba(46,197,182,.18)"/>
-
-              <text x="10" y="108" font-size="11" fill="rgba(15,15,18,.55)">Nu</text>
-              <text x="235" y="108" font-size="11" fill="rgba(15,15,18,.55)">Framåt</text>
-            </svg>
+            <div style="margin-top:12px; color:rgba(11,22,51,.62); font-size:12px; font-weight:650;">
+              Tips: Prova låg volym + högt snitt (få men bra) vs hög volym + medel (många men ojämnt).
+            </div>
           </div>
         </div>
 
@@ -940,7 +979,7 @@
     </div>
   </section>
 
-  <!-- Globe + KPI table (JORDVIDEO ÖVER rubrik+tabell) -->
+  <!-- GLOBE + KPI -->
   <section id="globe" class="section anchor">
     <div class="globe-hero" aria-label="Rotating globe">
       <video autoplay muted loop playsinline preload="auto">
@@ -985,25 +1024,22 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- NY: avskiljare -->
+      <div class="divider" aria-hidden="true">
+        <div class="divider-line"></div>
+      </div>
     </div>
   </section>
 
-  <!-- RATE (ta bort intro-texten ovanför Logga in + flytta inloggad-badge) -->
+  <!-- RATE -->
   <section id="rate" class="section white-block anchor">
     <div class="shell">
+      <!-- borttagen intro-text ovanför Logga in -->
 
-      <!-- OBS: borttagen rubrik + lead här (enligt din punkt 2) -->
+      <div class="pr-form-wrap" style="max-width: 980px; margin:0 auto;">
 
-      <div class="rate-wrap pr-form-wrap">
-
-        <!-- Flyttad: syns bara om inloggad, och ligger top-right -->
-        <div id="user-badge" class="user-badge hidden">
-          <div class="user-avatar" id="user-badge-avatar">PR</div>
-          <div>
-            <div class="user-label">Inloggad som</div>
-            <div class="user-name" id="user-badge-name">–</div>
-          </div>
-        </div>
+        <!-- borttagen user-badge i modulen (flyttad till topbaren) -->
 
         <section class="pr-card" id="login-card">
           <h2>Logga in</h2>
@@ -1181,7 +1217,7 @@
   <script type="module" src="/modules/main.js"></script>
 
   <script>
-    // Visa/dölj report details utan :has
+    // report details toggle
     (function(){
       const flag = document.getElementById('reportFlag');
       const box = document.getElementById('reportDetails');
@@ -1191,93 +1227,138 @@
       sync();
     })();
 
-    // Simulatorlogik (1–5 skala + 5P + proffsig graf)
+    // 2 sliders -> total trust (1..5) -> 1..5 P
     (function(){
-      const slider = document.getElementById('txSlider');
-      const simAdded = document.getElementById('simAdded');
+      const countSlider = document.getElementById('countSlider');
+      const avgSlider   = document.getElementById('avgSlider');
+
+      const simCount = document.getElementById('simCount');
+      const simAvg   = document.getElementById('simAvg');
       const simScore = document.getElementById('simScore');
-      const simColorLabel = document.getElementById('simColorLabel');
-      const dot = document.getElementById('scoreDot');
-      const sparkPath = document.getElementById('sparkPath');
-      const sparkArea = document.getElementById('sparkArea');
-      const sparkDot = document.getElementById('sparkDot');
-      const sparkGlow = document.getElementById('sparkGlow');
+      const simPCount = document.getElementById('simPCount');
+
+      const heroScore = document.getElementById('heroScore');
+      const repScore  = document.getElementById('repScore');
 
       const pEls = Array.from(document.querySelectorAll('.pbar .p'));
 
-      if (!slider) return;
+      function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
 
-      // Basnivå (exempel): 4.1, rör sig mot 4.9 när tx ökar.
-      const base = 4.10;
-      const maxAdd = 0.85; // max upp till ~4.95
+      // Volymfaktor: 0..200 -> 0..1 (avtagande marginal)
+      function volumeFactor(n){
+        return 1 - Math.exp(-n / 55);
+      }
 
-      function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+      // Total score (1..5):
+      // - kvalitet (avg 1..5) dominerar
+      // - volym (count) ökar "självförtroende" och låser upp högre nivåer
+      function totalScore(count, avg){
+        const q = clamp((avg - 1) / 4, 0, 1); // 0..1
+        const v = clamp(volumeFactor(count), 0, 1); // 0..1
 
-      function setPBar(score){
-        // score 1..5 -> fyll P proportionellt
-        const pct = clamp((score - 1) / 4, 0, 1); // 0..1
-        const filled = Math.round(pct * 5);
+        // Kombinera: kvalitetsbas + volym som "accelerator" när kvalitet är hög
+        // Ger: låg volym + låg kvalitet => nära 1
+        // hög volym + hög kvalitet => nära 5
+        const base = 1 + 4 * (q * (0.55 + 0.45 * v)); // 1..5
+        return clamp(base, 1, 5);
+      }
+
+      function pFilled(score){
+        // 1..5 -> 1..5 P (trösklar)
+        if (score >= 4.6) return 5;
+        if (score >= 4.0) return 4;
+        if (score >= 3.3) return 3;
+        if (score >= 2.3) return 2;
+        return 1;
+      }
+
+      function setPBar(filled){
         pEls.forEach((el, i) => el.classList.toggle('is-on', i < filled));
       }
 
-      function setRisk(score){
-        // Enkel risklabel och accent baserat på score
-        if (score >= 4.6){
-          simColorLabel.textContent = 'Låg risk';
-          dot.style.background = 'var(--acc)';
-          dot.style.boxShadow = '0 0 0 6px rgba(46,197,182,.16)';
-        } else if (score >= 4.2){
-          simColorLabel.textContent = 'Normal risk';
-          dot.style.background = 'rgba(126,213,255,1)';
-          dot.style.boxShadow = '0 0 0 6px rgba(126,213,255,.14)';
-        } else {
-          simColorLabel.textContent = 'Förhöjd risk';
-          dot.style.background = 'rgba(246,169,75,1)';
-          dot.style.boxShadow = '0 0 0 6px rgba(246,169,75,.16)';
+      function setTopUser(){
+        // Försök läsa inloggad användare från localStorage (vanligt i era moduler)
+        // Vi är defensiva: visar bara om vi hittar något rimligt.
+        const pill = document.getElementById('topUserPill');
+        const nameEl = document.getElementById('topUserName');
+        if (!pill || !nameEl) return;
+
+        const candidates = [
+          'peerRateUser',
+          'peerRateAuthUser',
+          'peerRateCurrentUser',
+          'peerRateUserEmail',
+          'pr_user',
+          'user',
+          'authUser'
+        ];
+
+        let foundName = null;
+
+        for (const k of candidates){
+          const raw = localStorage.getItem(k);
+          if (!raw) continue;
+
+          // Om det är en enkel sträng (email)
+          if (raw.includes('@') && raw.length < 120){
+            foundName = raw;
+            break;
+          }
+
+          // Om det är JSON
+          try{
+            const obj = JSON.parse(raw);
+            foundName =
+              obj?.name ||
+              obj?.fullName ||
+              obj?.email ||
+              obj?.user?.email ||
+              obj?.user?.name ||
+              null;
+            if (foundName) break;
+          }catch(_){}
+        }
+
+        if (foundName){
+          // snygg kortning
+          const short = String(foundName).trim();
+          nameEl.textContent = short.length > 26 ? short.slice(0, 24) + '…' : short;
+          pill.style.display = 'inline-flex';
+        }else{
+          pill.style.display = 'none';
         }
       }
 
-      function updateGraph(score){
-        // score 1..5 -> y (lägre y = högre)
-        // Vi bygger en kurva som stiger mjukt mot slutet.
-        const t = clamp((score - 1) / 4, 0, 1); // 0..1
-        const yEnd = 86 - (48 * t); // 86..38-ish
-        const yMid1 = 86 - (28 * t);
-        const yMid2 = 86 - (38 * t);
+      function update(){
+        const count = Number(countSlider?.value || 0);
+        const avg = Number(avgSlider?.value || 1);
 
-        const d = `M10 86 C55 ${78 - (10*t)}, 78 ${65 - (8*t)}, 110 ${yMid1}
-                   C142 ${yMid2}, 175 ${44 - (6*t)}, 210 ${40 - (4*t)}
-                   C232 ${yEnd + 2}, 242 ${yEnd}, 250 ${yEnd}`;
-        sparkPath.setAttribute('d', d);
+        if (simCount) simCount.textContent = String(count);
+        if (simAvg) simAvg.textContent = avg.toFixed(1);
 
-        const area = `${d} L250 100 L10 100 Z`;
-        sparkArea.setAttribute('d', area);
+        const score = totalScore(count, avg);
+        const filled = pFilled(score);
 
-        sparkDot.setAttribute('cy', yEnd.toFixed(1));
-        sparkGlow.setAttribute('cy', yEnd.toFixed(1));
-      }
+        if (simScore) simScore.textContent = score.toFixed(1);
+        if (simPCount) simPCount.textContent = String(filled);
 
-      function onInput(){
-        const added = Number(slider.value || 0);
-        simAdded.textContent = String(added);
+        setPBar(filled);
 
-        const gain = maxAdd * (1 - Math.exp(-added / 70)); // avtagande marginalnytta
-        const score = clamp(base + gain, 1, 4.95);
-
-        simScore.textContent = score.toFixed(1);
-        setPBar(score);
-        setRisk(score);
-        updateGraph(score);
-
-        // Spegla i hero-siffran om du vill (valfritt)
-        const heroScore = document.getElementById('heroScore');
-        const repScore = document.getElementById('repScore');
         if (heroScore) heroScore.textContent = score.toFixed(1);
         if (repScore) repScore.textContent = score.toFixed(1);
+
+        setTopUser();
       }
 
-      slider.addEventListener('input', onInput);
-      onInput();
+      countSlider?.addEventListener('input', update);
+      avgSlider?.addEventListener('input', update);
+
+      // initial
+      update();
+
+      // uppdatera även när andra scripts loggar in
+      window.addEventListener('storage', update);
+      setInterval(setTopUser, 1500);
     })();
   </script>
 
