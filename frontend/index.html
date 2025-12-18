@@ -17,7 +17,6 @@
       --w-radius: 22px;
       --w-max: 1180px;
 
-      /* Mörkblå theme (matcha jordbild) */
       --navy-1: #0b1633;
       --navy-2: #0f2a66;
       --navy-3: #1d4ed8;
@@ -167,7 +166,7 @@
     }
     .lang-pill:hover{ filter: brightness(0.98); }
 
-    /* NY: inloggad-indikator (BARA INITIALER) */
+    /* Inloggad-indikator (BARA INITIALER) */
     .top-user{
       display:none;
       align-items:center;
@@ -185,9 +184,9 @@
       letter-spacing: .02em;
       box-shadow: 0 10px 30px rgba(0,0,0,.10);
       user-select:none;
+      position: relative;
     }
     .top-user::after{
-      /* liten "online-dot" */
       content:"";
       position:absolute;
       width:10px; height:10px;
@@ -196,11 +195,6 @@
       background: rgba(34,197,94,1);
       box-shadow: 0 0 0 6px rgba(34,197,94,.12);
       border: 2px solid rgba(255,255,255,.9);
-    }
-    .top-user{ position: relative; }
-    @media (max-width: 760px){
-      /* på mobil kan vi fortfarande visa initialer */
-      .top-user{ display:none; } /* visas via JS om inloggad */
     }
 
     .lang-menu{
@@ -647,7 +641,7 @@
     }
 
     /* =========================
-       GLOBE – större + CROP för att runway ska försvinna
+       GLOBE
        ========================= */
     .globe-hero{
       width: min(1600px, 99vw);
@@ -660,20 +654,15 @@
       position: relative;
       isolation: isolate;
     }
-
-    /* NYTT: vi “zoomer” videon lite och croppar kanter
-       så watermark (runway) hamnar utanför. */
     .globe-hero video{
       width: 100%;
       height: min(78vh, 700px);
       display:block;
-      object-fit: cover; /* cover + transform => crop */
+      object-fit: cover;
       background: #000;
       transform: scale(1.18) translateY(3%);
       transform-origin: center;
     }
-
-    /* mobil: mindre zoom men fortfarande bort med watermark */
     @media (max-width: 680px){
       .globe-hero{
         width: 100vw;
@@ -710,7 +699,6 @@
     }
     .kpi tr:last-child td{ border-bottom: 0; }
 
-    /* mobil: KPI blir “kort” */
     @media (max-width: 680px){
       .kpi thead{ display:none; }
       .kpi, .kpi tbody, .kpi tr, .kpi td{ display:block; width:100%; }
@@ -730,85 +718,7 @@
     .white-block{ background: #fff; }
     .anchor { scroll-margin-top: 90px; }
 
-    /* =========================
-       NY INNOVATIV AVSKILJARE – “trust stream”
-       (inspirerad av world.org-känsla: mörkblå, nod-linje, lite glow)
-       ========================= */
-    .divider{
-      padding: 22px 0 0;
-      max-width: 980px;
-      margin: 0 auto;
-    }
-    .divider-stream{
-      height: 92px;
-      border-radius: 26px;
-      border: 1px solid rgba(11,22,51,.12);
-      background:
-        radial-gradient(420px 120px at 20% 45%, rgba(29,78,216,.10), transparent 60%),
-        radial-gradient(420px 120px at 80% 55%, rgba(125,211,252,.10), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.78));
-      box-shadow: 0 18px 70px rgba(0,0,0,.08);
-      position: relative;
-      overflow: hidden;
-    }
-    .divider-stream::before{
-      /* själva linjen */
-      content:"";
-      position:absolute;
-      left:-8%;
-      right:-8%;
-      top: 50%;
-      height: 2px;
-      transform: translateY(-50%);
-      background: linear-gradient(90deg,
-        transparent,
-        rgba(11,22,51,.25),
-        rgba(125,211,252,.45),
-        rgba(11,22,51,.25),
-        transparent
-      );
-      opacity: .9;
-    }
-    .divider-stream::after{
-      /* “noder” som prickar */
-      content:"";
-      position:absolute;
-      inset:0;
-      background:
-        radial-gradient(10px 10px at 18% 52%, rgba(29,78,216,.65), transparent 60%),
-        radial-gradient(10px 10px at 32% 46%, rgba(125,211,252,.60), transparent 60%),
-        radial-gradient(10px 10px at 50% 56%, rgba(46,197,182,.55), transparent 60%),
-        radial-gradient(10px 10px at 68% 48%, rgba(125,211,252,.60), transparent 60%),
-        radial-gradient(10px 10px at 82% 52%, rgba(29,78,216,.65), transparent 60%);
-      filter: drop-shadow(0 10px 24px rgba(11,22,51,.18));
-      opacity: .95;
-    }
-    .divider-label{
-      position:absolute;
-      left:50%;
-      top: 50%;
-      transform: translate(-50%, -50%);
-      padding: 10px 14px;
-      border-radius: 999px;
-      border: 1px solid rgba(11,22,51,.14);
-      background: rgba(255,255,255,.92);
-      font-weight: 900;
-      letter-spacing: .02em;
-      font-size: 12px;
-      color: rgba(11,22,51,.86);
-      text-transform: uppercase;
-      white-space: nowrap;
-      box-shadow: 0 12px 44px rgba(0,0,0,.10);
-    }
-    @media (max-width: 680px){
-      .divider{ padding-top: 16px; }
-      .divider-stream{ height: 74px; border-radius: 22px; }
-      .divider-label{ font-size: 11px; }
-    }
-
-    /* =========================
-       RATE – extra glapp mellan Logga in och Lämna betyg
-       ========================= */
+    /* RATE – extra glapp mellan Logga in och Lämna betyg */
     #rating-card{ margin-top: 44px !important; }
 
     /* Footer */
@@ -832,12 +742,12 @@
         </div>
         <div>
           <div class="brand-name">PeerRate</div>
-          <div class="brand-sub" data-i18n="top_sub">Trust you can prove</div>
+          <div class="brand-sub" data-i18n="top_sub">Förtroende du kan bevisa</div>
         </div>
       </a>
 
       <div class="top-actions">
-        <!-- NYTT: BARA INITIALER -->
+        <!-- BARA INITIALER (visas av main.js om inloggad) -->
         <div class="top-user" id="topUserPill" aria-live="polite" title="Inloggad">
           <span id="topUserInitials">?</span>
         </div>
@@ -862,13 +772,13 @@
 
     <nav class="menu-panel" id="menuPanel" aria-label="Meny">
       <div class="shell menu-panel-inner">
-        <a class="menu-link" href="#how"><div data-i18n="menu_how">How it works</div><span>→</span></a>
-        <a class="menu-link" href="#sim"><div>Se värdet direkt</div><span>→</span></a>
+        <a class="menu-link" href="#how"><div data-i18n="menu_how">Hur det funkar</div><span>→</span></a>
+        <a class="menu-link" href="#sim"><div data-i18n="menu_sim">Se värdet direkt</div><span>→</span></a>
         <a class="menu-link" href="#globe"><div data-i18n="menu_globe">Global trust</div><span>→</span></a>
-        <a class="menu-link" href="#rate"><div data-i18n="menu_rate">Leave a rating</div><span>→</span></a>
-        <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Sign up</div><span>→</span></a>
-        <a class="menu-link" href="/profile.html"><div data-i18n="menu_profile">My profile</div><span>→</span></a>
-        <a class="menu-link" href="/agent-chat.html"><div data-i18n="menu_ask">Ask about trust</div><span>→</span></a>
+        <a class="menu-link" href="#rate"><div data-i18n="menu_rate">Lämna betyg</div><span>→</span></a>
+        <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Registrera dig</div><span>→</span></a>
+        <a class="menu-link" href="/profile.html"><div data-i18n="menu_profile">Min profil</div><span>→</span></a>
+        <a class="menu-link" href="/agent-chat.html"><div data-i18n="menu_ask">Fråga om trust</div><span>→</span></a>
       </div>
     </nav>
   </header>
@@ -893,31 +803,30 @@
     <div class="shell hero-content">
       <div class="hero-grid">
         <div>
-          <div class="hero-kicker">Peer-to-peer reputation</div>
-          <h1>Trust you can prove.</h1>
-          <p>
-            PeerRate helps people carry verified reputation between marketplaces.
-            Not vibes. Not claims. Real transactions, verified, and portable.
+          <div class="hero-kicker" data-i18n="hero_kicker">Peer-to-peer reputation</div>
+          <h1 data-i18n="hero_h1">Förtroende du kan bevisa.</h1>
+          <p data-i18n="hero_p">
+            PeerRate gör att du kan bära med dig verifierad trovärdighet mellan marknadsplatser. Inte känsla. Inte påståenden. Riktiga transaktioner — portabelt och svårt att fejka.
           </p>
 
           <div class="hero-cta">
-            <a class="btn btn-primary soft-hover" href="/customer.html">Get started</a>
-            <a class="btn btn-ghost soft-hover" href="#sim">Fråga om trust</a>
+            <a class="btn btn-primary soft-hover" href="/customer.html" data-i18n="hero_cta_primary">Kom igång</a>
+            <a class="btn btn-ghost soft-hover" href="#sim" data-i18n="hero_cta_secondary">Fråga om trust</a>
           </div>
         </div>
 
         <aside class="hero-card">
-          <h3>A reputation card you can share</h3>
-          <p class="mini">A compact proof of how you behave in P2P — across platforms.</p>
+          <h3 data-i18n="hero_card_title">Ett reputation card du kan dela</h3>
+          <p class="mini" data-i18n="hero_card_p">Ett kompakt kvitto på hur du agerar i P2P — över plattformar.</p>
 
           <div class="hero-metrics">
             <div class="metric">
               <b id="heroScore">4.6</b>
-              <span>Förtroende (1–5)</span>
+              <span data-i18n="hero_metric_score">Förtroende (1–5)</span>
             </div>
             <div class="metric">
               <b id="heroTx">127</b>
-              <span>Verifierade transaktioner</span>
+              <span data-i18n="hero_metric_tx">Verifierade transaktioner</span>
             </div>
           </div>
         </aside>
@@ -928,24 +837,23 @@
   <!-- HOW -->
   <section id="how" class="section white-block anchor">
     <div class="shell">
-      <h2 class="section-title">A priority lane for trustworthy people online.</h2>
-      <p class="section-lead">
-        PeerRate standardizes ratings and links them to real, verified transactions — so trust becomes measurable,
-        portable and fair.
+      <h2 class="section-title" data-i18n="how_title">En snabbfil för människor online.</h2>
+      <p class="section-lead" data-i18n="how_lead">
+        PeerRate standardiserar betyg och kopplar dem till riktiga affärer — så att förtroende blir mätbart, portabelt och rättvist.
       </p>
 
       <div class="grid-3">
         <div class="w-card soft-hover">
-          <h3>Verified</h3>
-          <p>Connect reputation to real transactions. Less fraud, fewer bad surprises.</p>
+          <h3 data-i18n="f1_title">Verifierat</h3>
+          <p data-i18n="f1_p">Koppla reputation till riktiga transaktioner. Mindre bedrägeri, färre missar.</p>
         </div>
         <div class="w-card soft-hover">
-          <h3>Portable</h3>
-          <p>Bring your trust score across marketplaces instead of starting from zero.</p>
+          <h3 data-i18n="f2_title">Portabelt</h3>
+          <p data-i18n="f2_p">Ta med din trust score mellan marknadsplatser istället för att börja från noll.</p>
         </div>
         <div class="w-card soft-hover">
-          <h3>Explainable</h3>
-          <p>A clear breakdown of what affects your score — not a black box.</p>
+          <h3 data-i18n="f3_title">Förklarbart</h3>
+          <p data-i18n="f3_p">Tydligt vad som påverkar din score — inte en svart låda.</p>
         </div>
       </div>
     </div>
@@ -954,7 +862,7 @@
   <!-- SIM -->
   <section id="sim" class="section anchor">
     <div class="shell">
-      <h2 class="section-title">Se värdet direkt.</h2>
+      <h2 class="section-title" data-i18n="sim_title">Se värdet direkt.</h2>
 
       <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;">
 
@@ -973,74 +881,72 @@
                 <div class="card-meta">
                   <div class="m">
                     <b id="repScore">4.6</b>
-                    <span>Förtroende (1–5)</span>
+                    <span data-i18n="rep_trust">Förtroende (1–5)</span>
                   </div>
                   <div class="m">
                     <b id="repTx">127</b>
-                    <span>Verifierade transaktioner</span>
+                    <span data-i18n="rep_tx">Verifierade transaktioner</span>
                   </div>
                   <div class="m">
                     <b id="repPlatforms">Tradera, eBay</b>
-                    <span>Plattformar kopplade</span>
+                    <span data-i18n="rep_plat">Plattformar kopplade</span>
                   </div>
                   <div class="m">
-                    <b>Tryck</b>
-                    <span>Förklaring</span>
+                    <b data-i18n="rep_tap">Tryck</b>
+                    <span data-i18n="rep_explain">Förklaring</span>
                   </div>
                 </div>
 
                 <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-                  <a class="btn btn-primary soft-hover" href="/profile.html">Öppna min profil</a>
-                  <a class="btn btn-ghost soft-hover" href="/agent-chat.html">Förklara min trust</a>
+                  <a class="btn btn-primary soft-hover" href="/profile.html" data-i18n="rep_btn">Öppna min profil</a>
+                  <a class="btn btn-ghost soft-hover" href="/agent-chat.html" data-i18n="rep_btn2">Förklara min trust</a>
                 </div>
               </div>
             </div>
 
             <div class="flip-face flip-back">
               <div class="card-inner">
-                <div style="font-weight:820; letter-spacing:-.02em; font-size:16px;">Varför denna nivå?</div>
-                <p style="margin:10px 0 12px; color:var(--w-muted); line-height:1.55;">
-                  Förtroendet bygger på verifierade transaktioner, kvalitet i omdömen, aktualitet och risksignaler.
-                  Målet är att göra förtroende portabelt och svårt att fejka.
+                <div style="font-weight:820; letter-spacing:-.02em; font-size:16px;" data-i18n="back_title">Varför denna nivå?</div>
+                <p style="margin:10px 0 12px; color:var(--w-muted); line-height:1.55;" data-i18n="back_p">
+                  Förtroendet bygger på verifierade transaktioner, kvalitet i omdömen, aktualitet och risksignaler. Målet är att göra förtroende portabelt och svårt att fejka.
                 </p>
 
                 <div class="grid-3" style="grid-template-columns: 1fr; gap: 10px;">
                   <div class="w-card" style="box-shadow:none;">
-                    <b>Verifierad historik</b>
-                    <div style="color:var(--w-muted); font-size:13px;">Fler verifierade affärer höjer säkerheten.</div>
+                    <b data-i18n="back_b1">Verifierad historik</b>
+                    <div style="color:var(--w-muted); font-size:13px;" data-i18n="back_t1">Fler verifierade affärer höjer säkerheten.</div>
                   </div>
                   <div class="w-card" style="box-shadow:none;">
-                    <b>Stabilitet</b>
-                    <div style="color:var(--w-muted); font-size:13px;">Jämn positiv historik över tid belönas.</div>
+                    <b data-i18n="back_b2">Stabilitet</b>
+                    <div style="color:var(--w-muted); font-size:13px;" data-i18n="back_t2">Jämn positiv historik över tid belönas.</div>
                   </div>
                   <div class="w-card" style="box-shadow:none;">
-                    <b>Risksignaler</b>
-                    <div style="color:var(--w-muted); font-size:13px;">Dispyter och mönster kan sänka nivån.</div>
+                    <b data-i18n="back_b3">Risksignaler</b>
+                    <div style="color:var(--w-muted); font-size:13px;" data-i18n="back_t3">Dispyter och mönster kan sänka nivån.</div>
                   </div>
                 </div>
 
                 <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-                  <button class="btn btn-primary soft-hover" type="button" id="flipBackBtn">Tillbaka</button>
-                  <a class="btn btn-ghost soft-hover" href="/agent-chat.html">Fråga mer</a>
+                  <button class="btn btn-primary soft-hover" type="button" id="flipBackBtn" data-i18n="back_btn">Tillbaka</button>
+                  <a class="btn btn-ghost soft-hover" href="/agent-chat.html" data-i18n="back_btn2">Fråga mer</a>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Simulator – bara 5P + två sliders -->
+        <!-- Simulator – 5P + två sliders -->
         <div class="sim">
           <div>
-            <h3>Vad händer när fler lämnar omdömen – och de är bra?</h3>
-            <p>
-              Två reglage styr den totala nivån. Få omdömen + lågt snitt ger låg nivå.
-              Många omdömen + högt snitt ger 5P.
+            <h3 data-i18n="sim_h3">Vad händer när fler lämnar omdömen – och de är bra?</h3>
+            <p data-i18n="sim_p">
+              Två reglage styr den totala nivån. Få omdömen + lågt snitt ger låg nivå. Många omdömen + högt snitt ger 5P.
             </p>
 
             <div class="slider-stack">
               <div>
                 <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:6px;">
-                  <b>Antal omdömen</b>
+                  <b data-i18n="sim_count_label">Antal omdömen</b>
                   <span style="color:rgba(11,22,51,.62); font-weight:800;"><span id="simCount">10</span> st</span>
                 </div>
                 <div class="slider-row">
@@ -1050,7 +956,7 @@
 
               <div>
                 <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:6px;">
-                  <b>Genomsnittligt omdöme</b>
+                  <b data-i18n="sim_avg_label">Genomsnittligt omdöme</b>
                   <span style="color:rgba(11,22,51,.62); font-weight:800;"><span id="simAvg">4.6</span> / 5</span>
                 </div>
                 <div class="slider-row">
@@ -1063,8 +969,8 @@
           <div>
             <div class="trust-pill" aria-live="polite">
               <div class="trust-left">
-                <div class="trust-title">Total nivå</div>
-                <div class="trust-sub">Kombination av volym + kvalitet</div>
+                <div class="trust-title" data-i18n="sim_total_title">Total nivå</div>
+                <div class="trust-sub" data-i18n="sim_total_sub">Kombination av volym + kvalitet</div>
               </div>
 
               <div class="pbar" aria-label="5P rating">
@@ -1079,15 +985,15 @@
             <div class="sim-meta" style="margin-top:12px;">
               <div class="meta-box">
                 <b id="simScore">4.6</b>
-                <span>Förtroende (1–5)</span>
+                <span data-i18n="sim_score_label">Förtroende (1–5)</span>
               </div>
               <div class="meta-box">
                 <b id="simPCount">4</b>
-                <span>Fyllda P</span>
+                <span data-i18n="sim_pcount_label">Fyllda P</span>
               </div>
             </div>
 
-            <div style="margin-top:12px; color:rgba(11,22,51,.62); font-size:12px; font-weight:650;">
+            <div style="margin-top:12px; color:rgba(11,22,51,.62); font-size:12px; font-weight:650;" data-i18n="sim_tip">
               Tips: Prova låg volym + högt snitt (få men bra) vs hög volym + medel (många men ojämnt).
             </div>
           </div>
@@ -1106,49 +1012,43 @@
     </div>
 
     <div class="shell">
-      <h2 class="section-title">Ett globalt lager av trust.</h2>
-      <p class="section-lead">
+      <h2 class="section-title" data-i18n="globe_title">Ett globalt lager av trust.</h2>
+      <p class="section-lead" data-i18n="globe_lead">
         En enkel och delbar signal som visar hur pålitlig du är i P2P – baserat på riktiga, verifierade affärer.
       </p>
 
       <table class="kpi" aria-label="PeerRate nyckeltal">
         <thead>
           <tr>
-            <th>Nyckeltal</th>
-            <th>Värde</th>
-            <th>Not</th>
+            <th data-i18n="kpi_metric">Nyckeltal</th>
+            <th data-i18n="kpi_value">Värde</th>
+            <th data-i18n="kpi_note">Not</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Registrerade användare</td>
+            <td data-i18n="k1">Registrerade användare</td>
             <td><b id="kUsers">—</b></td>
-            <td>Early access / MVP</td>
+            <td data-i18n="k1n">Early access / MVP</td>
           </tr>
           <tr>
-            <td>Verifierade transaktioner</td>
+            <td data-i18n="k2">Verifierade transaktioner</td>
             <td><b id="kTx">—</b></td>
-            <td>Importerade + inskickade</td>
+            <td data-i18n="k2n">Importerade + inskickade</td>
           </tr>
           <tr>
-            <td>Omdömen / betyg</td>
+            <td data-i18n="k3">Omdömen / betyg</td>
             <td><b id="kRatings">—</b></td>
-            <td>Kopplade till identiteter</td>
+            <td data-i18n="k3n">Kopplade till identiteter</td>
           </tr>
           <tr>
-            <td>Plattformar kopplade</td>
+            <td data-i18n="k4">Plattformar kopplade</td>
             <td><b id="kPlatforms">Tradera, eBay</b></td>
-            <td>Mer kommer</td>
+            <td data-i18n="k4n">Mer kommer</td>
           </tr>
         </tbody>
       </table>
-
-      <!-- NY: mer markant avskiljare -->
-      <div class="divider" aria-hidden="true">
-        <div class="divider-stream">
-          <div class="divider-label">Trust stream</div>
-        </div>
-      </div>
+      <!-- ✅ Divider borttagen helt (enligt din request) -->
     </div>
   </section>
 
@@ -1158,8 +1058,8 @@
       <div class="pr-form-wrap" style="max-width: 980px; margin:0 auto;">
 
         <section class="pr-card" id="login-card">
-          <h2>Logga in</h2>
-          <p style="margin:0 0 10px;color:var(--pr-muted);font-size:13px;">
+          <h2 data-i18n="rate_login_title">Logga in</h2>
+          <p style="margin:0 0 10px;color:var(--pr-muted);font-size:13px;" data-i18n="rate_login_lead">
             Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.
           </p>
 
@@ -1176,7 +1076,7 @@
 
             <div class="pr-actions">
               <button class="pr-btn pr-btn-primary" type="submit" id="login-btn">Logga in</button>
-              <a class="pr-btn pr-btn-ghost" href="/customer.html">Registrera dig</a>
+              <a class="pr-btn pr-btn-ghost" href="/customer.html" data-i18n="rate_signup">Registrera dig</a>
             </div>
 
             <p id="login-status" style="margin-top:10px;color:var(--pr-muted);font-size:12px;"></p>
@@ -1184,7 +1084,7 @@
         </section>
 
         <section class="pr-card" id="rating-card">
-          <h2>Lämna ett betyg</h2>
+          <h2 data-i18n="rate_title">Lämna ett betyg</h2>
 
           <p id="rating-login-hint" style="margin:0 0 10px;color:var(--pr-muted);font-size:12px;">
             Du behöver logga in för att kunna lämna betyg.
@@ -1324,166 +1224,12 @@
   <footer class="footer">
     <div class="shell">
       © 2025 PeerRate. <span style="margin:0 8px; opacity:.35;">•</span>
-      <a href="/profile.html" style="color:inherit; text-decoration:none;">Profile</a>
+      <a href="/profile.html" style="color:inherit; text-decoration:none;" data-i18n="footer_profile">Profil</a>
       <span style="margin:0 8px; opacity:.35;">•</span>
-      <a href="/agent-chat.html" style="color:inherit; text-decoration:none;">Ask about trust</a>
+      <a href="/agent-chat.html" style="color:inherit; text-decoration:none;" data-i18n="footer_ask">Fråga om trust</a>
     </div>
   </footer>
 
   <script type="module" src="/modules/main.js"></script>
-
-  <script>
-    // report details toggle
-    (function(){
-      const flag = document.getElementById('reportFlag');
-      const box = document.getElementById('reportDetails');
-      if (!flag || !box) return;
-      const sync = () => { box.style.display = flag.checked ? 'block' : 'none'; };
-      flag.addEventListener('change', sync);
-      sync();
-    })();
-
-    // 2 sliders -> total trust (1..5) -> 1..5 P
-    (function(){
-      const countSlider = document.getElementById('countSlider');
-      const avgSlider   = document.getElementById('avgSlider');
-
-      const simCount = document.getElementById('simCount');
-      const simAvg   = document.getElementById('simAvg');
-      const simScore = document.getElementById('simScore');
-      const simPCount = document.getElementById('simPCount');
-
-      const heroScore = document.getElementById('heroScore');
-      const repScore  = document.getElementById('repScore');
-
-      const pEls = Array.from(document.querySelectorAll('.pbar .p'));
-
-      function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
-
-      // Volymfaktor: 0..200 -> 0..1 (avtagande marginal)
-      function volumeFactor(n){
-        return 1 - Math.exp(-n / 55);
-      }
-
-      function totalScore(count, avg){
-        const q = clamp((avg - 1) / 4, 0, 1);
-        const v = clamp(volumeFactor(count), 0, 1);
-        const base = 1 + 4 * (q * (0.55 + 0.45 * v));
-        return clamp(base, 1, 5);
-      }
-
-      function pFilled(score){
-        if (score >= 4.6) return 5;
-        if (score >= 4.0) return 4;
-        if (score >= 3.3) return 3;
-        if (score >= 2.3) return 2;
-        return 1;
-      }
-
-      function setPBar(filled){
-        pEls.forEach((el, i) => el.classList.toggle('is-on', i < filled));
-      }
-
-      function initialsFromAny(str){
-        const s = String(str || '').trim();
-        if (!s) return null;
-
-        // om e-post: ta första bokstaven före @
-        if (s.includes('@')){
-          const left = s.split('@')[0] || '';
-          const parts = left.replace(/[._-]+/g,' ').split(' ').filter(Boolean);
-          const a = (parts[0]?.[0] || left[0] || '').toUpperCase();
-          const b = (parts[1]?.[0] || left[1] || '').toUpperCase();
-          const out = (a + b).replace(/[^A-ZÅÄÖ]/g,'');
-          return out || null;
-        }
-
-        // om namn: ta första bokstaven i två första ord
-        const parts = s.split(/\s+/).filter(Boolean);
-        const a = (parts[0]?.[0] || '').toUpperCase();
-        const b = (parts[1]?.[0] || '').toUpperCase();
-        const out = (a + b).replace(/[^A-ZÅÄÖ]/g,'');
-        return out || null;
-      }
-
-      function setTopUser(){
-        const pill = document.getElementById('topUserPill');
-        const initialsEl = document.getElementById('topUserInitials');
-        if (!pill || !initialsEl) return;
-
-        const candidates = [
-          'peerRateUser',
-          'peerRateAuthUser',
-          'peerRateCurrentUser',
-          'peerRateUserEmail',
-          'pr_user',
-          'user',
-          'authUser'
-        ];
-
-        let found = null;
-
-        for (const k of candidates){
-          const raw = localStorage.getItem(k);
-          if (!raw) continue;
-
-          if (raw.includes('@') && raw.length < 120){
-            found = raw;
-            break;
-          }
-
-          try{
-            const obj = JSON.parse(raw);
-            found =
-              obj?.name ||
-              obj?.fullName ||
-              obj?.email ||
-              obj?.user?.email ||
-              obj?.user?.name ||
-              null;
-            if (found) break;
-          }catch(_){}
-        }
-
-        const ini = initialsFromAny(found);
-        if (ini){
-          initialsEl.textContent = ini;
-          pill.style.display = 'inline-flex';
-          pill.setAttribute('aria-label', 'Inloggad: ' + ini);
-        }else{
-          pill.style.display = 'none';
-        }
-      }
-
-      function update(){
-        const count = Number(countSlider?.value || 0);
-        const avg = Number(avgSlider?.value || 1);
-
-        if (simCount) simCount.textContent = String(count);
-        if (simAvg) simAvg.textContent = avg.toFixed(1);
-
-        const score = totalScore(count, avg);
-        const filled = pFilled(score);
-
-        if (simScore) simScore.textContent = score.toFixed(1);
-        if (simPCount) simPCount.textContent = String(filled);
-
-        setPBar(filled);
-
-        if (heroScore) heroScore.textContent = score.toFixed(1);
-        if (repScore) repScore.textContent = score.toFixed(1);
-
-        setTopUser();
-      }
-
-      countSlider?.addEventListener('input', update);
-      avgSlider?.addEventListener('input', update);
-
-      update();
-      window.addEventListener('storage', update);
-      setInterval(setTopUser, 1500);
-    })();
-  </script>
-
 </body>
 </html>
