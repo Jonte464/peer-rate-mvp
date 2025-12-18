@@ -11,7 +11,6 @@
   <style>
     /* =========================
        World-inspirerad landing
-       (luftig, vit/neutral, hero-video)
        ========================= */
 
     :root{
@@ -25,11 +24,14 @@
       --w-radius: 22px;
       --w-max: 1180px;
 
-      /* Mikrointeraktions-dials */
       --ease: cubic-bezier(.2,.8,.2,1);
       --ms-fast: 80ms;
       --ms-med: 160ms;
       --ms-slow: 260ms;
+
+      /* Accent (matchar er palette) */
+      --a-teal: rgba(46,197,182,1);
+      --a-orange: rgba(246,169,75,1);
     }
 
     *{ box-sizing:border-box; }
@@ -41,7 +43,6 @@
       color: var(--w-ink);
     }
 
-    /* Subtil cursor/hover-känsla */
     a, button { transition: transform var(--ms-fast) var(--ease), filter var(--ms-med) var(--ease), opacity var(--ms-med) var(--ease); }
     a:active, button:active { transform: translateY(1px); }
     .soft-hover:hover { transform: translateY(-1px); }
@@ -52,7 +53,9 @@
       padding: 0 18px;
     }
 
-    /* Top row (World-känsla) */
+    /* ==========================================
+       TOP ROW – smalare + mer "edge-to-edge"
+       ========================================== */
     .top-row{
       position: sticky;
       top: 0;
@@ -62,11 +65,18 @@
       border-bottom: 1px solid var(--w-border);
     }
     .top-row-inner{
+      /* smalare topp-panel */
+      padding: 10px 0;
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap: 14px;
-      padding: 14px 0;
+    }
+    /* Flytta ut mot kanter: gör att brand ligger mer vänster och actions mer höger */
+    .top-row .shell{
+      max-width: 1400px; /* gör baren “bredare” än content */
+      padding-left: 22px;
+      padding-right: 22px;
     }
 
     .brand{
@@ -77,18 +87,52 @@
       color: inherit;
       user-select:none;
     }
+
+    /* ==========================================
+       LOGO – mer proffsig badge + "PR" monogram
+       ========================================== */
     .logo-badge{
-      width: 38px; height: 38px;
+      width: 40px; height: 40px;
       border-radius: 999px;
-      border: 1px solid var(--w-border);
-      background: linear-gradient(135deg, rgba(46,197,182,.22), rgba(246,169,75,.16));
-      box-shadow: 0 10px 30px rgba(0,0,0,.10);
+      border: 1px solid rgba(15,15,18,.10);
+      background:
+        radial-gradient(12px 12px at 30% 28%, rgba(255,255,255,.65), rgba(255,255,255,0) 70%),
+        radial-gradient(520px 220px at 0% 0%, rgba(46,197,182,.35), rgba(46,197,182,0) 60%),
+        radial-gradient(520px 240px at 100% 100%, rgba(246,169,75,.25), rgba(246,169,75,0) 60%),
+        linear-gradient(135deg, rgba(15,15,18,.92), rgba(15,15,18,.70));
+      box-shadow:
+        0 12px 34px rgba(0,0,0,.18),
+        inset 0 1px 0 rgba(255,255,255,.16);
       display:flex; align-items:center; justify-content:center;
       overflow:hidden;
+      position: relative;
     }
-    .logo-badge svg{ width: 22px; height: 22px; display:block; }
+    .logo-badge::after{
+      content:"";
+      position:absolute;
+      inset: -2px;
+      border-radius: 999px;
+      background:
+        conic-gradient(from 220deg,
+          rgba(46,197,182,.55),
+          rgba(246,169,75,.45),
+          rgba(126,213,255,.30),
+          rgba(46,197,182,.55)
+        );
+      filter: blur(10px);
+      opacity: .35;
+      pointer-events:none;
+    }
+    .logo-mark{
+      position: relative;
+      z-index: 2;
+      width: 26px;
+      height: 26px;
+      display:block;
+    }
+
     .brand-name{
-      font-weight: 760;
+      font-weight: 820;
       letter-spacing: -0.02em;
       line-height: 1.1;
     }
@@ -110,17 +154,18 @@
       gap: 8px;
       border: 1px solid var(--w-border);
       background: rgba(255,255,255,.75);
-      padding: 8px 10px;
+      padding: 7px 10px; /* lite smalare */
       border-radius: 999px;
       font-weight: 650;
       font-size: 13px;
       cursor: pointer;
     }
     .lang-pill:hover{ filter: brightness(0.98); }
+
     .lang-menu{
       position: absolute;
-      right: 18px;
-      top: 58px;
+      right: 22px;
+      top: 52px;
       width: 180px;
       background: #fff;
       border: 1px solid var(--w-border);
@@ -139,12 +184,10 @@
       cursor:pointer;
       font-weight: 650;
     }
-    .lang-menu button:hover{
-      background: rgba(15,15,18,.05);
-    }
+    .lang-menu button:hover{ background: rgba(15,15,18,.05); }
 
     .menu-btn{
-      width: 42px; height: 42px;
+      width: 40px; height: 40px; /* lite smalare */
       border-radius: 999px;
       border: 1px solid var(--w-border);
       background: rgba(255,255,255,.75);
@@ -152,6 +195,7 @@
       display:flex; align-items:center; justify-content:center;
     }
     .menu-btn:hover{ filter: brightness(.98); }
+
     .menu-panel{
       display:none;
       border-top: 1px solid var(--w-border);
@@ -179,65 +223,52 @@
     .menu-link:hover{ background: rgba(15,15,18,.04); }
     .menu-link span{ color: var(--w-muted); font-weight: 600; font-size: 13px; }
 
-    /* HERO – fullskärm, riktig video (ingen blur/filter) */
-.hero{
-  position: relative;
-  min-height: 95vh;              /* så bara heron syns när man är högst upp */
-  display:flex;
-  align-items: stretch;
-  overflow:hidden;
-  border-bottom: 1px solid var(--w-border);
-  background:#000;
-}
-
-.hero video{
-  position:absolute;
-  inset: 0;
-  width:100%;
-  height:100%;
-  object-fit: cover;
-  transform: none !important;
-  filter: none !important;        /* 👈 tar bort “blur/film-look” helt */
-}
-
-.hero::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55));
-  pointer-events:none;
-}
-
-.hero-content{
-  position: relative;
-  z-index: 2;
-  width:100%;
-  padding: 72px 0 72px;
-  display:flex;
-  align-items:flex-end;
-}
-
+    /* ==========================================
+       HERO – fullskärm, riktig video
+       ========================================== */
+    .hero{
+      position: relative;
+      min-height: 95vh;
+      display:flex;
+      align-items: stretch;
+      overflow:hidden;
+      border-bottom: 1px solid var(--w-border);
+      background:#000;
+    }
+    .hero video{
+      position:absolute;
+      inset: 0;
+      width:100%;
+      height:100%;
+      object-fit: cover;
+      transform: none !important;
+      filter: none !important;
+    }
+    .hero::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55));
+      pointer-events:none;
+    }
     .hero-content{
       position: relative;
       z-index: 2;
       width:100%;
-      padding: 56px 0 56px;
+      padding: 72px 0 72px;
       display:flex;
       align-items:flex-end;
     }
-
     .hero-grid{
       display:grid;
       grid-template-columns: 1.2fr .8fr;
       gap: 24px;
       align-items:end;
     }
-
     @media (max-width: 980px){
       .hero-grid{ grid-template-columns: 1fr; }
       .hero-content{ padding: 44px 0 46px; }
     }
-
     .hero-kicker{
       color: rgba(255,255,255,.80);
       font-weight: 700;
@@ -246,7 +277,6 @@
       text-transform: uppercase;
       margin-bottom: 10px;
     }
-
     .hero h1{
       margin:0 0 14px;
       color: #fff;
@@ -256,7 +286,6 @@
       text-wrap: balance;
     }
     @media (max-width: 560px){ .hero h1{ font-size: 44px; } }
-
     .hero p{
       margin:0 0 18px;
       color: rgba(255,255,255,.82);
@@ -264,7 +293,6 @@
       max-width: 62ch;
       line-height: 1.55;
     }
-
     .hero-cta{
       display:flex;
       gap: 10px;
@@ -344,10 +372,8 @@
       font-size: 12px;
     }
 
-    /* Sektioner – luftigt */
-    .section{
-      padding: 70px 0;
-    }
+    /* Sektioner */
+    .section{ padding: 70px 0; }
     @media (max-width: 680px){ .section{ padding: 54px 0; } }
 
     .section-title{
@@ -381,21 +407,11 @@
       box-shadow: 0 14px 50px rgba(0,0,0,.08);
       padding: 18px;
     }
-    .w-card h3{
-      margin: 0 0 6px;
-      letter-spacing: -.01em;
-    }
-    .w-card p{
-      margin: 0;
-      color: var(--w-muted);
-      line-height: 1.55;
-      font-size: 14px;
-    }
+    .w-card h3{ margin: 0 0 6px; letter-spacing: -.01em; }
+    .w-card p{ margin: 0; color: var(--w-muted); line-height: 1.55; font-size: 14px; }
 
-    /* “Reputation card” flip */
-    .flip-wrap{
-      perspective: 1100px;
-    }
+    /* Reputation card flip */
+    .flip-wrap{ perspective: 1100px; }
     .flip{
       position: relative;
       width: 100%;
@@ -403,9 +419,9 @@
       border-radius: 22px;
       transform-style: preserve-3d;
       transition: transform var(--ms-slow) var(--ease);
+      min-height: 320px;
     }
     .flip.is-flipped{ transform: rotateY(180deg); }
-
     .flip-face{
       position:absolute;
       inset:0;
@@ -425,9 +441,7 @@
       transform: rotateY(180deg);
       background: #fff;
     }
-    .card-inner{
-      padding: 18px;
-    }
+    .card-inner{ padding: 18px; }
     .card-top{
       display:flex;
       justify-content:space-between;
@@ -461,7 +475,9 @@
     .card-meta .m b{ display:block; font-size: 18px; }
     .card-meta .m span{ display:block; color: var(--w-muted); font-size: 12px; margin-top: 4px; }
 
-    /* Simulator */
+    /* ==========================================
+       SIMULATOR – mer proffsig + 1–5 + "5P"
+       ========================================== */
     .sim{
       border: 1px solid var(--w-border);
       border-radius: 22px;
@@ -469,7 +485,7 @@
       box-shadow: 0 18px 70px rgba(0,0,0,.08);
       padding: 18px;
       display:grid;
-      grid-template-columns: 1.2fr .8fr;
+      grid-template-columns: 1.1fr .9fr;
       gap: 16px;
       align-items:center;
     }
@@ -489,15 +505,17 @@
       width:100%;
       accent-color: #111;
     }
+
     .score-pill{
       display:inline-flex;
       align-items:center;
-      gap: 8px;
+      gap: 10px;
       padding: 10px 12px;
       border-radius: 999px;
       border: 1px solid rgba(0,0,0,.10);
-      background: rgba(255,255,255,.7);
-      font-weight: 800;
+      background: rgba(255,255,255,.85);
+      box-shadow: 0 16px 50px rgba(0,0,0,.06);
+      font-weight: 820;
       white-space:nowrap;
     }
     .score-dot{
@@ -506,15 +524,53 @@
       box-shadow: 0 0 0 6px rgba(34,197,94,.14);
     }
 
+    /* 5P badge */
+    .p-badge{
+      width: 30px; height: 30px;
+      border-radius: 10px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      border: 1px solid rgba(0,0,0,.10);
+      background:
+        radial-gradient(12px 12px at 30% 28%, rgba(255,255,255,.7), rgba(255,255,255,0) 70%),
+        linear-gradient(135deg, rgba(46,197,182,.22), rgba(246,169,75,.18)),
+        #fff;
+    }
+
+    /* Proffsig graf-panel */
     .spark{
       width: 100%;
       border-radius: 18px;
       border: 1px solid rgba(0,0,0,.08);
       padding: 12px;
-      background: rgba(255,255,255,.7);
+      background:
+        radial-gradient(700px 200px at 20% 0%, rgba(46,197,182,.10), transparent 60%),
+        radial-gradient(700px 200px at 90% 100%, rgba(246,169,75,.08), transparent 60%),
+        rgba(255,255,255,.85);
+      box-shadow: 0 18px 70px rgba(0,0,0,.06);
     }
 
-    /* Globe section */
+    .spark-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+    }
+
+    /* Axel-labels */
+    .spark-axes{
+      display:flex;
+      justify-content:space-between;
+      color: var(--w-muted);
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    /* Globe/KPI */
     .globe-wrap{
       display:grid;
       grid-template-columns: 1fr 1fr;
@@ -524,29 +580,20 @@
     @media (max-width: 980px){ .globe-wrap{ grid-template-columns: 1fr; } }
 
     .globe{
-      width: 100%;
-      max-width: 620px;
-      border-radius: 26px;
-      border: 1px solid rgba(0,0,0,.10);
-      box-shadow: 0 22px 90px rgba(0,0,0,.12);
-      overflow:hidden;
+      width: min(1200px, 96vw);
+      margin: 0 auto 0;
+      border-radius: 28px;
+      overflow: hidden;
       background: #000;
-      position:relative;
+      box-shadow: 0 30px 120px rgba(0,0,0,.18);
     }
-    .globe img{
-      width:100%;
-      height:auto;
+    .globe video{
+      width: 100%;
+      height: auto;
       display:block;
-      transform-origin: 50% 50%;
-      animation: slowSpin 30s linear infinite;
-      will-change: transform;
-    }
-    @keyframes slowSpin{
-      from { transform: rotate(0deg) scale(1.01); }
-      to   { transform: rotate(360deg) scale(1.01); }
+      object-fit: cover;
     }
 
-    /* KPI table */
     .kpi{
       width:100%;
       border-collapse: collapse;
@@ -573,15 +620,9 @@
     }
     .kpi tr:last-child td{ border-bottom: 0; }
 
-    /* White block for your existing forms */
-    .white-block{
-      background: #fff;
-    }
-
-    /* Ankare offset pga sticky topbar */
+    .white-block{ background: #fff; }
     .anchor { scroll-margin-top: 90px; }
 
-    /* Footer */
     .footer{
       padding: 40px 0 60px;
       color: var(--w-muted);
@@ -589,25 +630,9 @@
       border-top: 1px solid var(--w-border);
     }
 
-    /* Globe video – stor, centrerad, premium */
-.globe-wrap{
-  padding: 46px 0 10px;
-}
-.globe{
-  width: min(1200px, 96vw);
-  margin: 0 auto 26px;
-  border-radius: 28px;
-  overflow: hidden;
-  background: #000;
-  box-shadow: 0 30px 120px rgba(0,0,0,.18);
-}
-.globe video{
-  width: 100%;
-  height: auto;
-  display: block;
-  object-fit: cover;
-}
-
+    /* ✅ extra spacing mellan login och rating */
+    #login-card{ margin-bottom: 44px; }
+    #rating-card{ margin-top: 44px !important; }
   </style>
 </head>
 
@@ -618,10 +643,10 @@
     <div class="shell top-row-inner">
       <a class="brand soft-hover" href="#top">
         <div class="logo-badge" aria-hidden="true">
-          <!-- enkel inline-logo (ni kan byta till PNG senare) -->
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="PeerRate">
-            <path d="M12 2c4 0 9 1.6 9 6.4 0 8.8-6.4 13.6-9 14.4-2.6-.8-9-5.6-9-14.4C3 3.6 8 2 12 2z" fill="rgba(15,15,18,.85)"/>
-            <path d="M9 8h4.5c2.2 0 3.5 1.3 3.5 3.2S15.7 14.4 13.5 14.4H11.4V18H9V8zm4.4 2H11.4v2.2h2.0c.9 0 1.4-.4 1.4-1.1s-.5-1.1-1.4-1.1z" fill="#fff"/>
+          <!-- Proffsig “PR”-monogram inline -->
+          <svg class="logo-mark" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="PeerRate">
+            <path d="M6.2 18V6.2h7.2c2.4 0 4.1 1.5 4.1 3.7 0 1.9-1.2 3.2-3 3.6l3.2 4.5h-2.7l-3-4.3H8.6V18H6.2zm2.4-6.4h4.5c1.2 0 1.9-.6 1.9-1.7 0-1-.7-1.7-1.9-1.7H8.6v3.4z"
+                  fill="rgba(255,255,255,.95)"/>
           </svg>
         </div>
         <div>
@@ -637,7 +662,6 @@
         </button>
 
         <button class="menu-btn soft-hover" id="menuBtn" type="button" aria-label="Öppna meny" aria-expanded="false">
-          <!-- hamburger -->
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M4 7h16M4 12h16M4 17h16" stroke="rgba(15,15,18,.85)" stroke-width="2" stroke-linecap="round"/>
           </svg>
@@ -667,31 +691,21 @@
 
   <!-- HERO -->
   <section id="top" class="hero anchor">
-    <!-- VIDEO: byt src till din mp4 när du lagt den i repo -->
-    <video
-      autoplay
-      muted
-      loop
-      playsinline
-      preload="auto"
-      aria-label="PeerRate hero video"
-    >
+    <video autoplay muted loop playsinline preload="auto" aria-label="PeerRate hero video">
       <source src="/assets/hero.mp4?v=4" type="video/mp4" />
     </video>
 
     <script>
-  (function(){
-    const v = document.querySelector('.hero video');
-    if (!v) return;
-    // Tvinga play efter att metadata laddats (hjälper ibland vid autoplay-strul)
-    v.addEventListener('loadeddata', () => {
-      const p = v.play();
-      if (p && typeof p.catch === 'function') p.catch(() => {});
-    });
-  })();
-</script>
+      (function(){
+        const v = document.querySelector('.hero video');
+        if (!v) return;
+        v.addEventListener('loadeddata', () => {
+          const p = v.play();
+          if (p && typeof p.catch === 'function') p.catch(() => {});
+        });
+      })();
+    </script>
 
-    <!-- Fallback om video saknas -->
     <div class="hero-fallback" style="background: radial-gradient(900px 520px at 20% 20%, rgba(46,197,182,.22), transparent 60%), radial-gradient(800px 520px at 80% 40%, rgba(126,213,255,.18), transparent 60%), #07080d;"></div>
 
     <div class="shell hero-content">
@@ -731,7 +745,7 @@
     </div>
   </section>
 
-  <!-- WHITE BLOCK (text + features) -->
+  <!-- HOW -->
   <section id="how" class="section white-block anchor">
     <div class="shell">
       <h2 class="section-title" data-i18n="how_title">A priority lane for trustworthy people online.</h2>
@@ -760,13 +774,12 @@
   <!-- Reputation Card + Simulator -->
   <section id="sim" class="section anchor">
     <div class="shell">
-      <h2 class="section-title" data-i18n="sim_title">See the value instantly.</h2>
-      <p class="section-lead" data-i18n="sim_lead">
-        Two visual “investor-friendly” blocks: a shareable reputation card and a “What if?” simulator.
-      </p>
+      <h2 class="section-title" data-i18n="sim_title">Se värdet direkt.</h2>
+      <!-- ✅ borttagen “investerarvänliga”-texten -->
 
       <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;">
-        <!-- Reputation card flip -->
+
+        <!-- Reputation card flip (behåll) -->
         <div class="flip-wrap">
           <div class="flip soft-hover" id="repFlip" role="button" tabindex="0" aria-label="Flip reputation card">
             <div class="flip-face flip-front">
@@ -780,95 +793,117 @@
 
                 <div class="card-meta">
                   <div class="m">
-                    <b id="repScore">94</b>
-                    <span data-i18n="rep_score">Peer-to-peer trust score</span>
+                    <b id="repScore">4.7</b>
+                    <span>Trust (1–5P)</span>
                   </div>
                   <div class="m">
                     <b id="repTx">127</b>
-                    <span data-i18n="rep_tx">Verified transactions</span>
+                    <span data-i18n="rep_tx">Verifierade transaktioner</span>
                   </div>
                   <div class="m">
                     <b id="repPlatforms">Tradera, eBay</b>
-                    <span data-i18n="rep_plat">Platforms connected</span>
+                    <span data-i18n="rep_plat">Plattformar kopplade</span>
                   </div>
                   <div class="m">
-                    <b data-i18n="rep_hint">Hover / click</b>
-                    <span data-i18n="rep_hint2">Explain my score</span>
+                    <b data-i18n="rep_hint">Klicka</b>
+                    <span data-i18n="rep_hint2">Förklaring av score</span>
                   </div>
                 </div>
 
                 <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-                  <a class="btn btn-primary soft-hover" href="/profile.html" data-i18n="rep_btn">Open my profile</a>
-                  <a class="btn btn-ghost soft-hover" href="/agent-chat.html" data-i18n="rep_btn2">Explain my score</a>
+                  <a class="btn btn-primary soft-hover" href="/profile.html">Öppna min profil</a>
+                  <a class="btn btn-ghost soft-hover" href="/agent-chat.html">Förklara min trust</a>
                 </div>
               </div>
             </div>
 
             <div class="flip-face flip-back">
               <div class="card-inner">
-                <div style="font-weight:820; letter-spacing:-.02em; font-size:16px;" data-i18n="back_title">Why this score?</div>
-                <p style="margin:10px 0 12px; color:var(--w-muted); line-height:1.55;" data-i18n="back_p">
-                  Score is a weighted summary of verified transactions, rating quality, recency and dispute signals.
-                  The goal: make trust portable and hard to fake.
+                <div style="font-weight:820; letter-spacing:-.02em; font-size:16px;">Varför den här scoren?</div>
+                <p style="margin:10px 0 12px; color:var(--w-muted); line-height:1.55;">
+                  Scoren väger samman verifierade transaktioner, betygskvalitet, aktualitet och risksignaler.
+                  Målet: göra trust portabelt och svårt att fejka.
                 </p>
 
                 <div class="grid-3" style="grid-template-columns: 1fr; gap: 10px;">
                   <div class="w-card" style="box-shadow:none;">
-                    <b data-i18n="back_b1">Verified history</b>
-                    <div style="color:var(--w-muted); font-size:13px;" data-i18n="back_t1">More verified transactions increases confidence.</div>
+                    <b>Verifierad historik</b>
+                    <div style="color:var(--w-muted); font-size:13px;">Fler verifierade transaktioner ger högre tillit.</div>
                   </div>
                   <div class="w-card" style="box-shadow:none;">
-                    <b data-i18n="back_b2">Consistency</b>
-                    <div style="color:var(--w-muted); font-size:13px;" data-i18n="back_t2">Stable positive behavior over time is rewarded.</div>
+                    <b>Stabilitet</b>
+                    <div style="color:var(--w-muted); font-size:13px;">Jämn positiv historik över tid belönas.</div>
                   </div>
                   <div class="w-card" style="box-shadow:none;">
-                    <b data-i18n="back_b3">Risk signals</b>
-                    <div style="color:var(--w-muted); font-size:13px;" data-i18n="back_t3">Disputes and suspicious patterns reduce score.</div>
+                    <b>Risksignaler</b>
+                    <div style="color:var(--w-muted); font-size:13px;">Tvister och misstänkta mönster sänker scoren.</div>
                   </div>
                 </div>
 
                 <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-                  <button class="btn btn-primary soft-hover" type="button" id="flipBackBtn" data-i18n="back_btn">Back</button>
-                  <a class="btn btn-ghost soft-hover" href="/agent-chat.html" data-i18n="back_btn2">Ask about trust</a>
+                  <button class="btn btn-primary soft-hover" type="button" id="flipBackBtn">Tillbaka</button>
+                  <a class="btn btn-ghost soft-hover" href="/agent-chat.html">Fråga om trust</a>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Simulator -->
+        <!-- ✅ Simulator (uppgraderad graf + svenska + 1–5P) -->
         <div class="sim">
           <div>
-            <h3 data-i18n="sim_h3">What if this user had more verified transactions?</h3>
-            <p data-i18n="sim_p">
-              Slide to simulate impact. The score, color signal and micro-graph updates instantly.
+            <h3>Vad händer om användaren får fler verifierade transaktioner?</h3>
+            <p>
+              Dra reglaget för att simulera. Trust (1–5P) och grafen uppdateras direkt.
             </p>
 
             <div class="slider-row">
+              <!-- slider 0..200 påverkar trust 1..5 -->
               <input id="txSlider" type="range" min="0" max="200" value="10" />
               <div class="score-pill" id="scorePill" aria-live="polite">
                 <span class="score-dot" id="scoreDot" aria-hidden="true"></span>
-                <span data-i18n="sim_score">Trust</span> <span id="simScore">94</span>
+                <span class="p-badge" aria-hidden="true">P</span>
+                <span>Trust</span>
+                <span id="simScore">4.0</span><span style="opacity:.6;">/5</span>
               </div>
             </div>
 
             <div style="margin-top:10px; color:var(--w-muted); font-size:13px;">
-              <span data-i18n="sim_label">Added verified transactions:</span>
-              <b id="simAdded">10</b>
+              Tillagda verifierade transaktioner: <b id="simAdded">10</b>
             </div>
           </div>
 
           <div class="spark">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
-              <b data-i18n="sim_graph">Trust trajectory</b>
-              <span style="color:var(--w-muted); font-size:12px;" id="simColorLabel">Low risk</span>
+            <div class="spark-top">
+              <b>Trust-utveckling</b>
+              <span style="color:var(--w-muted); font-size:12px;" id="simColorLabel">Låg risk</span>
             </div>
 
-            <!-- enkel SVG-sparkline -->
-            <svg id="sparkSvg" viewBox="0 0 240 90" width="100%" height="90" xmlns="http://www.w3.org/2000/svg" aria-label="Trust graph">
-              <path id="sparkPath" d="M10 70 L50 62 L90 58 L130 46 L170 40 L210 34" fill="none" stroke="rgba(15,15,18,.85)" stroke-width="3" stroke-linecap="round"/>
-              <circle id="sparkDot" cx="210" cy="34" r="5" fill="rgba(34,197,94,1)"/>
+            <!-- mer “premium” svg -->
+            <svg id="sparkSvg" viewBox="0 0 240 120" width="100%" height="120"
+                 xmlns="http://www.w3.org/2000/svg" aria-label="Trust graph">
+              <!-- grid -->
+              <path d="M10 20 H230 M10 50 H230 M10 80 H230 M10 110 H230"
+                    stroke="rgba(15,15,18,.06)" stroke-width="1" fill="none"/>
+
+              <!-- area under curve -->
+              <path id="sparkArea"
+                    d="M10 100 L50 92 L90 86 L130 70 L170 60 L210 52 L210 110 L10 110 Z"
+                    fill="rgba(46,197,182,.14)"/>
+
+              <!-- main line -->
+              <path id="sparkPath"
+                    d="M10 100 L50 92 L90 86 L130 70 L170 60 L210 52"
+                    fill="none" stroke="rgba(15,15,18,.86)" stroke-width="3" stroke-linecap="round"/>
+
+              <!-- end dot -->
+              <circle id="sparkDot" cx="210" cy="52" r="5" fill="rgba(34,197,94,1)"/>
             </svg>
+
+            <div class="spark-axes">
+              <span>Nu</span>
+              <span>Framåt</span>
+            </div>
           </div>
         </div>
 
@@ -876,67 +911,62 @@
     </div>
   </section>
 
-<!-- Globe + KPI table -->
-<section id="globe" class="section anchor">
-  <div class="shell globe-wrap">
-    <div>
-      <h2 class="section-title" data-i18n="globe_title">A global layer of trust.</h2>
-      <p class="section-lead" data-i18n="globe_lead">
-        A shared, portable reputation signal that can complement (or beat) traditional credit signals over time.
-      </p>
+  <!-- Globe + KPI table (behåll er nuvarande layout här) -->
+  <section id="globe" class="section anchor">
+    <div class="shell globe-wrap">
+      <div>
+        <h2 class="section-title" data-i18n="globe_title">A global layer of trust.</h2>
+        <p class="section-lead" data-i18n="globe_lead">
+          A shared, portable reputation signal that can complement (or beat) traditional credit signals over time.
+        </p>
 
-      <table class="kpi" aria-label="PeerRate key metrics">
-        <thead>
-          <tr>
-            <th data-i18n="kpi_metric">Metric</th>
-            <th data-i18n="kpi_value">Value</th>
-            <th data-i18n="kpi_note">Note</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td data-i18n="k1">Registered users</td>
-            <td><b id="kUsers">—</b></td>
-            <td data-i18n="k1n">Early access / MVP</td>
-          </tr>
-          <tr>
-            <td data-i18n="k2">Verified transactions</td>
-            <td><b id="kTx">—</b></td>
-            <td data-i18n="k2n">Imported + user submitted</td>
-          </tr>
-          <tr>
-            <td data-i18n="k3">Reviews / ratings</td>
-            <td><b id="kRatings">—</b></td>
-            <td data-i18n="k3n">Linked to identities</td>
-          </tr>
-          <tr>
-            <td data-i18n="k4">Platforms connected</td>
-            <td><b id="kPlatforms">Tradera, eBay</b></td>
-            <td data-i18n="k4n">More coming</td>
-          </tr>
-        </tbody>
-      </table>
+        <table class="kpi" aria-label="PeerRate key metrics">
+          <thead>
+            <tr>
+              <th data-i18n="kpi_metric">Metric</th>
+              <th data-i18n="kpi_value">Value</th>
+              <th data-i18n="kpi_note">Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td data-i18n="k1">Registered users</td>
+              <td><b id="kUsers">—</b></td>
+              <td data-i18n="k1n">Early access / MVP</td>
+            </tr>
+            <tr>
+              <td data-i18n="k2">Verified transactions</td>
+              <td><b id="kTx">—</b></td>
+              <td data-i18n="k2n">Imported + user submitted</td>
+            </tr>
+            <tr>
+              <td data-i18n="k3">Reviews / ratings</td>
+              <td><b id="kRatings">—</b></td>
+              <td data-i18n="k3n">Linked to identities</td>
+            </tr>
+            <tr>
+              <td data-i18n="k4">Platforms connected</td>
+              <td><b id="kPlatforms">Tradera, eBay</b></td>
+              <td data-i18n="k4n">More coming</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="globe" aria-label="Rotating globe">
+        <video autoplay muted loop playsinline preload="auto">
+          <source src="/assets/jorden.mp4?v=2" type="video/mp4" />
+        </video>
+      </div>
     </div>
+  </section>
 
-    <!-- ✅ Jord-video som syskon (inte inuti tabell-blocket) -->
-    <div class="globe" aria-label="Rotating globe">
-      <video autoplay muted loop playsinline preload="auto">
-        <source src="/assets/jorden.mp4?v=1" type="video/mp4" />
-      </video>
-    </div>
-
-  </div>
-</section>
-
-  <!-- Befintlig betyg/login-sektion: vi behåller den, men landningssidan länkar dit -->
+  <!-- RATE -->
   <section id="rate" class="section white-block anchor">
     <div class="shell">
-      <h2 class="section-title" data-i18n="rate_title">Leave a rating</h2>
-      <p class="section-lead" data-i18n="rate_lead">
-        Log in and leave a rating. (You can also sign up if you don’t have an account.)
-      </p>
 
-      <!-- Här återanvänder vi ditt befintliga markup rakt av för att INTE tappa funktionalitet -->
+      <!-- ✅ borttagen rubrik + lead-text här, så att det börjar direkt vid Logga in -->
+
       <div class="pr-form-wrap" style="max-width: 980px; margin:0 auto;">
 
         <div id="user-badge" class="user-badge hidden" style="margin-bottom:14px;">
@@ -983,7 +1013,6 @@
           </p>
 
           <div id="rating-form-wrapper" class="hidden">
-            <!-- samma formulär som tidigare -->
             <form id="rating-form" autocomplete="off">
               <div class="pr-field">
                 <label class="pr-label" for="subject">Vem betygsätter du? <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(användarnamn eller mejl)</span></label>
@@ -1132,6 +1161,74 @@
       const sync = () => { box.style.display = flag.checked ? 'block' : 'none'; };
       flag.addEventListener('change', sync);
       sync();
+    })();
+
+    // ✅ SIMULATOR: 0..200 tx => trust 1..5 (med mjuk kurva)
+    (function(){
+      const slider = document.getElementById('txSlider');
+      const simAdded = document.getElementById('simAdded');
+      const simScore = document.getElementById('simScore');
+      const dot = document.getElementById('sparkDot');
+      const path = document.getElementById('sparkPath');
+      const area = document.getElementById('sparkArea');
+      const scoreDot = document.getElementById('scoreDot');
+      const label = document.getElementById('simColorLabel');
+
+      if(!slider) return;
+
+      function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+      function txToScore(tx){
+        // bas 3.5, med avtagande marginalnytta upp mot 5
+        const t = tx / 200;              // 0..1
+        const eased = 1 - Math.pow(1 - t, 1.6);
+        const score = 3.6 + eased * 1.3; // ca 3.6..4.9
+        return clamp(score, 1, 5);
+      }
+
+      function scoreToRisk(score){
+        if(score >= 4.6) return {txt:"Mycket låg risk", color:"rgba(34,197,94,1)"};
+        if(score >= 4.2) return {txt:"Låg risk", color:"rgba(34,197,94,1)"};
+        if(score >= 3.7) return {txt:"Medelrisk", color:"rgba(246,169,75,1)"};
+        return {txt:"Högre risk", color:"rgba(239,68,68,1)"};
+      }
+
+      function update(){
+        const tx = Number(slider.value || 0);
+        simAdded.textContent = String(tx);
+
+        const score = txToScore(tx);
+        simScore.textContent = score.toFixed(1);
+
+        const risk = scoreToRisk(score);
+        label.textContent = risk.txt;
+
+        // färga score-dot och grafens slutpunkt
+        scoreDot.style.background = risk.color;
+        scoreDot.style.boxShadow = `0 0 0 6px ${risk.color.replace('1)', '.14)')}`;
+        if(dot) dot.setAttribute('fill', risk.color);
+
+        // Bygg en "World-ish" kurva 1..5 => y 105..30
+        const y = (s)=> 110 - ((s-1)/4)*80; // 1 => 110, 5 => 30
+        const s1 = clamp(score - 0.9, 1, 5);
+        const s2 = clamp(score - 0.6, 1, 5);
+        const s3 = clamp(score - 0.35,1, 5);
+        const s4 = clamp(score - 0.15,1, 5);
+        const s5 = score;
+
+        const d = `M10 ${y(s1).toFixed(1)} L50 ${y(s2).toFixed(1)} L90 ${y(s3).toFixed(1)} L130 ${y(s4).toFixed(1)} L170 ${(y((s4+s5)/2)).toFixed(1)} L210 ${y(s5).toFixed(1)}`;
+        if(path) path.setAttribute('d', d);
+
+        const a = `M10 ${y(s1).toFixed(1)} L50 ${y(s2).toFixed(1)} L90 ${y(s3).toFixed(1)} L130 ${y(s4).toFixed(1)} L170 ${(y((s4+s5)/2)).toFixed(1)} L210 ${y(s5).toFixed(1)} L210 110 L10 110 Z`;
+        if(area) area.setAttribute('d', a);
+
+        if(dot){
+          dot.setAttribute('cy', y(s5).toFixed(1));
+        }
+      }
+
+      slider.addEventListener('input', update);
+      update();
     })();
   </script>
 
