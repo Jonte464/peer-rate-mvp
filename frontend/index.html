@@ -182,7 +182,7 @@
     /* Hero video */
     .hero{
       position: relative;
-      min-height: 78vh;
+      min-height: 110vh;
       display:flex;
       align-items: stretch;
       overflow:hidden;
@@ -194,8 +194,8 @@
       width:100%;
       height:100%;
       object-fit: cover;
-      filter: saturate(1.05) contrast(1.05) brightness(.82);
-      transform: scale(1.02);
+      filter: none;
+      transform: none;
     }
     .hero::before{
       content:"";
@@ -639,10 +639,18 @@
   <!-- HERO -->
   <section id="top" class="hero anchor">
     <!-- VIDEO: byt src till din mp4 när du lagt den i repo -->
-    <video autoplay muted loop playsinline preload="auto" poster="" aria-label="PeerRate hero video">
-      <!-- EXEMPEL: lägg mp4 här: /assets/hero.mp4 -->
-      <source src="/assets/hero.mp4" type="video/mp4" />
-    </video>
+    <video
+  autoplay
+  muted
+  loop
+  playsinline
+  preload="auto"
+  poster="/assets/hero.jpg"
+  aria-label="PeerRate hero video"
+>
+  <source src="/assets/hero.mp4" type="video/mp4" />
+</video>
+
 
     <!-- Fallback om video saknas -->
     <div class="hero-fallback" style="background: radial-gradient(900px 520px at 20% 20%, rgba(46,197,182,.22), transparent 60%), radial-gradient(800px 520px at 80% 40%, rgba(126,213,255,.18), transparent 60%), #07080d;"></div>
