@@ -182,7 +182,7 @@
     /* HERO – fullskärm, riktig video (ingen blur/filter) */
 .hero{
   position: relative;
-  min-height: 90vh;              /* så bara heron syns när man är högst upp */
+  min-height: 95vh;              /* så bara heron syns när man är högst upp */
   display:flex;
   align-items: stretch;
   overflow:hidden;
@@ -588,6 +588,26 @@
       font-size: 12px;
       border-top: 1px solid var(--w-border);
     }
+
+    /* Globe video – stor, centrerad, premium */
+.globe-wrap{
+  padding: 46px 0 10px;
+}
+.globe{
+  width: min(1200px, 96vw);
+  margin: 0 auto 26px;
+  border-radius: 28px;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 30px 120px rgba(0,0,0,.18);
+}
+.globe video{
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
   </style>
 </head>
 
@@ -901,10 +921,13 @@
       <div class="globe" aria-label="Rotating globe">
         <!-- BYT src till din glob-bild när du lagt den i repo -->
         <!-- EXEMPEL: /assets/Jorden.png -->
-        <img src="/assets/Jorden.png" alt="Earth network visualization" />
-      </div>
-    </div>
-  </section>
+        <section class="globe-wrap">
+  <div class="globe">
+    <video autoplay muted loop playsinline preload="auto" aria-label="Rotating Earth">
+      <source src="/assets/jorden.mp4?v=1" type="video/mp4" />
+    </video>
+  </div>
+</section>
 
   <!-- Befintlig betyg/login-sektion: vi behåller den, men landningssidan länkar dit -->
   <section id="rate" class="section white-block anchor">
