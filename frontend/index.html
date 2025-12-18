@@ -179,34 +179,43 @@
     .menu-link:hover{ background: rgba(15,15,18,.04); }
     .menu-link span{ color: var(--w-muted); font-weight: 600; font-size: 13px; }
 
-    /* Hero video */
-    .hero{
-      position: relative;
-      min-height: 100vh;
-      display:flex;
-      align-items: stretch;
-      overflow:hidden;
-      border-bottom: 1px solid var(--w-border);
-    }
-    .hero video, .hero .hero-fallback{
-      position:absolute;
-      inset: 0;
-      width:100%;
-      height:100%;
-      object-fit: cover;
-      filter: none;
-      transform: none;
-    }
-    .hero::before{
-      content:"";
-      position:absolute;
-      inset:0;
-      background:
-        radial-gradient(1100px 540px at 20% 20%, rgba(255,255,255,.05), transparent 55%),
-        radial-gradient(900px 520px at 80% 40%, rgba(46,197,182,.10), transparent 55%),
-        linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,.55));
-      pointer-events:none;
-    }
+    /* HERO – fullskärm, riktig video (ingen blur/filter) */
+.hero{
+  position: relative;
+  min-height: 90vh;              /* så bara heron syns när man är högst upp */
+  display:flex;
+  align-items: stretch;
+  overflow:hidden;
+  border-bottom: 1px solid var(--w-border);
+  background:#000;
+}
+
+.hero video{
+  position:absolute;
+  inset: 0;
+  width:100%;
+  height:100%;
+  object-fit: cover;
+  transform: none !important;
+  filter: none !important;        /* 👈 tar bort “blur/film-look” helt */
+}
+
+.hero::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55));
+  pointer-events:none;
+}
+
+.hero-content{
+  position: relative;
+  z-index: 2;
+  width:100%;
+  padding: 72px 0 72px;
+  display:flex;
+  align-items:flex-end;
+}
 
     .hero-content{
       position: relative;
@@ -649,6 +658,18 @@
     >
       <source src="/assets/hero.mp4?v=4" type="video/mp4" />
     </video>
+
+    <script>
+  (function(){
+    const v = document.querySelector('.hero video');
+    if (!v) return;
+    // Tvinga play efter att metadata laddats (hjälper ibland vid autoplay-strul)
+    v.addEventListener('loadeddata', () => {
+      const p = v.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {});
+    });
+  })();
+</script>
 
     <!-- Fallback om video saknas -->
     <div class="hero-fallback" style="background: radial-gradient(900px 520px at 20% 20%, rgba(46,197,182,.22), transparent 60%), radial-gradient(800px 520px at 80% 40%, rgba(126,213,255,.18), transparent 60%), #07080d;"></div>
