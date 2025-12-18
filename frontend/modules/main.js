@@ -25,7 +25,7 @@ function updateRatingLoginHint(user) {
    + simulator (2 sliders)
    + reputation-card flip
    + KPI placeholders
-   + top-user initialer
+   + top-user initialer + logout dropdown
    ========================= */
 
 function initLandingMenu() {
@@ -64,7 +64,6 @@ function initLandingLanguage() {
   const langLabel = document.getElementById('langLabel');
   if (!langBtn || !langMenu || !langLabel) return;
 
-  // Minimal i18n: data-i18n nycklar
   const dict = {
     sv: {
       // top / menu
@@ -76,6 +75,9 @@ function initLandingLanguage() {
       menu_signup: 'Registrera dig',
       menu_profile: 'Min profil',
       menu_ask: 'Fråga om trust',
+
+      // user menu
+      user_logout: 'Logga ut',
 
       // hero
       hero_kicker: 'Peer-to-peer reputation',
@@ -100,7 +102,6 @@ function initLandingLanguage() {
 
       // sim / card
       sim_title: 'Se värdet direkt.',
-      rep_name_fallback: 'Din profil',
       rep_trust: 'Förtroende (1–5)',
       rep_tx: 'Verifierade transaktioner',
       rep_plat: 'Plattformar kopplade',
@@ -165,6 +166,9 @@ function initLandingLanguage() {
       menu_profile: 'My profile',
       menu_ask: 'Ask about trust',
 
+      // user menu
+      user_logout: 'Log out',
+
       // hero
       hero_kicker: 'Peer-to-peer reputation',
       hero_h1: 'Trust you can prove.',
@@ -188,7 +192,6 @@ function initLandingLanguage() {
 
       // sim / card
       sim_title: 'See the value instantly.',
-      rep_name_fallback: 'Your profile',
       rep_trust: 'Trust (1–5)',
       rep_tx: 'Verified transactions',
       rep_plat: 'Platforms connected',
@@ -287,7 +290,6 @@ function initLandingLanguage() {
     if (e.key === 'Escape') setMenuOpen(false);
   });
 
-  // Default: svenska
   const saved = localStorage.getItem(LS_LANG) || 'sv';
   applyLang(saved);
 }
@@ -372,6 +374,9 @@ function getFallbackUserLabelFromStorage() {
     'peerRateAuthUser',
     'peerRateCurrentUser',
     'peerRateUserEmail',
+    'peerRateToken',
+    'peerRateAccessToken',
+    'peerRateRefreshToken',
     'pr_user',
     'user',
     'authUser'
@@ -405,10 +410,7 @@ function updateTopUserPill(user) {
   const initialsEl = document.getElementById('topUserInitials');
   if (!pill || !initialsEl) return;
 
-  // 1) Primärt: auth.getUser()
   const label = extractUserLabel(user);
-
-  // 2) Fallback: localStorage
   const label2 = label || getFallbackUserLabelFromStorage();
 
   const ini = initialsFromString(label2);
@@ -423,14 +425,118 @@ function updateTopUserPill(user) {
 }
 
 /* =========
+   User dropdown (logout)
+   ========= */
+
+function safeLogout() {
+  try {
+    if (auth && typeof auth.logout === 'function') {
+      auth.logout();
+      return true;
+    }
+    if (auth && typeof auth.clearUser === 'function') {
+      auth.clearUser();
+      return true;
+    }
+  } catch (_) {}
+
+  // Fallback: städa de vanligaste nycklarna utan att krascha
+  const keys = [
+    'peerRateAuthUser',
+    'peerRateUser',
+    'peerRateCurrentUser',
+    'peerRateUserEmail',
+    'peerRateToken',
+    'peerRateAccessToken',
+    'peerRateRefreshToken',
+    'authToken',
+    'token',
+    'jwt',
+    'pr_user',
+    'user',
+    'authUser'
+  ];
+  keys.forEach(k => {
+    try { localStorage.removeItem(k); } catch (_) {}
+  });
+
+  return true;
+}
+
+function initUserDropdown(user) {
+  const pill = document.getElementById('topUserPill');
+  const menu = document.getElementById('userMenu');
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (!pill || !menu || !logoutBtn) return;
+
+  const setOpen = (open) => {
+    menu.style.display = open ? 'block' : 'none';
+    pill.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+
+  let open = false;
+
+  // endast om pill syns (dvs inloggad)
+  const canShow = () => (pill.style.display !== 'none');
+
+  pill.addEventListener('click', (e) => {
+    if (!canShow()) return;
+    open = !open;
+    setOpen(open);
+  });
+
+  logoutBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    setOpen(false);
+
+    safeLogout();
+
+    // uppdatera UI direkt
+    const u2 = auth.getUser?.() || null;
+    updateTopUserPill(u2);
+    updateUserBadge(u2);
+    updateAvatars(u2);
+
+    // “safe” reload så allt hamnar i rätt läge
+    window.location.href = '/';
+  });
+
+  // Klick utanför stänger
+  window.addEventListener('click', (e) => {
+    if (!open) return;
+    if (e.target.closest('#topUserPill') || e.target.closest('#userMenu')) return;
+    open = false;
+    setOpen(false);
+  });
+
+  // ESC stänger
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!open) return;
+    open = false;
+    setOpen(false);
+  });
+
+  // Om man blir utloggad i annan flik
+  window.addEventListener('storage', () => {
+    const u2 = auth.getUser?.() || null;
+    updateTopUserPill(u2);
+    if (!extractUserLabel(u2) && !getFallbackUserLabelFromStorage()) {
+      open = false;
+      setOpen(false);
+    }
+  });
+
+  setOpen(false);
+}
+
+/* =========
    2-sliders simulator (volym + snitt => 1..5P)
    ========= */
 
 function initTwoSliderSimulator() {
   const countSlider = document.getElementById('countSlider');
   const avgSlider = document.getElementById('avgSlider');
-
-  // Om den nya simulatorn inte finns på sidan → gör inget (äventyrar inget)
   if (!countSlider || !avgSlider) return;
 
   const simCount = document.getElementById('simCount');
@@ -446,7 +552,6 @@ function initTwoSliderSimulator() {
   function clamp(n, a, b) { return Math.max(a, Math.min(b, n)); }
 
   function volumeFactor(n) {
-    // 0..200 -> 0..1 (avtagande marginal)
     return 1 - Math.exp(-n / 55);
   }
 
@@ -484,7 +589,6 @@ function initTwoSliderSimulator() {
 
     setPBar(filled);
 
-    // uppdatera de två score-ställena (om de finns)
     if (heroScore) heroScore.textContent = score.toFixed(1);
     if (repScore) repScore.textContent = score.toFixed(1);
   }
@@ -517,11 +621,12 @@ function initKpis() {
 window.addEventListener('DOMContentLoaded', () => {
   console.log('DOM ready');
 
-  const user = auth.getUser();
+  const user = auth.getUser?.() || null;
 
   updateUserBadge(user);
   updateAvatars(user);
   updateTopUserPill(user);
+  initUserDropdown(user);
 
   if (customerForm) console.log('Customer form loaded');
   if (adminLoginForm && adminLogoutBtn) console.log('Admin functionality loaded');
@@ -545,21 +650,14 @@ window.addEventListener('DOMContentLoaded', () => {
   initLandingMenu();
   initLandingLanguage();
   initReputationFlip();
-
-  // NYTT: din 2-sliders-simulator, säkert (noop om saknas)
   initTwoSliderSimulator();
-
-  // report toggle (noop om saknas)
   initReportFlagToggle();
-
   initKpis();
 
-  // Håll top-user pill uppdaterad om login sker i annan flik / storage change
+  // Håll top-user pill uppdaterad om login sker i annan flik / async storage
   window.addEventListener('storage', () => {
-    const u2 = auth.getUser();
+    const u2 = auth.getUser?.() || null;
     updateTopUserPill(u2);
   });
-
-  // “safe refresh” ibland ifall auth skriver async till localStorage
-  setInterval(() => updateTopUserPill(auth.getUser()), 1500);
+  setInterval(() => updateTopUserPill(auth.getUser?.() || null), 1500);
 });
