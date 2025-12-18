@@ -22,16 +22,19 @@
       --w-glass: rgba(255,255,255,.65);
       --w-shadow: 0 20px 70px rgba(0,0,0,.12);
       --w-radius: 22px;
+
+      /* layout */
       --w-max: 1180px;
 
+      /* accent (matcha hero-känslan) */
+      --acc: #2ec5b6;
+      --acc2: #7ed5ff;
+
+      /* Mikrointeraktions-dials */
       --ease: cubic-bezier(.2,.8,.2,1);
       --ms-fast: 80ms;
       --ms-med: 160ms;
       --ms-slow: 260ms;
-
-      /* Accent (matchar er palette) */
-      --a-teal: rgba(46,197,182,1);
-      --a-orange: rgba(246,169,75,1);
     }
 
     *{ box-sizing:border-box; }
@@ -53,30 +56,27 @@
       padding: 0 18px;
     }
 
-    /* ==========================================
-       TOP ROW – smalare + mer "edge-to-edge"
-       ========================================== */
+    /* =========================
+       TOP ROW – smalare + mer mot kanter
+       ========================= */
     .top-row{
       position: sticky;
       top: 0;
       z-index: 100;
-      background: rgba(255,255,255,.75);
+      background: rgba(255,255,255,.78);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--w-border);
     }
+    .top-row .shell{
+      max-width: 100%;
+      padding: 0 28px; /* mer mot kanterna */
+    }
     .top-row-inner{
-      /* smalare topp-panel */
-      padding: 10px 0;
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap: 14px;
-    }
-    /* Flytta ut mot kanter: gör att brand ligger mer vänster och actions mer höger */
-    .top-row .shell{
-      max-width: 1400px; /* gör baren “bredare” än content */
-      padding-left: 22px;
-      padding-right: 22px;
+      padding: 10px 0; /* smalare */
     }
 
     .brand{
@@ -86,23 +86,19 @@
       text-decoration:none;
       color: inherit;
       user-select:none;
+      min-width: 220px;
     }
 
-    /* ==========================================
-       LOGO – mer proffsig badge + "PR" monogram
-       ========================================== */
+    /* Proffsigare logobadge (använder din PNG) */
     .logo-badge{
-      width: 40px; height: 40px;
+      width: 38px; height: 38px;
       border-radius: 999px;
       border: 1px solid rgba(15,15,18,.10);
       background:
-        radial-gradient(12px 12px at 30% 28%, rgba(255,255,255,.65), rgba(255,255,255,0) 70%),
-        radial-gradient(520px 220px at 0% 0%, rgba(46,197,182,.35), rgba(46,197,182,0) 60%),
-        radial-gradient(520px 240px at 100% 100%, rgba(246,169,75,.25), rgba(246,169,75,0) 60%),
-        linear-gradient(135deg, rgba(15,15,18,.92), rgba(15,15,18,.70));
-      box-shadow:
-        0 12px 34px rgba(0,0,0,.18),
-        inset 0 1px 0 rgba(255,255,255,.16);
+        radial-gradient(18px 18px at 30% 25%, rgba(46,197,182,.25), transparent 65%),
+        radial-gradient(18px 18px at 75% 70%, rgba(126,213,255,.18), transparent 65%),
+        linear-gradient(135deg, rgba(255,255,255,.9), rgba(255,255,255,.6));
+      box-shadow: 0 10px 30px rgba(0,0,0,.10);
       display:flex; align-items:center; justify-content:center;
       overflow:hidden;
       position: relative;
@@ -110,29 +106,25 @@
     .logo-badge::after{
       content:"";
       position:absolute;
-      inset: -2px;
+      inset:-1px;
       border-radius: 999px;
-      background:
-        conic-gradient(from 220deg,
-          rgba(46,197,182,.55),
-          rgba(246,169,75,.45),
-          rgba(126,213,255,.30),
-          rgba(46,197,182,.55)
-        );
-      filter: blur(10px);
+      background: linear-gradient(135deg, rgba(46,197,182,.35), rgba(246,169,75,.18), rgba(126,213,255,.25));
       opacity: .35;
       pointer-events:none;
+      mix-blend-mode: multiply;
     }
-    .logo-mark{
-      position: relative;
-      z-index: 2;
-      width: 26px;
-      height: 26px;
+    .logo-img{
+      width: 22px;
+      height: 22px;
       display:block;
+      object-fit: contain;
+      position: relative;
+      z-index: 1;
+      filter: drop-shadow(0 6px 10px rgba(0,0,0,.18));
     }
 
     .brand-name{
-      font-weight: 820;
+      font-weight: 780;
       letter-spacing: -0.02em;
       line-height: 1.1;
     }
@@ -146,6 +138,8 @@
       display:flex;
       align-items:center;
       gap: 10px;
+      min-width: 220px;
+      justify-content: flex-end;
     }
 
     .lang-pill{
@@ -153,7 +147,7 @@
       align-items:center;
       gap: 8px;
       border: 1px solid var(--w-border);
-      background: rgba(255,255,255,.75);
+      background: rgba(255,255,255,.78);
       padding: 7px 10px; /* lite smalare */
       border-radius: 999px;
       font-weight: 650;
@@ -164,7 +158,7 @@
 
     .lang-menu{
       position: absolute;
-      right: 22px;
+      right: 28px;
       top: 52px;
       width: 180px;
       background: #fff;
@@ -187,10 +181,10 @@
     .lang-menu button:hover{ background: rgba(15,15,18,.05); }
 
     .menu-btn{
-      width: 40px; height: 40px; /* lite smalare */
+      width: 40px; height: 40px;
       border-radius: 999px;
       border: 1px solid var(--w-border);
-      background: rgba(255,255,255,.75);
+      background: rgba(255,255,255,.78);
       cursor: pointer;
       display:flex; align-items:center; justify-content:center;
     }
@@ -223,9 +217,9 @@
     .menu-link:hover{ background: rgba(15,15,18,.04); }
     .menu-link span{ color: var(--w-muted); font-weight: 600; font-size: 13px; }
 
-    /* ==========================================
+    /* =========================
        HERO – fullskärm, riktig video
-       ========================================== */
+       ========================= */
     .hero{
       position: relative;
       min-height: 95vh;
@@ -248,7 +242,10 @@
       content:"";
       position:absolute;
       inset:0;
-      background: linear-gradient(180deg, rgba(0,0,0,.15), rgba(0,0,0,.55));
+      background:
+        radial-gradient(1100px 540px at 15% 20%, rgba(46,197,182,.10), transparent 55%),
+        radial-gradient(900px 520px at 80% 40%, rgba(126,213,255,.10), transparent 55%),
+        linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.60));
       pointer-events:none;
     }
     .hero-content{
@@ -372,7 +369,9 @@
       font-size: 12px;
     }
 
-    /* Sektioner */
+    /* =========================
+       SEKTIONER
+       ========================= */
     .section{ padding: 70px 0; }
     @media (max-width: 680px){ .section{ padding: 54px 0; } }
 
@@ -410,7 +409,9 @@
     .w-card h3{ margin: 0 0 6px; letter-spacing: -.01em; }
     .w-card p{ margin: 0; color: var(--w-muted); line-height: 1.55; font-size: 14px; }
 
-    /* Reputation card flip */
+    /* =========================
+       Reputation Card flip
+       ========================= */
     .flip-wrap{ perspective: 1100px; }
     .flip{
       position: relative;
@@ -419,9 +420,9 @@
       border-radius: 22px;
       transform-style: preserve-3d;
       transition: transform var(--ms-slow) var(--ease);
-      min-height: 320px;
     }
     .flip.is-flipped{ transform: rotateY(180deg); }
+
     .flip-face{
       position:absolute;
       inset:0;
@@ -434,20 +435,12 @@
     .flip-front{
       background:
         radial-gradient(900px 420px at 20% 0%, rgba(46,197,182,.20), transparent 60%),
-        radial-gradient(800px 420px at 90% 30%, rgba(246,169,75,.18), transparent 60%),
+        radial-gradient(800px 420px at 90% 30%, rgba(126,213,255,.18), transparent 60%),
         #fff;
     }
-    .flip-back{
-      transform: rotateY(180deg);
-      background: #fff;
-    }
+    .flip-back{ transform: rotateY(180deg); background: #fff; }
     .card-inner{ padding: 18px; }
-    .card-top{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap: 10px;
-    }
+    .card-top{ display:flex; justify-content:space-between; align-items:center; gap: 10px; }
     .chip{
       width: 44px; height: 34px;
       border-radius: 10px;
@@ -475,9 +468,9 @@
     .card-meta .m b{ display:block; font-size: 18px; }
     .card-meta .m span{ display:block; color: var(--w-muted); font-size: 12px; margin-top: 4px; }
 
-    /* ==========================================
-       SIMULATOR – mer proffsig + 1–5 + "5P"
-       ========================================== */
+    /* =========================
+       Simulator – proffsigare graf + 1–5 med 5P
+       ========================= */
     .sim{
       border: 1px solid var(--w-border);
       border-radius: 22px;
@@ -485,9 +478,10 @@
       box-shadow: 0 18px 70px rgba(0,0,0,.08);
       padding: 18px;
       display:grid;
-      grid-template-columns: 1.1fr .9fr;
+      grid-template-columns: 1.2fr .8fr;
       gap: 16px;
       align-items:center;
+      max-width: 980px;
     }
     @media (max-width: 980px){ .sim{ grid-template-columns: 1fr; } }
 
@@ -506,94 +500,88 @@
       accent-color: #111;
     }
 
-    .score-pill{
+    .trust-pill{
       display:inline-flex;
       align-items:center;
       gap: 10px;
       padding: 10px 12px;
       border-radius: 999px;
       border: 1px solid rgba(0,0,0,.10);
-      background: rgba(255,255,255,.85);
-      box-shadow: 0 16px 50px rgba(0,0,0,.06);
-      font-weight: 820;
+      background: rgba(255,255,255,.80);
+      font-weight: 850;
       white-space:nowrap;
+      box-shadow: 0 10px 30px rgba(0,0,0,.06);
     }
-    .score-dot{
+    .trust-dot{
       width:10px; height:10px; border-radius:999px;
-      background: #22c55e;
-      box-shadow: 0 0 0 6px rgba(34,197,94,.14);
+      background: var(--acc);
+      box-shadow: 0 0 0 6px rgba(46,197,182,.16);
     }
 
-    /* 5P badge */
-    .p-badge{
-      width: 30px; height: 30px;
-      border-radius: 10px;
+    .pbar{
       display:inline-flex;
       align-items:center;
-      justify-content:center;
+      gap: 4px;
+      padding: 6px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,.08);
+      background: rgba(15,15,18,.03);
       font-weight: 900;
-      letter-spacing: -0.02em;
+      letter-spacing: -.01em;
+    }
+    .pbar .p{
+      width: 18px;
+      height: 18px;
+      border-radius: 6px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 12px;
       border: 1px solid rgba(0,0,0,.10);
+      background: rgba(255,255,255,.9);
+      color: rgba(15,15,18,.82);
+      transition: filter var(--ms-med) var(--ease), opacity var(--ms-med) var(--ease);
+    }
+    .pbar .p.is-on{
       background:
-        radial-gradient(12px 12px at 30% 28%, rgba(255,255,255,.7), rgba(255,255,255,0) 70%),
-        linear-gradient(135deg, rgba(46,197,182,.22), rgba(246,169,75,.18)),
-        #fff;
+        radial-gradient(12px 12px at 30% 25%, rgba(46,197,182,.45), transparent 60%),
+        linear-gradient(135deg, rgba(46,197,182,.22), rgba(126,213,255,.18));
+      border-color: rgba(46,197,182,.35);
+      color: rgba(15,15,18,.92);
     }
 
-    /* Proffsig graf-panel */
-    .spark{
+    .sparkPro{
       width: 100%;
       border-radius: 18px;
       border: 1px solid rgba(0,0,0,.08);
       padding: 12px;
       background:
-        radial-gradient(700px 200px at 20% 0%, rgba(46,197,182,.10), transparent 60%),
-        radial-gradient(700px 200px at 90% 100%, rgba(246,169,75,.08), transparent 60%),
-        rgba(255,255,255,.85);
-      box-shadow: 0 18px 70px rgba(0,0,0,.06);
+        radial-gradient(800px 220px at 20% 0%, rgba(46,197,182,.10), transparent 60%),
+        radial-gradient(700px 220px at 90% 30%, rgba(126,213,255,.08), transparent 60%),
+        rgba(255,255,255,.9);
+      box-shadow: 0 16px 60px rgba(0,0,0,.06);
     }
 
-    .spark-top{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom:10px;
-    }
-
-    /* Axel-labels */
-    .spark-axes{
-      display:flex;
-      justify-content:space-between;
-      color: var(--w-muted);
-      font-size: 12px;
-      margin-top: 8px;
-    }
-
-    /* Globe/KPI */
-    .globe-wrap{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 22px;
-      align-items:center;
-    }
-    @media (max-width: 980px){ .globe-wrap{ grid-template-columns: 1fr; } }
-
-    .globe{
-      width: min(1200px, 96vw);
-      margin: 0 auto 0;
-      border-radius: 28px;
+    /* =========================
+       Globe section – video över rubrik/tabell (ej bredvid)
+       ========================= */
+    .globe-hero{
+      width: min(1400px, 98vw);
+      margin: 0 auto 26px;
+      border-radius: 30px;
       overflow: hidden;
       background: #000;
       box-shadow: 0 30px 120px rgba(0,0,0,.18);
+      border: 1px solid rgba(0,0,0,.10);
     }
-    .globe video{
+    .globe-hero video{
       width: 100%;
-      height: auto;
+      height: min(62vh, 520px);
       display:block;
       object-fit: cover;
     }
 
+    /* KPI table */
     .kpi{
       width:100%;
       border-collapse: collapse;
@@ -602,6 +590,7 @@
       border: 1px solid rgba(0,0,0,.10);
       background: #fff;
       box-shadow: 0 16px 60px rgba(0,0,0,.08);
+      max-width: 760px;
     }
     .kpi th, .kpi td{
       padding: 14px 14px;
@@ -620,9 +609,13 @@
     }
     .kpi tr:last-child td{ border-bottom: 0; }
 
+    /* White block for your existing forms */
     .white-block{ background: #fff; }
+
+    /* Ankare offset pga sticky topbar */
     .anchor { scroll-margin-top: 90px; }
 
+    /* Footer */
     .footer{
       padding: 40px 0 60px;
       color: var(--w-muted);
@@ -630,9 +623,31 @@
       border-top: 1px solid var(--w-border);
     }
 
-    /* ✅ extra spacing mellan login och rating */
-    #login-card{ margin-bottom: 44px; }
+    /* =========================
+       RATE – flytta "Inloggad som" till top-right
+       ========================= */
+    .rate-wrap{
+      position: relative;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+    #user-badge{
+      position: absolute;
+      top: -54px;
+      right: 0;
+      margin: 0 !important;
+      z-index: 2;
+    }
+    @media (max-width: 680px){
+      #user-badge{
+        position: static;
+        margin-bottom: 14px !important;
+      }
+    }
+
+    /* Större glapp mellan Logga in och Lämna betyg */
     #rating-card{ margin-top: 44px !important; }
+
   </style>
 </head>
 
@@ -643,11 +658,7 @@
     <div class="shell top-row-inner">
       <a class="brand soft-hover" href="#top">
         <div class="logo-badge" aria-hidden="true">
-          <!-- Proffsig “PR”-monogram inline -->
-          <svg class="logo-mark" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-label="PeerRate">
-            <path d="M6.2 18V6.2h7.2c2.4 0 4.1 1.5 4.1 3.7 0 1.9-1.2 3.2-3 3.6l3.2 4.5h-2.7l-3-4.3H8.6V18H6.2zm2.4-6.4h4.5c1.2 0 1.9-.6 1.9-1.7 0-1-.7-1.7-1.9-1.7H8.6v3.4z"
-                  fill="rgba(255,255,255,.95)"/>
-          </svg>
+          <img class="logo-img" src="/assets/Logo.PNG?v=1" alt="PeerRate logo" />
         </div>
         <div>
           <div class="brand-name">PeerRate</div>
@@ -679,7 +690,7 @@
     <nav class="menu-panel" id="menuPanel" aria-label="Meny">
       <div class="shell menu-panel-inner">
         <a class="menu-link" href="#how"><div data-i18n="menu_how">How it works</div><span>→</span></a>
-        <a class="menu-link" href="#sim"><div data-i18n="menu_sim">What if? simulator</div><span>→</span></a>
+        <a class="menu-link" href="#sim"><div data-i18n="menu_sim">Se värdet direkt</div><span>→</span></a>
         <a class="menu-link" href="#globe"><div data-i18n="menu_globe">Global trust</div><span>→</span></a>
         <a class="menu-link" href="#rate"><div data-i18n="menu_rate">Leave a rating</div><span>→</span></a>
         <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Sign up</div><span>→</span></a>
@@ -706,8 +717,6 @@
       })();
     </script>
 
-    <div class="hero-fallback" style="background: radial-gradient(900px 520px at 20% 20%, rgba(46,197,182,.22), transparent 60%), radial-gradient(800px 520px at 80% 40%, rgba(126,213,255,.18), transparent 60%), #07080d;"></div>
-
     <div class="shell hero-content">
       <div class="hero-grid">
         <div>
@@ -720,7 +729,8 @@
 
           <div class="hero-cta">
             <a class="btn btn-primary soft-hover" href="/customer.html" data-i18n="hero_cta_primary">Get started</a>
-            <a class="btn btn-ghost soft-hover" href="/agent-chat.html" data-i18n="hero_cta_secondary">Ask about trust</a>
+            <!-- ÄNDRAT: Fråga om trust -> scroll till Se värdet direkt -->
+            <a class="btn btn-ghost soft-hover" href="#sim">Fråga om trust</a>
           </div>
         </div>
 
@@ -732,12 +742,12 @@
 
           <div class="hero-metrics">
             <div class="metric">
-              <b id="heroScore">94</b>
-              <span data-i18n="hero_metric_score">Trust score</span>
+              <b id="heroScore">4.6</b>
+              <span>Trust (1–5)</span>
             </div>
             <div class="metric">
               <b id="heroTx">127</b>
-              <span data-i18n="hero_metric_tx">Verified transactions</span>
+              <span>Verifierade transaktioner</span>
             </div>
           </div>
         </aside>
@@ -745,7 +755,7 @@
     </div>
   </section>
 
-  <!-- HOW -->
+  <!-- WHITE BLOCK (text + features) -->
   <section id="how" class="section white-block anchor">
     <div class="shell">
       <h2 class="section-title" data-i18n="how_title">A priority lane for trustworthy people online.</h2>
@@ -774,12 +784,12 @@
   <!-- Reputation Card + Simulator -->
   <section id="sim" class="section anchor">
     <div class="shell">
-      <h2 class="section-title" data-i18n="sim_title">Se värdet direkt.</h2>
-      <!-- ✅ borttagen “investerarvänliga”-texten -->
+      <h2 class="section-title">Se värdet direkt.</h2>
+      <!-- borttagen "investor-friendly"-text -->
 
       <div style="display:flex; gap:22px; flex-wrap:wrap; align-items:flex-start;">
 
-        <!-- Reputation card flip (behåll) -->
+        <!-- Reputation card flip (behåller funktionalitet) -->
         <div class="flip-wrap">
           <div class="flip soft-hover" id="repFlip" role="button" tabindex="0" aria-label="Flip reputation card">
             <div class="flip-face flip-front">
@@ -793,20 +803,20 @@
 
                 <div class="card-meta">
                   <div class="m">
-                    <b id="repScore">4.7</b>
-                    <span>Trust (1–5P)</span>
+                    <b id="repScore">4.6</b>
+                    <span>Förtroende (1–5)</span>
                   </div>
                   <div class="m">
                     <b id="repTx">127</b>
-                    <span data-i18n="rep_tx">Verifierade transaktioner</span>
+                    <span>Verifierade transaktioner</span>
                   </div>
                   <div class="m">
                     <b id="repPlatforms">Tradera, eBay</b>
-                    <span data-i18n="rep_plat">Plattformar kopplade</span>
+                    <span>Plattformar kopplade</span>
                   </div>
                   <div class="m">
-                    <b data-i18n="rep_hint">Klicka</b>
-                    <span data-i18n="rep_hint2">Förklaring av score</span>
+                    <b>Tryck</b>
+                    <span>Förklaring</span>
                   </div>
                 </div>
 
@@ -819,16 +829,16 @@
 
             <div class="flip-face flip-back">
               <div class="card-inner">
-                <div style="font-weight:820; letter-spacing:-.02em; font-size:16px;">Varför den här scoren?</div>
+                <div style="font-weight:820; letter-spacing:-.02em; font-size:16px;">Varför denna nivå?</div>
                 <p style="margin:10px 0 12px; color:var(--w-muted); line-height:1.55;">
-                  Scoren väger samman verifierade transaktioner, betygskvalitet, aktualitet och risksignaler.
-                  Målet: göra trust portabelt och svårt att fejka.
+                  Förtroendet bygger på verifierade transaktioner, kvalitet i omdömen, aktualitet och risksignaler.
+                  Målet är att göra förtroende portabelt och svårt att fejka.
                 </p>
 
                 <div class="grid-3" style="grid-template-columns: 1fr; gap: 10px;">
                   <div class="w-card" style="box-shadow:none;">
                     <b>Verifierad historik</b>
-                    <div style="color:var(--w-muted); font-size:13px;">Fler verifierade transaktioner ger högre tillit.</div>
+                    <div style="color:var(--w-muted); font-size:13px;">Fler verifierade affärer höjer säkerheten.</div>
                   </div>
                   <div class="w-card" style="box-shadow:none;">
                     <b>Stabilitet</b>
@@ -836,35 +846,43 @@
                   </div>
                   <div class="w-card" style="box-shadow:none;">
                     <b>Risksignaler</b>
-                    <div style="color:var(--w-muted); font-size:13px;">Tvister och misstänkta mönster sänker scoren.</div>
+                    <div style="color:var(--w-muted); font-size:13px;">Dispyter och mönster kan sänka nivån.</div>
                   </div>
                 </div>
 
                 <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
                   <button class="btn btn-primary soft-hover" type="button" id="flipBackBtn">Tillbaka</button>
-                  <a class="btn btn-ghost soft-hover" href="/agent-chat.html">Fråga om trust</a>
+                  <a class="btn btn-ghost soft-hover" href="/agent-chat.html">Fråga mer</a>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- ✅ Simulator (uppgraderad graf + svenska + 1–5P) -->
+        <!-- Simulator (ny proffsig graf + 5P) -->
         <div class="sim">
           <div>
-            <h3>Vad händer om användaren får fler verifierade transaktioner?</h3>
+            <h3>Hur utvecklas förtroendet över tid?</h3>
             <p>
-              Dra reglaget för att simulera. Trust (1–5P) och grafen uppdateras direkt.
+              Dra reglaget för att simulera fler verifierade transaktioner.
+              Vi visar hur förtroendet kan röra sig mot 5P när historiken blir starkare.
             </p>
 
             <div class="slider-row">
-              <!-- slider 0..200 påverkar trust 1..5 -->
               <input id="txSlider" type="range" min="0" max="200" value="10" />
-              <div class="score-pill" id="scorePill" aria-live="polite">
-                <span class="score-dot" id="scoreDot" aria-hidden="true"></span>
-                <span class="p-badge" aria-hidden="true">P</span>
-                <span>Trust</span>
-                <span id="simScore">4.0</span><span style="opacity:.6;">/5</span>
+              <div class="trust-pill" id="scorePill" aria-live="polite">
+                <span class="trust-dot" id="scoreDot" aria-hidden="true"></span>
+                <span>Förtroende</span>
+                <span id="simScore">4.6</span>
+                <span style="opacity:.6;">/ 5</span>
+
+                <span class="pbar" aria-label="5P rating">
+                  <span class="p is-on">P</span>
+                  <span class="p is-on">P</span>
+                  <span class="p is-on">P</span>
+                  <span class="p is-on">P</span>
+                  <span class="p">P</span>
+                </span>
               </div>
             </div>
 
@@ -873,37 +891,48 @@
             </div>
           </div>
 
-          <div class="spark">
-            <div class="spark-top">
-              <b>Trust-utveckling</b>
+          <div class="sparkPro">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;">
+              <b>Förtroende-utveckling</b>
               <span style="color:var(--w-muted); font-size:12px;" id="simColorLabel">Låg risk</span>
             </div>
 
-            <!-- mer “premium” svg -->
-            <svg id="sparkSvg" viewBox="0 0 240 120" width="100%" height="120"
-                 xmlns="http://www.w3.org/2000/svg" aria-label="Trust graph">
-              <!-- grid -->
-              <path d="M10 20 H230 M10 50 H230 M10 80 H230 M10 110 H230"
-                    stroke="rgba(15,15,18,.06)" stroke-width="1" fill="none"/>
+            <!-- proffsigare SVG -->
+            <svg id="sparkSvg" viewBox="0 0 260 110" width="100%" height="110" xmlns="http://www.w3.org/2000/svg" aria-label="Förtroendegraf">
+              <defs>
+                <linearGradient id="gLine" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0" stop-color="rgba(46,197,182,1)"/>
+                  <stop offset="1" stop-color="rgba(126,213,255,1)"/>
+                </linearGradient>
+                <linearGradient id="gFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="rgba(46,197,182,.18)"/>
+                  <stop offset="1" stop-color="rgba(46,197,182,0)"/>
+                </linearGradient>
+              </defs>
 
-              <!-- area under curve -->
-              <path id="sparkArea"
-                    d="M10 100 L50 92 L90 86 L130 70 L170 60 L210 52 L210 110 L10 110 Z"
-                    fill="rgba(46,197,182,.14)"/>
+              <!-- subtilt rutnät -->
+              <g opacity=".25" stroke="rgba(15,15,18,.12)" stroke-width="1">
+                <path d="M10 25 H250" />
+                <path d="M10 55 H250" />
+                <path d="M10 85 H250" />
+              </g>
 
-              <!-- main line -->
+              <!-- area -->
+              <path id="sparkArea" d="M10 86 C55 78, 78 65, 110 58 C142 50, 175 44, 210 40 C232 38, 242 38, 250 38 L250 100 L10 100 Z"
+                    fill="url(#gFill)" />
+
+              <!-- line -->
               <path id="sparkPath"
-                    d="M10 100 L50 92 L90 86 L130 70 L170 60 L210 52"
-                    fill="none" stroke="rgba(15,15,18,.86)" stroke-width="3" stroke-linecap="round"/>
+                    d="M10 86 C55 78, 78 65, 110 58 C142 50, 175 44, 210 40 C232 38, 242 38, 250 38"
+                    fill="none" stroke="url(#gLine)" stroke-width="4" stroke-linecap="round"/>
 
-              <!-- end dot -->
-              <circle id="sparkDot" cx="210" cy="52" r="5" fill="rgba(34,197,94,1)"/>
+              <!-- dot -->
+              <circle id="sparkDot" cx="250" cy="38" r="6" fill="rgba(46,197,182,1)"/>
+              <circle id="sparkGlow" cx="250" cy="38" r="14" fill="rgba(46,197,182,.18)"/>
+
+              <text x="10" y="108" font-size="11" fill="rgba(15,15,18,.55)">Nu</text>
+              <text x="235" y="108" font-size="11" fill="rgba(15,15,18,.55)">Framåt</text>
             </svg>
-
-            <div class="spark-axes">
-              <span>Nu</span>
-              <span>Framåt</span>
-            </div>
           </div>
         </div>
 
@@ -911,65 +940,64 @@
     </div>
   </section>
 
-  <!-- Globe + KPI table (behåll er nuvarande layout här) -->
+  <!-- Globe + KPI table (JORDVIDEO ÖVER rubrik+tabell) -->
   <section id="globe" class="section anchor">
-    <div class="shell globe-wrap">
-      <div>
-        <h2 class="section-title" data-i18n="globe_title">A global layer of trust.</h2>
-        <p class="section-lead" data-i18n="globe_lead">
-          A shared, portable reputation signal that can complement (or beat) traditional credit signals over time.
-        </p>
+    <div class="globe-hero" aria-label="Rotating globe">
+      <video autoplay muted loop playsinline preload="auto">
+        <source src="/assets/jorden.mp4?v=1" type="video/mp4" />
+      </video>
+    </div>
 
-        <table class="kpi" aria-label="PeerRate key metrics">
-          <thead>
-            <tr>
-              <th data-i18n="kpi_metric">Metric</th>
-              <th data-i18n="kpi_value">Value</th>
-              <th data-i18n="kpi_note">Note</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td data-i18n="k1">Registered users</td>
-              <td><b id="kUsers">—</b></td>
-              <td data-i18n="k1n">Early access / MVP</td>
-            </tr>
-            <tr>
-              <td data-i18n="k2">Verified transactions</td>
-              <td><b id="kTx">—</b></td>
-              <td data-i18n="k2n">Imported + user submitted</td>
-            </tr>
-            <tr>
-              <td data-i18n="k3">Reviews / ratings</td>
-              <td><b id="kRatings">—</b></td>
-              <td data-i18n="k3n">Linked to identities</td>
-            </tr>
-            <tr>
-              <td data-i18n="k4">Platforms connected</td>
-              <td><b id="kPlatforms">Tradera, eBay</b></td>
-              <td data-i18n="k4n">More coming</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <div class="shell">
+      <h2 class="section-title">Ett globalt lager av trust.</h2>
+      <p class="section-lead">
+        En enkel och delbar signal som visar hur pålitlig du är i P2P – baserat på riktiga, verifierade affärer.
+      </p>
 
-      <div class="globe" aria-label="Rotating globe">
-        <video autoplay muted loop playsinline preload="auto">
-          <source src="/assets/jorden.mp4?v=2" type="video/mp4" />
-        </video>
-      </div>
+      <table class="kpi" aria-label="PeerRate nyckeltal">
+        <thead>
+          <tr>
+            <th>Nyckeltal</th>
+            <th>Värde</th>
+            <th>Not</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Registrerade användare</td>
+            <td><b id="kUsers">—</b></td>
+            <td>Early access / MVP</td>
+          </tr>
+          <tr>
+            <td>Verifierade transaktioner</td>
+            <td><b id="kTx">—</b></td>
+            <td>Importerade + inskickade</td>
+          </tr>
+          <tr>
+            <td>Omdömen / betyg</td>
+            <td><b id="kRatings">—</b></td>
+            <td>Kopplade till identiteter</td>
+          </tr>
+          <tr>
+            <td>Plattformar kopplade</td>
+            <td><b id="kPlatforms">Tradera, eBay</b></td>
+            <td>Mer kommer</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </section>
 
-  <!-- RATE -->
+  <!-- RATE (ta bort intro-texten ovanför Logga in + flytta inloggad-badge) -->
   <section id="rate" class="section white-block anchor">
     <div class="shell">
 
-      <!-- ✅ borttagen rubrik + lead-text här, så att det börjar direkt vid Logga in -->
+      <!-- OBS: borttagen rubrik + lead här (enligt din punkt 2) -->
 
-      <div class="pr-form-wrap" style="max-width: 980px; margin:0 auto;">
+      <div class="rate-wrap pr-form-wrap">
 
-        <div id="user-badge" class="user-badge hidden" style="margin-bottom:14px;">
+        <!-- Flyttad: syns bara om inloggad, och ligger top-right -->
+        <div id="user-badge" class="user-badge hidden">
           <div class="user-avatar" id="user-badge-avatar">PR</div>
           <div>
             <div class="user-label">Inloggad som</div>
@@ -1003,7 +1031,7 @@
           </form>
         </section>
 
-        <section class="pr-card" id="rating-card" style="margin-top: 18px;">
+        <section class="pr-card" id="rating-card">
           <h2>Lämna ett betyg</h2>
 
           <p id="rating-login-hint" style="margin:0 0 10px;color:var(--pr-muted);font-size:12px;">
@@ -1153,7 +1181,7 @@
   <script type="module" src="/modules/main.js"></script>
 
   <script>
-    // Visa/dölj report details utan :has (så det funkar i fler browsers)
+    // Visa/dölj report details utan :has
     (function(){
       const flag = document.getElementById('reportFlag');
       const box = document.getElementById('reportDetails');
@@ -1163,72 +1191,93 @@
       sync();
     })();
 
-    // ✅ SIMULATOR: 0..200 tx => trust 1..5 (med mjuk kurva)
+    // Simulatorlogik (1–5 skala + 5P + proffsig graf)
     (function(){
       const slider = document.getElementById('txSlider');
       const simAdded = document.getElementById('simAdded');
       const simScore = document.getElementById('simScore');
-      const dot = document.getElementById('sparkDot');
-      const path = document.getElementById('sparkPath');
-      const area = document.getElementById('sparkArea');
-      const scoreDot = document.getElementById('scoreDot');
-      const label = document.getElementById('simColorLabel');
+      const simColorLabel = document.getElementById('simColorLabel');
+      const dot = document.getElementById('scoreDot');
+      const sparkPath = document.getElementById('sparkPath');
+      const sparkArea = document.getElementById('sparkArea');
+      const sparkDot = document.getElementById('sparkDot');
+      const sparkGlow = document.getElementById('sparkGlow');
 
-      if(!slider) return;
+      const pEls = Array.from(document.querySelectorAll('.pbar .p'));
 
-      function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+      if (!slider) return;
 
-      function txToScore(tx){
-        // bas 3.5, med avtagande marginalnytta upp mot 5
-        const t = tx / 200;              // 0..1
-        const eased = 1 - Math.pow(1 - t, 1.6);
-        const score = 3.6 + eased * 1.3; // ca 3.6..4.9
-        return clamp(score, 1, 5);
+      // Basnivå (exempel): 4.1, rör sig mot 4.9 när tx ökar.
+      const base = 4.10;
+      const maxAdd = 0.85; // max upp till ~4.95
+
+      function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+      function setPBar(score){
+        // score 1..5 -> fyll P proportionellt
+        const pct = clamp((score - 1) / 4, 0, 1); // 0..1
+        const filled = Math.round(pct * 5);
+        pEls.forEach((el, i) => el.classList.toggle('is-on', i < filled));
       }
 
-      function scoreToRisk(score){
-        if(score >= 4.6) return {txt:"Mycket låg risk", color:"rgba(34,197,94,1)"};
-        if(score >= 4.2) return {txt:"Låg risk", color:"rgba(34,197,94,1)"};
-        if(score >= 3.7) return {txt:"Medelrisk", color:"rgba(246,169,75,1)"};
-        return {txt:"Högre risk", color:"rgba(239,68,68,1)"};
-      }
-
-      function update(){
-        const tx = Number(slider.value || 0);
-        simAdded.textContent = String(tx);
-
-        const score = txToScore(tx);
-        simScore.textContent = score.toFixed(1);
-
-        const risk = scoreToRisk(score);
-        label.textContent = risk.txt;
-
-        // färga score-dot och grafens slutpunkt
-        scoreDot.style.background = risk.color;
-        scoreDot.style.boxShadow = `0 0 0 6px ${risk.color.replace('1)', '.14)')}`;
-        if(dot) dot.setAttribute('fill', risk.color);
-
-        // Bygg en "World-ish" kurva 1..5 => y 105..30
-        const y = (s)=> 110 - ((s-1)/4)*80; // 1 => 110, 5 => 30
-        const s1 = clamp(score - 0.9, 1, 5);
-        const s2 = clamp(score - 0.6, 1, 5);
-        const s3 = clamp(score - 0.35,1, 5);
-        const s4 = clamp(score - 0.15,1, 5);
-        const s5 = score;
-
-        const d = `M10 ${y(s1).toFixed(1)} L50 ${y(s2).toFixed(1)} L90 ${y(s3).toFixed(1)} L130 ${y(s4).toFixed(1)} L170 ${(y((s4+s5)/2)).toFixed(1)} L210 ${y(s5).toFixed(1)}`;
-        if(path) path.setAttribute('d', d);
-
-        const a = `M10 ${y(s1).toFixed(1)} L50 ${y(s2).toFixed(1)} L90 ${y(s3).toFixed(1)} L130 ${y(s4).toFixed(1)} L170 ${(y((s4+s5)/2)).toFixed(1)} L210 ${y(s5).toFixed(1)} L210 110 L10 110 Z`;
-        if(area) area.setAttribute('d', a);
-
-        if(dot){
-          dot.setAttribute('cy', y(s5).toFixed(1));
+      function setRisk(score){
+        // Enkel risklabel och accent baserat på score
+        if (score >= 4.6){
+          simColorLabel.textContent = 'Låg risk';
+          dot.style.background = 'var(--acc)';
+          dot.style.boxShadow = '0 0 0 6px rgba(46,197,182,.16)';
+        } else if (score >= 4.2){
+          simColorLabel.textContent = 'Normal risk';
+          dot.style.background = 'rgba(126,213,255,1)';
+          dot.style.boxShadow = '0 0 0 6px rgba(126,213,255,.14)';
+        } else {
+          simColorLabel.textContent = 'Förhöjd risk';
+          dot.style.background = 'rgba(246,169,75,1)';
+          dot.style.boxShadow = '0 0 0 6px rgba(246,169,75,.16)';
         }
       }
 
-      slider.addEventListener('input', update);
-      update();
+      function updateGraph(score){
+        // score 1..5 -> y (lägre y = högre)
+        // Vi bygger en kurva som stiger mjukt mot slutet.
+        const t = clamp((score - 1) / 4, 0, 1); // 0..1
+        const yEnd = 86 - (48 * t); // 86..38-ish
+        const yMid1 = 86 - (28 * t);
+        const yMid2 = 86 - (38 * t);
+
+        const d = `M10 86 C55 ${78 - (10*t)}, 78 ${65 - (8*t)}, 110 ${yMid1}
+                   C142 ${yMid2}, 175 ${44 - (6*t)}, 210 ${40 - (4*t)}
+                   C232 ${yEnd + 2}, 242 ${yEnd}, 250 ${yEnd}`;
+        sparkPath.setAttribute('d', d);
+
+        const area = `${d} L250 100 L10 100 Z`;
+        sparkArea.setAttribute('d', area);
+
+        sparkDot.setAttribute('cy', yEnd.toFixed(1));
+        sparkGlow.setAttribute('cy', yEnd.toFixed(1));
+      }
+
+      function onInput(){
+        const added = Number(slider.value || 0);
+        simAdded.textContent = String(added);
+
+        const gain = maxAdd * (1 - Math.exp(-added / 70)); // avtagande marginalnytta
+        const score = clamp(base + gain, 1, 4.95);
+
+        simScore.textContent = score.toFixed(1);
+        setPBar(score);
+        setRisk(score);
+        updateGraph(score);
+
+        // Spegla i hero-siffran om du vill (valfritt)
+        const heroScore = document.getElementById('heroScore');
+        const repScore = document.getElementById('repScore');
+        if (heroScore) heroScore.textContent = score.toFixed(1);
+        if (repScore) repScore.textContent = score.toFixed(1);
+      }
+
+      slider.addEventListener('input', onInput);
+      onInput();
     })();
   </script>
 
