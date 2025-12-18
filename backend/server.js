@@ -49,7 +49,7 @@ const externalDataRoutes = assertRouter('externalDataRoutes', require('./routes/
 const blocketRoutes = assertRouter('blocketRoutes', require('./routes/blocketRoutes'));
 const traderaRoutes = assertRouter('traderaRoutes', require('./routes/traderaRoutes'));
 
-// ✅ NYTT: eBay data routes (orders etc)
+// ✅ eBay + Agent
 const ebayRoutes = assertRouter('ebayRoutes', require('./routes/ebayRoutes'));
 const agentRoutes = assertRouter('agentRoutes', require('./routes/agentRoutes'));
 
@@ -87,10 +87,28 @@ app.use((req, res, next) => {
 // CORS
 app.use(cors({ origin: corsOrigin }));
 
-// Statik (frontend)
-app.use(express.static(path.join(__dirname, '..', 'frontend')));
+// -----------------------------
+// Statik (frontend + assets)
+// Viktigt: assets måste ligga FÖRE SPA fallback
+// -----------------------------
+const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
+const ASSETS_DIR = path.join(FRONTEND_DIR, 'assets');
 
+// 1) Servera assets: /assets/hero.mp4, /assets/Jorden.png, /assets/Logo.PNG
+app.use(
+  '/assets',
+  express.static(ASSETS_DIR, {
+    maxAge: '7d',
+    immutable: true,
+  })
+);
+
+// 2) Servera resten av frontend (html/css/js)
+app.use(express.static(FRONTEND_DIR));
+
+// -----------------------------
 // Rate limit för API
+// -----------------------------
 app.use(
   '/api/',
   rateLimit({
@@ -112,11 +130,8 @@ app.use('/api', externalDataRoutes);
 app.use('/api', blocketRoutes);
 app.use('/api', integrationsRoutes);
 app.use('/api', traderaRoutes);
-
-// ✅ NYTT: mounta eBay endpoints under /api
 app.use('/api', ebayRoutes);
 app.use('/api', agentRoutes);
-
 
 // -----------------------------
 // Health
@@ -144,9 +159,14 @@ app.use((err, _req, res, _next) => {
 
 // -----------------------------
 // SPA fallback (lägg ALLRA SIST)
+// MEN: INTE för /api och INTE för /assets och INTE för filer med "."
 // -----------------------------
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  if (req.path.startsWith('/assets')) return next();
+  if (req.path.includes('.')) return next(); // ex .js .css .png .mp4
+
+  return res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
 });
 
 // --- Start ---
