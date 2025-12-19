@@ -656,9 +656,16 @@ input[type="range"]{ width:100%; accent-color: #111; }
   border: 1px solid rgba(11,22,51,.12);
   background:
     linear-gradient(180deg, rgba(255,255,255,.90), rgba(255,255,255,.75));
-  flex-wrap: wrap;
+  flex-wrap: nowrap;     /* ✅ tvingar 5P på samma rad */
   justify-content: center;
+  overflow: hidden;
 }
+
+/* På riktigt små skärmar får den wrappa igen om det behövs */
+@media (max-width: 420px){
+  .pbar{ flex-wrap: wrap; }
+}
+
 .pbar .p{
   width: 44px;
   height: 44px;
