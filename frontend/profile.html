@@ -70,32 +70,32 @@
       <div id="user-badge" class="user-badge hidden">
         <div class="user-avatar" id="user-badge-avatar">PR</div>
         <div>
-          <div class="user-label">Inloggad som</div>
+          <div class="user-label" data-i18n="profile_badge_label">Inloggad som</div>
           <div class="user-name" id="user-badge-name">–</div>
         </div>
       </div>
 
-      <h1>Min profil</h1>
-      <p class="lead">
+      <h1 data-i18n="profile_h1">Min profil</h1>
+      <p class="lead" data-i18n="profile_lead">
         Här kan du se dina uppgifter och ditt samlade omdöme.
       </p>
 
       <!-- LOGIN-KORT (visas bara om man inte är inloggad) -->
       <section class="card" id="login-card">
-        <h2>Logga in</h2>
-        <p class="muted">
+        <h2 data-i18n="profile_login_title">Logga in</h2>
+        <p class="muted" data-i18n="profile_login_lead">
           Logga in med den e-post och det lösenord du registrerade dig med.
         </p>
 
         <form id="login-form" autocomplete="off">
-          <label for="login-email">E-post</label>
+          <label for="login-email" data-i18n="profile_login_email">E-post</label>
           <input id="login-email" name="email" type="email" placeholder="erik@example.com" />
 
-          <label for="login-password">Lösenord</label>
+          <label for="login-password" data-i18n="profile_login_password">Lösenord</label>
           <input id="login-password" name="password" type="password" placeholder="Ditt lösenord" />
 
           <div class="row" style="margin-top:12px">
-            <button class="primary" type="submit" id="login-btn">Logga in</button>
+            <button class="primary" type="submit" id="login-btn" data-i18n="profile_login_btn">Logga in</button>
           </div>
 
           <p id="login-status" class="tiny muted" style="margin-top:8px;"></p>
@@ -105,20 +105,57 @@
       <!-- Allt här visas bara när man är inloggad -->
       <div id="profile-root" class="hidden">
 
+        <!-- ✅ Mitt omdöme (flyttad högst upp) -->
+        <section class="card">
+          <h2 data-i18n="profile_my_rating_title">Mitt omdöme</h2>
+          <p class="tiny muted" data-i18n="profile_my_rating_lead">
+            Sammanfattning av betyg som är kopplade till din e-postadress.
+          </p>
+
+          <div class="ratings-visuals">
+            <div class="ratings-visual-box">
+              <h3 class="tiny" data-i18n="profile_rating_sources_title">Varifrån kommer dina omdömen?</h3>
+              <div id="rating-source-pie" class="rating-pie">
+                <div id="rating-source-pie-label" class="rating-pie-center-label" data-i18n="profile_no_ratings">Inga omdömen</div>
+              </div>
+              <div id="rating-source-legend" class="rating-legend tiny muted"></div>
+            </div>
+
+            <div class="ratings-visual-box">
+              <h3 class="tiny" data-i18n="profile_pr_rating_title">Din PeerRate-rating</h3>
+              <div id="rating-p-symbols" class="rating-p-row"></div>
+              <div id="rating-p-symbols-text" class="tiny muted"></div>
+            </div>
+          </div>
+
+          <p class="score-line">
+            <span data-i18n="profile_avg_label">Snittbetyg:</span>
+            <strong><span id="profile-score">–</span> / 5</strong>
+            <span class="tiny muted">(<span data-i18n="profile_based_on">baserat på</span> <span id="profile-score-count">0</span> <span data-i18n="profile_reviews">omdömen</span>)</span>
+          </p>
+
+          <div class="score-bar">
+            <div class="score-bar-fill" id="profile-score-bar"></div>
+          </div>
+
+          <div id="ratings-graph" class="ratings-graph"></div>
+          <div id="ratings-list" class="ratings-list"></div>
+        </section>
+
         <!-- Mina uppgifter -->
         <section class="card">
-          <h2>Mina uppgifter</h2>
-          <p class="tiny muted">Uppgifter kopplade till din profil.</p>
+          <h2 data-i18n="profile_my_details_title">Mina uppgifter</h2>
+          <p class="tiny muted" data-i18n="profile_my_details_lead">Uppgifter kopplade till din profil.</p>
 
           <!-- Profilbild -->
           <div class="profile-avatar-block">
             <div class="profile-avatar-preview" id="profile-avatar-preview">PR</div>
             <div>
-              <label class="profile-avatar-upload-label">
+              <label class="profile-avatar-upload-label" data-i18n="profile_avatar_upload">
                 Ladda upp profilbild
                 <input type="file" id="profile-avatar-input" accept="image/*" />
               </label>
-              <p class="profile-avatar-text">
+              <p class="profile-avatar-text" data-i18n="profile_avatar_note">
                 Bilden sparas bara lokalt i din webbläsare och kopplas till “Inloggad som”.
               </p>
             </div>
@@ -214,44 +251,9 @@
           </div>
         </section>
 
-        <!-- Mitt omdöme -->
-        <section class="card">
-          <h2>Mitt omdöme</h2>
-          <p class="tiny muted">Sammanfattning av betyg som är kopplade till din e-postadress.</p>
-
-          <div class="ratings-visuals">
-            <div class="ratings-visual-box">
-              <h3 class="tiny">Varifrån kommer dina omdömen?</h3>
-              <div id="rating-source-pie" class="rating-pie">
-                <div id="rating-source-pie-label" class="rating-pie-center-label">Inga omdömen</div>
-              </div>
-              <div id="rating-source-legend" class="rating-legend tiny muted"></div>
-            </div>
-
-            <div class="ratings-visual-box">
-              <h3 class="tiny">Din PeerRate-rating</h3>
-              <div id="rating-p-symbols" class="rating-p-row"></div>
-              <div id="rating-p-symbols-text" class="tiny muted"></div>
-            </div>
-          </div>
-
-          <p class="score-line">
-            Snittbetyg:
-            <strong><span id="profile-score">–</span> / 5</strong>
-            <span class="tiny muted">(baserat på <span id="profile-score-count">0</span> omdömen)</span>
-          </p>
-
-          <div class="score-bar">
-            <div class="score-bar-fill" id="profile-score-bar"></div>
-          </div>
-
-          <div id="ratings-graph" class="ratings-graph"></div>
-          <div id="ratings-list" class="ratings-list"></div>
-        </section>
-
         <!-- Logga ut -->
         <section class="card">
-          <button id="logout-btn" type="button" class="secondary">Logga ut</button>
+          <button id="logout-btn" type="button" class="secondary" data-i18n="profile_logout_btn">Logga ut</button>
         </section>
 
       </div>
@@ -261,6 +263,12 @@
       </div>
     </div>
   </main>
+
+  <!-- ✅ Viktigt: initiera språk även på profilsidan -->
+  <script type="module">
+    import { initLandingLanguage } from '/modules/landing/language.js';
+    initLandingLanguage();
+  </script>
 
   <script type="module" src="/modules/main.js"></script>
 </body>
