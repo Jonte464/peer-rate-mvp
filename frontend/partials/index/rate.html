@@ -1,8 +1,8 @@
-<!-- RATE -->
 <section id="rate" class="section white-block anchor">
   <div class="shell">
     <div class="pr-form-wrap" style="max-width: 980px; margin:0 auto;">
 
+      <!-- LOGGA IN (visas när man är utloggad, döljs när man är inloggad av JS) -->
       <section class="pr-card" id="login-card">
         <h2 data-i18n="rate_login_title">Logga in</h2>
         <p style="margin:0 0 10px;color:var(--pr-muted);font-size:13px;" data-i18n="rate_login_lead">
@@ -29,24 +29,33 @@
         </form>
       </section>
 
+      <!-- LÄMNA BETYG -->
       <section class="pr-card" id="rating-card">
         <h2 data-i18n="rate_title">Lämna ett betyg</h2>
 
+        <!-- ✅ Ska synas när man INTE är inloggad (JS döljer den när user finns) -->
         <p id="rating-login-hint" style="margin:0 0 10px;color:var(--pr-muted);font-size:12px;">
           Du behöver logga in för att kunna lämna betyg.
           Logga in ovan eller
           <a href="/customer.html" target="_blank" rel="noopener noreferrer">registrera dig här</a>.
         </p>
 
+        <!-- ✅ Allt formulär måste ligga i denna wrapper (startar dold) -->
         <div id="rating-form-wrapper" class="hidden">
           <form id="rating-form" autocomplete="off">
             <div class="pr-field">
-              <label class="pr-label" for="subject">Vem betygsätter du? <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(användarnamn eller mejl)</span></label>
+              <label class="pr-label" for="subject">
+                Vem betygsätter du?
+                <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(användarnamn eller mejl)</span>
+              </label>
               <input class="pr-input" id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
             </div>
 
             <div class="pr-field">
-              <label class="pr-label" for="rater">Ditt namn/mejl <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span></label>
+              <label class="pr-label" for="rater">
+                Ditt namn/mejl
+                <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span>
+              </label>
               <input class="pr-input" id="rater" name="rater" type="text" placeholder="" />
             </div>
 
@@ -63,7 +72,10 @@
             </div>
 
             <div class="pr-field">
-              <label class="pr-label" for="ratingSource">Varifrån kommer betyget? <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+              <label class="pr-label" for="ratingSource">
+                Varifrån kommer betyget?
+                <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span>
+              </label>
               <select class="pr-select" id="ratingSource" name="source">
                 <option value="" selected>Välj källa (valfritt)</option>
                 <option value="Blocket">Blocket</option>
@@ -75,12 +87,18 @@
             </div>
 
             <div class="pr-field">
-              <label class="pr-label" for="comment">Kommentar <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+              <label class="pr-label" for="comment">
+                Kommentar
+                <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span>
+              </label>
               <textarea class="pr-textarea" id="comment" name="comment" placeholder=""></textarea>
             </div>
 
             <div class="pr-field">
-              <label class="pr-label" for="proofRef">Verifierings-ID <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt, t.ex. ordernr)</span></label>
+              <label class="pr-label" for="proofRef">
+                Verifierings-ID
+                <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt, t.ex. ordernr)</span>
+              </label>
               <input class="pr-input" id="proofRef" name="proofRef" type="text" placeholder="ORDER-123" />
             </div>
 
