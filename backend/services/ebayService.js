@@ -1,14 +1,19 @@
 // backend/services/ebayService.js
 // Bygger eBay OAuth-URL + gör token-utbyte (authorization_code -> access/refresh)
 
-const querystring = require('querystring');
 const https = require('https');
+const querystring = require('querystring');
 
 const EBAY_CLIENT_ID = process.env.EBAY_CLIENT_ID;
 const EBAY_CLIENT_SECRET = process.env.EBAY_CLIENT_SECRET;
 const EBAY_REDIRECT_URI = process.env.EBAY_REDIRECT_URI;
 const EBAY_ENV = (process.env.EBAY_ENV || 'PRODUCTION').toUpperCase();
 
+/**
+ * eBay Auth endpoints
+ * (Obs: auth.ebay.com fungerar fint. auth2.ebay.com syns i din nätverkspanel,
+ * men vi håller oss till officiella basen här.)
+ */
 const EBAY_AUTH_BASE =
   EBAY_ENV === 'SANDBOX'
     ? 'https://auth.sandbox.ebay.com/oauth2/authorize'
@@ -17,17 +22,18 @@ const EBAY_AUTH_BASE =
 const EBAY_TOKEN_HOST =
   EBAY_ENV === 'SANDBOX' ? 'api.sandbox.ebay.com' : 'api.ebay.com';
 
-// Scopes (utökade så vi kan läsa ordrar både som säljare och köpare)
+/**
+ * IMPORTANT:
+ * Vi tar bort den generella "api_scope" och använder bara de scopes vi behöver.
+ * Detta löser ofta "invalid_scope" direkt.
+ */
 const SCOPES = [
-  'https://api.ebay.com/oauth/api_scope',
   'https://api.ebay.com/oauth/api_scope/sell.fulfillment.readonly',
   'https://api.ebay.com/oauth/api_scope/buy.order.readonly',
 ];
 
-
 // ---------- base64url helpers (URL-säkra) ----------
 function toBase64Url(str) {
-  // base64 -> base64url (byt tecken + / och ta bort padding =)
   return Buffer.from(str, 'utf8')
     .toString('base64')
     .replace(/\+/g, '-')
@@ -36,7 +42,6 @@ function toBase64Url(str) {
 }
 
 function fromBase64Url(b64url) {
-  // base64url -> base64 (återställ tecken och padding)
   const b64 = String(b64url || '')
     .replace(/-/g, '+')
     .replace(/_/g, '/');
@@ -48,23 +53,36 @@ function fromBase64Url(b64url) {
 }
 // -----------------------------------------------
 
-function buildEbayAuthUrlForCustomer(customerId) {
+function assertEnvForAuth() {
   if (!EBAY_CLIENT_ID || !EBAY_REDIRECT_URI) {
     throw new Error('EBAY_CLIENT_ID eller EBAY_REDIRECT_URI saknas i env');
   }
+}
+
+function assertEnvForToken() {
+  if (!EBAY_CLIENT_ID || !EBAY_CLIENT_SECRET || !EBAY_REDIRECT_URI) {
+    throw new Error('EBAY_CLIENT_ID/EBAY_CLIENT_SECRET/EBAY_REDIRECT_URI saknas i env');
+  }
+}
+
+function buildEbayAuthUrlForCustomer(customerId) {
+  assertEnvForAuth();
 
   const statePayload = JSON.stringify({ customerId, ts: Date.now() });
   const state = toBase64Url(statePayload);
 
-  const qs = querystring.stringify({
-    response_type: 'code',
-    client_id: EBAY_CLIENT_ID,
-    redirect_uri: EBAY_REDIRECT_URI,
-    scope: SCOPES.join(' '),
-    state,
-  });
+  // Bygg URL säkert (korrekt encoding)
+  const u = new URL(EBAY_AUTH_BASE);
+  u.searchParams.set('response_type', 'code');
+  u.searchParams.set('client_id', EBAY_CLIENT_ID);
+  u.searchParams.set('redirect_uri', EBAY_REDIRECT_URI);
 
-  return { redirectUrl: `${EBAY_AUTH_BASE}?${qs}`, state };
+  // Space-separerad scope-sträng (eBay vill ha detta)
+  u.searchParams.set('scope', SCOPES.join(' '));
+
+  u.searchParams.set('state', state);
+
+  return { redirectUrl: u.toString(), state };
 }
 
 function decodeState(state) {
@@ -98,15 +116,12 @@ function httpPostForm({ host, path, headers, form }) {
           const status = res.statusCode || 0;
           if (status < 200 || status >= 300) {
             return reject(
-              new Error(
-                `eBay token request failed (${status}): ${data?.slice(0, 500)}`
-              )
+              new Error(`eBay token request failed (${status}): ${data?.slice(0, 700)}`)
             );
           }
 
           try {
-            const json = JSON.parse(data);
-            resolve(json);
+            resolve(JSON.parse(data));
           } catch {
             reject(new Error('Kunde inte tolka JSON från eBay token-endpoint'));
           }
@@ -121,31 +136,20 @@ function httpPostForm({ host, path, headers, form }) {
 }
 
 async function exchangeCodeForTokens(code) {
-  if (!EBAY_CLIENT_ID || !EBAY_CLIENT_SECRET || !EBAY_REDIRECT_URI) {
-    throw new Error(
-      'EBAY_CLIENT_ID/EBAY_CLIENT_SECRET/EBAY_REDIRECT_URI saknas i env'
-    );
-  }
+  assertEnvForToken();
 
-  const basic = Buffer.from(
-    `${EBAY_CLIENT_ID}:${EBAY_CLIENT_SECRET}`,
-    'utf8'
-  ).toString('base64');
+  const basic = Buffer.from(`${EBAY_CLIENT_ID}:${EBAY_CLIENT_SECRET}`, 'utf8').toString('base64');
 
-  const tokenJson = await httpPostForm({
+  return httpPostForm({
     host: EBAY_TOKEN_HOST,
     path: '/identity/v1/oauth2/token',
-    headers: {
-      Authorization: `Basic ${basic}`,
-    },
+    headers: { Authorization: `Basic ${basic}` },
     form: {
       grant_type: 'authorization_code',
       code,
       redirect_uri: EBAY_REDIRECT_URI,
     },
   });
-
-  return tokenJson;
 }
 
 async function handleEbayCallback({ code, state }) {
