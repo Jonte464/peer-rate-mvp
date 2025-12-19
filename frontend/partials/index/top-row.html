@@ -1,0 +1,54 @@
+<!-- TOP ROW -->
+<header class="top-row">
+  <div class="shell top-row-inner">
+    <a class="brand soft-hover" href="#top">
+      <div class="logo-badge" aria-hidden="true">
+        <img class="logo-img" src="/assets/Logo.PNG?v=1" alt="PeerRate logo" />
+      </div>
+      <div>
+        <div class="brand-name">PeerRate</div>
+        <div class="brand-sub" data-i18n="top_sub">Förtroende du kan bevisa</div>
+      </div>
+    </a>
+
+    <div class="top-actions">
+      <div class="top-user" id="topUserPill" aria-live="polite" title="Inloggad" aria-expanded="false">
+        <span id="topUserInitials">?</span>
+      </div>
+
+      <div class="user-menu" id="userMenu" role="menu" aria-label="Användarmeny">
+        <button type="button" id="logoutBtn" data-i18n="user_logout">Logga ut</button>
+      </div>
+
+      <button class="lang-pill soft-hover" id="langBtn" type="button" aria-haspopup="true" aria-expanded="false">
+        <span id="langLabel">SV</span>
+        <span style="opacity:.6;">▾</span>
+      </button>
+
+      <button class="menu-btn soft-hover" id="menuBtn" type="button" aria-label="Öppna meny" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" stroke="rgba(15,15,18,.85)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="lang-menu" id="langMenu" role="menu" aria-label="Välj språk">
+    <button type="button" data-lang="sv">Svenska (SV)</button>
+    <button type="button" data-lang="en">English (EN)</button>
+  </div>
+
+  <nav class="menu-panel" id="menuPanel" aria-label="Meny">
+    <div class="shell menu-panel-inner">
+      <a class="menu-link" href="#how"><div data-i18n="menu_how">Hur det funkar</div><span>→</span></a>
+      <a class="menu-link" href="#sim"><div data-i18n="menu_sim">Se värdet direkt</div><span>→</span></a>
+      <a class="menu-link" href="#globe"><div data-i18n="menu_globe">Global trust</div><span>→</span></a>
+      <a class="menu-link" href="#rate"><div data-i18n="menu_rate">Lämna betyg</div><span>→</span></a>
+      <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Registrera dig</div><span>→</span></a>
+      <a class="menu-link" href="/profile.html"><div data-i18n="menu_profile">Min profil</div><span>→</span></a>
+
+      <!-- ingen agent-chat längre -->
+      <a class="menu-link" href="#sim"><div data-i18n="menu_ask">Se 5P-modellen</div><span>→</span></a>
+    </div>
+  </nav>
+</header>

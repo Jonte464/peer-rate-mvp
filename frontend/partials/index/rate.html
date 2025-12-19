@@ -1,0 +1,168 @@
+<!-- RATE -->
+<section id="rate" class="section white-block anchor">
+  <div class="shell">
+    <div class="pr-form-wrap" style="max-width: 980px; margin:0 auto;">
+
+      <section class="pr-card" id="login-card">
+        <h2 data-i18n="rate_login_title">Logga in</h2>
+        <p style="margin:0 0 10px;color:var(--pr-muted);font-size:13px;" data-i18n="rate_login_lead">
+          Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.
+        </p>
+
+        <form id="rating-login-form" autocomplete="off">
+          <div class="pr-field">
+            <label class="pr-label" for="login-email">E-post</label>
+            <input class="pr-input" id="login-email" name="email" type="email" placeholder="erik@example.com" />
+          </div>
+
+          <div class="pr-field">
+            <label class="pr-label" for="login-password">Lösenord</label>
+            <input class="pr-input" id="login-password" name="password" type="password" placeholder="Ditt lösenord" />
+          </div>
+
+          <div class="pr-actions">
+            <button class="pr-btn pr-btn-primary" type="submit" id="login-btn">Logga in</button>
+            <a class="pr-btn pr-btn-ghost" href="/customer.html" data-i18n="rate_signup">Registrera dig</a>
+          </div>
+
+          <p id="login-status" style="margin-top:10px;color:var(--pr-muted);font-size:12px;"></p>
+        </form>
+      </section>
+
+      <section class="pr-card" id="rating-card">
+        <h2 data-i18n="rate_title">Lämna ett betyg</h2>
+
+        <p id="rating-login-hint" style="margin:0 0 10px;color:var(--pr-muted);font-size:12px;">
+          Du behöver logga in för att kunna lämna betyg.
+          Logga in ovan eller
+          <a href="/customer.html" target="_blank" rel="noopener noreferrer">registrera dig här</a>.
+        </p>
+
+        <div id="rating-form-wrapper" class="hidden">
+          <form id="rating-form" autocomplete="off">
+            <div class="pr-field">
+              <label class="pr-label" for="subject">Vem betygsätter du? <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(användarnamn eller mejl)</span></label>
+              <input class="pr-input" id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="rater">Ditt namn/mejl <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span></label>
+              <input class="pr-input" id="rater" name="rater" type="text" placeholder="" />
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="rating">Betyg (1–5)</label>
+              <select class="pr-select" id="rating" name="score" required>
+                <option value="" disabled selected hidden>Välj betyg</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="ratingSource">Varifrån kommer betyget? <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+              <select class="pr-select" id="ratingSource" name="source">
+                <option value="" selected>Välj källa (valfritt)</option>
+                <option value="Blocket">Blocket</option>
+                <option value="Tradera">Tradera</option>
+                <option value="Airbnb">Airbnb</option>
+                <option value="Husknuten">Husknuten</option>
+                <option value="Tiptap">Tiptap</option>
+              </select>
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="comment">Kommentar <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+              <textarea class="pr-textarea" id="comment" name="comment" placeholder=""></textarea>
+            </div>
+
+            <div class="pr-field">
+              <label class="pr-label" for="proofRef">Verifierings-ID <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt, t.ex. ordernr)</span></label>
+              <input class="pr-input" id="proofRef" name="proofRef" type="text" placeholder="ORDER-123" />
+            </div>
+
+            <div style="margin-top:12px;">
+              <label style="font-weight:700;color:var(--pr-purple);">
+                <input type="checkbox" id="reportFlag" />
+                Rapportera misstänkt bedrägeri
+              </label>
+              <div style="color:var(--pr-muted);font-size:12px;">
+                Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.
+              </div>
+
+              <div id="reportDetails" style="display:none;margin-top:10px;border:1px solid rgba(0,0,0,.08);background:#fff;padding:12px;border-radius:12px;">
+                <div class="pr-field">
+                  <label class="pr-label" for="reportReason">Typ av problem</label>
+                  <select class="pr-select" id="reportReason">
+                    <option value="">Välj...</option>
+                    <option>Misstänkt bedrägeri</option>
+                    <option>Vilseledande identitet</option>
+                    <option>Obetald/utebliven leverans</option>
+                    <option>Falsk/felaktigt beskriven vara/tjänst</option>
+                    <option>Otillåten betalningsmetod/chargeback-abuse</option>
+                    <option>Annan oegentlighet</option>
+                  </select>
+                </div>
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                  <div style="flex:1;min-width:180px;">
+                    <label class="pr-label" for="reportDate">Datum</label>
+                    <input class="pr-input" id="reportDate" type="date" />
+                  </div>
+                  <div style="flex:1;min-width:180px;">
+                    <label class="pr-label" for="reportTime">Tid</label>
+                    <input class="pr-input" id="reportTime" type="time" />
+                  </div>
+                </div>
+
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+                  <div style="flex:1;min-width:180px;">
+                    <label class="pr-label" for="reportAmount">Belopp (SEK) <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+                    <input class="pr-input" id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
+                  </div>
+                  <div style="flex:1;min-width:180px;">
+                    <label class="pr-label" for="reportLink">Motpart/annonslänk <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+                    <input class="pr-input" id="reportLink" type="url" placeholder="https://annons-eller-profil" />
+                  </div>
+                </div>
+
+                <div class="pr-field" style="margin-top:8px;">
+                  <label class="pr-label" for="reportText">Beskrivning</label>
+                  <textarea class="pr-textarea" id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp."></textarea>
+                </div>
+
+                <div class="pr-field">
+                  <label class="pr-label" for="evidenceUrl">Bevislänk <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+                  <input class="pr-input" type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
+                </div>
+
+                <div class="pr-field">
+                  <label class="pr-label" for="reportFiles">Ladda upp bevis <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
+                  <input class="pr-input" id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
+                  <div style="font-size:12px;color:var(--pr-muted);margin-top:6px">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
+                  <ul id="fileList" style="margin:6px 0 0;padding:0;list-style:none"></ul>
+
+                  <label style="margin-top:8px;font-weight:700;color:var(--pr-purple);display:block;">
+                    <input type="checkbox" id="reportConsent" />
+                    Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="pr-actions" style="margin-top:14px;">
+              <button class="pr-btn pr-btn-primary" type="submit">Skicka betyg</button>
+              <button class="pr-btn pr-btn-ghost" type="button" id="reset-form">Avbryt</button>
+            </div>
+
+            <div id="notice" style="display:none;margin-top:12px;border-radius:12px;padding:10px 14px;font-weight:700;border:1px solid rgba(0,0,0,.08);background:#fff;"></div>
+          </form>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</section>
