@@ -208,48 +208,10 @@
           </div>
         </section>
 
-        <!-- Tradera-koppling -->
-        <section class="card" id="tradera-card">
-          <h2>Tradera-koppling</h2>
-          <p class="tiny muted">
-            Koppla ditt Tradera-konto för att visa avslutade affärer som en del av ditt förtroendeunderlag.
-            Dina Tradera-uppgifter används endast för att hämta information kopplad till dina affärer.
-          </p>
-
-          <div class="row">
-            <div>
-              <label for="tradera-username-input">Tradera-användarnamn</label>
-              <input id="tradera-username-input" type="text" placeholder="Ditt Tradera-användarnamn" />
-            </div>
-            <div>
-              <label for="tradera-password-input">Tradera-lösenord (valfritt)</label>
-              <input id="tradera-password-input" type="password" placeholder="Ditt Tradera-lösenord" />
-              <p class="tiny muted">Lösenordet lagras krypterat. Lämna tomt om du bara vill spara användarnamnet.</p>
-            </div>
-          </div>
-
-          <div class="row" style="margin-top:8px;">
-            <button type="button" class="primary" id="tradera-connect-btn">Koppla / uppdatera Tradera-konto</button>
-            <button type="button" class="secondary" id="tradera-mock-btn">Skapa demoaffärer från Tradera</button>
-            <button type="button" class="secondary" id="tradera-sync-btn">Synka riktiga Tradera-affärer</button>
-          </div>
-
-          <p id="tradera-notice" class="tiny muted" style="margin-top:8px;"></p>
-
-          <hr style="margin:16px 0;border:none;border-top:1px solid rgba(0,0,0,.06);" />
-
-          <h3>Översikt</h3>
-          <ul class="profile-list">
-            <li><span class="profile-label">Användarnamn</span><span class="profile-value" id="tradera-username-label">–</span></li>
-            <li><span class="profile-label">Senast synkad</span><span class="profile-value" id="tradera-last-synced">–</span></li>
-          </ul>
-
-          <div id="tradera-orders-section" style="margin-top:12px;">
-            <h3>Avslutade affärer från Tradera</h3>
-            <p id="tradera-orders-summary" class="tiny muted"></p>
-            <div id="tradera-orders-list" class="ratings-list"></div>
-          </div>
-        </section>
+        <!-- Tradera-koppling (tillfälligt dold) -->
+<section class="card hidden" id="tradera-card" style="display:none;">
+  <!-- Tradera är tillfälligt avstängt i UI -->
+</section>
 
         <!-- Logga ut -->
         <section class="card">
