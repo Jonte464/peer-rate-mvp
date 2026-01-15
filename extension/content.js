@@ -1,53 +1,78 @@
 // extension/content.js
-// MVP: Om sidan verkar handla om "avslutad/vunnen/såld" visar vi en flytande knapp.
-// Klick öppnar PeerRate med queryparams (source + pageUrl).
+// Robustare MVP: försöker flera gånger + lyssnar på ändringar på sidan (Tradera laddar ofta dynamiskt).
 
 (function () {
-  const DEFAULTS = {
-    peerrate_enabled: true
-  };
+  const DEFAULTS = { peerrate_enabled: true };
 
   chrome.storage.sync.get(DEFAULTS, (data) => {
     if (!data.peerrate_enabled) return;
 
-    // Enkla "signaler" (MVP)
-    // OBS: Detta är medvetet simpelt och kan förbättras senare.
-    const text = (document.body ? document.body.innerText : "").toLowerCase();
+    // 1) Kör direkt + flera gånger (ifall Tradera laddar sent)
+    let tries = 0;
+    const maxTries = 20; // ~20 sek om vi kör varje sekund
+
+    const tick = () => {
+      tries++;
+      if (maybeShowButton()) return;
+      if (tries >= maxTries) clearInterval(timer);
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
+
+    // 2) Lyssna på förändringar i sidan (SPA/dynamiskt innehåll)
+    const obs = new MutationObserver(() => {
+      maybeShowButton();
+    });
+    obs.observe(document.documentElement, { childList: true, subtree: true });
+  });
+
+  function maybeShowButton() {
+    if (document.getElementById("peerrate-float-btn")) return true;
+
     const url = location.href.toLowerCase();
 
-    const looksLikeRelevantPage =
-      url.includes("tradera") &&
-      (
-        url.includes("item") ||            // ofta objekt/annons-sidor
-        url.includes("auction") ||
-        url.includes("mina") ||
-        url.includes("my")
-      );
+    // Bara Tradera
+    const onTradera =
+      url.startsWith("https://www.tradera.com/") ||
+      url.startsWith("https://www.tradera.se/");
 
+    if (!onTradera) return false;
+
+    const text = (document.body ? document.body.innerText : "").toLowerCase();
+
+    // URL-signaler (vi breddar lite)
+    const looksLikeRelevantPage =
+      url.includes("/item/") ||          // annons/objekt
+      url.includes("/my/") ||            // "mina" sidor (köp/ordrar)
+      url.includes("order") ||           // order-sidor
+      url.includes("purchases") ||
+      url.includes("sales");
+
+    // Text-signaler (typ det du visar i bild: "Avslutad", "du vann", etc)
     const hasEndSignals =
       text.includes("avslutad") ||
       text.includes("såld") ||
       text.includes("vunnen") ||
       text.includes("du vann") ||
-      text.includes("köpt") ||
-      text.includes("order") ||
-      text.includes("betalning");
+      text.includes("grattis") ||
+      text.includes("orderinformation") ||
+      text.includes("betald") ||
+      text.includes("skickad") ||
+      text.includes("lämna omdöme");
 
-    if (!looksLikeRelevantPage || !hasEndSignals) return;
+    if (!looksLikeRelevantPage || !hasEndSignals) return false;
 
     injectButton();
-  });
+    return true;
+  }
 
   function injectButton() {
-    if (document.getElementById("peerrate-float-btn")) return;
-
     const btn = document.createElement("button");
     btn.id = "peerrate-float-btn";
     btn.type = "button";
     btn.textContent = "Betygsätt med PeerRate";
-    btn.setAttribute("aria-label", "Betygsätt med PeerRate");
 
-    // Enkel stil – flytande knapp nere till höger
     Object.assign(btn.style, {
       position: "fixed",
       right: "16px",
@@ -66,9 +91,10 @@
     btn.addEventListener("click", () => {
       const pageUrl = encodeURIComponent(location.href);
 
-      // ✅ Byt denna URL om din riktiga rating-sida är t.ex. /#rate
+      // Din riktiga rate-URL:
       const PEERRATE_RATE_URL_BASE = "https://peerrate.ai/#rate";
 
+      // OBS: Om #rate inte tar queryparams snyggt kan vi ändra strategi sen.
       const target = `${PEERRATE_RATE_URL_BASE}?source=tradera&pageUrl=${pageUrl}`;
 
       chrome.runtime.sendMessage({ type: "openRating", url: target });
