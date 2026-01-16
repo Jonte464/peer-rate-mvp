@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PeerRate – Tradera trigger (MVP)",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Visar en 'Betygsätt med PeerRate'-knapp på utvalda Tradera-sidor.",
   "action": {
     "default_title": "PeerRate",
@@ -9,7 +9,9 @@
   },
   "permissions": ["storage", "tabs"],
   "host_permissions": [
+    "https://tradera.com/*",
     "https://www.tradera.com/*",
+    "https://tradera.se/*",
     "https://www.tradera.se/*"
   ],
   "background": {
@@ -18,7 +20,9 @@
   "content_scripts": [
     {
       "matches": [
+        "https://tradera.com/*",
         "https://www.tradera.com/*",
+        "https://tradera.se/*",
         "https://www.tradera.se/*"
       ],
       "js": ["content.js"],
