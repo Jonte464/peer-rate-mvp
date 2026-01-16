@@ -6,7 +6,6 @@
   <title>Lämna betyg – PeerRate</title>
 
   <link rel="stylesheet" href="/css/pr-theme.css" />
-  <!-- Vi återanvänder index.css för att få samma styling på pr-card/sektioner -->
   <link rel="stylesheet" href="/css/index.css" />
 </head>
 
@@ -68,11 +67,69 @@
     </nav>
   </header>
 
-  <!-- Själva betygsblocket (exakt samma som tidigare partial) -->
   <main>
     <section id="rate" class="section white-block anchor">
       <div class="shell">
         <div class="pr-form-wrap" style="max-width: 980px; margin:0 auto;">
+
+          <!-- ✅ INTRO -->
+          <section class="pr-card" style="margin-bottom:16px;">
+            <h1 style="margin:0 0 6px;" data-i18n="rate_page_h1">Lämna ett betyg – snabbt, enkelt och verifierbart</h1>
+            <p style="margin:0;color:var(--pr-muted);font-size:14px;line-height:1.5;" data-i18n="rate_page_lead">
+              PeerRate hjälper dig att samla omdömen som du kan visa upp – oavsett plattform.
+              När fler omdömen kopplas till verifierade affärer blir din PeerRate-rating starkare.
+            </p>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
+              <div style="flex:1;min-width:220px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
+                <div style="font-weight:800;color:var(--pr-purple);margin-bottom:4px;" data-i18n="rate_page_b1_title">1) Logga in</div>
+                <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_page_b1_text">Så kan vi koppla betyget till dig och minska spam.</div>
+              </div>
+
+              <div style="flex:1;min-width:220px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
+                <div style="font-weight:800;color:var(--pr-purple);margin-bottom:4px;" data-i18n="rate_page_b2_title">2) Sätt betyg</div>
+                <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_page_b2_text">Ge 1–5 och lämna en kort kommentar (valfritt).</div>
+              </div>
+
+              <div style="flex:1;min-width:220px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
+                <div style="font-weight:800;color:var(--pr-purple);margin-bottom:4px;" data-i18n="rate_page_b3_title">3) Lägg verifiering</div>
+                <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_page_b3_text">Om du vill kan du ange order-ID/annonslänk för starkare trovärdighet.</div>
+              </div>
+            </div>
+          </section>
+
+          <!-- ✅ FAQ -->
+          <section class="pr-card" style="margin-bottom:16px;">
+            <h2 style="margin:0 0 10px;" data-i18n="rate_faq_title">FAQ</h2>
+
+            <details style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;">
+              <summary style="cursor:pointer;font-weight:800;color:var(--pr-purple);" data-i18n="rate_faq_q1">Måste jag logga in?</summary>
+              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_faq_a1">
+                Ja, för att minska spam och kunna koppla betyg till en riktig användare.
+              </div>
+            </details>
+
+            <details style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;">
+              <summary style="cursor:pointer;font-weight:800;color:var(--pr-purple);" data-i18n="rate_faq_q2">Är kommentaren obligatorisk?</summary>
+              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_faq_a2">
+                Nej. Du kan lämna bara ett betyg. Kommentar gör oftast omdömet mer användbart.
+              </div>
+            </details>
+
+            <details style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;">
+              <summary style="cursor:pointer;font-weight:800;color:var(--pr-purple);" data-i18n="rate_faq_q3">Vad är “Verifierings-ID”?</summary>
+              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_faq_a3">
+                Det är ett valfritt referensnummer som kan stärka trovärdigheten, t.ex. ordernummer eller annons-ID.
+              </div>
+            </details>
+
+            <details style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
+              <summary style="cursor:pointer;font-weight:800;color:var(--pr-purple);" data-i18n="rate_faq_q4">Vad händer om jag rapporterar misstänkt bedrägeri?</summary>
+              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_faq_a4">
+                Då flaggas betyget för granskning. Vi kan kontakta dig om vi behöver mer info.
+              </div>
+            </details>
+          </section>
 
           <!-- LOGGA IN (visas när man är utloggad, döljs när man är inloggad av JS) -->
           <section class="pr-card" id="login-card">
