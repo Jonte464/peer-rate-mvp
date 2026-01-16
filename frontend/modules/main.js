@@ -49,10 +49,11 @@ window.addEventListener('DOMContentLoaded', () => {
     initProfilePage();
   }
 
-  // Rating page (index innehåller rating-card)
+  // ✅ Rating page: nu är det bara /rate.html (eller framtida /lamna-betyg)
   const isRatingPage =
     path.includes('/lamna-betyg') ||
-    path.includes('index.html') ||
+    path.includes('rate.html') ||
+    path.endsWith('/rate') ||
     document.getElementById('rating-card');
 
   if (isRatingPage) {

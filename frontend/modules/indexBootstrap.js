@@ -40,7 +40,7 @@ async function bootstrap() {
   await loadPartialInto('slot-how', '/partials/index/how.html');
   await loadPartialInto('slot-sim', '/partials/index/sim.html');
   await loadPartialInto('slot-globe', '/partials/index/globe.html');
-  await loadPartialInto('slot-rate', '/partials/index/rate.html');
+  // ✅ rate-partial borttagen (Lämna betyg flyttat till /rate.html)
   await loadPartialInto('slot-footer', '/partials/index/footer.html');
 
   setupHeroVideoAutoplay();
