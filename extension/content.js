@@ -98,7 +98,7 @@
 
     btn.addEventListener("click", () => {
       const pageUrl = encodeURIComponent(location.href);
-      const target = `https://peerrate.ai/#rate?source=tradera&pageUrl=${pageUrl}`;
+      const target = `https://peerrate.ai/rate.html?source=tradera&pageUrl=${pageUrl}`;
       chrome.runtime.sendMessage({ type: "openRating", url: target });
     });
 

@@ -85,6 +85,11 @@ export function initLandingLanguage() {
       rate_signup: 'Registrera dig',
       rate_title: 'Lämna ett betyg',
 
+      // ✅ NYTT: login-hint (SV/EN)
+      rate_login_hint_pre: 'Du behöver logga in för att kunna lämna betyg. Logga in ovan eller ',
+      rate_login_hint_link: 'registrera dig här',
+      rate_login_hint_post: '.',
+
       footer_profile: 'Profil',
       footer_ask: 'Fråga om trust',
 
@@ -114,7 +119,7 @@ export function initLandingLanguage() {
 
       profile_logout_btn: 'Logga ut',
 
-      // ✅ NYTT: rate-sidan intro + FAQ
+      // ✅ rate-sidan intro + FAQ
       rate_page_h1: 'Lämna ett betyg – snabbt, enkelt och verifierbart',
       rate_page_lead:
         'PeerRate hjälper dig att samla omdömen som du kan visa upp – oavsett plattform. När fler omdömen kopplas till verifierade affärer blir din PeerRate-rating starkare.',
@@ -216,6 +221,11 @@ export function initLandingLanguage() {
       rate_signup: 'Sign up',
       rate_title: 'Leave a rating',
 
+      // ✅ NEW: login-hint (SV/EN)
+      rate_login_hint_pre: 'You need to log in to leave a rating. Log in above or ',
+      rate_login_hint_link: 'sign up here',
+      rate_login_hint_post: '.',
+
       footer_profile: 'Profile',
       footer_ask: 'Ask about trust',
 
@@ -245,7 +255,7 @@ export function initLandingLanguage() {
 
       profile_logout_btn: 'Log out',
 
-      // ✅ NEW: rate page intro + FAQ
+      // ✅ rate page intro + FAQ
       rate_page_h1: 'Leave a review — quick, simple, and verifiable',
       rate_page_lead:
         'PeerRate helps you collect reviews you can show anywhere — regardless of platform. As more reviews get linked to verified transactions, your PeerRate rating becomes stronger.',

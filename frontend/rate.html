@@ -163,10 +163,14 @@
             <h2 data-i18n="rate_title">Lämna ett betyg</h2>
 
             <p id="rating-login-hint" style="margin:0 0 10px;color:var(--pr-muted);font-size:12px;">
-              Du behöver logga in för att kunna lämna betyg.
-              Logga in ovan eller
-              <a href="/customer.html" target="_blank" rel="noopener noreferrer">registrera dig här</a>.
+                <span data-i18n="rate_login_hint_pre">
+                    Du behöver logga in för att kunna lämna betyg. Logga in ovan eller
+                </span>
+                <a href="/customer.html" target="_blank" rel="noopener noreferrer" data-i18n="rate_login_hint_link">
+                    registrera dig här
+                </a><span data-i18n="rate_login_hint_post">.</span>
             </p>
+
 
             <div id="rating-form-wrapper" class="hidden">
               <form id="rating-form" autocomplete="off">
