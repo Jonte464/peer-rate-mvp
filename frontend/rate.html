@@ -165,22 +165,22 @@
             </p>
 
             <form id="rating-login-form" autocomplete="off">
-              <div class="pr-field">
-                <label class="pr-label" for="login-email">E-post</label>
-                <input class="pr-input" id="login-email" name="email" type="email" placeholder="erik@example.com" />
-              </div>
+                <div class="pr-field">
+                    <label class="pr-label" for="login-email" data-i18n="rate_login_email_label">E-post</label>
+                    <input class="pr-input" id="login-email" name="email" type="email" placeholder="erik@example.com" />
+                </div>
 
-              <div class="pr-field">
-                <label class="pr-label" for="login-password">Lösenord</label>
-                <input class="pr-input" id="login-password" name="password" type="password" placeholder="Ditt lösenord" />
-              </div>
+                <div class="pr-field">
+                    <label class="pr-label" for="login-password" data-i18n="rate_login_password_label">Lösenord</label>
+                    <input class="pr-input" id="login-password" name="password" type="password" data-i18n-placeholder="rate_login_password_ph" placeholder="Ditt lösenord" />
+                </div>
 
-              <div class="pr-actions">
-                <button class="pr-btn pr-btn-primary" type="submit" id="login-btn">Logga in</button>
+                <div class="pr-actions">
+                    <button class="pr-btn pr-btn-primary" type="submit" id="login-btn" data-i18n="rate_login_btn">Logga in</button>
                 <a class="pr-btn pr-btn-ghost" href="/customer.html" data-i18n="rate_signup">Registrera dig</a>
-              </div>
+  </div>
 
-              <p id="login-status" style="margin-top:10px;color:var(--pr-muted);font-size:12px;"></p>
+                <p id="login-status" style="margin-top:10px;color:var(--pr-muted);font-size:12px;"></p>
             </form>
           </section>
 
@@ -201,33 +201,48 @@
 
             <div id="rating-form-wrapper" class="hidden">
               <form id="rating-form" autocomplete="off">
-                <div class="pr-field">
-                  <label class="pr-label" for="subject">
-                    Vem betygsätter du?
-                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(användarnamn eller mejl)</span>
-                  </label>
-                  <input class="pr-input" id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
-                </div>
+  <div class="pr-field">
+    <label class="pr-label" for="subject">
+      <span data-i18n="rate_form_subject_label">Vem betygsätter du?</span>
+      <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_subject_note">(användarnamn eller mejl)</span>
+    </label>
+    <input class="pr-input" id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
+  </div>
 
-                <div class="pr-field">
-                  <label class="pr-label" for="rater">
-                    Ditt namn/mejl
-                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span>
-                  </label>
-                  <input class="pr-input" id="rater" name="rater" type="text" placeholder="" />
-                </div>
+  <div class="pr-field">
+    <label class="pr-label" for="rater">
+      <span data-i18n="rate_form_rater_label">Ditt namn/mejl</span>
+      <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_rater_note">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span>
+    </label>
+    <input class="pr-input" id="rater" name="rater" type="text" placeholder="" />
+  </div>
 
-                <div class="pr-field">
-                  <label class="pr-label" for="rating">Betyg (1–5)</label>
-                  <select class="pr-select" id="rating" name="score" required>
-                    <option value="" disabled selected hidden>Välj betyg</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                  </select>
-                </div>
+  <div class="pr-field">
+    <label class="pr-label" for="rating" data-i18n="rate_form_score_label">Betyg (1–5)</label>
+    <select class="pr-select" id="rating" name="score" required>
+      <option value="" disabled selected hidden data-i18n="rate_form_score_pick">Välj betyg</option>
+      <option value="1">1</option>
+      <option value="2">2</option>
+      <option value="3">3</option>
+      <option value="4">4</option>
+      <option value="5">5</option>
+    </select>
+  </div>
+
+  <div class="pr-field">
+    <label class="pr-label" for="ratingSource">
+      <span data-i18n="rate_form_source_label">Varifrån kommer betyget?</span>
+      <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_optional">(valfritt)</span>
+    </label>
+    <select class="pr-select" id="ratingSource" name="source">
+      <option value="" selected data-i18n="rate_form_source_pick">Välj källa (valfritt)</option>
+      <option value="Blocket">Blocket</option>
+      <option value="Tradera">Tradera</option>
+      <option value="Airbnb">Airbnb</option>
+      <option value="Husknuten">Husknuten</option>
+      <option value="Tiptap">Tiptap</option>
+    </select>
+  </div>
 
                 <div class="pr-field">
                   <label class="pr-label" for="ratingSource">

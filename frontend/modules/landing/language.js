@@ -85,10 +85,27 @@ export function initLandingLanguage() {
       rate_signup: 'Registrera dig',
       rate_title: 'Lämna ett betyg',
 
-      // ✅ NYTT: login-hint (SV/EN)
+      // ✅ login-hint (delad för att länken ska kunna översättas separat)
       rate_login_hint_pre: 'Du behöver logga in för att kunna lämna betyg. Logga in ovan eller ',
       rate_login_hint_link: 'registrera dig här',
       rate_login_hint_post: '.',
+
+      // ✅ login-form labels + placeholder + button
+      rate_login_email_label: 'E-post',
+      rate_login_password_label: 'Lösenord',
+      rate_login_password_ph: 'Ditt lösenord',
+      rate_login_btn: 'Logga in',
+
+      // ✅ rate-form (övre delen)
+      rate_form_subject_label: 'Vem betygsätter du?',
+      rate_form_subject_note: '(användarnamn eller mejl)',
+      rate_form_rater_label: 'Ditt namn/mejl',
+      rate_form_rater_note: '(valfritt – om du är inloggad fylls din e-post i automatiskt)',
+      rate_form_score_label: 'Betyg (1–5)',
+      rate_form_score_pick: 'Välj betyg',
+      rate_form_source_label: 'Varifrån kommer betyget?',
+      rate_form_optional: '(valfritt)',
+      rate_form_source_pick: 'Välj källa (valfritt)',
 
       footer_profile: 'Profil',
       footer_ask: 'Fråga om trust',
@@ -139,7 +156,7 @@ export function initLandingLanguage() {
       rate_faq_q3: 'Vad är “Verifierings-ID”?',
       rate_faq_a3: 'Det är ett valfritt referensnummer som kan stärka trovärdigheten, t.ex. ordernummer eller annons-ID.',
       rate_faq_q4: 'Vad händer om jag rapporterar misstänkt bedrägeri?',
-      rate_faq_a4: 'Då flaggas betyget för granskning. Vi kan kontakta dig om vi behöver mer info.',
+      rate_faq_a4: 'Då flaggas betyget för granskning. Vi kan kontakta dig om vi behöver mer info.'
     },
 
     en: {
@@ -150,7 +167,7 @@ export function initLandingLanguage() {
       menu_rate: 'Leave a rating',
       menu_signup: 'Sign up',
       menu_profile: 'My profile',
-      menu_ask: 'Ask about trust',
+      menu_ask: 'See the 5P model',
       user_logout: 'Log out',
 
       hero_kicker: 'Peer-to-peer reputation',
@@ -221,10 +238,27 @@ export function initLandingLanguage() {
       rate_signup: 'Sign up',
       rate_title: 'Leave a rating',
 
-      // ✅ NEW: login-hint (SV/EN)
+      // ✅ login-hint
       rate_login_hint_pre: 'You need to log in to leave a rating. Log in above or ',
       rate_login_hint_link: 'sign up here',
       rate_login_hint_post: '.',
+
+      // ✅ login-form labels + placeholder + button
+      rate_login_email_label: 'Email',
+      rate_login_password_label: 'Password',
+      rate_login_password_ph: 'Your password',
+      rate_login_btn: 'Log in',
+
+      // ✅ rate-form (övre delen)
+      rate_form_subject_label: 'Who are you rating?',
+      rate_form_subject_note: '(username or email)',
+      rate_form_rater_label: 'Your name/email',
+      rate_form_rater_note: '(optional — if you are logged in, your email is filled in automatically)',
+      rate_form_score_label: 'Rating (1–5)',
+      rate_form_score_pick: 'Choose rating',
+      rate_form_source_label: 'Where is the rating from?',
+      rate_form_optional: '(optional)',
+      rate_form_source_pick: 'Choose source (optional)',
 
       footer_profile: 'Profile',
       footer_ask: 'Ask about trust',
@@ -272,10 +306,10 @@ export function initLandingLanguage() {
       rate_faq_a1: 'Yes — to reduce spam and link reviews to a real account.',
       rate_faq_q2: 'Is the comment required?',
       rate_faq_a2: 'No. You can submit a rating only. A comment usually makes the review more helpful.',
-      rate_faq_q3: 'What is "Verification ID"?',
+      rate_faq_q3: 'What is “Verification ID”?',
       rate_faq_a3: 'An optional reference that can strengthen credibility, e.g. an order number or listing ID.',
       rate_faq_q4: 'What happens if I report suspected fraud?',
-      rate_faq_a4: 'The review is flagged for review. We may contact you if we need more information.',
+      rate_faq_a4: 'The review is flagged for review. We may contact you if we need more information.'
     }
   };
 
@@ -287,10 +321,18 @@ export function initLandingLanguage() {
     document.documentElement.lang = (lang === 'en') ? 'en' : 'sv';
     langLabel.textContent = (lang === 'en') ? 'EN' : 'SV';
 
+    // 1) Normal text nodes (data-i18n)
     document.querySelectorAll('[data-i18n]').forEach((n) => {
       const key = n.getAttribute('data-i18n');
       if (!key) return;
       if (d[key] != null) n.textContent = d[key];
+    });
+
+    // 2) Placeholders (data-i18n-placeholder)
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((n) => {
+      const key = n.getAttribute('data-i18n-placeholder');
+      if (!key) return;
+      if (d[key] != null) n.setAttribute('placeholder', d[key]);
     });
 
     localStorage.setItem(LS_LANG, lang);
