@@ -19,6 +19,101 @@ function updateRatingLoginHint(user) {
   else hint.classList.remove('hidden');
 }
 
+/**
+ * Läs ?source=...&pageUrl=... och förifyll rate-formulär där det går.
+ * (Funkar både på rate.html och index om formuläret finns.)
+ */
+function applyRatingContextFromQuery() {
+  const params = new URLSearchParams(window.location.search || '');
+  const sourceRaw = (params.get('source') || '').trim();
+  const pageUrlRaw = (params.get('pageUrl') || '').trim();
+
+  if (!sourceRaw && !pageUrlRaw) return;
+
+  // 1) Visa källrutan om den finns
+  const card = document.getElementById('rate-context-card');
+  const sourceEl = document.getElementById('rate-context-source');
+  const linkEl = document.getElementById('rate-context-link');
+
+  // Mappa "tradera" -> "Tradera" osv (så det matchar dina <option>-värden)
+  const prettySourceMap = {
+    tradera: 'Tradera',
+    blocket: 'Blocket',
+    airbnb: 'Airbnb',
+    husknuten: 'Husknuten',
+    tiptap: 'Tiptap'
+  };
+
+  const prettySource = prettySourceMap[sourceRaw.toLowerCase()] || (sourceRaw ? sourceRaw : '–');
+
+  let decodedPageUrl = '';
+  try {
+    decodedPageUrl = pageUrlRaw ? decodeURIComponent(pageUrlRaw) : '';
+  } catch {
+    decodedPageUrl = pageUrlRaw;
+  }
+
+  if (card) card.style.display = 'block';
+  if (sourceEl) sourceEl.textContent = prettySource;
+  if (linkEl) {
+    if (decodedPageUrl) {
+      linkEl.href = decodedPageUrl;
+      linkEl.style.display = 'inline-block';
+    } else {
+      linkEl.href = '#';
+      linkEl.style.display = 'none';
+    }
+  }
+
+  // 2) Förifyll dropdown "Varifrån kommer betyget?"
+  const sourceSelect =
+    document.querySelector('#rating-form select[name="source"]') ||
+    document.getElementById('ratingSource');
+
+  if (sourceSelect && prettySource && prettySource !== '–') {
+    // sätt bara om användaren inte redan valt något
+    if (!sourceSelect.value) sourceSelect.value = prettySource;
+  }
+
+  // 3) Förifyll "Motpart/annonslänk" i rapport-delen (om fältet finns)
+  const reportLinkInput = document.getElementById('reportLink');
+  if (reportLinkInput && decodedPageUrl) {
+    if (!reportLinkInput.value) reportLinkInput.value = decodedPageUrl;
+  }
+
+  // 4) Försök förifylla "Verifierings-ID" om vi kan hitta ett ID i URL:en
+  const proofRefInput =
+    document.querySelector('#rating-form input[name="proofRef"]') ||
+    document.getElementById('proofRef');
+
+  if (proofRefInput && !proofRefInput.value && decodedPageUrl) {
+    const id = extractProofIdFromUrl(decodedPageUrl);
+    if (id) proofRefInput.value = id;
+  }
+}
+
+/**
+ * Försök hitta ett vettigt referens-ID ur en URL.
+ * Ex: Tradera item-länk kan innehålla .../item/<cat>/<objectId>/...
+ */
+function extractProofIdFromUrl(url) {
+  const u = (url || '').toLowerCase();
+
+  // Tradera item: /item/341380/704309999/....
+  let m = u.match(/\/item\/\d+\/(\d+)/);
+  if (m && m[1]) return `TRADERA-${m[1]}`;
+
+  // Tradera order: /my/order/<id>
+  m = u.match(/\/my\/order\/([a-z0-9]+)/);
+  if (m && m[1]) return `TRADERA-ORDER-${m[1]}`;
+
+  // Fallback: plocka en längre sifferserie (t.ex. ordernr)
+  m = u.match(/(\d{6,})/);
+  if (m && m[1]) return `REF-${m[1]}`;
+
+  return '';
+}
+
 window.addEventListener('DOMContentLoaded', () => {
   console.log('DOM ready');
 
@@ -58,6 +153,9 @@ window.addEventListener('DOMContentLoaded', () => {
   if (isRatingPage) {
     initRatingLogin();
     updateRatingLoginHint(user);
+
+    // ✅ NYTT: förifyll från query params (source/pageUrl)
+    applyRatingContextFromQuery();
   }
 
   // Landing-interaktioner (kör bara på startsidan där blocken faktiskt finns)

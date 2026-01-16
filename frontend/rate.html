@@ -131,6 +131,32 @@
             </details>
           </section>
 
+          <!-- ✅ KÄLLA (auto från extension: ?source=...&pageUrl=...) -->
+<section class="pr-card" id="rate-context-card" style="display:none;margin-bottom:16px;">
+  <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:240px;">
+      <div style="font-weight:900;color:var(--pr-purple);margin-bottom:4px;">
+        Verifierad källa
+      </div>
+      <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;">
+        Källa: <span id="rate-context-source" style="font-weight:800;color:var(--pr-ink);">–</span><br/>
+        <a id="rate-context-link" href="#" target="_blank" rel="noopener noreferrer"
+           style="display:inline-block;margin-top:6px;font-weight:800;">
+          Visa sidan som triggar betyget →
+        </a>
+      </div>
+    </div>
+
+    <div style="min-width:240px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
+      <div style="font-weight:900;color:var(--pr-purple);margin-bottom:4px;">Tips</div>
+      <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;">
+        Vi kan förifylla “Källa” och ibland även “Verifierings-ID”.
+        Du kan alltid justera innan du skickar.
+      </div>
+    </div>
+  </div>
+</section>
+
           <!-- LOGGA IN (visas när man är utloggad, döljs när man är inloggad av JS) -->
           <section class="pr-card" id="login-card">
             <h2 data-i18n="rate_login_title">Logga in</h2>
