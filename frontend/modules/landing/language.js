@@ -88,7 +88,7 @@ export function initLandingLanguage() {
       footer_profile: 'Profil',
       footer_ask: 'Fråga om trust',
 
-      // ✅ NYTT: profile-sidan
+      // ✅ profile-sidan
       profile_badge_label: 'Inloggad som',
       profile_h1: 'Min profil',
       profile_lead: 'Här kan du se dina uppgifter och ditt samlade omdöme.',
@@ -113,6 +113,28 @@ export function initLandingLanguage() {
       profile_avatar_note: 'Bilden sparas bara lokalt i din webbläsare och kopplas till “Inloggad som”.',
 
       profile_logout_btn: 'Logga ut',
+
+      // ✅ NYTT: rate-sidan intro + FAQ
+      rate_page_h1: 'Lämna ett betyg – snabbt, enkelt och verifierbart',
+      rate_page_lead:
+        'PeerRate hjälper dig att samla omdömen som du kan visa upp – oavsett plattform. När fler omdömen kopplas till verifierade affärer blir din PeerRate-rating starkare.',
+
+      rate_page_b1_title: '1) Logga in',
+      rate_page_b1_text: 'Så kan vi koppla betyget till dig och minska spam.',
+      rate_page_b2_title: '2) Sätt betyg',
+      rate_page_b2_text: 'Ge 1–5 och lämna en kort kommentar (valfritt).',
+      rate_page_b3_title: '3) Lägg verifiering',
+      rate_page_b3_text: 'Om du vill kan du ange order-ID/annonslänk för starkare trovärdighet.',
+
+      rate_faq_title: 'FAQ',
+      rate_faq_q1: 'Måste jag logga in?',
+      rate_faq_a1: 'Ja, för att minska spam och kunna koppla betyg till en riktig användare.',
+      rate_faq_q2: 'Är kommentaren obligatorisk?',
+      rate_faq_a2: 'Nej. Du kan lämna bara ett betyg. Kommentar gör oftast omdömet mer användbart.',
+      rate_faq_q3: 'Vad är “Verifierings-ID”?',
+      rate_faq_a3: 'Det är ett valfritt referensnummer som kan stärka trovärdigheten, t.ex. ordernummer eller annons-ID.',
+      rate_faq_q4: 'Vad händer om jag rapporterar misstänkt bedrägeri?',
+      rate_faq_a4: 'Då flaggas betyget för granskning. Vi kan kontakta dig om vi behöver mer info.',
     },
 
     en: {
@@ -197,7 +219,7 @@ export function initLandingLanguage() {
       footer_profile: 'Profile',
       footer_ask: 'Ask about trust',
 
-      // ✅ NEW: profile page
+      // ✅ profile page
       profile_badge_label: 'Signed in as',
       profile_h1: 'My profile',
       profile_lead: 'Here you can see your details and your combined reputation.',
@@ -222,6 +244,28 @@ export function initLandingLanguage() {
       profile_avatar_note: 'The image is stored locally in your browser and used for “Signed in as”.',
 
       profile_logout_btn: 'Log out',
+
+      // ✅ NEW: rate page intro + FAQ
+      rate_page_h1: 'Leave a review — quick, simple, and verifiable',
+      rate_page_lead:
+        'PeerRate helps you collect reviews you can show anywhere — regardless of platform. As more reviews get linked to verified transactions, your PeerRate rating becomes stronger.',
+
+      rate_page_b1_title: '1) Log in',
+      rate_page_b1_text: 'So we can link the review to a real user and reduce spam.',
+      rate_page_b2_title: '2) Set a rating',
+      rate_page_b2_text: 'Choose 1–5 and optionally add a short comment.',
+      rate_page_b3_title: '3) Add verification',
+      rate_page_b3_text: 'Optionally add an order ID/listing link to strengthen credibility.',
+
+      rate_faq_title: 'FAQ',
+      rate_faq_q1: 'Do I have to log in?',
+      rate_faq_a1: 'Yes — to reduce spam and link reviews to a real account.',
+      rate_faq_q2: 'Is the comment required?',
+      rate_faq_a2: 'No. You can submit a rating only. A comment usually makes the review more helpful.',
+      rate_faq_q3: 'What is "Verification ID"?',
+      rate_faq_a3: 'An optional reference that can strengthen credibility, e.g. an order number or listing ID.',
+      rate_faq_q4: 'What happens if I report suspected fraud?',
+      rate_faq_a4: 'The review is flagged for review. We may contact you if we need more information.',
     }
   };
 
@@ -233,7 +277,7 @@ export function initLandingLanguage() {
     document.documentElement.lang = (lang === 'en') ? 'en' : 'sv';
     langLabel.textContent = (lang === 'en') ? 'EN' : 'SV';
 
-    document.querySelectorAll('[data-i18n]').forEach(n => {
+    document.querySelectorAll('[data-i18n]').forEach((n) => {
       const key = n.getAttribute('data-i18n');
       if (!key) return;
       if (d[key] != null) n.textContent = d[key];

@@ -313,6 +313,12 @@
     </section>
   </main>
 
-  <script type="module" src="/modules/main.js"></script>
+  <script type="module">
+  import { initLandingLanguage } from '/modules/landing/language.js';
+  initLandingLanguage();
+</script>
+
+<script type="module" src="/modules/main.js"></script>
+
 </body>
 </html>

@@ -49,11 +49,10 @@ window.addEventListener('DOMContentLoaded', () => {
     initProfilePage();
   }
 
-  // ✅ Rating page: nu är det bara /rate.html (eller framtida /lamna-betyg)
+  // Rating page (rate.html eller om rating-card finns)
   const isRatingPage =
     path.includes('/lamna-betyg') ||
-    path.includes('rate.html') ||
-    path.endsWith('/rate') ||
+    path.includes('/rate.html') ||
     document.getElementById('rating-card');
 
   if (isRatingPage) {
@@ -61,8 +60,16 @@ window.addEventListener('DOMContentLoaded', () => {
     updateRatingLoginHint(user);
   }
 
-  // Landing-interaktioner (meny, språk, flip, sliders, report toggle, kpis)
-  initLanding();
+  // Landing-interaktioner (kör bara på startsidan där blocken faktiskt finns)
+  const isIndex =
+    path === '/' ||
+    path.endsWith('/index.html') ||
+    document.getElementById('slot-hero') ||
+    document.querySelector('.hero');
+
+  if (isIndex) {
+    initLanding();
+  }
 
   // Håll top-user pill uppdaterad om login sker i annan flik
   window.addEventListener('storage', () => {
