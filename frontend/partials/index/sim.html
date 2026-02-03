@@ -12,35 +12,84 @@
           <!-- FRONT -->
           <div class="flip-face flip-front">
             <div class="card-inner">
-              <div class="card-top">
-                <div style="font-weight:820; letter-spacing:-.02em; color:rgba(15,23,42,.90);">PeerRate</div>
-                <div class="chip" aria-hidden="true"></div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
+                <div style="display:flex;gap:10px;flex:1;">
+                  <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg, #1d4ed8, #60a5fa);flex-shrink:0;"></div>
+                  <div style="flex:1;padding-top:2px;">
+                    <div style="font-weight:800;font-size:18px;">Emma Johnson</div>
+                    <p style="margin:2px 0;font-size:13px;color:rgba(0,0,0,.6);">Senior Consultant</p>
+                    <p style="margin:2px 0 0;font-size:12px;color:rgba(0,0,0,.5);">Stockholm, Sweden</p>
+                  </div>
+                </div>
+                <button style="background:#f0f4f8;border:1px solid #1d4ed8;color:#1d4ed8;padding:5px 9px;border-radius:6px;font-size:9px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:8px;flex-shrink:0;">Share</button>
               </div>
 
-              <div class="card-name" id="repName">Jonathan S.</div>
-
-              <div class="card-meta">
-                <div class="m">
-                  <b id="repScore">4.6</b>
-                  <span data-i18n="rep_score">Förtroende (1–5)</span>
+              <div style="background:#f5f5f5;border-radius:10px;padding:10px;margin-bottom:10px;">
+                <div style="margin-bottom:8px;">
+                  <span style="font-weight:700;font-size:12px;">PeerRate Score:</span>
+                  <span style="font-weight:900;font-size:28px;margin-left:4px;">82</span>
+                  <span style="font-size:12px;color:rgba(0,0,0,.6);"> of 100</span>
                 </div>
-                <div class="m">
-                  <b id="repTx">127</b>
-                  <span data-i18n="rep_tx">Verifierade transaktioner</span>
-                </div>
-                <div class="m">
-                  <b id="repPlatforms">Tradera, eBay</b>
-                  <span data-i18n="rep_plat">Plattformar kopplade</span>
-                </div>
-                <div class="m">
-                  <b>Tryck</b>
-                  <span data-i18n="rep_hint2">Förklaring</span>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                  <span style="background:#1d4ed8;color:white;padding:3px 7px;border-radius:4px;font-size:8px;font-weight:600;">✓ Verified</span>
+                  <span style="background:#1d4ed8;color:white;padding:3px 7px;border-radius:4px;font-size:8px;font-weight:600;">✓ High Conf</span>
+                  <span style="background:#1d4ed8;color:white;padding:3px 7px;border-radius:4px;font-size:8px;font-weight:600;">✓ Strong</span>
                 </div>
               </div>
 
-              <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-                <a class="btn btn-primary soft-hover" href="/profile.html" data-i18n="rep_btn">Öppna min profil</a>
-                <a class="btn btn-ghost soft-hover" href="#sim" data-i18n="rep_btn2">Se 5P-modellen</a>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px;margin-bottom:9px;">
+                <div style="text-align:center;">
+                  <div style="color:#16a34a;font-weight:800;margin-bottom:1px;">✓ Client</div>
+                  <div style="color:rgba(0,0,0,.7);">Excellent</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="color:#16a34a;font-weight:800;margin-bottom:1px;">✓ Leadership</div>
+                  <div style="color:rgba(0,0,0,.7);">Strong</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="color:#16a34a;font-weight:800;margin-bottom:1px;">✓ Consistency</div>
+                  <div style="color:rgba(0,0,0,.7);">Recent</div>
+                </div>
+              </div>
+
+              <div style="border-top:1px solid rgba(0,0,0,.1);padding-top:8px;font-size:9px;margin-bottom:9px;">
+                <div style="font-weight:700;color:#1d4ed8;margin-bottom:1px;">✓ Verification</div>
+                <div style="color:rgba(0,0,0,.7);">High</div>
+              </div>
+
+              <div style="border-top:1px solid rgba(0,0,0,.1);padding-top:8px;margin-bottom:9px;">
+                <div style="font-weight:700;font-size:9px;margin-bottom:5px;">Recent Engagement</div>
+                <div style="background:#f9f9f9;border-radius:8px;padding:7px;font-size:8px;">
+                  <div style="display:flex;gap:5px;margin-bottom:5px;align-items:center;">
+                    <div style="width:26px;height:26px;background:#1d4ed8;border-radius:4px;"></div>
+                    <div>
+                      <div style="font-weight:700;">Large Bank</div>
+                      <div style="color:rgba(0,0,0,.6);font-size:7px;">Finans</div>
+                    </div>
+                  </div>
+                  <div style="color:rgba(0,0,0,.7);line-height:1.2;font-size:7px;">
+                    <div><strong>Role:</strong> Senior PM</div>
+                    <div><strong>Skills:</strong> Project Mgmt, Risk, Analytics</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="border-top:1px solid rgba(0,0,0,.1);padding-top:8px;">
+                <div style="font-weight:700;font-size:9px;margin-bottom:5px;">Endorsements</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
+                  <div style="background:#f0f7ff;border-radius:6px;padding:6px;border:1px solid #1d4ed8;text-align:center;">
+                    <div style="background:#1d4ed8;color:white;padding:2px 5px;border-radius:3px;font-size:7px;font-weight:600;margin-bottom:3px;white-space:nowrap;">Client</div>
+                    <div style="font-size:7px;color:rgba(0,0,0,.7);line-height:1.1;font-style:italic;">"Excellent"</div>
+                  </div>
+                  <div style="background:#f0fdf4;border-radius:6px;padding:6px;border:1px solid #16a34a;text-align:center;">
+                    <div style="background:#16a34a;color:white;padding:2px 5px;border-radius:3px;font-size:7px;font-weight:600;margin-bottom:3px;white-space:nowrap;">Manager</div>
+                    <div style="font-size:7px;color:rgba(0,0,0,.7);line-height:1.1;font-style:italic;">"Great"</div>
+                  </div>
+                  <div style="background:#f0f7ff;border-radius:6px;padding:6px;border:1px solid #1d4ed8;text-align:center;">
+                    <div style="background:#1d4ed8;color:white;padding:2px 5px;border-radius:3px;font-size:7px;font-weight:600;margin-bottom:3px;white-space:nowrap;">Team</div>
+                    <div style="font-size:7px;color:rgba(0,0,0,.7);line-height:1.1;font-style:italic;">"Fantastic"</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -78,6 +127,57 @@
             </div>
           </div>
 
+        </div>
+      </div>
+
+      <!-- Example Test User card (static demo) -->
+      <div class="flip-wrap" style="margin-left:18px;">
+        <div class="flip soft-hover" role="button" tabindex="0" aria-label="Example profile card">
+          <div class="flip-face flip-front">
+            <div class="card-inner" style="width:260px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;">
+                <div style="display:flex;gap:10px;flex:1;">
+                  <div id="exampleAvatar" style="width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#06b6d4,#7dd3fc);flex-shrink:0;"></div>
+                  <div style="flex:1;padding-top:4px;">
+                    <div id="exampleName" style="font-weight:800;font-size:16px;">Test User</div>
+                    <p id="exampleTitle" style="margin:2px 0;font-size:12px;color:rgba(0,0,0,.6);">Independent Consultant</p>
+                    <p id="exampleLocation" style="margin:2px 0 0;font-size:11px;color:rgba(0,0,0,.5);">Remote</p>
+                  </div>
+                </div>
+                <button id="exampleBadge" style="background:#f0f4f8;border:1px solid #06b6d4;color:#0369a1;padding:4px 8px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;white-space:nowrap;margin-left:8px;flex-shrink:0;">Example</button>
+              </div>
+
+              <div style="background:#fbfeff;border-radius:8px;padding:8px;margin-bottom:8px;">
+                <div style="margin-bottom:6px;">
+                  <span style="font-weight:700;font-size:11px;">PeerRate Score:</span>
+                  <span id="exampleScore" style="font-weight:900;font-size:22px;margin-left:6px;color:#0369a1;">74</span>
+                  <span id="exampleScoreText" style="font-size:11px;color:rgba(0,0,0,.6);"> of 100</span>
+                </div>
+                <div id="exampleTags" style="display:flex;gap:6px;flex-wrap:wrap;">
+                  <span class="example-tag" style="background:#06b6d4;color:white;padding:3px 7px;border-radius:4px;font-size:9px;font-weight:600;">Verified</span>
+                  <span class="example-tag" style="background:#7dd3fc;color:#033f4a;padding:3px 7px;border-radius:4px;font-size:9px;font-weight:600;">Portable</span>
+                  <span class="example-tag" style="background:#d1fae5;color:#065f46;padding:3px 7px;border-radius:4px;font-size:9px;font-weight:600;">Recent</span>
+                </div>
+              </div>
+
+              <div style="font-size:11px;margin-bottom:8px;">
+                <div style="font-weight:700;margin-bottom:4px;">Recent Engagement</div>
+                <div style="background:#f9fafb;border-radius:8px;padding:8px;font-size:10px;">
+                  <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+                    <div id="exampleEngLogo" style="width:24px;height:24px;background:#06b6d4;border-radius:4px;"></div>
+                    <div>
+                      <div id="exampleEngClient" style="font-weight:700;font-size:11px;">Design Agency</div>
+                      <div id="exampleEngType" style="color:rgba(0,0,0,.6);font-size:10px;">UX / Product</div>
+                    </div>
+                  </div>
+                  <div id="exampleEngDetails" style="color:rgba(0,0,0,.65);line-height:1.2;font-size:10px;">
+                    <div><strong>Role:</strong> Consultant</div>
+                    <div><strong>Delivered:</strong> Concept, Roadmap</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -148,3 +248,54 @@
     </div>
   </div>
 </section>
+
+<script>
+  // Example Test User data (copy of dev test user with made-up metrics)
+  (function(){
+    const exampleTestUser = {
+      id: 'test-dev-user',
+      email: 'test@development.local',
+      fullName: 'Test User',
+      title: 'Independent Consultant',
+      location: 'Remote',
+      score: 74,
+      tags: ['Verified','Portable','Recent'],
+      engagement: {
+        client: 'Design Agency',
+        type: 'UX / Product',
+        role: 'Consultant',
+        delivered: 'Concept, Roadmap'
+      }
+    };
+
+    // Populate example card if present
+    try {
+      const nameEl = document.getElementById('exampleName');
+      if (!nameEl) return;
+
+      document.getElementById('exampleName').textContent = exampleTestUser.fullName || '';
+      document.getElementById('exampleTitle').textContent = exampleTestUser.title || '';
+      document.getElementById('exampleLocation').textContent = exampleTestUser.location || '';
+      document.getElementById('exampleScore').textContent = exampleTestUser.score || '';
+
+      const tagsEl = document.getElementById('exampleTags');
+      if (tagsEl && exampleTestUser.tags && exampleTestUser.tags.length) {
+        tagsEl.innerHTML = '';
+        exampleTestUser.tags.forEach(t => {
+          const s = document.createElement('span');
+          s.className = 'example-tag';
+          s.style.cssText = 'background:#06b6d4;color:white;padding:3px 7px;border-radius:4px;font-size:9px;font-weight:600;';
+          s.textContent = t;
+          tagsEl.appendChild(s);
+        });
+      }
+
+      const eng = exampleTestUser.engagement || {};
+      document.getElementById('exampleEngClient').textContent = eng.client || '';
+      document.getElementById('exampleEngType').textContent = eng.type || '';
+      document.getElementById('exampleEngDetails').innerHTML = `<div><strong>Role:</strong> ${eng.role||''}</div><div><strong>Delivered:</strong> ${eng.delivered||''}</div>`;
+    } catch (err) {
+      console.error('Could not populate exampleTestUser card', err);
+    }
+  })();
+</script>

@@ -57,4 +57,48 @@ router.post('/auth/login', async (req, res) => {
   }
 });
 
+/* -------------------------------------------------------
+   POST /api/auth/reset-password – Password reset request
+   ------------------------------------------------------- */
+router.post('/auth/reset-password', async (req, res) => {
+  const { email } = req.body;
+
+  if (!email || typeof email !== 'string') {
+    return res
+      .status(400)
+      .json({ ok: false, error: 'Email is required.' });
+  }
+
+  const emailTrim = String(email).trim().toLowerCase();
+
+  try {
+    const customer = await findCustomerBySubjectRef(emailTrim);
+    
+    if (!customer || !customer.passwordHash) {
+      // For security, we don't reveal if email exists or not
+      // Always return success message
+      return res.status(200).json({
+        ok: true,
+        message: 'If an account with this email exists, you will receive password reset instructions.',
+      });
+    }
+
+    // TODO: In a real implementation, you would:
+    // 1. Generate a reset token
+    // 2. Store it in the database with an expiration time
+    // 3. Send an email with a reset link
+    // For now, we just return success
+
+    return res.status(200).json({
+      ok: true,
+      message: 'If an account with this email exists, you will receive password reset instructions.',
+    });
+  } catch (e) {
+    console.error('[POST /api/auth/reset-password] error:', e);
+    return res
+      .status(500)
+      .json({ ok: false, error: 'Failed to process password reset.' });
+  }
+});
+
 module.exports = router;

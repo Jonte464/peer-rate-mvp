@@ -8,6 +8,7 @@ import customerForm from './customer.js';
 
 import { initLanding } from './landing/init.js';
 import { updateTopUserPill, initUserDropdown } from './landing/topUser.js';
+import { initLandingMenu } from './landing/menu.js';
 
 /**
  * Döljer eller visar login-hint på sidan Lämna betyg.
@@ -122,6 +123,9 @@ window.addEventListener('DOMContentLoaded', () => {
   updateUserBadge(user);
   updateAvatars(user);
   updateTopUserPill(user);
+
+  // Initialize menu on all pages (not just landing)
+  initLandingMenu();
 
   initUserDropdown({
     auth,

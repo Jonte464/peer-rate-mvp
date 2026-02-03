@@ -105,6 +105,85 @@
       <!-- Allt här visas bara när man är inloggad -->
       <div id="profile-root" class="hidden">
 
+        <!-- Trust Profile Card (matches design) -->
+        <section class="trust-profile-card" style="background:#fff;border-radius:16px;padding:32px 32px 24px 32px;box-shadow:0 4px 24px rgba(0,0,0,0.07);margin-bottom:32px;position:relative;max-width:900px;margin-left:auto;margin-right:auto;">
+          <button id="profile-share-btn" style="position:absolute;top:24px;right:32px;background:#f8fafc;border:1px solid #cbd5e1;color:#1d4ed8;padding:8px 22px 8px 22px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.03);">Share PeerRate</button>
+          <div style="display:flex;align-items:center;gap:28px;">
+            <img id="profile-photo" src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profile photo" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,.06);">
+            <div style="flex:1;">
+              <div id="profile-fullname" style="font-size:2rem;font-weight:700;line-height:1.1;">Anna Larsson</div>
+              <div id="profile-title" style="font-size:1.1rem;color:#555;font-weight:500;margin-top:2px;">Senior Project Manager</div>
+              <div id="profile-location" style="font-size:1rem;color:#888;margin-top:2px;">Stockholm, Sweden</div>
+            </div>
+          </div>
+          <div style="margin-top:28px;background:#f8fafc;border-radius:12px;padding:24px 24px 18px 24px;border:1px solid #e5e7eb;">
+            <div style="font-size:1.2rem;font-weight:600;color:#222;margin-bottom:8px;">PeerRate Score: <span id="profile-score-big" style="font-size:2.2rem;font-weight:800;color:#1d4ed8;">82</span><span style="font-size:1.1rem;font-weight:500;color:#555;"> of 100</span></div>
+            <div style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+              <span id="badge-verified" style="background:#2563eb;color:#fff;padding:6px 16px;border-radius:8px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:6px;"><svg width="18" height="18" fill="none" style="vertical-align:middle;"><circle cx="9" cy="9" r="9" fill="#fff"/><path d="M6 9.5l2 2 4-4" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Verified Engagements</span>
+              <span id="badge-confidence" style="background:#e0e7ff;color:#1d4ed8;padding:6px 16px;border-radius:8px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:6px;"><svg width="18" height="18" fill="none" style="vertical-align:middle;"><circle cx="9" cy="9" r="9" fill="#fff"/><path d="M6 9.5l2 2 4-4" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>High Confidence</span>
+              <span id="badge-strong" style="background:#e0e7ff;color:#1d4ed8;padding:6px 16px;border-radius:8px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:6px;"><svg width="18" height="18" fill="none" style="vertical-align:middle;"><circle cx="9" cy="9" r="9" fill="#fff"/><path d="M6 9.5l2 2 4-4" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Strong Verification</span>
+            </div>
+            <div style="display:flex;gap:32px;margin-top:18px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:10px;">
+                <span style="color:#22c55e;font-size:1.5rem;">✔️</span>
+                <div><span style="font-weight:700;">Client Feedback:</span><br><span id="feedback-client" style="color:#222;">Excellent</span></div>
+              </div>
+              <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:10px;">
+                <span style="color:#22c55e;font-size:1.5rem;">✔️</span>
+                <div><span style="font-weight:700;">Leadership & Collaboration:</span><br><span id="feedback-leadership" style="color:#222;">Strong</span></div>
+              </div>
+              <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:10px;">
+                <span style="color:#22c55e;font-size:1.5rem;">✔️</span>
+                <div><span style="font-weight:700;">Consistency:</span><br><span id="feedback-consistency" style="color:#222;">Recent & Stable</span></div>
+              </div>
+            </div>
+            <div style="margin-top:18px;display:flex;align-items:center;gap:10px;">
+              <span style="color:#2563eb;font-size:1.5rem;">✔️</span>
+              <div><span style="font-weight:700;">Verification Level:</span> <span id="verification-level" style="color:#222;">High</span></div>
+            </div>
+          </div>
+          <div style="margin-top:32px;">
+            <div style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">Recent Engagement</div>
+            <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px 14px 20px;display:flex;align-items:flex-start;gap:18px;">
+              <div style="font-size:2rem;color:#2563eb;margin-right:8px;">🏦</div>
+              <div style="flex:1;">
+                <div style="font-size:1.1rem;font-weight:700;display:inline;" id="engagement-title">Large Bank</div> <span style="color:#888;" id="engagement-industry">| Finance</span>
+                <div style="margin-top:2px;"><span style="font-weight:600;">Role:</span> <span style="font-weight:700;" id="engagement-role">Senior Project Manager</span></div>
+                <div style="margin-top:2px;"><span style="font-weight:600;">Skills:</span> <span style="color:#222;" id="engagement-skills">Project Management, Risk & Compliance, <b>Data Analytics</b></span></div>
+                <div style="margin-top:6px;color:#444;" id="engagement-desc">Led implementation of new compliance system for a major bank. Managed a team of 8 consultants.</div>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:28px;display:flex;gap:18px;flex-wrap:wrap;">
+            <div style="background:#f1f5f9;border-radius:10px;padding:18px 18px 14px 18px;flex:1;min-width:220px;max-width:320px;box-shadow:0 1px 4px rgba(0,0,0,.03);border:1px solid #e5e7eb;">
+              <div style="color:#2563eb;font-weight:700;margin-bottom:6px;">Client Reference</div>
+              <div id="testimonial-client" style="font-size:1.1rem;font-style:italic;color:#222;">“Anna delivered excellent results on time.”</div>
+              <div style="margin-top:10px;color:#555;font-size:0.98rem;">— <span id="testimonial-client-author">Magnus S.</span>, <span style="font-style:italic;" id="testimonial-client-role">Risk Director</span></div>
+            </div>
+            <div style="background:#f1f5f9;border-radius:10px;padding:18px 18px 14px 18px;flex:1;min-width:220px;max-width:320px;box-shadow:0 1px 4px rgba(0,0,0,.03);border:1px solid #e5e7eb;">
+              <div style="color:#22c55e;font-weight:700;margin-bottom:6px;">Manager Endorsement</div>
+              <div id="testimonial-manager" style="font-size:1.1rem;font-style:italic;color:#222;">“Great leader with strong strategic focus.”</div>
+              <div style="margin-top:10px;color:#555;font-size:0.98rem;">— <span id="testimonial-manager-author">Elin L.</span>, <span style="font-style:italic;" id="testimonial-manager-role">Consulting Director</span></div>
+            </div>
+            <div style="background:#f1f5f9;border-radius:10px;padding:18px 18px 14px 18px;flex:1;min-width:220px;max-width:320px;box-shadow:0 1px 4px rgba(0,0,0,.03);border:1px solid #e5e7eb;">
+              <div style="color:#2563eb;font-weight:700;margin-bottom:6px;">Team Feedback</div>
+              <div id="testimonial-team" style="font-size:1.1rem;font-style:italic;color:#222;">“Anna is a fantastic team lead!”</div>
+              <div style="margin-top:10px;color:#555;font-size:0.98rem;">— <span id="testimonial-team-author">Erik J.</span>, <span style="font-style:italic;" id="testimonial-team-role">Data Analyst</span></div>
+            </div>
+          </div>
+        </section>
+        <script>
+        // Share button logic
+        const shareBtn = document.getElementById('profile-share-btn');
+        if (shareBtn) {
+          shareBtn.addEventListener('click', function() {
+            navigator.clipboard.writeText(window.location.href);
+            shareBtn.textContent = 'Copied!';
+            setTimeout(()=>shareBtn.textContent='Share PeerRate',1200);
+          });
+        }
+        </script>
+
         <!-- ✅ Mitt omdöme (flyttad högst upp) -->
         <section class="card">
           <h2 data-i18n="profile_my_rating_title">Mitt omdöme</h2>
@@ -206,6 +285,12 @@
         </section>
 
       </div>
+
+      
+
+      
+
+      
 
       <div style="text-align:center;color:rgba(15,15,18,.55);font-size:12px;margin-top:18px;">
         © 2025 by PeerRate.

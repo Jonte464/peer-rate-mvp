@@ -31,6 +31,26 @@ export function initRatingLogin() {
   const form = document.getElementById('rating-login-form');
   if (form) form.addEventListener('submit', handleRatingLoginSubmit);
 
+  // Test mode button for development
+  const testBtn = document.getElementById('test-without-login-btn');
+  if (testBtn) {
+    testBtn.addEventListener('click', () => {
+      // Create a test user without actual login
+      const testUser = { id: 'test-dev-user', email: 'test@development.local', fullName: 'Test User' };
+      auth.setUser(testUser);
+      setRatingVisibility(true);
+      try {
+        initRatingForm();
+      } catch (err) {
+        console.error('Could not init rating form', err);
+      }
+      const raterInput =
+        document.querySelector('#rating-form input[name="rater"]') ||
+        document.getElementById('rater');
+      if (raterInput && testUser.email) raterInput.value = testUser.email;
+    });
+  }
+
   try {
     const user = auth.getUser?.() || null;
     setRatingVisibility(!!user);
@@ -68,7 +88,13 @@ async function handleRatingLoginSubmit(event) {
   try {
     const res = await login(email, password);
     if (!res || res.ok === false) {
-      const message = res?.error || 'Inloggningen misslyckades. Kontrollera uppgifterna.';
+      let message = res?.error || 'Login failed. Please check your credentials.';
+      
+      // Convert Swedish error messages to English
+      if (message.includes('Fel e-post') || message.includes('lösenord')) {
+        message = 'Incorrect Email or Password';
+      }
+      
       showNotification('error', message, 'login-status');
       return;
     }

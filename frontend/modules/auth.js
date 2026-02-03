@@ -20,6 +20,29 @@ const auth = {
   },
 };
 
+// On module load: if backend set a peerRateUser cookie (from OAuth callback),
+// copy it into localStorage so the existing frontend auth flow recognizes the user.
+try {
+  if (typeof document !== 'undefined' && document.cookie) {
+    const match = document.cookie.match(/(?:^|; )peerRateUser=([^;]+)/);
+    if (match && match[1]) {
+      try {
+        const decoded = decodeURIComponent(match[1]);
+        const parsed = JSON.parse(decoded);
+        if (parsed && !localStorage.getItem('peerRateUser')) {
+          localStorage.setItem('peerRateUser', JSON.stringify(parsed));
+        }
+      } catch (e) {
+        // ignore parse errors
+      }
+      // Clear the cookie so it doesn't linger (set past date)
+      document.cookie = 'peerRateUser=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    }
+  }
+} catch (e) {
+  // no-op in non-browser environments
+}
+
 // Logga in användare via API och spara användarinfo i localStorage
 export async function login(email, password) {
   try {

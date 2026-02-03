@@ -193,8 +193,109 @@ function translateAddressStatus(rawStatus) {
 // ----------------------
 async function loadProfileData() {
   try {
-    const customer = await api.getCurrentCustomer();
-    if (!customer) return;
+    let customer = null;
+    try {
+      customer = await api.getCurrentCustomer();
+    } catch (e) {
+      customer = null;
+    }
+
+    // If backend customer not available (dev mode), fall back to local auth user
+    if (!customer) {
+      const local = auth.getUser && auth.getUser();
+      if (local) {
+        customer = {
+          fullName: local.fullName || `${local.firstName || ''} ${local.lastName || ''}`.trim(),
+          email: local.email || '',
+          firstName: local.firstName,
+          lastName: local.lastName,
+          title: (local.title || '').trim() || undefined,
+        };
+      } else {
+        return;
+      }
+    }
+
+    // Fill the dynamic profile info card if present
+    function updateProfileInfoCard(customer) {
+      if (!customer) return;
+      const name = customer.fullName || customer.name || `${customer.firstName || ''} ${customer.lastName || ''}`;
+      const email = customer.email || customer.subjectRef || '';
+      const city = customer.addressCity || customer.city || '';
+      const country = customer.country || '';
+      const role = customer.role || 'Member';
+      const score = typeof customer.average === 'number' ? Math.round(customer.average * 20) : '–';
+      // Avatar initials
+      let initials = 'P';
+      if (name && name.trim()) {
+        initials = name.trim().split(/\s+/).slice(0,2).map(n=>n[0].toUpperCase()).join('');
+      } else if (email) {
+        initials = email[0].toUpperCase();
+      }
+      const avatar = document.getElementById('profile-info-avatar');
+      if (avatar) { avatar.textContent = initials; }
+      const nameEl = document.getElementById('profile-info-name');
+      if (nameEl) { nameEl.textContent = name || '–'; }
+      const roleEl = document.getElementById('profile-info-role');
+      if (roleEl) { roleEl.textContent = role; }
+      const locEl = document.getElementById('profile-info-location');
+      if (locEl) { locEl.textContent = [city, country].filter(Boolean).join(', ') || '–'; }
+      const scoreEl = document.getElementById('profile-info-score');
+      if (scoreEl) { scoreEl.textContent = score; }
+    }
+
+    // Fill the trust profile card with dynamic data
+    function updateTrustProfileCard(customer, engagement, testimonials) {
+      if (!customer) return;
+      // Basic info
+      const name = customer.fullName || customer.name || `${customer.firstName || ''} ${customer.lastName || ''}`;
+      const email = customer.email || customer.subjectRef || '';
+      const city = customer.addressCity || customer.city || '';
+      const country = customer.country || '';
+      const title = customer.title || customer.role || 'Member';
+      const location = [city, country].filter(Boolean).join(', ');
+      const score = typeof customer.average === 'number' ? Math.round(customer.average * 20) : '–';
+      // Avatar/photo
+      const photoEl = document.getElementById('profile-photo');
+      if (photoEl) {
+        const key = (customer.email ? 'peerRateAvatar:' + customer.email.toLowerCase() : null);
+        const avatarUrl = key ? localStorage.getItem(key) : null;
+        if (avatarUrl) {
+          photoEl.src = avatarUrl;
+        } else {
+          photoEl.src = 'https://randomuser.me/api/portraits/lego/1.jpg'; // fallback
+        }
+      }
+      const nameEl = document.getElementById('profile-fullname');
+      if (nameEl) nameEl.textContent = name || '–';
+      const titleEl = document.getElementById('profile-title');
+      if (titleEl) titleEl.textContent = title;
+      const locEl = document.getElementById('profile-location');
+      if (locEl) locEl.textContent = location || '–';
+      const scoreEl = document.getElementById('profile-score-big');
+      if (scoreEl) scoreEl.textContent = score;
+      // Feedback (demo: static or from engagement)
+      document.getElementById('feedback-client').textContent = (engagement && engagement.clientFeedback) || 'Excellent';
+      document.getElementById('feedback-leadership').textContent = (engagement && engagement.leadership) || 'Strong';
+      document.getElementById('feedback-consistency').textContent = (engagement && engagement.consistency) || 'Recent & Stable';
+      document.getElementById('verification-level').textContent = (engagement && engagement.verificationLevel) || 'High';
+      // Engagement
+      document.getElementById('engagement-title').textContent = (engagement && engagement.title) || 'Large Bank';
+      document.getElementById('engagement-industry').textContent = '| ' + ((engagement && engagement.industry) || 'Finance');
+      document.getElementById('engagement-role').textContent = (engagement && engagement.role) || title;
+      document.getElementById('engagement-skills').innerHTML = (engagement && engagement.skills) || 'Project Management, Risk & Compliance, <b>Data Analytics</b>';
+      document.getElementById('engagement-desc').textContent = (engagement && engagement.description) || 'Led implementation of new compliance system for a major bank. Managed a team of 8 consultants.';
+      // Testimonials
+      document.getElementById('testimonial-client').textContent = (testimonials && testimonials.client && testimonials.client.text) || '“Anna delivered excellent results on time.”';
+      document.getElementById('testimonial-client-author').textContent = (testimonials && testimonials.client && testimonials.client.author) || 'Magnus S.';
+      document.getElementById('testimonial-client-role').textContent = (testimonials && testimonials.client && testimonials.client.role) || 'Risk Director';
+      document.getElementById('testimonial-manager').textContent = (testimonials && testimonials.manager && testimonials.manager.text) || '“Great leader with strong strategic focus.”';
+      document.getElementById('testimonial-manager-author').textContent = (testimonials && testimonials.manager && testimonials.manager.author) || 'Elin L.';
+      document.getElementById('testimonial-manager-role').textContent = (testimonials && testimonials.manager && testimonials.manager.role) || 'Consulting Director';
+      document.getElementById('testimonial-team').textContent = (testimonials && testimonials.team && testimonials.team.text) || '“Anna is a fantastic team lead!”';
+      document.getElementById('testimonial-team-author').textContent = (testimonials && testimonials.team && testimonials.team.author) || 'Erik J.';
+      document.getElementById('testimonial-team-role').textContent = (testimonials && testimonials.team && testimonials.team.role) || 'Data Analyst';
+    }
 
     const set = (id, value) => {
       const el = document.getElementById(id);
@@ -219,7 +320,6 @@ async function loadProfileData() {
     set('profile-addressZip', customer.addressZip || customer.zip || '-');
     set('profile-addressCity', customer.addressCity || customer.city || '-');
     set('profile-country', customer.country || '-');
-
     if (typeof customer.average === 'number') {
       set('profile-score', String(customer.average));
       set('profile-score-count', String(customer.count || 0));
@@ -234,6 +334,10 @@ async function loadProfileData() {
       // Visa direkt en rating-graf baserat på profilens snitt
       renderPRating(customer.average);
     }
+    // Update the info card
+    updateProfileInfoCard(customer);
+    // Update the trust profile card (demo: static engagement/testimonials)
+    updateTrustProfileCard(customer, null, null);
   } catch (err) {
     console.error('Kunde inte ladda profil', err);
   }

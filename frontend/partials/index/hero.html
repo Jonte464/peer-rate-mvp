@@ -15,25 +15,87 @@
 
         <div class="hero-cta">
           <a class="btn btn-primary soft-hover" href="/customer.html" data-i18n="hero_cta_primary">Kom igång</a>
-          <a class="btn btn-ghost soft-hover" href="#sim" data-i18n="hero_cta_secondary">Se 5P-modellen</a>
+          <a class="btn btn-ghost soft-hover" href="/rate.html" data-i18n="hero_cta_secondary">Logga in</a>
+          <a class="btn btn-social soft-hover" href="/auth/linkedin" style="margin-left:8px;background:#0a66c2;color:white;border:none;">Sign in with LinkedIn</a>
         </div>
       </div>
 
-      <aside class="hero-card">
-        <h3 data-i18n="hero_card_title">Ett reputation card du kan dela</h3>
-        <p class="mini" data-i18n="hero_card_p">Ett kompakt kvitto på hur du agerar i P2P — över plattformar.</p>
+      <!-- hero-card removed (replaced by example profile below) -->
+    </div>
+    
+    <!-- Full example profile card (frosted transparent background) -->
+    <section class="trust-profile-card" style="background:rgba(255,255,255,0.06);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.08);margin-top:12px;max-width:880px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+        <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop" alt="Sofia Andersson" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.06);box-shadow:0 1px 2px rgba(0,0,0,0.04);">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.82rem;font-weight:700;line-height:1;color:#fff;">Sofia Andersson</div>
+          <div style="font-size:0.66rem;color:rgba(255,255,255,0.85);margin-top:2px;">Senior Consultant</div>
+          <div style="font-size:0.6rem;color:rgba(255,255,255,0.7);margin-top:1px;">Stockholm, Sweden</div>
+        </div>
+        <div style="flex-shrink:0;">
+          <button style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.08);color:#fff;padding:2px 6px;border-radius:7px;font-size:9px;font-weight:600;">Share</button>
+        </div>
+      </div>
 
-        <div class="hero-metrics">
-          <div class="metric">
-            <b id="heroScore">4.6</b>
-            <span data-i18n="hero_metric_score">Förtroende (1–5)</span>
+      <div style="margin-top:12px;background:linear-gradient(rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:8px;padding:12px;border:1px solid rgba(255,255,255,0.03);">
+        <div style="font-weight:700;font-size:0.78rem;color:#fff;margin-bottom:6px;">PeerRate Score: <span style="font-size:1.05rem;font-weight:800;color:#a5d8ff;margin-left:6px;">88</span><span style="font-size:0.68rem;color:rgba(255,255,255,0.8);margin-left:6px;"> of 100</span></div>
+        <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+          <span style="background:rgba(96,165,250,0.12);color:#cfe8ff;padding:1px 4px;border-radius:4px;font-weight:600;font-size:8px;">Verified</span>
+          <span style="background:rgba(224,242,254,0.08);color:#cfe8ff;padding:1px 4px;border-radius:4px;font-weight:600;font-size:8px;">High</span>
+          <span style="background:rgba(200,230,255,0.06);color:#cfe8ff;padding:1px 4px;border-radius:4px;font-weight:600;font-size:8px;">Strong</span>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:10px;align-items:center;">
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.95);">
+              <div style="font-size:0.8rem;color:#9ef7c6;">✔️</div>
+              <div style="font-weight:700;font-size:0.72rem;">Client Feedback: <span style="font-weight:600;margin-left:6px;color:rgba(255,255,255,0.9);font-size:0.62rem;">Excellent</span></div>
+            </div>
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.95);">
+              <div style="font-size:0.8rem;color:#9ef7c6;">✔️</div>
+              <div style="font-weight:700;font-size:0.72rem;">Leadership & Collaboration: <span style="font-weight:600;margin-left:6px;color:rgba(255,255,255,0.9);font-size:0.62rem;">Strong</span></div>
+            </div>
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.95);">
+              <div style="font-size:0.8rem;color:#9ef7c6;">✔️</div>
+              <div style="font-weight:700;font-size:0.72rem;">Consistency: <span style="font-weight:600;margin-left:6px;color:rgba(255,255,255,0.9);font-size:0.62rem;">Recent & Stable</span></div>
+            </div>
           </div>
-          <div class="metric">
-            <b id="heroTx">127</b>
-            <span data-i18n="hero_metric_tx">Verifierade transaktioner</span>
+
+          <div style="margin-top:8px;display:flex;align-items:center;gap:6px;color:rgba(255,255,255,0.95);">
+            <div style="font-size:0.8rem;color:#a5d8ff;">✔️</div>
+            <div><span style="font-weight:700;font-size:0.72rem;">Verification Level:</span> <span style="margin-left:6px;color:rgba(255,255,255,0.9);font-size:0.62rem;">High</span></div>
+          </div>
+      </div>
+
+      <div style="margin-top:18px;">
+        <div style="font-size:1rem;font-weight:700;color:rgba(255,255,255,0.95);margin-bottom:8px;">Recent Engagement</div>
+        <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03);border-radius:10px;padding:14px;display:flex;align-items:flex-start;gap:14px;">
+          <div style="font-size:1.6rem;color:#a5d8ff;">🏦</div>
+          <div style="flex:1;color:rgba(255,255,255,0.95);">
+            <div style="font-size:0.82rem;font-weight:700;display:inline;">Large Bank</div> <span style="color:rgba(255,255,255,0.75);font-size:0.72rem;">| Finance</span>
+            <div style="margin-top:5px;font-size:0.72rem;"><span style="font-weight:600;">Role:</span> <span style="font-weight:700;">Member</span></div>
+            <div style="margin-top:5px;font-size:0.72rem;"><span style="font-weight:600;">Skills:</span> <span style="color:rgba(255,255,255,0.95);">Project Management, Risk & Compliance, Data Analytics</span></div>
+            <div style="margin-top:6px;color:rgba(255,255,255,0.85);font-size:0.75rem;">Led implementation of a compliance system for a major bank. Managed a team of 8 consultants.</div>
           </div>
         </div>
-      </aside>
-    </div>
+      </div>
+
+      <div style="margin-top:14px;display:flex;gap:12px;flex-wrap:nowrap;">
+        <div style="background:rgba(255,255,255,0.02);border-radius:10px;padding:12px;flex:1;min-width:0;border:1px solid rgba(255,255,255,0.03);">
+          <div style="color:#a5d8ff;font-weight:700;margin-bottom:6px;font-size:0.78rem;">Client Reference</div>
+            <div style="font-size:0.7rem;font-style:italic;color:rgba(255,255,255,0.95);">“Sofia delivered excellent results on time.”</div>
+            <div style="margin-top:6px;color:rgba(255,255,255,0.85);font-size:0.65rem;">— Magnus S., Risk Director</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.02);border-radius:10px;padding:12px;flex:1;min-width:0;border:1px solid rgba(255,255,255,0.03);">
+          <div style="color:#9ef7c6;font-weight:700;margin-bottom:6px;font-size:0.78rem;">Manager Endorsement</div>
+            <div style="font-size:0.7rem;font-style:italic;color:rgba(255,255,255,0.95);">“Great leader with strong strategic focus.”</div>
+            <div style="margin-top:6px;color:rgba(255,255,255,0.85);font-size:0.65rem;">— Elin L., Consulting Director</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.02);border-radius:10px;padding:12px;flex:1;min-width:0;border:1px solid rgba(255,255,255,0.03);">
+          <div style="color:#a5d8ff;font-weight:700;margin-bottom:6px;font-size:0.78rem;">Team Feedback</div>
+            <div style="font-size:0.7rem;font-style:italic;color:rgba(255,255,255,0.95);">“Sofia is an excellent collaborator and pragmatic problem solver.”</div>
+            <div style="margin-top:6px;color:rgba(255,255,255,0.85);font-size:0.65rem;">— Erik J., Data Analyst</div>
+        </div>
+      </div>
+    </section>
   </div>
 </section>

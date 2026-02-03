@@ -48,7 +48,13 @@ if (customerForm) {
     }
 
     if (response.status === 409) {
-      const message = data?.error || 'Det finns redan en användare med samma e-post eller personnummer.';
+      let message = data?.error || 'Det finns redan en användare med samma e-post eller personnummer.';
+      
+      // Check if email already exists
+      if (message.includes('redan ett registrerat konto') || message.includes('redan en användare')) {
+        message = 'You already have an account';
+      }
+      
       showNotification('error', message, 'cust-notice');
       return;
     }

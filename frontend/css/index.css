@@ -52,12 +52,14 @@ a:active, button:active { transform: translateY(1px); }
    TOP ROW
    ========================= */
 .top-row{
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
-  background: rgba(255,255,255,.78);
-  backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--w-border);
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom: none;
 }
 .top-row .shell{
   max-width: 100%;
@@ -80,7 +82,7 @@ a:active, button:active { transform: translateY(1px); }
   align-items:center;
   gap: 12px;
   text-decoration:none;
-  color: inherit;
+  color: #fff;
   user-select:none;
   min-width: 220px;
 }
@@ -129,7 +131,7 @@ a:active, button:active { transform: translateY(1px); }
 }
 .brand-sub{
   font-size: 12px;
-  color: var(--w-muted);
+  color: rgba(255,255,255,.70);
   margin-top: 2px;
 }
 @media (max-width: 520px){
@@ -152,15 +154,16 @@ a:active, button:active { transform: translateY(1px); }
   display:inline-flex;
   align-items:center;
   gap: 8px;
-  border: 1px solid var(--w-border);
-  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(255,255,255,.30);
+  background: rgba(255,255,255,.12);
+  color: #fff;
   padding: 7px 10px;
   border-radius: 999px;
   font-weight: 650;
   font-size: 13px;
   cursor: pointer;
 }
-.lang-pill:hover{ filter: brightness(0.98); }
+.lang-pill:hover{ filter: brightness(1.15); }
 
 .top-user{
   display:none;
@@ -254,16 +257,25 @@ a:active, button:active { transform: translateY(1px); }
 .menu-btn:hover{ filter: brightness(.98); }
 
 .menu-panel{
+  position: fixed;
+  top: 60px;
+  right: 16px;
+  width: 260px;
+  max-height: 80vh;
+  overflow-y: auto;
   display:none;
-  border-top: 1px solid var(--w-border);
-  background: rgba(255,255,255,.88);
+  border: 1px solid rgba(15,15,18,.10);
+  border-radius: 16px;
+  background: rgba(255,255,255,.95);
   backdrop-filter: blur(12px);
+  box-shadow: 0 20px 60px rgba(0,0,0,.15);
+  z-index: 99;
 }
 .menu-panel-inner{
-  padding: 12px 0 18px;
+  padding: 12px 12px;
   display:flex;
   flex-direction:column;
-  gap: 10px;
+  gap: 8px;
 }
 .menu-link{
   display:flex;
@@ -318,9 +330,10 @@ a:active, button:active { transform: translateY(1px); }
   position: relative;
   z-index: 2;
   width:100%;
-  padding: 72px 0 72px;
+  padding: 60px 0 72px;
   display:flex;
-  align-items:flex-end;
+  align-items:center;
+  margin-top: 0;
 }
 .hero-grid{
   display:grid;
@@ -330,7 +343,7 @@ a:active, button:active { transform: translateY(1px); }
 }
 @media (max-width: 980px){
   .hero-grid{ grid-template-columns: 1fr; }
-  .hero-content{ padding: 44px 0 46px; }
+  .hero-content{ padding: 50px 0 46px; margin-top: 0; }
 }
 .hero-kicker{
   color: rgba(255,255,255,.80);
@@ -480,7 +493,7 @@ a:active, button:active { transform: translateY(1px); }
   border-radius: 22px;
   transform-style: preserve-3d;
   transition: transform var(--ms-slow) var(--ease);
-  height: 420px;
+  height: 580px;
 }
 .flip.is-flipped{ transform: rotateY(180deg); }
 .flip-face{
@@ -502,8 +515,18 @@ a:active, button:active { transform: translateY(1px); }
     linear-gradient(180deg, rgba(148,163,184,.30), rgba(226,232,240,.55) 45%, rgba(255,255,255,.85));
 }
 
-.flip-back{ transform: rotateY(180deg); background: #fff; }
-.card-inner{ padding: 18px; }
+.flip-back{ 
+  transform: rotateY(180deg); 
+  background: #fff;
+  display: none;
+}
+.card-inner{ 
+  padding: 14px;
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
 .card-top{ display:flex; justify-content:space-between; align-items:center; gap: 10px; }
 .chip{
   width: 44px; height: 34px;

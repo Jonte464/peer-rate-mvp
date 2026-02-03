@@ -21,7 +21,7 @@ export function initLandingLanguage() {
       hero_h1: 'Förtroende du kan bevisa.',
       hero_p: 'PeerRate gör att du kan bära med dig verifierad trovärdighet mellan marknadsplatser. Inte känsla. Inte påståenden. Riktiga transaktioner — portabelt och svårt att fejka.',
       hero_cta_primary: 'Kom igång',
-      hero_cta_secondary: 'Fråga om trust',
+      hero_cta_secondary: 'Logga in',
       hero_card_title: 'Ett reputation card du kan dela',
       hero_card_p: 'Ett kompakt kvitto på hur du agerar i P2P — över plattformar.',
       hero_metric_score: 'Förtroende (1–5)',
@@ -160,7 +160,7 @@ export function initLandingLanguage() {
     },
 
     en: {
-      top_sub: 'Trust you can prove',
+      top_sub: 'Reputation you can prove',
       menu_how: 'How it works',
       menu_sim: 'See the value',
       menu_globe: 'Global trust',
@@ -171,25 +171,25 @@ export function initLandingLanguage() {
       user_logout: 'Log out',
 
       hero_kicker: 'Peer-to-peer reputation',
-      hero_h1: 'Trust you can prove.',
-      hero_p: 'PeerRate helps you carry verified reputation between marketplaces. Not vibes. Not claims. Real transactions — portable and hard to fake.',
+      hero_h1: 'Reputation you can prove.',
+      hero_p: 'PeerRate helps you carry verified reputation between assignments. Not vibes. Not claims. Transactions — portable and hard to fake.',
       hero_cta_primary: 'Get started',
-      hero_cta_secondary: 'Ask about trust',
+      hero_cta_secondary: 'Log in',
       hero_card_title: 'A reputation card you can share',
       hero_card_p: 'A compact proof of how you behave in P2P — across platforms.',
       hero_metric_score: 'Trust (1–5)',
       hero_metric_tx: 'Verified transactions',
 
-      how_title: 'A priority lane for trustworthy people online.',
-      how_lead: 'PeerRate standardizes ratings and links them to real transactions — making trust measurable, portable and fair.',
+      how_title: 'For consultants who want to show real trust, not just a CV.',
+      how_lead: 'PeerRate standardizes reviews and links them to assignments — making trust measurable, portable and fair.',
       f1_title: 'Verified',
-      f1_p: 'Connect reputation to real transactions. Less fraud, fewer bad surprises.',
+      f1_p: 'Connect reputation to transactions. Less fraud, fewer bad surprises.',
       f2_title: 'Portable',
-      f2_p: 'Bring your trust score across marketplaces instead of starting from zero.',
+      f2_p: 'Bring your trust score across assignments instead of starting from zero.',
       f3_title: 'Explainable',
       f3_p: 'A clear breakdown of what affects your score — not a black box.',
 
-      sim_title: 'See the value instantly.',
+      sim_title: 'But it is not only about reviews, we look at the big picture.',
       rep_trust: 'Trust (1–5)',
       rep_tx: 'Verified transactions',
       rep_plat: 'Platforms connected',
@@ -363,5 +363,5 @@ export function initLandingLanguage() {
     if (e.key === 'Escape') setMenuOpen(false);
   });
 
-  applyLang(localStorage.getItem(LS_LANG) || 'sv');
+  applyLang(localStorage.getItem(LS_LANG) || 'en');
 }

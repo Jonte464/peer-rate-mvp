@@ -7,6 +7,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const helmet = require('helmet');
 const compression = require('compression');
+const cookieParser = require('cookie-parser');
 
 // -----------------------------
 // Router-diagnostik (för Render)
@@ -40,18 +41,26 @@ function assertRouter(name, mod) {
 }
 
 // ---- Ladda routes (med diagnostik)
-const ratingsRoutes = assertRouter('ratingsRoutes', require('./routes/ratingsRoutes'));
-const customersRoutes = assertRouter('customersRoutes', require('./routes/customersRoutes'));
 const authRoutes = assertRouter('authRoutes', require('./routes/authRoutes'));
-const adminRoutes = assertRouter('adminRoutes', require('./routes/adminRoutes'));
-const integrationsRoutes = assertRouter('integrationsRoutes', require('./routes/integrationsRoutes'));
-const externalDataRoutes = assertRouter('externalDataRoutes', require('./routes/externalDataRoutes'));
-const blocketRoutes = assertRouter('blocketRoutes', require('./routes/blocketRoutes'));
-const traderaRoutes = assertRouter('traderaRoutes', require('./routes/traderaRoutes'));
+const linkedinAuth = assertRouter('linkedinAuth', require('./routes/linkedinAuth'));
 
-// ✅ eBay + Agent
-const ebayRoutes = assertRouter('ebayRoutes', require('./routes/ebayRoutes'));
-const agentRoutes = assertRouter('agentRoutes', require('./routes/agentRoutes'));
+// DB-backed routes are optional in local dev — only load when DATABASE_URL set
+const dbConfigured = Boolean(process.env.DATABASE_URL);
+let ratingsRoutes, customersRoutes, adminRoutes, integrationsRoutes, externalDataRoutes, blocketRoutes, traderaRoutes, ebayRoutes, agentRoutes;
+if (dbConfigured) {
+  const load = (name, path) => assertRouter(name, require(path));
+  ratingsRoutes = load('ratingsRoutes', './routes/ratingsRoutes');
+  customersRoutes = load('customersRoutes', './routes/customersRoutes');
+  adminRoutes = load('adminRoutes', './routes/adminRoutes');
+  integrationsRoutes = load('integrationsRoutes', './routes/integrationsRoutes');
+  externalDataRoutes = load('externalDataRoutes', './routes/externalDataRoutes');
+  blocketRoutes = load('blocketRoutes', './routes/blocketRoutes');
+  traderaRoutes = load('traderaRoutes', './routes/traderaRoutes');
+  ebayRoutes = load('ebayRoutes', './routes/ebayRoutes');
+  agentRoutes = load('agentRoutes', './routes/agentRoutes');
+} else {
+  console.warn('⚠️ DATABASE_URL not set — skipping DB-backed routes (development fallback).');
+}
 
 const app = express();
 
@@ -66,6 +75,7 @@ app.set('trust proxy', 1);
 
 // --- Middleware ---
 app.use(express.json({ limit: '200kb' }));
+app.use(cookieParser());
 app.use(
   helmet({
     frameguard: false,
@@ -122,16 +132,19 @@ app.use(
 // -----------------------------
 // Routes
 // -----------------------------
-app.use('/api', ratingsRoutes);
-app.use('/api', customersRoutes);
+// Mount routes (conditionally mount DB-backed routes)
+if (ratingsRoutes) app.use('/api', ratingsRoutes);
+if (customersRoutes) app.use('/api', customersRoutes);
 app.use('/api', authRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api', externalDataRoutes);
-app.use('/api', blocketRoutes);
-app.use('/api', integrationsRoutes);
-app.use('/api', traderaRoutes);
-app.use('/api', ebayRoutes);
-app.use('/api', agentRoutes);
+if (adminRoutes) app.use('/api/admin', adminRoutes);
+if (externalDataRoutes) app.use('/api', externalDataRoutes);
+if (blocketRoutes) app.use('/api', blocketRoutes);
+if (integrationsRoutes) app.use('/api', integrationsRoutes);
+if (traderaRoutes) app.use('/api', traderaRoutes);
+if (ebayRoutes) app.use('/api', ebayRoutes);
+if (agentRoutes) app.use('/api', agentRoutes);
+// OAuth / auth helpers
+app.use('/auth', linkedinAuth);
 
 // -----------------------------
 // Health
