@@ -65,8 +65,9 @@ if (dbConfigured) {
 const app = express();
 
 // --- Config ---
-const PORT = process.env.PORT || 3001;
-const HOST = '0.0.0.0';
+const PORT = Number(process.env.PORT || 3001);
+// Bind to localhost by default for local development. Production can override with HOST env var.
+const HOST = process.env.HOST || '127.0.0.1';
 const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
 const corsOrigin = process.env.CORS_ORIGIN || '*';
 
@@ -183,6 +184,14 @@ app.get('*', (req, res, next) => {
 });
 
 // --- Start ---
-app.listen(PORT, HOST, () => {
-  console.log(`PeerRate PROD running on ${HOST}:${PORT}`);
+const server = app.listen(PORT, HOST, () => {
+  const addr = server.address();
+  const host = addr && addr.address ? addr.address : HOST;
+  const port = addr && addr.port ? addr.port : PORT;
+  console.log(`PeerRate server listening on ${host}:${port}`);
+});
+
+server.on('error', (err) => {
+  console.error('❌ Server failed to start:', err && err.stack ? err.stack : err);
+  process.exit(1);
 });
