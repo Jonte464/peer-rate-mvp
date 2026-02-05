@@ -450,24 +450,24 @@ export async function initProfilePage() {
           initQuestionnaire(),
           initInviteForm(),
         ]);
-        // Ensure the compact invite card is visible and pre-fill consultant name when present
+        // Prefill consultant name into the invite form when profile data is available
         try {
-          const topInviteCard = document.getElementById('invite-top-card');
           const profileNameEl = document.getElementById('profile-fullname');
-          const invNameTop = document.getElementById('inv-consultant-name-top');
           const invName = document.getElementById('inv-consultant-name');
+          const invTitle = document.getElementById('inv-consultant-title');
+          const invCompany = document.getElementById('inv-company');
           const profileRootEl = document.getElementById('profile-root');
-          if (topInviteCard && profileRootEl && !profileRootEl.classList.contains('hidden')) {
-            topInviteCard.style.display = 'block';
-          }
-          const name = profileNameEl && profileNameEl.textContent ? profileNameEl.textContent.trim() : '';
-          if (name) {
-            if (invNameTop && !invNameTop.value) invNameTop.value = name;
-            if (invName && !invName.value) invName.value = name;
+          if (profileRootEl && !profileRootEl.classList.contains('hidden')) {
+            const name = profileNameEl && profileNameEl.textContent ? profileNameEl.textContent.trim() : '';
+            if (name && invName && !invName.value) invName.value = name;
+            // optional: try to fill title/company if available in DOM
+            const titleText = document.getElementById('profile-title')?.textContent?.trim();
+            if (titleText && invTitle && !invTitle.value) invTitle.value = titleText;
+            const engagementCompany = document.getElementById('engagement-title')?.textContent?.trim();
+            if (engagementCompany && invCompany && !invCompany.value) invCompany.value = engagementCompany;
           }
         } catch (err) {
-          // non-critical
-          console.debug('invite card init error', err);
+          console.debug('invite prefill error', err);
         }
       } catch (err) {
         console.error('profile data loaders error', err);
