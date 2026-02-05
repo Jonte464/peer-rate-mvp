@@ -75,16 +75,60 @@
         </div>
       </div>
 
-      <!-- Invite reviewer (moved to top for quick access) -->
-      <section class="card" id="invite-reviewer-form-top" style="max-width:700px;margin-left:auto;margin-right:auto;margin-top:12px;">
-        <form id="invite-form-top" autocomplete="off" style="display:flex;flex-direction:row;gap:8px;align-items:center;">
-          <input id="inv-consultant-name-top" name="consultant_name_top" type="text" placeholder="Consultant name" style="flex:2;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" />
-          <input id="inv-reviewer-email-top" name="reviewer_email_top" type="email" placeholder="reviewer@example.com" style="flex:2;padding:8px;border:1px solid #e5e7eb;border-radius:6px;" />
-          <button id="inv-submit-top" type="button" class="primary" style="flex:1;white-space:nowrap;">Send feedback request</button>
-          <div id="inv-status-top" class="tiny muted" aria-live="polite" style="margin-left:8px;min-width:180px;text-align:right"></div>
-        </form>
-      </section>
+      <!-- (Invite compact removed) — larger invite form placed beside profile card below -->
+      <style>
+        /* Keep profile and invite side-by-side on desktop, allow wrap on small screens */
+        .top-profile-row { flex-wrap: nowrap; }
+        @media (max-width: 980px) {
+          .top-profile-row { flex-wrap: wrap !important; }
+          .trust-profile-card { min-width: 320px !important; flex: 1 1 100% !important; }
+          .top-profile-row aside.card { max-width: 100% !important; flex: 1 1 100% !important; }
+        }
+        /* Frosted, translucent cards and profile-specific input styles */
+        #profile-root .card,
+        .top-profile-row .trust-profile-card,
+        .top-profile-row aside.card {
+          background: rgba(255,255,255,0.06) !important;
+          border: 1px solid rgba(255,255,255,0.09) !important;
+          color: #ffffff !important;
+          -webkit-backdrop-filter: blur(8px) saturate(120%);
+          backdrop-filter: blur(8px) saturate(120%);
+          box-shadow: 0 6px 20px rgba(2,6,23,0.35) !important;
+        }
+        /* Make text and muted text lighter for readability */
+        #profile-root .muted, #profile-root .tiny { color: rgba(255,255,255,0.75) !important; }
+        #profile-root h1, #profile-root h2, #profile-root h3 { color: #fff !important; }
+        /* Inputs on profile page should be translucent */
+        #profile-root input, #profile-root textarea, #profile-root select {
+          background: rgba(255,255,255,0.04) !important;
+          border: 1px solid rgba(255,255,255,0.12) !important;
+          color: #fff !important;
+        }
+        #profile-root input::placeholder, #profile-root textarea::placeholder { color: rgba(255,255,255,0.6) !important; }
+        /* Buttons: keep current accent but ensure readable on translucent cards */
+        #profile-root .primary { color: #fff !important; }
 
+        /* Override specific inline white sub-cards inside `.trust-profile-card` so they become frosted */
+        .trust-profile-card div[style*="background:#f8fafc"],
+        .trust-profile-card div[style*="background:#fbfbff"],
+        .trust-profile-card div[style*="background:#f1f5f9"],
+        .trust-profile-card div[style*="background:#ffffff"],
+        .trust-profile-card section[style*="background:#fbfbff"] {
+          background: rgba(255,255,255,0.04) !important;
+          border: 1px solid rgba(255,255,255,0.08) !important;
+          color: #fff !important;
+          box-shadow: none !important;
+        }
+        /* Keep small colored badges intact (spans) by not overriding span backgrounds */
+        .trust-profile-card span[style*="background:"] { color: inherit !important; }
+      </style>
+      <!-- Full-bleed background video (reuses landing hero video) -->
+      <div id="profile-bg-video" aria-hidden="true" style="position:fixed;inset:0;overflow:hidden;z-index:-2;pointer-events:none;">
+        <video autoplay muted loop playsinline preload="auto" style="width:100%;height:100%;object-fit:cover;transform:translateZ(0);">
+          <source src="/assets/hero.mp4?v=4" type="video/mp4" />
+        </video>
+        <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,12,20,0.25),rgba(5,8,15,0.5));mix-blend-mode:multiply;pointer-events:none;"></div>
+      </div>
       
 
       <h1 data-i18n="profile_h1">Min profil</h1>
@@ -117,8 +161,9 @@
       <!-- Allt här visas bara när man är inloggad -->
       <div id="profile-root" class="hidden">
 
-        <!-- Trust Profile Card (matches design) -->
-        <section class="trust-profile-card" style="background:#fff;border-radius:16px;padding:32px 32px 24px 32px;box-shadow:0 4px 24px rgba(0,0,0,0.07);margin-bottom:32px;position:relative;max-width:900px;margin-left:auto;margin-right:auto;">
+        <!-- Trust Profile Card (matches design) and Invite form side-by-side) -->
+        <div class="top-profile-row" style="display:flex;gap:24px;align-items:flex-start;max-width:1280px;margin-left:auto;margin-right:auto;margin-bottom:32px;flex-wrap:nowrap;">
+          <section class="trust-profile-card" style="flex:5;min-width:640px;background:#fff;border-radius:16px;padding:32px 32px 24px 32px;box-shadow:0 4px 24px rgba(0,0,0,0.07);position:relative;">
           <button id="profile-share-btn" style="position:absolute;top:24px;right:32px;background:#f8fafc;border:1px solid #cbd5e1;color:#1d4ed8;padding:8px 22px 8px 22px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.03);">Share PeerRate</button>
           <div style="display:flex;align-items:center;gap:28px;">
             <img id="profile-photo" src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profile photo" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,.06);">
@@ -183,7 +228,42 @@
               <div style="margin-top:10px;color:#555;font-size:0.98rem;">— <span id="testimonial-team-author">Erik J.</span>, <span style="font-style:italic;" id="testimonial-team-role">Data Analyst</span></div>
             </div>
           </div>
-        </section>
+          </section>
+
+          <!-- Invite panel (larger) -->
+          <aside class="card" style="flex:1;min-width:300px;max-width:340px;padding:20px;border-radius:12px;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,0.05);">
+            <h3 style="margin-top:0;margin-bottom:6px">Send feedback request</h3>
+            <p class="tiny muted" style="margin-top:0;margin-bottom:12px">Quickly invite a reviewer to submit feedback for this engagement.</p>
+            <form id="invite-form" autocomplete="off">
+              <label style="display:block;margin-bottom:8px;font-weight:600">Consultant name
+                <input id="inv-consultant-name" name="consultant_name" type="text" placeholder="Anna Larsson" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
+              </label>
+              <label style="display:block;margin-bottom:8px">Title
+                <input id="inv-consultant-title" name="consultant_title" type="text" placeholder="Senior Project Manager" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
+              </label>
+              <label style="display:block;margin-bottom:8px">Company / engagement
+                <input id="inv-company" name="company_client" type="text" placeholder="Large Bank" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
+              </label>
+              <label style="display:block;margin-bottom:8px">Segment
+                <input id="inv-segment" name="client_segment" type="text" placeholder="Finance" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
+              </label>
+              <div style="display:flex;gap:8px;margin-bottom:8px;">
+                <input id="inv-start" name="start_month" type="text" placeholder="Start (e.g. Jan 2024)" style="flex:1;padding:8px;border:1px solid #e5e7eb;border-radius:8px;" />
+                <input id="inv-end" name="end_month" type="text" placeholder="End (e.g. Jun 2024)" style="flex:1;padding:8px;border:1px solid #e5e7eb;border-radius:8px;" />
+              </div>
+              <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input id="inv-ongoing" type="checkbox" /> Ongoing</label>
+              <label style="display:block;margin-bottom:10px">Reviewer email
+                <input id="inv-reviewer-email" name="reviewer_email" type="email" placeholder="reviewer@example.com" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" required />
+              </label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <button id="inv-submit" class="primary" type="submit" style="flex:0 0 auto;">Send invitation</button>
+                <div id="inv-status" class="tiny muted" aria-live="polite"></div>
+              </div>
+            </form>
+          </aside>
+
+        </div>
+
         <script>
         // Share button logic
         const shareBtn = document.getElementById('profile-share-btn');
@@ -196,42 +276,7 @@
         }
         </script>
 
-        <!-- ✅ Mitt omdöme (flyttad högst upp) -->
-        <section class="card">
-          <h2 data-i18n="profile_my_rating_title">Mitt omdöme</h2>
-          <p class="tiny muted" data-i18n="profile_my_rating_lead">
-            Sammanfattning av betyg som är kopplade till din e-postadress.
-          </p>
-
-          <div class="ratings-visuals">
-            <div class="ratings-visual-box">
-              <h3 class="tiny" data-i18n="profile_rating_sources_title">Varifrån kommer dina omdömen?</h3>
-              <div id="rating-source-pie" class="rating-pie">
-                <div id="rating-source-pie-label" class="rating-pie-center-label" data-i18n="profile_no_ratings">Inga omdömen</div>
-              </div>
-              <div id="rating-source-legend" class="rating-legend tiny muted"></div>
-            </div>
-
-            <div class="ratings-visual-box">
-              <h3 class="tiny" data-i18n="profile_pr_rating_title">Din PeerRate-rating</h3>
-              <div id="rating-p-symbols" class="rating-p-row"></div>
-              <div id="rating-p-symbols-text" class="tiny muted"></div>
-            </div>
-          </div>
-
-          <p class="score-line">
-            <span data-i18n="profile_avg_label">Snittbetyg:</span>
-            <strong><span id="profile-score">–</span> / 5</strong>
-            <span class="tiny muted">(<span data-i18n="profile_based_on">baserat på</span> <span id="profile-score-count">0</span> <span data-i18n="profile_reviews">omdömen</span>)</span>
-          </p>
-
-          <div class="score-bar">
-            <div class="score-bar-fill" id="profile-score-bar"></div>
-          </div>
-
-          <div id="ratings-graph" class="ratings-graph"></div>
-          <div id="ratings-list" class="ratings-list"></div>
-        </section>
+        <!-- 'Mitt omdöme' removed as requested -->
 
         <!-- Mina uppgifter -->
         <section class="card">
