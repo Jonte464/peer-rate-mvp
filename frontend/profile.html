@@ -269,6 +269,125 @@
           </ul>
         </section>
 
+        <!-- Feedback form (Trust Profile feedback) -->
+        <section class="card" id="engagement-feedback-form">
+          <h2>Provide feedback for this engagement</h2>
+          <p class="tiny muted">You are providing feedback for the following engagement (read-only):</p>
+
+          <!-- Invite sender: enter reviewer email to send questionnaire -->
+          <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input id="q-invite-email" type="email" placeholder="reviewer@example.com" style="flex:1;min-width:220px;padding:8px;border:1px solid #e5e7eb;border-radius:8px" />
+            <button id="q-invite-send" class="secondary">Send questionnaire</button>
+            <div id="q-invite-status" class="tiny muted" aria-live="polite"></div>
+          </div>
+
+          <div style="background:#fafafa;border:1px solid #e8eef6;padding:14px;border-radius:8px;margin-bottom:12px;">
+            <div style="font-weight:700;" id="q-engagement-consultant">Anna Larsson</div>
+            <div id="q-engagement-role" style="color:#555;margin-top:2px;">Senior Project Manager</div>
+            <div id="q-engagement-type" style="color:#777;margin-top:6px;">Large Bank | Finance — Jan 2024 - Jun 2024</div>
+          </div>
+
+          <form id="trust-feedback-form" autocomplete="off">
+            <fieldset style="border:0;padding:0;margin:0">
+              <legend style="font-weight:700;margin-bottom:8px">Relationship to the consultant (required)</legend>
+              <div>
+                <label><input type="radio" name="reviewer_type" value="client" required> Client / Stakeholder</label><br>
+                <label><input type="radio" name="reviewer_type" value="manager"> Direct Manager / Project Owner</label><br>
+                <label><input type="radio" name="reviewer_type" value="peer"> Team Member / Peer</label>
+              </div>
+            </fieldset>
+
+            <hr style="margin:14px 0" />
+
+            <div>
+              <label for="q-overall" style="font-weight:700">Overall Delivery</label>
+              <div class="tiny muted">How would you rate the consultant’s overall delivery? (1–5)</div>
+              <select id="q-overall" name="overall" required>
+                <option value="">Select</option>
+                <option value="1">1 — Very poor</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5 — Excellent</option>
+              </select>
+            </div>
+
+            <div style="margin-top:10px">
+              <label for="q-lead" style="font-weight:700">Leadership & Collaboration</label>
+              <div class="tiny muted">How would you rate leadership & collaboration? (1–5)</div>
+              <select id="q-lead" name="leadership" required>
+                <option value="">Select</option>
+                <option value="1">1 — Weak</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5 — Exceptional</option>
+              </select>
+            </div>
+
+            <div style="margin-top:10px">
+              <label for="q-reliability" style="font-weight:700">Reliability & Consistency</label>
+              <div class="tiny muted">How consistent and reliable was the consultant? (1–5)</div>
+              <select id="q-reliability" name="consistency" required>
+                <option value="">Select</option>
+                <option value="1">1 — Unreliable</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5 — Very reliable</option>
+              </select>
+            </div>
+
+            <hr style="margin:14px 0" />
+
+            <div>
+              <label style="font-weight:700">Verification: Did this consultant actively work in the described role during this engagement?</label>
+              <div>
+                <label><input type="radio" name="worked_in_role" value="yes" required> Yes</label>
+                <label style="margin-left:12px"><input type="radio" name="worked_in_role" value="no"> No</label>
+              </div>
+            </div>
+
+            <div style="margin-top:10px">
+              <label style="font-weight:700">Would you confidently verify this engagement as accurate?</label>
+              <div>
+                <label><input type="radio" name="verify_engagement" value="yes" required> Yes</label>
+                <label style="margin-left:12px"><input type="radio" name="verify_engagement" value="no"> No</label>
+              </div>
+            </div>
+
+            <hr style="margin:14px 0" />
+
+            <div>
+              <label for="q-quote" style="font-weight:700">Optional: Short public quote (max 240 chars)</label>
+              <textarea id="q-quote" name="public_quote" maxlength="240" placeholder="Example: Delivered excellent results on time and was a strong partner to our team." style="width:100%;min-height:64px"></textarea>
+            </div>
+
+            <hr style="margin:14px 0" />
+
+            <div>
+              <p class="tiny muted">Your contact details are used only for verification and are never shown publicly.</p>
+              <label for="q-name">Full name (required)</label>
+              <input id="q-name" name="reviewer_name" type="text" required />
+
+              <label for="q-email">Work email (required)</label>
+              <input id="q-email" name="reviewer_email" type="email" required />
+
+              <label for="q-company">Company / Organization (optional)</label>
+              <input id="q-company" name="reviewer_company" type="text" />
+            </div>
+
+            <div style="margin-top:12px">
+              <label><input type="checkbox" id="q-confirm" required> I confirm that this feedback is honest and based on a real engagement.</label>
+            </div>
+
+            <div style="margin-top:14px;display:flex;gap:12px;align-items:center">
+              <button type="submit" class="primary" id="q-submit">Submit Feedback</button>
+              <div id="q-status" class="tiny muted" aria-live="polite"></div>
+            </div>
+          </form>
+        </section>
+
         <!-- eBay-koppling (tillfälligt dold) -->
 <section class="card hidden" id="ebay-card" style="display:none;">
   <!-- eBay är tillfälligt avstängt i UI -->

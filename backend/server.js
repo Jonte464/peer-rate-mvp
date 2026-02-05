@@ -43,6 +43,7 @@ function assertRouter(name, mod) {
 // ---- Ladda routes (med diagnostik)
 const authRoutes = assertRouter('authRoutes', require('./routes/authRoutes'));
 const linkedinAuth = assertRouter('linkedinAuth', require('./routes/linkedinAuth'));
+const questionnaireRoutes = assertRouter('questionnaireRoutes', require('./routes/questionnaireRoutes'));
 
 // DB-backed routes are optional in local dev — only load when DATABASE_URL set
 const dbConfigured = Boolean(process.env.DATABASE_URL);
@@ -137,6 +138,8 @@ app.use(
 if (ratingsRoutes) app.use('/api', ratingsRoutes);
 if (customersRoutes) app.use('/api', customersRoutes);
 app.use('/api', authRoutes);
+// Questionnaire (form) route — stores reviewer feedback for engagements
+if (questionnaireRoutes) app.use('/api/questionnaires', questionnaireRoutes);
 if (adminRoutes) app.use('/api/admin', adminRoutes);
 if (externalDataRoutes) app.use('/api', externalDataRoutes);
 if (blocketRoutes) app.use('/api', blocketRoutes);
