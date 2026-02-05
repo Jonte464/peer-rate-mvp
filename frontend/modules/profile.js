@@ -10,6 +10,7 @@ import { initEbaySection } from './profileEbay.js';
 import { renderPRating, loadMyRating } from './profileRatings.js';
 import { initRatingForm } from './ratingForm.js';
 import { initQuestionnaire } from './profileQuestionnaire.js';
+import { initInviteForm } from './inviteForm.js';
 export { initRatingLogin } from './ratingForm.js'; // vidareexport för /lamna-betyg-sidan
 
 // Hjälpare: nyckel i localStorage per användare
@@ -447,6 +448,7 @@ export async function initProfilePage() {
           initTraderaSection(),
           initEbaySection(),
           initQuestionnaire(),
+          initInviteForm(),
         ]);
       } catch (err) {
         console.error('profile data loaders error', err);
