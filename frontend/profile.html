@@ -75,6 +75,23 @@
         </div>
       </div>
 
+      <!-- Compact invite card (placed top-right beside user badge) -->
+      <div id="invite-top-card" style="display:none;margin-left:auto;max-width:420px;">
+        <section class="card" style="padding:12px;border-radius:12px;">
+          <form id="invite-form-top" autocomplete="off" style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+              <div style="font-weight:700">Invite reviewer</div>
+            </div>
+            <input id="inv-consultant-name-top" name="consultant_name" type="text" placeholder="Consultant name" required />
+            <input id="inv-reviewer-email-top" name="reviewer_email" type="email" placeholder="reviewer@example.com" required />
+            <div style="display:flex;gap:8px">
+              <button id="inv-submit-top" type="submit" class="primary" style="flex:1">Send feedback request</button>
+            </div>
+            <div id="inv-status-top" class="tiny muted" aria-live="polite"></div>
+          </form>
+        </section>
+      </div>
+
       <h1 data-i18n="profile_h1">Min profil</h1>
       <p class="lead" data-i18n="profile_lead">
         Här kan du se dina uppgifter och ditt samlade omdöme.
@@ -388,64 +405,7 @@
           </form>
         </section>
 
-        <!-- Minimal Invite Reviewer (consultant fills) -->
-        <section class="card" id="invite-reviewer-form" style="max-width:700px;margin-left:auto;margin-right:auto;">
-          <h2 style="margin-top:0">Invite someone to provide feedback</h2>
-          <form id="invite-form" autocomplete="off" style="display:flex;flex-direction:column;gap:10px">
-            <!-- Engagement details -->
-            <div style="border-top:1px solid #eef2f6;padding-top:12px">
-              <label style="font-weight:600">Consultant name <span style="color:#b91c1c">*</span></label>
-              <input id="inv-consultant-name" name="consultant_name" type="text" required />
-
-              <label style="font-weight:600">Consultant title <span style="color:#b91c1c">*</span></label>
-              <input id="inv-consultant-title" name="consultant_title" type="text" required />
-
-              <label style="font-weight:600">Company / Client <span style="color:#b91c1c">*</span></label>
-              <input id="inv-company" name="company_client" type="text" required />
-
-              <label style="font-weight:600">Client segment <span style="color:#b91c1c">*</span></label>
-              <select id="inv-segment" name="client_segment" required>
-                <option value="">Select</option>
-                <option>Large bank</option>
-                <option>Insurance</option>
-                <option>Public sector</option>
-                <option>Consulting firm</option>
-                <option>Private equity / Investment</option>
-                <option>Tech / SaaS</option>
-                <option>Energy / Industrial</option>
-                <option>Other</option>
-              </select>
-
-              <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
-                <div style="flex:1">
-                  <label style="font-weight:600">Start month <span style="color:#b91c1c">*</span></label>
-                  <input id="inv-start" name="start_month" type="month" required />
-                </div>
-                <div style="flex:1">
-                  <label style="font-weight:600">End month</label>
-                  <input id="inv-end" name="end_month" type="month" />
-                </div>
-                <div style="display:flex;flex-direction:column;justify-content:flex-end">
-                  <label style="font-weight:600;visibility:hidden">Ongoing</label>
-                  <label style="font-size:13px"><input id="inv-ongoing" type="checkbox" /> Ongoing</label>
-                </div>
-              </div>
-            </div>
-
-            <!-- Reviewer invitation -->
-            <div style="border-top:1px solid #eef2f6;padding-top:12px">
-              <label style="font-weight:600">Reviewer email address <span style="color:#b91c1c">*</span></label>
-              <input id="inv-reviewer-email" name="reviewer_email" type="email" required placeholder="reviewer@example.com" />
-              <div class="tiny muted">We’ll send a short feedback request (2–3 minutes). The email address is only used for verification.</div>
-            </div>
-
-            <div style="margin-top:8px">
-              <button id="inv-submit" type="submit" class="primary" style="width:100%">Send feedback request</button>
-            </div>
-
-            <div id="inv-status" class="tiny muted" aria-live="polite"></div>
-          </form>
-        </section>
+        <!-- Invite form moved to top (compact). The full form still exists in JS and is wired to send endpoint. -->
 
         <!-- eBay-koppling (tillfälligt dold) -->
 <section class="card hidden" id="ebay-card" style="display:none;">

@@ -31,7 +31,8 @@ function disableForm(disabled) {
 
 export function initInviteForm() {
   const form = qs('invite-form');
-  if (!form) return;
+  const topForm = qs('invite-form-top');
+  if (!form && !topForm) return;
 
   // Toggle end month when ongoing checked
   const ongoing = qs('inv-ongoing');
@@ -106,6 +107,34 @@ export function initInviteForm() {
       disableForm(false);
     }
   });
+
+  // Wire the compact top form if present
+  if (topForm) {
+    topForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const status = qs('inv-status-top');
+      status.textContent = '';
+      const consultant = qs('inv-consultant-name-top')?.value?.trim();
+      const email = qs('inv-reviewer-email-top')?.value?.trim();
+      if (!consultant || !email) { status.textContent = 'Please provide consultant name and reviewer email.'; return; }
+
+      // Mirror minimal payload to existing send endpoint
+      disableForm(true);
+      qs('inv-status-top').textContent = 'Sending…';
+
+      const engagement = { consultant, role: '', type: '' };
+      try {
+        const res = await fetch('/api/questionnaires/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to: email, engagement }) });
+        if (!res.ok) { qs('inv-status-top').textContent = 'Failed to send invitation.'; disableForm(false); return; }
+        const json = await res.json().catch(()=>null);
+        qs('inv-status-top').textContent = json && json.queued ? 'Invitation queued.' : 'Invitation sent.';
+      } catch (err) {
+        console.error('Top invite error', err);
+        qs('inv-status-top').textContent = 'Failed to send invitation.';
+        disableForm(false);
+      }
+    });
+  }
 }
 
 export default { initInviteForm };
