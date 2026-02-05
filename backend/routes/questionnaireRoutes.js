@@ -64,7 +64,12 @@ router.post('/send', async (req, res) => {
     // Build default subject/body
     const mailSubject = subject || `PeerRate: Feedback request for ${engagement && engagement.consultant ? engagement.consultant : 'consultant'}`;
     const baseUrl = process.env.BASE_URL || `http://${process.env.HOST || '127.0.0.1'}:${process.env.PORT || 3001}`;
-    const replyLink = `${baseUrl}/profile.html`; // simple link — can be improved to a tokenized route
+    // Public feedback page (no login) with engagement context encoded in query string
+    const params = new URLSearchParams();
+    if (engagement && engagement.consultant) params.set('consultant', engagement.consultant);
+    if (engagement && engagement.role) params.set('role', engagement.role);
+    if (engagement && engagement.type) params.set('type', engagement.type);
+    const replyLink = `${baseUrl}/feedback.html?${params.toString()}`;
     const bodyHtml = message || `<p>You have been invited to provide feedback for the engagement:</p>
       <p><strong>${(engagement && engagement.consultant) || ''}</strong><br>${(engagement && engagement.role) || ''}<br>${(engagement && engagement.type) || ''}</p>
       <p>Please click the link to open the feedback form:</p>
