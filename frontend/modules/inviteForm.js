@@ -30,10 +30,11 @@ function disableForm(disabled) {
 }
 
 export function initInviteForm() {
-  const form = qs('invite-form');
+  // support both full and top compact forms
+  const form = qs('invite-form') || qs('invite-form-top');
   if (!form) return;
 
-  // Toggle end month when ongoing checked
+  // Toggle end month when ongoing checked (if present)
   const ongoing = qs('inv-ongoing');
   if (ongoing) {
     ongoing.addEventListener('change', () => {
