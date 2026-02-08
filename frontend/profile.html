@@ -59,6 +59,7 @@
         <a class="menu-link" href="/rate.html"><div data-i18n="menu_rate">Lämna betyg</div><span>→</span></a>
         <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Registrera dig</div><span>→</span></a>
         <a class="menu-link" href="/profile.html"><div data-i18n="menu_profile">Min profil</div><span>→</span></a>
+        <a class="menu-link" href="/my-details.html"><div>My details</div><span>→</span></a>
       </div>
     </nav>
   </header>
@@ -77,6 +78,21 @@
 
       <!-- (Invite compact removed) — larger invite form placed beside profile card below -->
       <style>
+        /* Ensure profile page text is white for readability on darkened video background */
+        .page, .page * { color: #ffffff !important; }
+
+        /* Make the embedded engagement feedback form readable (dark text on light inputs)
+           The page globally forces white text, so target only the feedback form area to
+           avoid changing other profile cards. */
+        #engagement-feedback-form, #engagement-feedback-form * { color: #0b1720 !important; }
+        #engagement-feedback-form input, #engagement-feedback-form textarea, #engagement-feedback-form select {
+          background: #ffffff !important;
+          color: #0b1720 !important;
+          border: 1px solid #e5e7eb !important;
+        }
+        #engagement-feedback-form input::placeholder, #engagement-feedback-form textarea::placeholder { color: rgba(15,15,18,0.45) !important; }
+        #engagement-feedback-form .tiny.muted { color: rgba(15,15,18,0.6) !important; }
+
         /* Keep profile and invite side-by-side on desktop, allow wrap on small screens */
         .top-profile-row { flex-wrap: nowrap; }
         @media (max-width: 980px) {
@@ -162,107 +178,124 @@
       <div id="profile-root" class="hidden">
 
         <!-- Trust Profile Card (matches design) and Invite form side-by-side) -->
-        <div class="top-profile-row" style="display:flex;gap:24px;align-items:flex-start;max-width:1280px;margin-left:auto;margin-right:auto;margin-bottom:32px;flex-wrap:nowrap;">
-          <section class="trust-profile-card" style="flex:5;min-width:640px;background:#fff;border-radius:16px;padding:32px 32px 24px 32px;box-shadow:0 4px 24px rgba(0,0,0,0.07);position:relative;">
-          <button id="profile-share-btn" style="position:absolute;top:24px;right:32px;background:#f8fafc;border:1px solid #cbd5e1;color:#1d4ed8;padding:8px 22px 8px 22px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.03);">Share PeerRate</button>
-          <div style="display:flex;align-items:center;gap:28px;">
-            <img id="profile-photo" src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profile photo" style="width:96px;height:96px;border-radius:50%;object-fit:cover;border:3px solid #e5e7eb;box-shadow:0 2px 8px rgba(0,0,0,.06);">
-            <div style="flex:1;">
-              <div id="profile-fullname" style="font-size:2rem;font-weight:700;line-height:1.1;">Anna Larsson</div>
-              <div id="profile-title" style="font-size:1.1rem;color:#555;font-weight:500;margin-top:2px;">Senior Project Manager</div>
-              <div id="profile-location" style="font-size:1rem;color:#888;margin-top:2px;">Stockholm, Sweden</div>
-            </div>
+        <div class="top-profile-row" style="display:flex;gap:24px;align-items:flex-start;max-width:1440px;margin-left:auto;margin-right:auto;margin-bottom:32px;flex-wrap:nowrap;">
+          <section class="trust-profile-card" style="background:#ffffff;border-radius:12px;padding:12px;border:1px solid rgba(11,22,51,0.06);box-shadow:0 8px 24px rgba(11,22,51,0.06);margin-top:0;max-width:100%;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img id="profile-photo" src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profile photo" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid rgba(11,22,51,0.06);box-shadow:0 1px 2px rgba(11,22,51,0.04);">
+          <div style="flex:1;min-width:0;">
+            <div id="profile-fullname" style="font-size:1rem;font-weight:700;line-height:1;color:rgba(11,22,51,0.95);">Anna Larsson</div>
+            <div id="profile-title" style="font-size:0.82rem;color:rgba(11,22,51,0.7);margin-top:2px;">Senior Project Manager</div>
+            <div id="profile-location" style="font-size:0.78rem;color:rgba(11,22,51,0.6);margin-top:1px;">Stockholm, Sweden</div>
           </div>
-          <div style="margin-top:28px;background:#f8fafc;border-radius:12px;padding:24px 24px 18px 24px;border:1px solid #e5e7eb;">
-            <div style="font-size:1.2rem;font-weight:600;color:#222;margin-bottom:8px;">PeerRate Score: <span id="profile-score-big" style="font-size:2.2rem;font-weight:800;color:#1d4ed8;">82</span><span style="font-size:1.1rem;font-weight:500;color:#555;"> of 100</span></div>
-            <div style="display:flex;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
-              <span id="badge-verified" style="background:#2563eb;color:#fff;padding:6px 16px;border-radius:8px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:6px;"><svg width="18" height="18" fill="none" style="vertical-align:middle;"><circle cx="9" cy="9" r="9" fill="#fff"/><path d="M6 9.5l2 2 4-4" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Verified Engagements</span>
-              <span id="badge-confidence" style="background:#e0e7ff;color:#1d4ed8;padding:6px 16px;border-radius:8px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:6px;"><svg width="18" height="18" fill="none" style="vertical-align:middle;"><circle cx="9" cy="9" r="9" fill="#fff"/><path d="M6 9.5l2 2 4-4" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>High Confidence</span>
-              <span id="badge-strong" style="background:#e0e7ff;color:#1d4ed8;padding:6px 16px;border-radius:8px;font-size:1rem;font-weight:600;display:flex;align-items:center;gap:6px;"><svg width="18" height="18" fill="none" style="vertical-align:middle;"><circle cx="9" cy="9" r="9" fill="#fff"/><path d="M6 9.5l2 2 4-4" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Strong Verification</span>
-            </div>
-            <div style="display:flex;gap:32px;margin-top:18px;flex-wrap:wrap;">
-              <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:10px;">
-                <span style="color:#22c55e;font-size:1.5rem;">✔️</span>
-                <div><span style="font-weight:700;">Client Feedback:</span><br><span id="feedback-client" style="color:#222;">Excellent</span></div>
-              </div>
-              <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:10px;">
-                <span style="color:#22c55e;font-size:1.5rem;">✔️</span>
-                <div><span style="font-weight:700;">Leadership & Collaboration:</span><br><span id="feedback-leadership" style="color:#222;">Strong</span></div>
-              </div>
-              <div style="flex:1;min-width:180px;display:flex;align-items:center;gap:10px;">
-                <span style="color:#22c55e;font-size:1.5rem;">✔️</span>
-                <div><span style="font-weight:700;">Consistency:</span><br><span id="feedback-consistency" style="color:#222;">Recent & Stable</span></div>
-              </div>
-            </div>
-            <div style="margin-top:18px;display:flex;align-items:center;gap:10px;">
-              <span style="color:#2563eb;font-size:1.5rem;">✔️</span>
-              <div><span style="font-weight:700;">Verification Level:</span> <span id="verification-level" style="color:#222;">High</span></div>
-            </div>
+          <div style="flex-shrink:0;">
+            <button id="profile-share-btn" style="background:#f8fafc;border:1px solid rgba(11,22,51,0.06);color:rgba(11,22,51,0.95);padding:6px 10px;border-radius:8px;font-size:12px;font-weight:700;">Share</button>
           </div>
-          <div style="margin-top:32px;">
-            <div style="font-size:1.1rem;font-weight:700;margin-bottom:10px;">Recent Engagement</div>
-            <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:18px 20px 14px 20px;display:flex;align-items:flex-start;gap:18px;">
-              <div style="font-size:2rem;color:#2563eb;margin-right:8px;">🏦</div>
-              <div style="flex:1;">
-                <div style="font-size:1.1rem;font-weight:700;display:inline;" id="engagement-title">Large Bank</div> <span style="color:#888;" id="engagement-industry">| Finance</span>
-                <div style="margin-top:2px;"><span style="font-weight:600;">Role:</span> <span style="font-weight:700;" id="engagement-role">Senior Project Manager</span></div>
-                <div style="margin-top:2px;"><span style="font-weight:600;">Skills:</span> <span style="color:#222;" id="engagement-skills">Project Management, Risk & Compliance, <b>Data Analytics</b></span></div>
-                <div style="margin-top:6px;color:#444;" id="engagement-desc">Led implementation of new compliance system for a major bank. Managed a team of 8 consultants.</div>
-              </div>
-            </div>
-          </div>
-          <div style="margin-top:28px;display:flex;gap:18px;flex-wrap:wrap;">
-            <div style="background:#f1f5f9;border-radius:10px;padding:18px 18px 14px 18px;flex:1;min-width:220px;max-width:320px;box-shadow:0 1px 4px rgba(0,0,0,.03);border:1px solid #e5e7eb;">
-              <div style="color:#2563eb;font-weight:700;margin-bottom:6px;">Client Reference</div>
-              <div id="testimonial-client" style="font-size:1.1rem;font-style:italic;color:#222;">“Anna delivered excellent results on time.”</div>
-              <div style="margin-top:10px;color:#555;font-size:0.98rem;">— <span id="testimonial-client-author">Magnus S.</span>, <span style="font-style:italic;" id="testimonial-client-role">Risk Director</span></div>
-            </div>
-            <div style="background:#f1f5f9;border-radius:10px;padding:18px 18px 14px 18px;flex:1;min-width:220px;max-width:320px;box-shadow:0 1px 4px rgba(0,0,0,.03);border:1px solid #e5e7eb;">
-              <div style="color:#22c55e;font-weight:700;margin-bottom:6px;">Manager Endorsement</div>
-              <div id="testimonial-manager" style="font-size:1.1rem;font-style:italic;color:#222;">“Great leader with strong strategic focus.”</div>
-              <div style="margin-top:10px;color:#555;font-size:0.98rem;">— <span id="testimonial-manager-author">Elin L.</span>, <span style="font-style:italic;" id="testimonial-manager-role">Consulting Director</span></div>
-            </div>
-            <div style="background:#f1f5f9;border-radius:10px;padding:18px 18px 14px 18px;flex:1;min-width:220px;max-width:320px;box-shadow:0 1px 4px rgba(0,0,0,.03);border:1px solid #e5e7eb;">
-              <div style="color:#2563eb;font-weight:700;margin-bottom:6px;">Team Feedback</div>
-              <div id="testimonial-team" style="font-size:1.1rem;font-style:italic;color:#222;">“Anna is a fantastic team lead!”</div>
-              <div style="margin-top:10px;color:#555;font-size:0.98rem;">— <span id="testimonial-team-author">Erik J.</span>, <span style="font-style:italic;" id="testimonial-team-role">Data Analyst</span></div>
-            </div>
-          </div>
-          </section>
+        </div>
 
-          <!-- Invite panel (larger) -->
-          <aside class="card" style="flex:1;min-width:300px;max-width:340px;padding:20px;border-radius:12px;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,0.05);">
-            <h3 style="margin-top:0;margin-bottom:6px">Send feedback request</h3>
-            <p class="tiny muted" style="margin-top:0;margin-bottom:12px">Quickly invite a reviewer to submit feedback for this engagement.</p>
-            <form id="invite-form" autocomplete="off">
-              <label style="display:block;margin-bottom:8px;font-weight:600">Consultant name
-                <input id="inv-consultant-name" name="consultant_name" type="text" placeholder="Anna Larsson" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
-              </label>
-              <label style="display:block;margin-bottom:8px">Title
-                <input id="inv-consultant-title" name="consultant_title" type="text" placeholder="Senior Project Manager" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
-              </label>
-              <label style="display:block;margin-bottom:8px">Company / engagement
-                <input id="inv-company" name="company_client" type="text" placeholder="Large Bank" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
-              </label>
-              <label style="display:block;margin-bottom:8px">Segment
-                <input id="inv-segment" name="client_segment" type="text" placeholder="Finance" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
-              </label>
-              <div style="display:flex;gap:8px;margin-bottom:8px;">
-                <input id="inv-start" name="start_month" type="text" placeholder="Start (e.g. Jan 2024)" style="flex:1;padding:8px;border:1px solid #e5e7eb;border-radius:8px;" />
-                <input id="inv-end" name="end_month" type="text" placeholder="End (e.g. Jun 2024)" style="flex:1;padding:8px;border:1px solid #e5e7eb;border-radius:8px;" />
-              </div>
-              <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input id="inv-ongoing" type="checkbox" /> Ongoing</label>
-              <label style="display:block;margin-bottom:10px">Reviewer email
-                <input id="inv-reviewer-email" name="reviewer_email" type="email" placeholder="reviewer@example.com" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" required />
-              </label>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <button id="inv-submit" class="primary" type="submit" style="flex:0 0 auto;">Send invitation</button>
-                <div id="inv-status" class="tiny muted" aria-live="polite"></div>
-              </div>
-            </form>
-          </aside>
+          <div style="margin-top:12px;background:#ffffff;border-radius:8px;padding:12px;border:1px solid rgba(11,22,51,0.03);">
+          <div style="font-weight:700;font-size:0.9rem;color:rgba(11,22,51,0.95);margin-bottom:6px;">PeerRate Score: <span id="profile-score-big" style="font-size:1.4rem;font-weight:800;color:#1d4ed8;margin-left:6px;">82</span><span style="font-size:0.78rem;color:rgba(11,22,51,0.6);margin-left:6px;"> of 100</span></div>
+          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;" id="profile-tags">
+            <span id="badge-verified" style="background:#e6f0ff;color:#0369a1;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;">Verified</span>
+            <span id="badge-confidence" style="background:#eef6ff;color:#0369a1;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;">High</span>
+            <span id="badge-strong" style="background:#eef6ff;color:#0369a1;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;">Strong</span>
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:8px;align-items:center;">
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;color:rgba(11,22,51,0.85);">
+              <div style="font-size:1rem;color:#16a34a;">✔️</div>
+              <div style="font-weight:700;font-size:0.92rem;">Client Feedback: <span style="font-weight:600;margin-left:6px;color:rgba(11,22,51,0.8);font-size:0.9rem;" id="feedback-client">Excellent</span></div>
+            </div>
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;color:rgba(11,22,51,0.85);">
+              <div style="font-size:1rem;color:#16a34a;">✔️</div>
+              <div style="font-weight:700;font-size:0.92rem;">Leadership & Collaboration: <span style="font-weight:600;margin-left:6px;color:rgba(11,22,51,0.8);font-size:0.9rem;" id="feedback-leadership">Strong</span></div>
+            </div>
+            <div style="flex:1;min-width:0;display:flex;align-items:center;gap:6px;color:rgba(11,22,51,0.85);">
+              <div style="font-size:1rem;color:#16a34a;">✔️</div>
+              <div style="font-weight:700;font-size:0.92rem;">Consistency: <span style="font-weight:600;margin-left:6px;color:rgba(11,22,51,0.8);font-size:0.9rem;" id="feedback-consistency">Recent & Stable</span></div>
+            </div>
+          </div>
+
+          <div style="margin-top:8px;display:flex;align-items:center;gap:6px;color:rgba(11,22,51,0.85);">
+            <div style="font-size:1rem;color:#1d4ed8;">✔️</div>
+            <div><span style="font-weight:700;font-size:0.92rem;">Verification Level:</span> <span style="margin-left:6px;color:rgba(11,22,51,0.8);font-size:0.9rem;" id="verification-level">High</span></div>
+          </div>
+        </div>
+
+        <div style="margin-top:18px;">
+          <div style="font-size:1rem;font-weight:700;color:rgba(11,22,51,0.95);margin-bottom:8px;">Recent Engagement</div>
+          <div id="recent-engagement-card" style="background:#fbfbff;border:1px solid rgba(11,22,51,0.03);border-radius:10px;padding:14px;display:flex;align-items:flex-start;gap:14px;transition:opacity .35s ease;">
+            <div style="font-size:1.6rem;color:#3b82f6;">🏦</div>
+            <div style="flex:1;color:rgba(11,22,51,0.9);">
+              <div style="font-size:0.9rem;font-weight:700;display:inline;" id="engagement-title">Large Bank</div> <span style="color:rgba(11,22,51,0.65);font-size:0.86rem;" id="engagement-industry">| Finance</span>
+              <div style="margin-top:5px;font-size:0.86rem;"><span style="font-weight:600;">Role:</span> <span style="font-weight:700;" id="engagement-role">Senior Project Manager</span></div>
+              <div style="margin-top:5px;font-size:0.86rem;"><span style="font-weight:600;">Skills:</span> <span style="color:rgba(11,22,51,0.9);" id="engagement-skills">Project Management, Risk & Compliance, Data Analytics</span></div>
+              <div style="margin-top:6px;color:rgba(11,22,51,0.75);font-size:0.85rem;" id="engagement-desc">Led implementation of a compliance system for a major bank. Managed a team of 8 consultants.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;display:flex;gap:12px;flex-wrap:nowrap;">
+          <div style="background:#fbfbff;border-radius:10px;padding:12px;flex:1;min-width:0;border:1px solid rgba(11,22,51,0.03);">
+            <div style="color:#1d4ed8;font-weight:700;margin-bottom:6px;font-size:0.9rem;">Client Reference</div>
+              <div id="testimonial-client" style="font-size:0.9rem;font-style:italic;color:rgba(11,22,51,0.75);">“Anna delivered excellent results on time.”</div>
+              <div style="margin-top:6px;color:rgba(11,22,51,0.7);font-size:0.85rem;">— <span id="testimonial-client-author">Magnus S.</span>, <span style="font-style:italic;" id="testimonial-client-role">Risk Director</span></div>
+          </div>
+          <div style="background:#fbfbff;border-radius:10px;padding:12px;flex:1;min-width:0;border:1px solid rgba(11,22,51,0.03);">
+            <div style="color:#16a34a;font-weight:700;margin-bottom:6px;font-size:0.9rem;">Manager Endorsement</div>
+              <div id="testimonial-manager" style="font-size:0.9rem;font-style:italic;color:rgba(11,22,51,0.75);">“Great leader with strong strategic focus.”</div>
+              <div style="margin-top:6px;color:rgba(11,22,51,0.7);font-size:0.85rem;">— <span id="testimonial-manager-author">Elin L.</span>, <span style="font-style:italic;" id="testimonial-manager-role">Consulting Director</span></div>
+          </div>
+          <div style="background:#fbfbff;border-radius:10px;padding:12px;flex:1;min-width:0;border:1px solid rgba(11,22,51,0.03);">
+            <div style="color:#3b82f6;font-weight:700;margin-bottom:6px;font-size:0.9rem;">Team Feedback</div>
+              <div id="testimonial-team" style="font-size:0.9rem;font-style:italic;color:rgba(11,22,51,0.75);">“Anna is a fantastic team lead!”</div>
+              <div style="margin-top:6px;color:rgba(11,22,51,0.7);font-size:0.85rem;">— <span id="testimonial-team-author">Erik J.</span>, <span style="font-style:italic;" id="testimonial-team-role">Data Analyst</span></div>
+          </div>
+        </div>
+      </section>
 
         </div>
+
+        <!-- Invite panel placed below the trust profile and sized to match the trust card container -->
+        <aside class="card" style="max-width:1440px;width:100%;box-sizing:border-box;margin:14px auto;padding:20px;border-radius:12px;background:#fff;box-shadow:0 4px 18px rgba(0,0,0,0.05);">
+          <h3 style="margin-top:0;margin-bottom:6px">Send feedback request</h3>
+          <p class="tiny muted" style="margin-top:0;margin-bottom:12px">Quickly invite a reviewer to submit feedback for this engagement.</p>
+          <form id="invite-form" autocomplete="off">
+            <label style="display:block;margin-bottom:8px;font-weight:600">Consultant name
+              <input id="inv-consultant-name" name="consultant_name" type="text" placeholder="Anna Larsson" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
+            </label>
+            <label style="display:block;margin-bottom:8px">Title
+              <input id="inv-consultant-title" name="consultant_title" type="text" placeholder="Senior Project Manager" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
+            </label>
+            <label style="display:block;margin-bottom:8px">Company / engagement
+              <input id="inv-company" name="company_client" type="text" placeholder="Large Bank" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
+            </label>
+            <label style="display:block;margin-bottom:8px">Segment
+              <input id="inv-segment" name="client_segment" type="text" placeholder="Finance" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" />
+            </label>
+            <div style="display:flex;gap:8px;margin-bottom:8px;">
+              <input id="inv-start" name="start_month" type="text" placeholder="Start (e.g. Jan 2024)" style="flex:1;padding:8px;border:1px solid #e5e7eb;border-radius:8px;" />
+              <input id="inv-end" name="end_month" type="text" placeholder="End (e.g. Jun 2024)" style="flex:1;padding:8px;border:1px solid #e5e7eb;border-radius:8px;" />
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><input id="inv-ongoing" type="checkbox" /> Ongoing</label>
+            <label style="display:block;margin-bottom:10px">Reviewer email
+              <input id="inv-reviewer-email" name="reviewer_email" type="email" placeholder="reviewer@example.com" style="width:100%;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;" required />
+            </label>
+
+            <label style="display:block;margin-bottom:8px">Message to Reviewer:
+              <textarea id="inv-message" name="inv_message" placeholder="Hi Sarah,\n\nI hope you're doing well! I really enjoyed working together on our recent project. Could you please take a few minutes to fill out a quick review for me? All the details are already filled in, so it should be quick and easy.\n\nYour feedback means a lot to me for my PeerRate profile.\n\nThank you so much!\n- {{consultantName}}" style="width:100%;min-height:120px;padding:8px;margin-top:6px;border:1px solid #e5e7eb;border-radius:8px;"></textarea>
+            </label>
+
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+              <label style="display:flex;align-items:center"><input type="checkbox" id="inv-include-link" checked /> A review link with the engagement details will be included in the email.</label>
+            </div>
+
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button id="inv-preview" type="button" class="secondary">Preview Email</button>
+              <button id="inv-submit" class="primary" type="submit" style="flex:0 0 auto;">Send Request</button>
+              <div id="inv-status" class="tiny muted" aria-live="polite"></div>
+            </div>
+          </form>
+        </aside>
 
         <script>
         // Share button logic
@@ -278,36 +311,7 @@
 
         <!-- 'Mitt omdöme' removed as requested -->
 
-        <!-- Mina uppgifter -->
-        <section class="card">
-          <h2 data-i18n="profile_my_details_title">Mina uppgifter</h2>
-          <p class="tiny muted" data-i18n="profile_my_details_lead">Uppgifter kopplade till din profil.</p>
-
-          <!-- Profilbild -->
-          <div class="profile-avatar-block">
-            <div class="profile-avatar-preview" id="profile-avatar-preview">PR</div>
-            <div>
-              <label class="profile-avatar-upload-label" data-i18n="profile_avatar_upload">
-                Ladda upp profilbild
-                <input type="file" id="profile-avatar-input" accept="image/*" />
-              </label>
-              <p class="profile-avatar-text" data-i18n="profile_avatar_note">
-                Bilden sparas bara lokalt i din webbläsare och kopplas till “Inloggad som”.
-              </p>
-            </div>
-          </div>
-
-          <ul class="profile-list">
-            <li><span class="profile-label">Namn</span><span class="profile-value" id="profile-name">–</span></li>
-            <li><span class="profile-label">E-post</span><span class="profile-value" id="profile-email">–</span></li>
-            <li><span class="profile-label">Personnummer</span><span class="profile-value" id="profile-personalNumber">–</span></li>
-            <li><span class="profile-label">Telefon</span><span class="profile-value" id="profile-phone">–</span></li>
-            <li><span class="profile-label">Gatuadress</span><span class="profile-value" id="profile-addressStreet">–</span></li>
-            <li><span class="profile-label">Postnummer</span><span class="profile-value" id="profile-addressZip">–</span></li>
-            <li><span class="profile-label">Ort</span><span class="profile-value" id="profile-addressCity">–</span></li>
-            <li><span class="profile-label">Land</span><span class="profile-value" id="profile-country">–</span></li>
-          </ul>
-        </section>
+        <!-- 'My details' box removed as requested -->
 
         <!-- Externa data -->
         <section class="card" id="external-data-section">
@@ -344,105 +348,7 @@
             <div id="q-engagement-type" style="color:#777;margin-top:6px;">Large Bank | Finance — Jan 2024 - Jun 2024</div>
           </div>
 
-          <form id="trust-feedback-form" autocomplete="off">
-            <fieldset style="border:0;padding:0;margin:0">
-              <legend style="font-weight:700;margin-bottom:8px">Relationship to the consultant (required)</legend>
-              <div>
-                <label><input type="radio" name="reviewer_type" value="client" required> Client / Stakeholder</label><br>
-                <label><input type="radio" name="reviewer_type" value="manager"> Direct Manager / Project Owner</label><br>
-                <label><input type="radio" name="reviewer_type" value="peer"> Team Member / Peer</label>
-              </div>
-            </fieldset>
-
-            <hr style="margin:14px 0" />
-
-            <div>
-              <label for="q-overall" style="font-weight:700">Overall Delivery</label>
-              <div class="tiny muted">How would you rate the consultant’s overall delivery? (1–5)</div>
-              <select id="q-overall" name="overall" required>
-                <option value="">Select</option>
-                <option value="1">1 — Very poor</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5 — Excellent</option>
-              </select>
-            </div>
-
-            <div style="margin-top:10px">
-              <label for="q-lead" style="font-weight:700">Leadership & Collaboration</label>
-              <div class="tiny muted">How would you rate leadership & collaboration? (1–5)</div>
-              <select id="q-lead" name="leadership" required>
-                <option value="">Select</option>
-                <option value="1">1 — Weak</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5 — Exceptional</option>
-              </select>
-            </div>
-
-            <div style="margin-top:10px">
-              <label for="q-reliability" style="font-weight:700">Reliability & Consistency</label>
-              <div class="tiny muted">How consistent and reliable was the consultant? (1–5)</div>
-              <select id="q-reliability" name="consistency" required>
-                <option value="">Select</option>
-                <option value="1">1 — Unreliable</option>
-                <option value="2">2</option>
-                <option value="3">3</option>
-                <option value="4">4</option>
-                <option value="5">5 — Very reliable</option>
-              </select>
-            </div>
-
-            <hr style="margin:14px 0" />
-
-            <div>
-              <label style="font-weight:700">Verification: Did this consultant actively work in the described role during this engagement?</label>
-              <div>
-                <label><input type="radio" name="worked_in_role" value="yes" required> Yes</label>
-                <label style="margin-left:12px"><input type="radio" name="worked_in_role" value="no"> No</label>
-              </div>
-            </div>
-
-            <div style="margin-top:10px">
-              <label style="font-weight:700">Would you confidently verify this engagement as accurate?</label>
-              <div>
-                <label><input type="radio" name="verify_engagement" value="yes" required> Yes</label>
-                <label style="margin-left:12px"><input type="radio" name="verify_engagement" value="no"> No</label>
-              </div>
-            </div>
-
-            <hr style="margin:14px 0" />
-
-            <div>
-              <label for="q-quote" style="font-weight:700">Optional: Short public quote (max 240 chars)</label>
-              <textarea id="q-quote" name="public_quote" maxlength="240" placeholder="Example: Delivered excellent results on time and was a strong partner to our team." style="width:100%;min-height:64px"></textarea>
-            </div>
-
-            <hr style="margin:14px 0" />
-
-            <div>
-              <p class="tiny muted">Your contact details are used only for verification and are never shown publicly.</p>
-              <label for="q-name">Full name (required)</label>
-              <input id="q-name" name="reviewer_name" type="text" required />
-
-              <label for="q-email">Work email (required)</label>
-              <input id="q-email" name="reviewer_email" type="email" required />
-
-              <label for="q-company">Company / Organization (optional)</label>
-              <input id="q-company" name="reviewer_company" type="text" />
-            </div>
-
-            <div style="margin-top:12px">
-              <label><input type="checkbox" id="q-confirm" required> I confirm that this feedback is honest and based on a real engagement.</label>
-            </div>
-
-            <div style="margin-top:14px;display:flex;gap:12px;align-items:center">
-              <button type="submit" class="primary" id="q-submit">Submit Feedback</button>
-              <div id="q-status" class="tiny muted" aria-live="polite"></div>
-            </div>
-          </form>
+          <div id="review-form-root"></div>
         </section>
 
         <!-- (Invite form moved to top of page) -->
@@ -477,6 +383,261 @@
   </main>
 
   <!-- ✅ Viktigt: initiera språk även på profilsidan -->
+  <!-- React + Babel (CDN) for the embedded review form component. Using UMD builds
+       and babel-standalone here for a lightweight, no-build integration that keeps
+       the rest of the app unchanged. In production you should prebuild a bundle. -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Inline React component (JSX via babel-standalone). This implements the
+       review form per requirements: engagement details, ratings, qualitative
+       feedback, verification & consent, and a submit flow with confirmation.
+       It's intentionally self-contained and stores a draft in localStorage on
+       submit. Replace with a prebuilt React bundle for production. -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    function StarRange({ label, name, min=1, max=5, value, onChange, tooltip='' }){
+      return (
+        <div style={{marginTop:10}}>
+          <label style={{fontWeight:700}} title={tooltip}>{label}</label>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginTop:6}}>
+            <input
+              type="range"
+              min={min}
+              max={max}
+              value={value}
+              onChange={e => onChange(Number(e.target.value))}
+              aria-label={label}
+            />
+            <div style={{minWidth:36,textAlign:'center',fontWeight:700}}>{value}</div>
+          </div>
+          <div className="tiny muted" style={{marginTop:4}}>{tooltip}</div>
+        </div>
+      );
+    }
+
+    function ReviewForm(){
+      // prefill consultant name from DOM if available
+      const initialConsultant = (document.getElementById('q-engagement-consultant') && document.getElementById('q-engagement-consultant').textContent) || '';
+
+      const [consultant, setConsultant] = useState(initialConsultant);
+      const [company, setCompany] = useState('');
+      const [reviewerName, setReviewerName] = useState('');
+      const [reviewerTitle, setReviewerTitle] = useState('');
+      const [industry, setIndustry] = useState('Tech');
+      const [engagementType, setEngagementType] = useState('Consultant');
+      const [startDate, setStartDate] = useState('');
+      const [endDate, setEndDate] = useState('');
+      const [ongoing, setOngoing] = useState(false);
+
+      // ratings
+      const [overall, setOverall] = useState(5);
+      const [collaboration, setCollaboration] = useState(5);
+      const [expertise, setExpertise] = useState(5);
+      const [communication, setCommunication] = useState(5);
+      const [delivery, setDelivery] = useState(5);
+      const [independence, setIndependence] = useState(5);
+
+      const [whatWorked, setWhatWorked] = useState('');
+      const [whatImprove, setWhatImprove] = useState('');
+      const [recommend, setRecommend] = useState('yes');
+      const [suitableFor, setSuitableFor] = useState('');
+
+      const [workEmail, setWorkEmail] = useState('');
+      const [confirmReal, setConfirmReal] = useState(false);
+      const [consentPublic, setConsentPublic] = useState(false);
+
+      const [submitting, setSubmitting] = useState(false);
+      const [done, setDone] = useState(false);
+      const [statusMsg, setStatusMsg] = useState('');
+
+      useEffect(()=>{
+        // If the engagement has a prefilled company from DOM, use it
+        const engText = document.getElementById('q-engagement-type') && document.getElementById('q-engagement-type').textContent;
+        if(engText && !company) setCompany(engText.split('|')[0].trim());
+      },[]);
+
+      function validate(){
+        if(!consultant) return 'Consultant name is required.';
+        if(!reviewerName) return 'Reviewer name is required.';
+        if(!workEmail || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(workEmail)) return 'Valid work email is required.';
+        if(!confirmReal) return 'You must confirm this review is based on a real engagement.';
+        if(!consentPublic) return 'You must consent to the review being displayed publicly.';
+        return null;
+      }
+
+      async function handleSubmit(e){
+        e.preventDefault();
+        const err = validate();
+        if(err){ setStatusMsg(err); return; }
+        setSubmitting(true);
+        setStatusMsg('Submitting…');
+
+        const payload = {
+          consultant, company, reviewerName, reviewerTitle, industry, engagementType,
+          startDate, endDate: ongoing ? null : endDate, ongoing,
+          ratings: { overall, collaboration, expertise, communication, delivery, independence },
+          whatWorked, whatImprove, recommend, suitableFor,
+          workEmail, verified: false, consentPublic, confirmedReal: confirmReal,
+          createdAt: new Date().toISOString(),
+        };
+
+        try{
+          // Attempt to post to backend endpoint if available (best-effort).
+          // Keep this optional — many local dev instances lack a backend.
+          let serverOk = false;
+          try{
+            const res = await fetch('/api/reviews', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload), credentials: 'include' });
+            if(res && res.ok) serverOk = true;
+          }catch(err){ /* ignore */ }
+
+          // Persist locally as fallback/draft
+          const key = 'peerRateReviewDraft';
+          localStorage.setItem(key, JSON.stringify(payload));
+
+          setDone(true);
+          setStatusMsg(serverOk ? 'Thank you — your review was submitted.' : 'Saved locally. Thank you — verification pending.');
+        }catch(err){
+          setStatusMsg('Submission failed. Please try again.');
+        }finally{
+          setSubmitting(false);
+        }
+      }
+
+      if(done){
+        return (
+          <div>
+            <h3 style={{marginTop:0}}>Thank you — review submitted</h3>
+            <p className="tiny muted">We’ve received your review. It will be marked as verified after email validation.</p>
+            <div style={{marginTop:12}}><strong>Status:</strong> <span>{statusMsg}</span></div>
+          </div>
+        );
+      }
+
+      return (
+        <form onSubmit={handleSubmit}>
+          <h2 style={{marginTop:0}}>Provide feedback for this engagement</h2>
+          <p className="tiny muted">Please complete the fields below. Work email is used only for verification.</p>
+
+          <fieldset style={{border:0,padding:0,margin:0}}>
+            <label style={{display:'block',fontWeight:700}}>Consultant’s Name (read-only)</label>
+            <input type="text" value={consultant} readOnly style={{width:'100%',padding:8,marginTop:6}} />
+
+            <label style={{display:'block',fontWeight:700,marginTop:8}}>Company Name</label>
+            <input type="text" value={company} onChange={e=>setCompany(e.target.value)} style={{width:'100%',padding:8,marginTop:6}} />
+
+            <label style={{display:'block',fontWeight:700,marginTop:8}}>Reviewer Name</label>
+            <input type="text" value={reviewerName} onChange={e=>setReviewerName(e.target.value)} required style={{width:'100%',padding:8,marginTop:6}} />
+
+            <label style={{display:'block',fontWeight:700,marginTop:8}}>Reviewer Title</label>
+            <input type="text" value={reviewerTitle} onChange={e=>setReviewerTitle(e.target.value)} style={{width:'100%',padding:8,marginTop:6}} />
+
+            <div style={{display:'flex',gap:8,marginTop:8}}>
+              <div style={{flex:1}}>
+                <label style={{display:'block',fontWeight:700}}>Industry / Segment</label>
+                <select value={industry} onChange={e=>setIndustry(e.target.value)} style={{width:'100%',padding:8,marginTop:6}}>
+                  <option>Tech</option>
+                  <option>Finance</option>
+                  <option>Healthcare</option>
+                  <option>Startup</option>
+                  <option>Enterprise</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div style={{flex:1}}>
+                <label style={{display:'block',fontWeight:700}}>Engagement Type</label>
+                <select value={engagementType} onChange={e=>setEngagementType(e.target.value)} style={{width:'100%',padding:8,marginTop:6}}>
+                  <option>Consultant</option>
+                  <option>Contractor</option>
+                  <option>Interim</option>
+                  <option>Project-based</option>
+                  <option>Freelancer</option>
+                  <option>Employee</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{display:'flex',gap:8,marginTop:8,alignItems:'center'}}>
+              <div style={{flex:1}}>
+                <label style={{display:'block',fontWeight:700}}>Start Date</label>
+                <input type="date" value={startDate} onChange={e=>setStartDate(e.target.value)} style={{width:'100%',padding:8,marginTop:6}} />
+              </div>
+              <div style={{flex:1}}>
+                <label style={{display:'block',fontWeight:700}}>End Date</label>
+                <input type="date" value={endDate} onChange={e=>setEndDate(e.target.value)} disabled={ongoing} style={{width:'100%',padding:8,marginTop:6}} />
+              </div>
+              <div style={{display:'flex',alignItems:'center'}}>
+                <label style={{marginLeft:6}}><input type="checkbox" checked={ongoing} onChange={e=>setOngoing(e.target.checked)} /> Ongoing</label>
+              </div>
+            </div>
+          </fieldset>
+
+          <hr style={{margin:'14px 0'}} />
+
+          <h3 style={{marginBottom:6}}>Ratings</h3>
+          <StarRange label="Overall Rating" value={overall} onChange={setOverall} tooltip="Overall delivery quality (1–5)." />
+          <StarRange label="Collaboration" value={collaboration} onChange={setCollaboration} tooltip="Working with others, team fit." />
+          <StarRange label="Professional Expertise" value={expertise} onChange={setExpertise} tooltip="Domain knowledge and skills." />
+          <StarRange label="Communication" value={communication} onChange={setCommunication} tooltip="Clarity and responsiveness." />
+          <StarRange label="Delivery / Reliability" value={delivery} onChange={setDelivery} tooltip="On-time delivery and follow-through." />
+          <StarRange label="Level of Independence" value={independence} onChange={setIndependence} tooltip="Ability to run with minimal supervision." />
+
+          <hr style={{margin:'14px 0'}} />
+
+          <div>
+            <label style={{fontWeight:700}}>What worked particularly well? (max 500 chars)</label>
+            <textarea value={whatWorked} onChange={e=>setWhatWorked(e.target.value.slice(0,500))} style={{width:'100%',minHeight:100,marginTop:6}} />
+          </div>
+
+          <div style={{marginTop:10}}>
+            <label style={{fontWeight:700}}>Is there anything that could have been improved? (optional)</label>
+            <textarea value={whatImprove} onChange={e=>setWhatImprove(e.target.value.slice(0,500))} style={{width:'100%',minHeight:80,marginTop:6}} />
+          </div>
+
+          <div style={{marginTop:10}}>
+            <label style={{fontWeight:700}}>Would you recommend this person to others?</label>
+            <div style={{marginTop:6}}>
+              <label><input type="radio" name="recommend" value="yes" checked={recommend==='yes'} onChange={e=>setRecommend('yes')} /> Yes</label>
+              <label style={{marginLeft:12}}><input type="radio" name="recommend" value="no" checked={recommend==='no'} onChange={e=>setRecommend('no')} /> No</label>
+            </div>
+            {recommend==='yes' && (
+              <div style={{marginTop:8}}>What types of engagements is this person best suited for? (tags or short text)
+                <input type="text" value={suitableFor} onChange={e=>setSuitableFor(e.target.value)} placeholder="e.g. Project-based, Interim, Long-term" style={{width:'100%',padding:8,marginTop:6}} />
+              </div>
+            )}
+          </div>
+
+          <hr style={{margin:'14px 0'}} />
+
+          <div>
+            <p className="tiny muted">Work Email (used only for verification, not publicly visible)</p>
+            <input type="email" value={workEmail} onChange={e=>setWorkEmail(e.target.value)} required style={{width:'100%',padding:8,marginTop:6}} />
+          </div>
+
+          <div style={{marginTop:10}}>
+            <label><input type="checkbox" checked={confirmReal} onChange={e=>setConfirmReal(e.target.checked)} required /> I confirm this review is based on a real professional engagement.</label>
+          </div>
+          <div style={{marginTop:6}}>
+            <label><input type="checkbox" checked={consentPublic} onChange={e=>setConsentPublic(e.target.checked)} required /> I consent to this review being displayed publicly.</label>
+          </div>
+
+          <div style={{marginTop:14,display:'flex',gap:12,alignItems:'center'}}>
+            <button type="submit" className="primary" disabled={submitting}>Submit Review</button>
+            <div className="tiny muted" aria-live="polite">{statusMsg}</div>
+          </div>
+        </form>
+      );
+    }
+
+    // mount the component
+    document.addEventListener('DOMContentLoaded', function(){
+      const root = document.getElementById('review-form-root');
+      if(root) ReactDOM.createRoot(root).render(React.createElement(ReviewForm));
+    });
+  </script>
+
   <script type="module">
     import { initLandingLanguage } from '/modules/landing/language.js';
     initLandingLanguage();

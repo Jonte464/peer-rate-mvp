@@ -183,7 +183,7 @@ export function initLandingLanguage() {
       how_title: 'For consultants who want to show real trust, not just a CV.',
       how_lead: 'PeerRate standardizes reviews and links them to assignments — making trust measurable, portable and fair.',
       f1_title: 'Verified',
-      f1_p: 'Connect reputation to transactions. Less fraud, fewer bad surprises.',
+      f1_p: 'Connect reputation to assignments. Less fraud, more trust',
       f2_title: 'Portable',
       f2_p: 'Bring your trust score across assignments instead of starting from zero.',
       f3_title: 'Explainable',
@@ -345,23 +345,14 @@ export function initLandingLanguage() {
     langBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
 
-  langBtn.addEventListener('click', () => setMenuOpen(!open));
-  langMenu.addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-lang]');
-    if (!b) return;
-    applyLang(b.getAttribute('data-lang'));
-    setMenuOpen(false);
-  });
+  // This app will be English-only by default. Hide language selector and
+  // force English so users do not get a Swedish option.
+  try {
+    langMenu.style.display = 'none';
+    langBtn.style.display = 'none';
+  } catch (e) { /* ignore if elements missing */ }
 
-  window.addEventListener('click', (e) => {
-    if (!open) return;
-    if (e.target.closest('#langBtn') || e.target.closest('#langMenu')) return;
-    setMenuOpen(false);
-  });
-
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') setMenuOpen(false);
-  });
-
-  applyLang(localStorage.getItem(LS_LANG) || 'en');
+  // Always apply English. Keep storage key for future flexibility but do not
+  // offer the UI to change language.
+  applyLang('en');
 }

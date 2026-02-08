@@ -9,6 +9,9 @@ function serialize(form) {
   for (const [k, v] of fd.entries()) obj[k] = v;
   // handle ongoing checkbox
   obj.ongoing = !!qs('inv-ongoing').checked;
+  // include optional message and include-link flag
+  obj.inv_message = qs('inv-message') ? qs('inv-message').value : '';
+  obj.inv_include_link = qs('inv-include-link') ? !!qs('inv-include-link').checked : true;
   return obj;
 }
 
@@ -24,7 +27,7 @@ function validate(obj) {
 
 function disableForm(disabled) {
   qs('inv-submit').disabled = disabled;
-  ['inv-consultant-name','inv-consultant-title','inv-company','inv-segment','inv-start','inv-end','inv-ongoing','inv-reviewer-email'].forEach(id=>{
+  ['inv-consultant-name','inv-consultant-title','inv-company','inv-segment','inv-start','inv-end','inv-ongoing','inv-reviewer-email','inv-message','inv-include-link','inv-preview'].forEach(id=>{
     const el = qs(id); if (el) el.disabled = disabled;
   });
 }
@@ -81,7 +84,7 @@ export function initInviteForm() {
         end_month: data.ongoing ? 'Ongoing' : (data.end_month || ''),
       };
 
-      const payload = { to: data.reviewer_email, engagement };
+      const payload = { to: data.reviewer_email, engagement, message: data.inv_message || '', includeLink: !!data.inv_include_link };
 
       const res = await fetch('/api/questionnaires/send', {
         method: 'POST',
@@ -108,7 +111,50 @@ export function initInviteForm() {
     }
   });
 
+  // Preview button: show a simple preview window with the constructed email
+  const previewBtn = qs('inv-preview');
+  if (previewBtn) {
+    previewBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const data = serialize(form);
+      const reviewer = data.reviewer_email || '';
+      const consultantName = data.consultant_name || '';
+      let message = data.inv_message || '';
+      message = message.replace(/\{\{reviewerName\}\}/g, reviewer.split('@')[0] || reviewer).replace(/\{\{consultantName\}\}/g, consultantName);
+
+      const includeLink = data.inv_include_link;
+      let linkHtml = '';
+      if (includeLink) {
+        // create a simple review link — in production this should be a tokenized, single-use URL
+        const params = new URLSearchParams({ consultant: consultantName, company: data.company_client || '', reviewer: reviewer });
+        const url = window.location.origin + '/rate.html?' + params.toString();
+        linkHtml = `<p><strong>Review link:</strong> <a href="${url}" target="_blank">${url}</a></p>`;
+      }
+
+      const html = `
+        <html><head><title>Preview email</title></head><body style="font-family:system-ui,Segoe UI,Roboto,Arial;background:#fff;color:#111;padding:18px;">
+        <h3>Preview: To ${reviewer}</h3>
+        <pre style="white-space:pre-wrap;font-family:inherit;">${escapeHtml(message)}</pre>
+        ${linkHtml}
+        </body></html>`;
+
+      const w = window.open('', '_blank', 'noopener');
+      if (w) {
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+      } else {
+        alert(message + (includeLink ? '\n\n(Review link will be included)' : ''));
+      }
+    });
+  }
+
   
 }
 
 export default { initInviteForm };
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; });
+}

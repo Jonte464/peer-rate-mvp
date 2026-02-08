@@ -25,4 +25,6 @@ export function initLandingMenu() {
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') setOpen(false);
   });
+
+  // no inline profile dropdown — uses dedicated page
 }

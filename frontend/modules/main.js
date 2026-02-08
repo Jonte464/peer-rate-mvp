@@ -144,7 +144,13 @@ window.addEventListener('DOMContentLoaded', () => {
   const path = window.location.pathname || '';
 
   // Profile page
-  if (path.includes('/min-profil') || path.includes('profile.html') || path.includes('/profile')) {
+  if (
+    path.includes('/min-profil') ||
+    path.includes('profile.html') ||
+    path.includes('/profile') ||
+    path.includes('my-details') ||
+    path.includes('my-details.html')
+  ) {
     initProfilePage();
   }
 
