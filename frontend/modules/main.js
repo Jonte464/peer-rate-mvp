@@ -36,10 +36,8 @@ function applyRatingContextFromQuery() {
   const sourceEl = document.getElementById('rate-context-source');
   const linkEl = document.getElementById('rate-context-link');
 
-  // Mappa "tradera" -> "Tradera" osv (så det matchar dina <option>-värden)
+  // Map known pretty names for sources (marketplace entries removed)
   const prettySourceMap = {
-    tradera: 'Tradera',
-    blocket: 'Blocket',
     airbnb: 'Airbnb',
     husknuten: 'Husknuten',
     tiptap: 'Tiptap'
@@ -100,16 +98,8 @@ function applyRatingContextFromQuery() {
 function extractProofIdFromUrl(url) {
   const u = (url || '').toLowerCase();
 
-  // Tradera item: /item/341380/704309999/....
-  let m = u.match(/\/item\/\d+\/(\d+)/);
-  if (m && m[1]) return `TRADERA-${m[1]}`;
-
-  // Tradera order: /my/order/<id>
-  m = u.match(/\/my\/order\/([a-z0-9]+)/);
-  if (m && m[1]) return `TRADERA-ORDER-${m[1]}`;
-
   // Fallback: plocka en längre sifferserie (t.ex. ordernr)
-  m = u.match(/(\d{6,})/);
+  let m = u.match(/(\d{6,})/);
   if (m && m[1]) return `REF-${m[1]}`;
 
   return '';

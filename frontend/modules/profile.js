@@ -5,8 +5,7 @@
 import { el, showNotification } from './utils.js';
 import auth, { login, logout } from './auth.js';
 import api from './api.js';
-import { initTraderaSection } from './profileTradera.js';
-import { initEbaySection } from './profileEbay.js';
+// Tradera/eBay integrations removed
 import { renderPRating, loadMyRating } from './profileRatings.js';
 import { initRatingForm } from './ratingForm.js';
 import { initQuestionnaire } from './profileQuestionnaire.js';
@@ -851,12 +850,10 @@ export async function initProfilePage() {
       updateUserBadge(user);
       updateAvatars(user);
       try {
-        await Promise.all([
+          await Promise.all([
           loadProfileData(),
           loadExternalData(),
           loadMyRating(),
-          initTraderaSection(),
-          initEbaySection(),
           initQuestionnaire(),
           initInviteForm(),
         ]);

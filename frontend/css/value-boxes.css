@@ -1,0 +1,29 @@
+/* Styles for the three feature/value boxes (Verified / Portable / Explainable)
+   - Mobile-first
+   - Hover / focus reveal of descriptive text
+   - Subtle fade + slide animations (respects prefers-reduced-motion)
+*/
+:root{
+  --vb-accent:#6b28d9;
+  --vb-muted:#6b7280;
+  --vb-bg:#ffffff;
+}
+.vb-grid{display:flex;flex-direction:column;gap:12px}
+@media(min-width:860px){.vb-grid{flex-direction:row}}
+
+.vb-card{background:var(--vb-bg);border:1px solid rgba(11,23,32,0.06);padding:18px;border-radius:12px;display:flex;flex-direction:column;gap:10px;cursor:pointer;transition:box-shadow 220ms ease,border-color 220ms ease,transform 200ms ease}
+.vb-card:focus{outline:3px solid rgba(107,40,217,0.12);outline-offset:3px}
+.vb-card .vb-title{font-weight:700;font-size:16px;display:flex;align-items:center;gap:10px}
+.vb-card .vb-accent{width:36px;height:4px;background:linear-gradient(90deg,var(--vb-accent),#9256f0);border-radius:4px}
+.vb-card .vb-desc{color:var(--vb-muted);font-size:14px;line-height:1.45;max-height:0;opacity:0;transform:translateY(6px);overflow:hidden;transition:opacity 320ms ease-out,transform 320ms ease-out,max-height 320ms ease-out}
+.vb-card.expanded{border-color:rgba(107,40,217,0.12);box-shadow:0 8px 20px rgba(11,23,32,0.04);transform:translateY(-2px)}
+.vb-card.expanded .vb-desc{opacity:1;transform:translateY(0);max-height:400px}
+
+/* Ensure tap targets are large enough on mobile */
+.vb-card{min-height:84px}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .vb-card, .vb-card .vb-desc{transition:none;transform:none}
+  .vb-card .vb-desc{opacity:1;max-height:none}
+}

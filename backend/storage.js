@@ -11,12 +11,7 @@ const {
   listRecentRatings,
 } = require('./storage.ratings');
 
-// Tradera-relaterade funktioner i egen modul
-const {
-  upsertTraderaProfile,
-  saveTraderaOrders,
-  getTraderaSummaryBySubjectRef,
-} = require('./storage.tradera');
+// Tradera integration removed
 
 /** Skapa en rapport (kopplad till kund och ev. rating/transaction) */
 async function createReport(data) {
@@ -251,8 +246,5 @@ module.exports = {
   averageForSubjectRef,
   listRecentRatings,
 
-  // Tradera-relaterade hjälpfunktioner (från storage.tradera.js)
-  upsertTraderaProfile,
-  saveTraderaOrders,
-  getTraderaSummaryBySubjectRef,
+  // Tradera integration removed
 };

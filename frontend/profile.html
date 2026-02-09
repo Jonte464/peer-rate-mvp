@@ -55,8 +55,7 @@
       <div class="shell menu-panel-inner">
         <a class="menu-link" href="/#how"><div data-i18n="menu_how">Hur det funkar</div><span>→</span></a>
         <a class="menu-link" href="/#sim"><div data-i18n="menu_sim">Se värdet direkt</div><span>→</span></a>
-        <a class="menu-link" href="/#globe"><div data-i18n="menu_globe">Global trust</div><span>→</span></a>
-        <a class="menu-link" href="/rate.html"><div data-i18n="menu_rate">Lämna betyg</div><span>→</span></a>
+        <!-- Global trust and "Lämna betyg" removed from menu -->
         <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Registrera dig</div><span>→</span></a>
         <a class="menu-link" href="/profile.html"><div data-i18n="menu_profile">Min profil</div><span>→</span></a>
         <a class="menu-link" href="/my-details.html"><div>My details</div><span>→</span></a>
@@ -180,7 +179,7 @@
         <!-- Trust Profile Card (matches design) and Invite form side-by-side) -->
         <div class="top-profile-row" style="display:flex;gap:24px;align-items:flex-start;max-width:1440px;margin-left:auto;margin-right:auto;margin-bottom:32px;flex-wrap:nowrap;">
           <section class="trust-profile-card" style="background:#ffffff;border-radius:12px;padding:12px;border:1px solid rgba(11,22,51,0.06);box-shadow:0 8px 24px rgba(11,22,51,0.06);margin-top:0;max-width:100%;">
-        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="display:flex;align-items:center;gap:12px;">
           <img id="profile-photo" src="https://randomuser.me/api/portraits/women/44.jpg" alt="Profile photo" style="width:56px;height:56px;border-radius:50%;object-fit:cover;border:1px solid rgba(11,22,51,0.06);box-shadow:0 1px 2px rgba(11,22,51,0.04);">
           <div style="flex:1;min-width:0;">
             <div id="profile-fullname" style="font-size:1rem;font-weight:700;line-height:1;color:rgba(11,22,51,0.95);">Anna Larsson</div>
@@ -188,16 +187,16 @@
             <div id="profile-location" style="font-size:0.78rem;color:rgba(11,22,51,0.6);margin-top:1px;">Stockholm, Sweden</div>
           </div>
           <div style="flex-shrink:0;">
-            <button id="profile-share-btn" style="background:#f8fafc;border:1px solid rgba(11,22,51,0.06);color:rgba(11,22,51,0.95);padding:6px 10px;border-radius:8px;font-size:12px;font-weight:700;">Share</button>
+            <button id="profile-share-btn" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.18);color:#0369a1;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:700;">Share</button>
           </div>
         </div>
 
           <div style="margin-top:12px;background:#ffffff;border-radius:8px;padding:12px;border:1px solid rgba(11,22,51,0.03);">
           <div style="font-weight:700;font-size:0.9rem;color:rgba(11,22,51,0.95);margin-bottom:6px;">PeerRate Score: <span id="profile-score-big" style="font-size:1.4rem;font-weight:800;color:#1d4ed8;margin-left:6px;">82</span><span style="font-size:0.78rem;color:rgba(11,22,51,0.6);margin-left:6px;"> of 100</span></div>
-          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;" id="profile-tags">
-            <span id="badge-verified" style="background:#e6f0ff;color:#0369a1;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;">Verified</span>
-            <span id="badge-confidence" style="background:#eef6ff;color:#0369a1;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;">High</span>
-            <span id="badge-strong" style="background:#eef6ff;color:#0369a1;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;">Strong</span>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;" id="profile-tags">
+            <span id="badge-verified" style="background:rgba(59,130,246,0.08);color:#0369a1;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;">Verified</span>
+            <span id="badge-confidence" style="background:rgba(59,130,246,0.08);color:#0369a1;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;">High</span>
+            <span id="badge-strong" style="background:rgba(59,130,246,0.08);color:#0369a1;padding:6px 10px;border-radius:8px;font-weight:700;font-size:12px;">Strong</span>
           </div>
 
           <div style="display:flex;gap:10px;margin-top:8px;align-items:center;">
@@ -352,16 +351,6 @@
         </section>
 
         <!-- (Invite form moved to top of page) -->
-
-        <!-- eBay-koppling (tillfälligt dold) -->
-<section class="card hidden" id="ebay-card" style="display:none;">
-  <!-- eBay är tillfälligt avstängt i UI -->
-</section>
-
-        <!-- Tradera-koppling (tillfälligt dold) -->
-<section class="card hidden" id="tradera-card" style="display:none;">
-  <!-- Tradera är tillfälligt avstängt i UI -->
-</section>
 
         <!-- Logga ut -->
         <section class="card">

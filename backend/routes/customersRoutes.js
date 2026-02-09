@@ -6,7 +6,6 @@ const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
 
 const { searchCustomers } = require('../storage');
-const { connectBlocketProfile } = require('../services/blocketService');
 
 const {
   clean,
@@ -43,9 +42,7 @@ const createCustomerSchema = Joi.object({
   addressCity: Joi.string().max(100).allow('', null),
   country: Joi.string().max(100).allow('', null),
 
-  // NYTT: Blocket-fält (valfria)
-  blocketEmail: Joi.string().email().allow('', null),
-  blocketPassword: Joi.string().min(1).max(200).allow('', null),
+  // Blocket fields removed
 
   // Samtycken – måste vara TRUE
   thirdPartyConsent: Joi.boolean().valid(true).required(),
@@ -120,12 +117,7 @@ router.post('/customers', async (req, res) => {
       case 'passwordConfirm':
         friendlyField = 'bekräfta lösenord';
         break;
-      case 'blocketEmail':
-        friendlyField = 'Blocket-e-post';
-        break;
-      case 'blocketPassword':
-        friendlyField = 'Blocket-lösenord';
-        break;
+      // Blocket-related friendlyField options removed
       case 'thirdPartyConsent':
         friendlyField = 'samtycke till tredjepartsdata';
         break;
@@ -176,10 +168,7 @@ router.post('/customers', async (req, res) => {
     null;
   const passwordHash = await bcrypt.hash(value.password, 10);
 
-  // NYTT: plocka ut Blocket-fält (valfria)
-  const blocketEmail =
-    (value.blocketEmail && String(value.blocketEmail).trim()) || '';
-  const blocketPassword = value.blocketPassword || '';
+  // Blocket integration removed
 
   try {
     // 1) Finns det redan en kund med denna subjectRef (dvs e-post som subject)?
@@ -252,21 +241,7 @@ router.post('/customers', async (req, res) => {
       });
     }
 
-    // Starta Blocket-koppling i bakgrunden om båda fälten är ifyllda
-    if (blocketEmail && blocketPassword) {
-      connectBlocketProfile(customer.id, blocketEmail, blocketPassword)
-        .then(() => {
-          console.log(
-            `Blocket-profil kopplad för kund ${customer.id} (${blocketEmail})`
-          );
-        })
-        .catch((err) => {
-          console.error(
-            `Misslyckades att koppla Blocket-profil för kund ${customer.id}`,
-            err
-          );
-        });
-    }
+    // Blocket background connection removed
 
     return res.status(201).json({
       ok: true,

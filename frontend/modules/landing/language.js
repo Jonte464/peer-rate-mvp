@@ -10,11 +10,10 @@ export function initLandingLanguage() {
       top_sub: 'Förtroende du kan bevisa',
       menu_how: 'Hur det funkar',
       menu_sim: 'Se värdet direkt',
-      menu_globe: 'Global trust',
-      menu_rate: 'Lämna betyg',
+      // menu_globe and menu_rate removed
       menu_signup: 'Registrera dig',
       menu_profile: 'Min profil',
-      menu_ask: 'Fråga om trust',
+      // menu_ask removed
       user_logout: 'Logga ut',
 
       hero_kicker: 'Peer-to-peer reputation',
@@ -163,11 +162,10 @@ export function initLandingLanguage() {
       top_sub: 'Reputation you can prove',
       menu_how: 'How it works',
       menu_sim: 'See the value',
-      menu_globe: 'Global trust',
-      menu_rate: 'Leave a rating',
+      // menu_globe and menu_rate removed
       menu_signup: 'Sign up',
       menu_profile: 'My profile',
-      menu_ask: 'See the 5P model',
+      // menu_ask removed
       user_logout: 'Log out',
 
       hero_kicker: 'Peer-to-peer reputation',

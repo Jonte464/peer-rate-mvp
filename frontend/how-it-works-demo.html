@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>How PeerRate Works — Demo</title>
+  <link rel="stylesheet" href="/css/how-it-works.css" />
+  <style>html,body{height:100%;overflow:hidden;margin:0}body{background:#fbfbff;padding:12px;height:100%}#hiw-root{height:100%;min-height:360px}</style>
+</head>
+<body>
+  <div id="hiw-root" class="hiw" aria-label="How PeerRate Works section"></div>
+
+  <!-- React + Babel from CDN for quick demo (no build) -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6.26.0/babel.min.js"></script>
+
+  <!-- Component (JSX) -->
+  <script type="text/babel">
+    const {useState, useEffect, useRef} = React;
+
+    // HowItWorks component
+    // - Mobile-first responsive
+    // - Scroll-driven activation using IntersectionObserver
+    // - CSS-based fade+slide animations (respects prefers-reduced-motion)
+    // - Dots allow keyboard + mouse navigation
+
+    function HowItWorks(){
+      const steps = [
+        {
+          title: 'Create a request',
+          text: 'Add the details about the work you did together. Everything is pre-filled so your peer doesn\'t need to add context.',
+          key: 'create'
+        },
+        {
+          title: 'We handle the outreach',
+          text: 'PeerRate sends a secure request to your peer. No account required.',
+          key: 'send'
+        },
+        {
+          title: 'Structured peer feedback',
+          text: 'Your peer rates only what they directly experienced and can add optional comments.',
+          key: 'structured'
+        },
+        {
+          title: 'Verified and locked',
+          text: 'Feedback is tied to a real work relationship and can\'t be edited after submission.',
+          key: 'locked'
+        },
+        {
+          title: 'A reputation you can show',
+          text: 'Verified feedback builds your PeerRate profile — ready to share with employers or clients.',
+          key: 'profile'
+        }
+      ];
+
+      const [index, setIndex] = useState(0);
+      const [paused, setPaused] = useState(false);
+      const rootRef = useRef(null);
+      const autoplayRef = useRef(null);
+
+      // Respect reduced motion
+      const reduceMotion = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      // Scroll-driven activation: when section enters viewport, start autoplay (optional)
+      useEffect(()=>{
+        const el = rootRef.current;
+        if(!el || reduceMotion) return; // skip autoplay if reduced motion
+
+        const obs = new IntersectionObserver(entries=>{
+          entries.forEach(e=>{
+            if(e.isIntersecting){
+              // start autoplay when in view
+              startAutoplay();
+            } else {
+              stopAutoplay();
+            }
+          })
+        },{threshold:0.45});
+
+        obs.observe(el);
+        return ()=>obs.disconnect();
+      },[]);
+
+      // Autoplay timer
+      function startAutoplay(){
+        if(autoplayRef.current) return;
+        autoplayRef.current = setInterval(()=>{
+          setIndex(i=> (i+1) % steps.length);
+        }, 4500);
+      }
+      function stopAutoplay(){
+        if(autoplayRef.current){
+          clearInterval(autoplayRef.current);
+          autoplayRef.current = null;
+        }
+      }
+
+      // Pause autoplay on user interaction
+      useEffect(()=>{
+        if(paused) stopAutoplay();
+      },[paused]);
+
+      // Update progress bar width
+      useEffect(()=>{
+        const pct = ((index+1)/steps.length)*100;
+        const el = rootRef.current && rootRef.current.querySelector('.progress > i');
+        if(el) el.style.width = pct + '%';
+      },[index]);
+
+      // Keyboard navigation for dots
+      useEffect(()=>{
+        const keyHandler = (e)=>{
+          if(e.key === 'ArrowRight') setIndex(i=>Math.min(i+1, steps.length-1));
+          if(e.key === 'ArrowLeft') setIndex(i=>Math.max(i-1, 0));
+        };
+        window.addEventListener('keydown', keyHandler);
+        return ()=>window.removeEventListener('keydown', keyHandler);
+      },[]);
+
+      return (
+        <section ref={rootRef} className="hiw" aria-labelledby="hiw-title">
+          <div className="section-head">
+            <h2 id="hiw-title">How PeerRate Works</h2>
+            <div style={{color:'#6b7280',fontSize:14}}>5 steps — clear, verified reputation</div>
+          </div>
+
+          <div className="stepper" onMouseEnter={()=>setPaused(true)} onMouseLeave={()=>setPaused(false)}>
+            <div className="illustration" aria-hidden="true">
+              <Illustration step={steps[index].key} />
+            </div>
+
+            <div>
+              <div className="panel">
+                <div className="steps" role="region" aria-live="polite">
+                  {steps.map((s,i)=> (
+                    <article key={s.key} className={"step" + (i===index? ' active':'')} aria-hidden={i===index? 'false':'true'}>
+                      <h3>{s.title}</h3>
+                      <p>{s.text}</p>
+                    </article>
+                  ))}
+                </div>
+
+                <div className="controls">
+                  <div className="dots" role="tablist" aria-label="Choose step">
+                    {steps.map((s,i)=> (
+                      <button
+                        key={s.key}
+                        className="dot"
+                        aria-pressed={i===index}
+                        title={`${i+1}: ${s.title}`}
+                        onClick={()=>{ setIndex(i); setPaused(true); }}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="progress" aria-hidden="true"><i style={{width: ((index+1)/steps.length)*100 + '%'}}></i></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    // Illustration component: simple SVG representations for each step
+    function Illustration({step}){
+      // keep visuals lightweight and semantic; only one visible at a time
+      switch(step){
+        case 'create':
+          return (
+            <svg className="svg-simplified" viewBox="0 0 600 380" role="img" aria-label="Create request form illustration">
+              <rect x="12" y="18" rx="8" ry="8" width="460" height="280" fill="#fff" stroke="rgba(11,23,32,0.06)" />
+              <rect x="40" y="50" width="380" height="28" rx="6" fill="#f3f4f6" />
+              <rect x="40" y="94" width="320" height="24" rx="6" fill="#f8fafc" />
+              <rect x="40" y="132" width="250" height="24" rx="6" fill="#f8fafc" />
+              <rect x="40" y="170" width="300" height="24" rx="6" fill="#f8fafc" />
+
+              {/* sequential autofill dots */}
+              <g transform="translate(450,60)">
+                <circle cx="0" cy="0" r="8" fill="#c7b3ff">
+                  <animate attributeName="r" from="6" to="10" dur="0.9s" begin="0s" repeatCount="indefinite"/>
+                </circle>
+              </g>
+            </svg>
+          );
+        case 'send':
+          return (
+            <svg className="svg-simplified" viewBox="0 0 600 380" role="img" aria-label="Sending request illustration">
+              <rect x="40" y="60" width="380" height="240" rx="12" fill="#fff" stroke="rgba(11,23,32,0.06)" />
+              <g transform="translate(60,90)">
+                <rect x="0" y="0" width="300" height="36" rx="6" fill="#f3f4f6" />
+                <rect x="0" y="56" width="200" height="28" rx="6" fill="#f8fafc" />
+
+                <g transform="translate(320,40)">
+                  <rect x="0" y="0" width="120" height="72" rx="8" fill="#fff" stroke="rgba(11,23,32,0.06)" />
+                  <path d="M12 36 L40 24 L40 48 Z" fill="#6b28d9" opacity="0.9">
+                    <animateTransform attributeName="transform" type="translate" from="0 0" to="80 0" dur="0.9s" repeatCount="indefinite"/>
+                  </path>
+                  <circle cx="90" cy="18" r="10" fill="#e6eefc" />
+                  <path d="M84 16 L96 16" stroke="#6b28d9" strokeWidth="2" strokeLinecap="round" />
+                </g>
+
+                {/* shield */}
+                <g transform="translate(180,140)">
+                  <path d="M20 0 L40 10 L40 30 L20 40 L0 30 L0 10 Z" fill="#eef2ff" stroke="#c7b3ff"/>
+                  <text x="20" y="26" textAnchor="middle" fontSize="12" fill="#6b28d9">✓</text>
+                </g>
+              </g>
+            </svg>
+          );
+        case 'structured':
+          return (
+            <svg className="svg-simplified" viewBox="0 0 600 380" role="img" aria-label="Structured feedback illustration">
+              <rect x="30" y="40" width="420" height="300" rx="12" fill="#fff" stroke="rgba(11,23,32,0.06)" />
+              <g transform="translate(60,80)">
+                {[0,1,2,3].map((r,idx)=> (
+                  <g key={idx} transform={`translate(0, ${idx*46})`}>
+                    <rect x="0" y="0" width="220" height="12" rx="6" fill="#f3f4f6" />
+                    <rect x="0" y="18" width={60 + idx*60} height="12" rx="6" fill="#c7b3ff">
+                      <animate attributeName="width" from="0" to={`${60 + idx*60}`} dur="0.9s" begin="0s" repeatCount="indefinite"/>
+                    </rect>
+                  </g>
+                ))}
+                <rect x="0" y="200" width="360" height="24" rx="6" fill="#f8fafc" />
+                <text x="10" y="216" fontSize="12" fill="#6b7280">Optional comment…</text>
+              </g>
+            </svg>
+          );
+        case 'locked':
+          return (
+            <svg className="svg-simplified" viewBox="0 0 600 380" role="img" aria-label="Verified and locked illustration">
+              <rect x="32" y="48" rx="12" width="420" height="260" fill="#fff" stroke="rgba(11,23,32,0.06)" />
+              <g transform="translate(120,120)">
+                <rect x="0" y="0" width="220" height="120" rx="8" fill="#f8fafc" />
+                <path d="M180 10 v-20 a20 20 0 0 0 -40 0 v20" fill="none" stroke="#6b28d9" strokeWidth="6" strokeLinecap="round" />
+                <rect x="90" y="44" width="40" height="36" rx="6" fill="#6b28d9" />
+                <text x="110" y="70" textAnchor="middle" fill="#fff">✓</text>
+              </g>
+            </svg>
+          );
+        case 'profile':
+        default:
+          return (
+            <svg className="svg-simplified" viewBox="0 0 600 380" role="img" aria-label="PeerRate profile illustration">
+              <g transform="translate(36,36)">
+                <rect x="0" y="0" width="360" height="120" rx="10" fill="#fff" stroke="rgba(11,23,32,0.06)" />
+                <rect x="0" y="140" width="260" height="120" rx="10" fill="#fff" stroke="rgba(11,23,32,0.06)" />
+                <g transform="translate(16,16)">
+                  <circle cx="36" cy="36" r="24" fill="#eae6ff" />
+                  <rect x="76" y="18" width="160" height="18" rx="6" fill="#f3f4f6" />
+                </g>
+                <g transform="translate(280,20)">
+                  <path d="M10 30 L40 30 L60 10" stroke="#6b28d9" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="48" cy="10" r="6" fill="#6b28d9" />
+                </g>
+              </g>
+            </svg>
+          );
+      }
+    }
+
+    // Mount demo
+    ReactDOM.createRoot(document.getElementById('hiw-root')).render(<HowItWorks />);
+  </script>
+</body>
+</html>

@@ -7,10 +7,7 @@ function mapRatingSourceLabel(source) {
   if (!source) return 'Annat/okänt';
   const s = String(source).toUpperCase();
   switch (s) {
-    case 'BLOCKET':
-      return 'Blocket';
-    case 'TRADERA':
-      return 'Tradera';
+    // Removed BLOCKET/TRADERA labels
     case 'AIRBNB':
       return 'Airbnb';
     case 'HUSKNUTEN':

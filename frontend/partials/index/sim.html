@@ -5,73 +5,7 @@
 
     <!-- example profile card removed -->
 
-    <div class="sim-row">
-
-      <!-- Simulator – 5P + två sliders -->
-      <div class="sim">
-        <div>
-          <h3 data-i18n="sim_h3">Vad händer när fler lämnar omdömen – och de är bra?</h3>
-          <p data-i18n="sim_p">
-            Två reglage styr den totala nivån. Få omdömen + lågt snitt ger låg nivå. Många omdömen + högt snitt ger 5P.
-          </p>
-
-          <div class="slider-stack">
-            <div>
-              <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:6px;">
-                <b data-i18n="sim_count_label">Antal omdömen</b>
-                <span style="color:rgba(11,22,51,.62); font-weight:800;"><span id="simCount">10</span> st</span>
-              </div>
-              <div class="slider-row">
-                <input id="countSlider" type="range" min="0" max="200" value="10" />
-              </div>
-            </div>
-
-            <div>
-              <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:6px;">
-                <b data-i18n="sim_avg_label">Genomsnittligt omdöme</b>
-                <span style="color:rgba(11,22,51,.62); font-weight:800;"><span id="simAvg">4.6</span> / 5</span>
-              </div>
-              <div class="slider-row">
-                <input id="avgSlider" type="range" min="1" max="5" step="0.1" value="4.6" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="trust-pill" aria-live="polite">
-            <div class="trust-left">
-              <div class="trust-title" data-i18n="sim_total_title">Total nivå</div>
-              <div class="trust-sub" data-i18n="sim_total_sub">Kombination av volym + kvalitet</div>
-            </div>
-
-            <div class="pbar" aria-label="5P rating">
-              <div class="p is-on">P</div>
-              <div class="p is-on">P</div>
-              <div class="p is-on">P</div>
-              <div class="p is-on">P</div>
-              <div class="p">P</div>
-            </div>
-          </div>
-
-          <div class="sim-meta" style="margin-top:12px;">
-            <div class="meta-box">
-              <b id="simScore">4.6</b>
-              <span data-i18n="sim_score_label">Förtroende (1–5)</span>
-            </div>
-            <div class="meta-box">
-              <b id="simPCount">4</b>
-              <span data-i18n="sim_pcount_label">Fyllda P</span>
-            </div>
-          </div>
-
-          <div style="margin-top:12px; color:rgba(11,22,51,.62); font-size:12px; font-weight:650;" data-i18n="sim_tip">
-            Tips: Prova låg volym + högt snitt (få men bra) vs hög volym + medel (många men ojämnt).
-          </div>
-        </div>
-      </div>
-
-    </div>
+    <!-- Simulator removed per request: interactive sliders and dynamic box deleted -->
   </div>
 </section>
 

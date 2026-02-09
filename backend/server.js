@@ -47,7 +47,7 @@ const questionnaireRoutes = assertRouter('questionnaireRoutes', require('./route
 
 // DB-backed routes are optional in local dev — only load when DATABASE_URL set
 const dbConfigured = Boolean(process.env.DATABASE_URL);
-let ratingsRoutes, customersRoutes, adminRoutes, integrationsRoutes, externalDataRoutes, blocketRoutes, traderaRoutes, ebayRoutes, agentRoutes;
+let ratingsRoutes, customersRoutes, adminRoutes, integrationsRoutes, externalDataRoutes, agentRoutes;
 if (dbConfigured) {
   const load = (name, path) => assertRouter(name, require(path));
   ratingsRoutes = load('ratingsRoutes', './routes/ratingsRoutes');
@@ -55,9 +55,6 @@ if (dbConfigured) {
   adminRoutes = load('adminRoutes', './routes/adminRoutes');
   integrationsRoutes = load('integrationsRoutes', './routes/integrationsRoutes');
   externalDataRoutes = load('externalDataRoutes', './routes/externalDataRoutes');
-  blocketRoutes = load('blocketRoutes', './routes/blocketRoutes');
-  traderaRoutes = load('traderaRoutes', './routes/traderaRoutes');
-  ebayRoutes = load('ebayRoutes', './routes/ebayRoutes');
   agentRoutes = load('agentRoutes', './routes/agentRoutes');
 } else {
   console.warn('⚠️ DATABASE_URL not set — skipping DB-backed routes (development fallback).');
@@ -67,8 +64,9 @@ const app = express();
 
 // --- Config ---
 const PORT = Number(process.env.PORT || 3001);
-// Bind to localhost by default for local development. Production can override with HOST env var.
-const HOST = process.env.HOST || '127.0.0.1';
+// Bind to all interfaces by default so localhost (IPv4/IPv6) resolves reliably.
+// Production can override with HOST env var.
+const HOST = process.env.HOST || '0.0.0.0';
 const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
 const corsOrigin = process.env.CORS_ORIGIN || '*';
 
@@ -142,10 +140,7 @@ app.use('/api', authRoutes);
 if (questionnaireRoutes) app.use('/api/questionnaires', questionnaireRoutes);
 if (adminRoutes) app.use('/api/admin', adminRoutes);
 if (externalDataRoutes) app.use('/api', externalDataRoutes);
-if (blocketRoutes) app.use('/api', blocketRoutes);
 if (integrationsRoutes) app.use('/api', integrationsRoutes);
-if (traderaRoutes) app.use('/api', traderaRoutes);
-if (ebayRoutes) app.use('/api', ebayRoutes);
 if (agentRoutes) app.use('/api', agentRoutes);
 // OAuth / auth helpers
 app.use('/auth', linkedinAuth);

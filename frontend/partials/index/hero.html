@@ -7,8 +7,8 @@
   <div class="shell hero-content">
     <div class="hero-grid">
       <div>
-        <div class="hero-kicker" data-i18n="hero_kicker">Peer-to-peer reputation</div>
-        <h1 data-i18n="hero_h1">Förtroende du kan bevisa.</h1>
+        <div class="hero-kicker" data-i18n="hero_kicker">Trust you can prove</div>
+        <h1 data-i18n="hero_h1" style="white-space:nowrap;">Trust you can prove</h1>
         <p data-i18n="hero_p">
           PeerRate gör att du kan bära med dig verifierad trovärdighet mellan marknadsplatser. Inte känsla. Inte påståenden. Riktiga transaktioner — portabelt och svårt att fejka.
         </p>
@@ -18,7 +18,13 @@
         </div>
       </div>
 
-      <!-- hero-card retained: duplicate of the trust-profile-card shown in SIM -->
+      <div>
+        <div id="landing-profile-root" style="max-width:1209px;margin:0 auto;">
+          <div id="landing-profile-card-slot" style="max-width:1209px;margin:0 auto;">
+            <!-- Trust Card will be injected here by frontend/modules/landing/profileExample.js -->
+          </div>
+        </div>
+      </div>
     </div>
     
     <!-- example profile card removed -->
