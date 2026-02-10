@@ -1,21 +1,61 @@
-// ratingForm.js – Hanterar själva betygsformuläret (lämna omdöme) och login på /lamna-betyg + index
-
+// frontend/modules/ratingForm.js
 import { showNotification } from './utils.js';
 import auth, { login } from './auth.js';
 import api from './api.js';
 
-function setRatingVisibility(isLoggedIn) {
+const PENDING_KEY = 'peerrate_pending_rating_v2';
+const TTL_MS = 1000 * 60 * 60 * 24;
+
+function now() { return Date.now(); }
+
+function safeParse(s) {
+  try { return JSON.parse(s); } catch { return null; }
+}
+
+function readB64Json(b64) {
+  try {
+    const cleaned = decodeURIComponent(b64);
+    return safeParse(atob(cleaned));
+  } catch {
+    return null;
+  }
+}
+
+function setPending(data) {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify({ ...data, _ts: now() }));
+  } catch {}
+}
+
+function getPending() {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    const parsed = raw ? safeParse(raw) : null;
+    if (!parsed) return null;
+    if (now() - (parsed._ts || 0) > TTL_MS) {
+      localStorage.removeItem(PENDING_KEY);
+      return null;
+    }
+    return parsed;
+  } catch { return null; }
+}
+
+function clearPending() {
+  try { localStorage.removeItem(PENDING_KEY); } catch {}
+}
+
+function isRatePage() {
+  return (window.location.pathname || '').toLowerCase().includes('/rate.html');
+}
+
+function setVisibility(isLoggedIn) {
   const loginCard = document.getElementById('login-card');
   const ratingWrapper = document.getElementById('rating-form-wrapper');
   const hint = document.getElementById('rating-login-hint');
 
-  // På index vill du ha:
-  // - När man INTE är inloggad: "Lämna ett betyg" ska bara visa rubrik + hint (ingen form)
-  // - När man ÄR inloggad: visa form + dölj hint
   if (isLoggedIn) {
     if (ratingWrapper) ratingWrapper.classList.remove('hidden');
     if (hint) hint.classList.add('hidden');
-    // Login-card kan gärna döljas när man är inloggad (renare UI)
     if (loginCard) loginCard.classList.add('hidden');
   } else {
     if (ratingWrapper) ratingWrapper.classList.add('hidden');
@@ -24,58 +64,109 @@ function setRatingVisibility(isLoggedIn) {
   }
 }
 
-// ----------------------
-// Lämna-betyg: login (på index + ev separat sida)
-// ----------------------
-export function initRatingLogin() {
-  const form = document.getElementById('rating-login-form');
-  if (form) form.addEventListener('submit', handleRatingLoginSubmit);
+function applyPendingToUI(p) {
+  if (!p) return;
 
-  // Test mode button for development
-  const testBtn = document.getElementById('test-without-login-btn');
-  if (testBtn) {
-    testBtn.addEventListener('click', () => {
-      // Create a test user without actual login
-      const testUser = { id: 'test-dev-user', email: 'test@development.local', fullName: 'Test User' };
-      auth.setUser(testUser);
-      setRatingVisibility(true);
-      try {
-        initRatingForm();
-      } catch (err) {
-        console.error('Could not init rating form', err);
-      }
-      const raterInput =
-        document.querySelector('#rating-form input[name="rater"]') ||
-        document.getElementById('rater');
-      if (raterInput && testUser.email) raterInput.value = testUser.email;
-    });
+  // Context-card
+  const ctxCard = document.getElementById('rate-context-card');
+  const ctxSource = document.getElementById('rate-context-source');
+  const ctxLink = document.getElementById('rate-context-link');
+
+  if (ctxCard) ctxCard.style.display = '';
+  if (ctxSource) ctxSource.textContent = (p.source || '–');
+  if (ctxLink && p.pageUrl) {
+    ctxLink.href = p.pageUrl;
+    ctxLink.style.display = '';
   }
 
-  try {
-    const user = auth.getUser?.() || null;
-    setRatingVisibility(!!user);
+  // Form
+  const form = document.getElementById('rating-form');
+  if (!form) return;
 
-    // Om inloggad: initiera form och fyll rater med email
-    if (user) {
-      try {
-        initRatingForm();
-      } catch (err) {
-        console.error('Could not init rating form', err);
-      }
+  // Subject = email (HÅRD)
+  const subjectInput = form.querySelector('input[name="ratedUserEmail"]');
+  const email = p.subjectEmail || p?.counterparty?.email || null;
+  if (subjectInput && email) {
+    subjectInput.value = email;
+    subjectInput.readOnly = true;
+    subjectInput.style.background = '#f7f8fb';
+  }
 
-      const raterInput =
-        document.querySelector('#rating-form input[name="rater"]') ||
-        document.getElementById('rater');
-      if (raterInput && user.email) raterInput.value = user.email;
-    }
-  } catch (err) {
-    console.error('initRatingLogin check user error', err);
+  // Source
+  const sourceSelect = form.querySelector('select[name="source"]');
+  if (sourceSelect && p.source) {
+    // Vi mappar “tradera” -> "Tradera" (så dropdown matchar)
+    const v = String(p.source).toLowerCase().includes('tradera') ? 'Tradera' : p.source;
+    sourceSelect.value = v;
+    sourceSelect.disabled = true;
+  }
+
+  // proofRef (ordernr)
+  const proof = form.querySelector('input[name="proofRef"]');
+  if (proof && (p.proofRef || p?.counterparty?.orderId)) {
+    proof.value = p.proofRef || p.counterparty.orderId;
   }
 }
 
-async function handleRatingLoginSubmit(event) {
-  event.preventDefault();
-  const form = event.currentTarget;
+function captureFromUrl() {
+  const qs = new URLSearchParams(window.location.search || '');
+  const pr = qs.get('pr');
+  const source = qs.get('source') || '';
+  const pageUrl = qs.get('pageUrl') || '';
+
+  if (!pr && !source && !pageUrl) return null;
+
+  if (pr) {
+    const decoded = readB64Json(pr);
+    if (decoded && typeof decoded === 'object') {
+      if (!decoded.source && source) decoded.source = source;
+      if (!decoded.pageUrl && pageUrl) decoded.pageUrl = pageUrl;
+      setPending(decoded);
+      return decoded;
+    }
+  }
+
+  // fallback (om gamla länkar)
+  const existing = getPending();
+  if (!existing) {
+    setPending({ source: source || undefined, pageUrl: pageUrl || undefined });
+    return getPending();
+  }
+  return existing;
+}
+
+export function initRatingLogin() {
+  // 1) fånga pending från URL
+  const fromUrl = captureFromUrl();
+  const pending = fromUrl || getPending();
+  if (pending) applyPendingToUI(pending);
+
+  // 2) bind login
+  const loginForm = document.getElementById('rating-login-form');
+  if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
+
+  // 3) om inloggad: visa form direkt + lås rater = user email
+  const user = auth.getUser?.() || null;
+  setVisibility(!!user);
+
+  if (user) {
+    initRatingForm();
+
+    const raterInput = document.querySelector('#rating-form input[name="rater"]') || document.getElementById('rater');
+    if (raterInput && user.email) {
+      raterInput.value = user.email;
+      raterInput.readOnly = true;
+      raterInput.style.background = '#f7f8fb';
+    }
+
+    const p = getPending();
+    if (p) applyPendingToUI(p);
+  }
+}
+
+async function handleLoginSubmit(e) {
+  e.preventDefault();
+  const form = e.currentTarget;
 
   const email = form.querySelector('input[name="email"]')?.value?.trim() || '';
   const password = form.querySelector('input[name="password"]')?.value || '';
@@ -88,162 +179,104 @@ async function handleRatingLoginSubmit(event) {
   try {
     const res = await login(email, password);
     if (!res || res.ok === false) {
-      let message = res?.error || 'Login failed. Please check your credentials.';
-      
-      // Convert Swedish error messages to English
-      if (message.includes('Fel e-post') || message.includes('lösenord')) {
-        message = 'Incorrect Email or Password';
-      }
-      
-      showNotification('error', message, 'login-status');
+      showNotification('error', res?.error || 'Login failed.', 'login-status');
       return;
     }
 
     showNotification('success', 'Du är nu inloggad.', 'login-status');
 
-    // ✅ NYTT: När man loggar in på startsidan → gå direkt till profilen och vara inloggad där
+    // På rate.html: stanna kvar, visa form och prefill
+    if (isRatePage()) {
+      setVisibility(true);
+      initRatingForm();
+
+      const user = auth.getUser?.() || null;
+      const raterInput = document.querySelector('#rating-form input[name="rater"]') || document.getElementById('rater');
+      if (raterInput && user?.email) {
+        raterInput.value = user.email;
+        raterInput.readOnly = true;
+        raterInput.style.background = '#f7f8fb';
+      }
+
+      const p = getPending();
+      if (p) applyPendingToUI(p);
+
+      return;
+    }
+
+    // annars: beteende som tidigare
     window.setTimeout(() => {
       window.location.href = '/profile.html';
     }, 250);
   } catch (err) {
-    console.error('handleRatingLoginSubmit error', err);
-    showNotification('error', 'Tekniskt fel vid inloggning. Försök igen om en stund.', 'login-status');
+    console.error('login error', err);
+    showNotification('error', 'Tekniskt fel vid inloggning.', 'login-status');
   }
 }
 
-// ----------------------
-// Rating form (skicka betyg)
-// ----------------------
 export function initRatingForm() {
   const form = document.getElementById('rating-form');
   if (!form) return;
 
-  // Undvik dubbelbindning
   if (form.dataset.ratingBound === '1') return;
-
   form.dataset.ratingBound = '1';
-  form.addEventListener('submit', handleRatingSubmit);
+
+  form.addEventListener('submit', handleSubmit);
 
   const resetBtn = document.getElementById('reset-form');
   if (resetBtn) resetBtn.addEventListener('click', () => form.reset());
 }
 
-// Global lyssnare som fångar rating-formulär om det inte bundits direkt
-document.addEventListener(
-  'submit',
-  (e) => {
-    try {
-      const target = e.target;
-      if (!target || !(target instanceof HTMLFormElement)) return;
-      if (target.id !== 'rating-form') return;
-      if (target.dataset && target.dataset.ratingBound === '1') return;
+async function handleSubmit(e) {
+  e.preventDefault();
+  const form = e.currentTarget;
 
-      e.preventDefault();
-      handleRatingSubmit.call(target, e);
-    } catch (err) {
-      console.error('rating-form delegation error', err);
-    }
-  },
-  true
-);
-
-async function handleRatingSubmit(event) {
-  event.preventDefault();
-  const form = event.currentTarget;
-
-  const ratedUserEmail =
-    form.querySelector('input[name="ratedUserEmail"]')?.value?.trim() || '';
+  const subjectEmail = form.querySelector('input[name="ratedUserEmail"]')?.value?.trim() || '';
   const score = Number(form.querySelector('select[name="score"]')?.value || 0);
-  const comment =
-    form.querySelector('textarea[name="comment"]')?.value?.trim() || '';
-  const proofRef =
-    form.querySelector('input[name="proofRef"]')?.value?.trim() || '';
+  const comment = form.querySelector('textarea[name="comment"]')?.value?.trim() || '';
+  const proofRef = form.querySelector('input[name="proofRef"]')?.value?.trim() || '';
   const sourceRaw = form.querySelector('select[name="source"]')?.value || '';
 
-  if (!ratedUserEmail || !score) {
+  if (!subjectEmail || !score) {
     showNotification('error', 'Fyll i alla obligatoriska fält innan du skickar.', 'notice');
     return;
   }
 
+  // Hämta pending payload och skicka med som “kundakt-underlag”
+  const pending = getPending();
+  const counterparty = pending?.counterparty || null;
+
+  // rater = inloggad email (låst)
+  const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || null;
+
+  const payload = {
+    subject: subjectEmail,
+    rating: Number(score),
+    rater: raterVal || undefined,
+    comment: comment || undefined,
+    proofRef: proofRef || undefined,
+    source: sourceRaw || undefined,
+    counterparty: counterparty || undefined,
+  };
+
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn) btn.disabled = true;
+
   try {
-    const raterVal =
-      form.querySelector('input[name="rater"]')?.value?.trim() || null;
-
-    const reportFlag = !!(
-      form.querySelector('#reportFlag')?.checked ||
-      form.querySelector('[name="fraudReportEnabled"]')?.checked
-    );
-    const reportReason =
-      form.querySelector('#reportReason')?.value ||
-      form.querySelector('[name="fraudType"]')?.value ||
-      null;
-    const reportDate =
-      form.querySelector('#reportDate')?.value ||
-      form.querySelector('[name="fraudDate"]')?.value ||
-      null;
-    const reportTime =
-      form.querySelector('#reportTime')?.value ||
-      form.querySelector('[name="fraudTime"]')?.value ||
-      null;
-    const reportAmount =
-      form.querySelector('#reportAmount')?.value ||
-      form.querySelector('[name="fraudAmount"]')?.value ||
-      null;
-    const reportLink =
-      form.querySelector('#reportLink')?.value ||
-      form.querySelector('[name="fraudLink"]')?.value ||
-      null;
-    const reportText =
-      form.querySelector('#reportText')?.value?.trim() ||
-      form.querySelector('[name="fraudDescription"]')?.value?.trim() ||
-      '';
-    const reportConsent = !!(
-      form.querySelector('#reportConsent')?.checked ||
-      form.querySelector('[name="fraudConsent"]')?.checked
-    );
-
-    let composedReportText = reportText || '';
-    if (reportDate) composedReportText += `${composedReportText ? '\n' : ''}Datum: ${reportDate}`;
-    if (reportTime) composedReportText += `${composedReportText ? '\n' : ''}Tid: ${reportTime}`;
-    if (reportAmount) composedReportText += `${composedReportText ? '\n' : ''}Belopp: ${reportAmount}`;
-    if (reportLink) composedReportText += `${composedReportText ? '\n' : ''}Länk: ${reportLink}`;
-
-    const payload = {
-      subject: ratedUserEmail,
-      rating: Number(score),
-      rater: raterVal || undefined,
-      comment: comment || undefined,
-      proofRef: proofRef || undefined,
-      source: sourceRaw || undefined,
-      report: undefined,
-    };
-
-    if (reportFlag || reportReason || composedReportText) {
-      payload.report = {
-        report_flag: !!reportFlag,
-        report_reason: reportReason || null,
-        report_text: composedReportText || null,
-        evidence_url: (form.querySelector('#evidenceUrl')?.value || null) || null,
-        report_consent: !!reportConsent,
-      };
-    }
-
-    const submitBtn = form.querySelector('button[type="submit"]');
-    if (submitBtn) submitBtn.disabled = true;
-
     const result = await api.createRating(payload);
     if (!result || result.ok === false) {
-      const message = result?.error || 'Kunde inte spara betyget.';
-      showNotification('error', message, 'notice');
-      if (submitBtn) submitBtn.disabled = false;
+      showNotification('error', result?.error || 'Kunde inte spara betyget.', 'notice');
+      if (btn) btn.disabled = false;
       return;
     }
 
+    clearPending();
     showNotification('success', 'Tack för ditt omdöme!', 'notice');
     form.reset();
-    if (submitBtn) submitBtn.disabled = false;
+    if (btn) btn.disabled = false;
   } catch (err) {
-    console.error('handleRatingSubmit error', err);
+    console.error('submit error', err);
     showNotification('error', 'Tekniskt fel. Försök igen om en stund.', 'notice');
+    if (btn) btn.disabled = false;
   }
 }

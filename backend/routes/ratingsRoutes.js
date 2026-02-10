@@ -2,6 +2,9 @@
 
 const express = require('express');
 const Joi = require('joi');
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient();
 
 const {
   createRating,
@@ -42,6 +45,26 @@ const reportSchema = Joi.object({
   report_consent: Joi.boolean().optional(),
 }).unknown(true);
 
+// “kundakt”-underlag från extension
+const counterpartySchema = Joi.object({
+  email: Joi.string().email().required(),
+  name: Joi.string().max(120).allow('', null),
+  phone: Joi.string().max(40).allow('', null),
+  addressStreet: Joi.string().max(120).allow('', null),
+  addressZip: Joi.string().max(20).allow('', null),
+  addressCity: Joi.string().max(80).allow('', null),
+  country: Joi.string().max(60).allow('', null),
+
+  platform: Joi.string().max(30).allow('', null),          // "TRADERA"
+  platformUsername: Joi.string().max(60).allow('', null),  // alias om vi hittar
+  pageUrl: Joi.string().uri().allow('', null),
+
+  orderId: Joi.string().max(80).allow('', null),
+  itemId: Joi.string().max(80).allow('', null),
+  amountSek: Joi.number().integer().min(0).max(100000000).allow(null),
+  title: Joi.string().max(200).allow('', null),
+}).optional();
+
 const createRatingSchema = Joi.object({
   subject: Joi.string().min(2).max(200).required(),
   rater: Joi.string().min(2).max(200).allow('', null).optional(),
@@ -50,7 +73,79 @@ const createRatingSchema = Joi.object({
   proofRef: Joi.string().max(200).allow('', null),
   source: Joi.string().allow('', null), // källa (Blocket, Tradera, ...)
   report: reportSchema.optional(),
+  counterparty: counterpartySchema,
 });
+
+async function upsertCounterpartyDossier(counterparty) {
+  if (!counterparty || !counterparty.email) return;
+
+  const subjectRef = normSubject(counterparty.email);
+  if (!subjectRef) return;
+
+  // 1) Kund (Customer) – fyll på endast om fält saknas (förstör inte befintlig data)
+  const existing = await prisma.customer.findUnique({
+    where: { subjectRef },
+  });
+
+  if (!existing) {
+    await prisma.customer.create({
+      data: {
+        subjectRef,
+        email: counterparty.email.toLowerCase(),
+        fullName: counterparty.name || null,
+        phone: counterparty.phone || null,
+        addressStreet: counterparty.addressStreet || null,
+        addressZip: counterparty.addressZip || null,
+        addressCity: counterparty.addressCity || null,
+        country: counterparty.country || 'SE',
+      },
+    });
+  } else {
+    const dataToUpdate = {};
+    if (!existing.email) dataToUpdate.email = counterparty.email.toLowerCase();
+    if (!existing.fullName && counterparty.name) dataToUpdate.fullName = counterparty.name;
+    if (!existing.phone && counterparty.phone) dataToUpdate.phone = counterparty.phone;
+    if (!existing.addressStreet && counterparty.addressStreet) dataToUpdate.addressStreet = counterparty.addressStreet;
+    if (!existing.addressZip && counterparty.addressZip) dataToUpdate.addressZip = counterparty.addressZip;
+    if (!existing.addressCity && counterparty.addressCity) dataToUpdate.addressCity = counterparty.addressCity;
+    if (!existing.country && counterparty.country) dataToUpdate.country = counterparty.country;
+
+    if (Object.keys(dataToUpdate).length) {
+      await prisma.customer.update({
+        where: { subjectRef },
+        data: dataToUpdate,
+      });
+    }
+  }
+
+  // 2) Extern profil (ExternalProfile) – om vi har username
+  if (counterparty.platform && String(counterparty.platform).toUpperCase() === 'TRADERA' && counterparty.platformUsername) {
+    const customer = await prisma.customer.findUnique({ where: { subjectRef } });
+    if (customer) {
+      const found = await prisma.externalProfile.findFirst({
+        where: {
+          customerId: customer.id,
+          platform: 'TRADERA',
+          username: counterparty.platformUsername,
+        }
+      });
+
+      if (!found) {
+        await prisma.externalProfile.create({
+          data: {
+            customerId: customer.id,
+            platform: 'TRADERA',
+            username: counterparty.platformUsername,
+            profileJson: counterparty.pageUrl ? { pageUrl: counterparty.pageUrl } : undefined,
+          }
+        });
+      }
+    }
+  }
+
+  // (MVP) Vi skapar inte TraderaOrder än – det kräver mer modellering för roll osv.
+  // Men vi har redan sparat bevis i proofRef + pageUrl i betyget.
+}
 
 /* -------------------------------------------------------
    POST /api/ratings – skapa betyg
@@ -72,7 +167,20 @@ router.post('/ratings', async (req, res) => {
   // Mappa text i rullistan -> enum
   const ratingSource = mapRatingSource(value.source);
 
+  // Säkerhet: om counterparty skickas måste subject matcha counterparty.email
+  if (value.counterparty?.email) {
+    const a = normSubject(value.subject);
+    const b = normSubject(value.counterparty.email);
+    if (a && b && a !== b) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Subject matchar inte counterparty.email (säkerhetskontroll).',
+      });
+    }
+  }
+
   try {
+    // 1) skapa rating (som tidigare)
     const { customerId, ratingId } = await createRating({
       subjectRef,
       rating,
@@ -80,9 +188,15 @@ router.post('/ratings', async (req, res) => {
       raterName,
       proofRef,
       createdAt: nowIso(),
-      ratingSource, // viktigt
+      ratingSource,
     });
 
+    // 2) spara kundakt (motpart) om vi fick in data från extension
+    if (value.counterparty) {
+      await upsertCounterpartyDossier(value.counterparty);
+    }
+
+    // 3) ev report
     const r = value.report || null;
     if (r) {
       const flagged =
@@ -139,9 +253,6 @@ router.get('/ratings', async (req, res) => {
   }
 });
 
-/* -------------------------------------------------------
-   GET /api/ratings/average – snitt
-   ------------------------------------------------------- */
 router.get('/ratings/average', async (req, res) => {
   const subject = normSubject(req.query.subject || '');
   if (!subject) {
@@ -160,9 +271,6 @@ router.get('/ratings/average', async (req, res) => {
   }
 });
 
-/* -------------------------------------------------------
-   GET /api/ratings/recent – senaste globalt
-   ------------------------------------------------------- */
 router.get('/ratings/recent', async (_req, res) => {
   try {
     const list = await listRecentRatings(20);
