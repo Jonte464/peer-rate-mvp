@@ -7,10 +7,7 @@ const PENDING_KEY = 'peerrate_pending_rating_v2';
 const TTL_MS = 1000 * 60 * 60 * 24;
 
 function now() { return Date.now(); }
-
-function safeParse(s) {
-  try { return JSON.parse(s); } catch { return null; }
-}
+function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
 function readB64Json(b64) {
   try {
@@ -22,9 +19,7 @@ function readB64Json(b64) {
 }
 
 function setPending(data) {
-  try {
-    localStorage.setItem(PENDING_KEY, JSON.stringify({ ...data, _ts: now() }));
-  } catch {}
+  try { localStorage.setItem(PENDING_KEY, JSON.stringify({ ...data, _ts: now() })); } catch {}
 }
 
 function getPending() {
@@ -48,26 +43,80 @@ function isRatePage() {
   return (window.location.pathname || '').toLowerCase().includes('/rate.html');
 }
 
-/**
- * Visar/döljer login + rating-form på rate.html
- * Förutsätter att du har:
- * - #login-card
- * - #rating-form-wrapper
- * - #rating-login-hint (valfritt)
- */
+/** Robust: hitta login-card även om id varierar */
+function getLoginCardEl() {
+  return (
+    document.getElementById('login-card') ||
+    document.getElementById('rating-login-card') ||
+    document.getElementById('rating-login') ||
+    document.querySelector('[data-role="rating-login"]') ||
+    null
+  );
+}
+
+/** Robust: hitta wrapper för rating-form */
+function getRatingWrapperEl() {
+  return (
+    document.getElementById('rating-form-wrapper') ||
+    document.getElementById('rating-card') ||
+    document.getElementById('rating-form-card') ||
+    document.getElementById('rating-form') ||
+    null
+  );
+}
+
+/** Dölj “Test utan inloggning” om den finns */
+function hideTestWithoutLoginButton() {
+  // 1) försök via id om du har ett
+  const byId =
+    document.getElementById('test-without-login') ||
+    document.getElementById('testWithoutLogin') ||
+    document.getElementById('testWithoutLoginBtn');
+  if (byId) {
+    byId.style.display = 'none';
+    return;
+  }
+
+  // 2) fallback: leta upp knapp med text
+  const btns = Array.from(document.querySelectorAll('button, a'));
+  const hit = btns.find(el => (el.textContent || '').toLowerCase().includes('test utan inloggning'));
+  if (hit) hit.style.display = 'none';
+}
+
 function setVisibility(isLoggedIn) {
-  const loginCard = document.getElementById('login-card');
-  const ratingWrapper = document.getElementById('rating-form-wrapper');
-  const hint = document.getElementById('rating-login-hint');
+  const loginCard = getLoginCardEl();
+  const ratingWrapper = getRatingWrapperEl();
+  const hint =
+    document.getElementById('rating-login-hint') ||
+    document.getElementById('ratingHint') ||
+    null;
 
   if (isLoggedIn) {
-    if (ratingWrapper) ratingWrapper.classList.remove('hidden');
+    if (loginCard) {
+      loginCard.classList.add('hidden');
+      loginCard.style.display = 'none';
+    }
     if (hint) hint.classList.add('hidden');
-    if (loginCard) loginCard.classList.add('hidden');
+
+    if (ratingWrapper) {
+      ratingWrapper.classList.remove('hidden');
+      ratingWrapper.style.display = '';
+    }
   } else {
-    if (ratingWrapper) ratingWrapper.classList.add('hidden');
+    if (loginCard) {
+      loginCard.classList.remove('hidden');
+      loginCard.style.display = '';
+    }
     if (hint) hint.classList.remove('hidden');
-    if (loginCard) loginCard.classList.remove('hidden');
+
+    if (ratingWrapper) {
+      // Om ratingWrapper råkar vara själva form-kortet, dölj bara om du har separat wrapper.
+      // Vi försöker vara försiktiga: om elementet ÄR formuläret (#rating-form) så lämnar vi display.
+      if (ratingWrapper.id !== 'rating-form') {
+        ratingWrapper.classList.add('hidden');
+        ratingWrapper.style.display = 'none';
+      }
+    }
   }
 }
 
@@ -86,7 +135,6 @@ function applyPendingToUI(p) {
     ctxLink.style.display = '';
   }
 
-  // Form
   const form = document.getElementById('rating-form');
   if (!form) return;
 
@@ -99,7 +147,7 @@ function applyPendingToUI(p) {
     subjectInput.style.background = '#f7f8fb';
   }
 
-  // Source (låst om vi vet)
+  // Source (låst)
   const sourceSelect = form.querySelector('select[name="source"]');
   if (sourceSelect && p.source) {
     const v = String(p.source).toLowerCase().includes('tradera') ? 'Tradera' : p.source;
@@ -107,7 +155,7 @@ function applyPendingToUI(p) {
     sourceSelect.disabled = true;
   }
 
-  // proofRef (ordernr)
+  // proofRef
   const proof = form.querySelector('input[name="proofRef"]');
   if (proof && (p.proofRef || p?.counterparty?.orderId)) {
     proof.value = p.proofRef || p.counterparty.orderId;
@@ -132,7 +180,6 @@ function captureFromUrl() {
     }
   }
 
-  // fallback (om gamla länkar)
   const existing = getPending();
   if (!existing) {
     setPending({ source: source || undefined, pageUrl: pageUrl || undefined });
@@ -142,11 +189,9 @@ function captureFromUrl() {
 }
 
 export function initRatingLogin() {
-  // ✅ Se till att rating-kortet kan visas (inte låst till display:none från HTML)
-  const ratingCard = document.getElementById('rating-card');
-  if (ratingCard) ratingCard.style.display = 'block';
+  hideTestWithoutLoginButton();
 
-  // 1) fånga pending från URL
+  // 1) pending från URL
   const fromUrl = captureFromUrl();
   const pending = fromUrl || getPending();
   if (pending) applyPendingToUI(pending);
@@ -155,7 +200,7 @@ export function initRatingLogin() {
   const loginForm = document.getElementById('rating-login-form');
   if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
 
-  // 3) sätt UI-läge direkt baserat på session
+  // 3) sätt UI direkt baserat på session
   const user = auth.getUser?.() || null;
   setVisibility(!!user);
 
@@ -177,7 +222,7 @@ export function initRatingLogin() {
     if (p) applyPendingToUI(p);
   }
 
-  // ✅ om login/logout sker i annan flik, uppdatera UI
+  // 4) om login/logout sker i annan flik
   window.addEventListener('storage', () => {
     const u2 = auth.getUser?.() || null;
     setVisibility(!!u2);
@@ -210,7 +255,7 @@ async function handleLoginSubmit(e) {
 
     showNotification('success', 'Du är nu inloggad.', 'login-status');
 
-    // Om vi är på rate.html: stanna kvar och visa formuläret
+    // På rate.html: stanna, göm login, visa form
     if (isRatePage()) {
       setVisibility(true);
       initRatingForm();
@@ -232,7 +277,7 @@ async function handleLoginSubmit(e) {
       return;
     }
 
-    // På andra sidor: gå till profil
+    // Annars: till profil
     window.setTimeout(() => {
       window.location.href = '/profile.html';
     }, 150);
@@ -271,11 +316,9 @@ async function handleSubmit(e) {
     return;
   }
 
-  // Hämta pending payload och skicka med som “kundakt-underlag”
   const pending = getPending();
   const counterparty = pending?.counterparty || null;
 
-  // rater = inloggad email (låst)
   const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || null;
 
   const payload = {

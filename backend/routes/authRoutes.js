@@ -45,8 +45,8 @@ router.post('/auth/login', async (req, res) => {
       ok: true,
       customer: {
         id: customer.id,
-        email: customer.email,
-        fullName: customer.fullName,
+        email: customer.email || emailTrim,   // ✅ fallback
+        fullName: customer.fullName || null,
       },
     });
   } catch (e) {
@@ -73,22 +73,8 @@ router.post('/auth/reset-password', async (req, res) => {
 
   try {
     const customer = await findCustomerBySubjectRef(emailTrim);
-    
-    if (!customer || !customer.passwordHash) {
-      // For security, we don't reveal if email exists or not
-      // Always return success message
-      return res.status(200).json({
-        ok: true,
-        message: 'If an account with this email exists, you will receive password reset instructions.',
-      });
-    }
 
-    // TODO: In a real implementation, you would:
-    // 1. Generate a reset token
-    // 2. Store it in the database with an expiration time
-    // 3. Send an email with a reset link
-    // For now, we just return success
-
+    // För security: avslöja inte om email finns
     return res.status(200).json({
       ok: true,
       message: 'If an account with this email exists, you will receive password reset instructions.',
