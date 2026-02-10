@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arbetsreferenser – PeerRate</title>
+
+  <link rel="stylesheet" href="/css/pr-theme.css" />
+  <link rel="stylesheet" href="/css/index.css" />
+</head>
+
+<body>
+
+  <!-- TOP ROW (samma som rate.html så main.js fungerar) -->
+  <header class="top-row">
+    <div class="shell top-row-inner">
+      <a class="brand soft-hover" href="/#top">
+        <div class="logo-badge" aria-hidden="true">
+          <img class="logo-img" src="/assets/Logo.PNG?v=1" alt="PeerRate logo" />
+        </div>
+        <div>
+          <div class="brand-name">PeerRate</div>
+          <div class="brand-sub" data-i18n="top_sub">Förtroende du kan bevisa</div>
+        </div>
+      </a>
+
+      <div class="top-actions">
+        <div class="top-user" id="topUserPill" aria-live="polite" title="Inloggad" aria-expanded="false">
+          <span id="topUserInitials">?</span>
+        </div>
+
+        <div class="user-menu" id="userMenu" role="menu" aria-label="Användarmeny">
+          <button type="button" id="logoutBtn" data-i18n="user_logout">Logga ut</button>
+        </div>
+
+        <button class="lang-pill soft-hover" id="langBtn" type="button" aria-haspopup="true" aria-expanded="false">
+          <span id="langLabel">SV</span>
+          <span style="opacity:.6;">▾</span>
+        </button>
+
+        <button class="menu-btn soft-hover" id="menuBtn" type="button" aria-label="Öppna meny" aria-expanded="false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" stroke="rgba(15,15,18,.85)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="lang-menu" id="langMenu" role="menu" aria-label="Välj språk">
+      <button type="button" data-lang="sv">Svenska (SV)</button>
+      <button type="button" data-lang="en">English (EN)</button>
+    </div>
+
+    <nav class="menu-panel" id="menuPanel" aria-label="Meny">
+      <div class="shell menu-panel-inner">
+        <a class="menu-link" href="/#how"><div data-i18n="menu_how">Hur det funkar</div><span>→</span></a>
+        <a class="menu-link" href="/#sim"><div data-i18n="menu_sim">Se värdet direkt</div><span>→</span></a>
+        <a class="menu-link" href="/#globe"><div data-i18n="menu_globe">Global trust</div><span>→</span></a>
+
+        <a class="menu-link" href="/rate.html"><div data-i18n="menu_rate">Lämna betyg</div><span>→</span></a>
+
+        <!-- ✅ NY LÄNK -->
+        <a class="menu-link" href="/references.html"><div data-i18n="menu_refs">Arbetsreferenser</div><span>→</span></a>
+
+        <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Registrera dig</div><span>→</span></a>
+        <a class="menu-link" href="/profile.html"><div data-i18n="menu_profile">Min profil</div><span>→</span></a>
+
+        <a class="menu-link" href="/#sim"><div data-i18n="menu_ask">Se 5P-modellen</div><span>→</span></a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="section white-block">
+      <div class="shell" style="max-width: 980px; margin:0 auto; padding-top: 18px;">
+
+        <section class="pr-card" style="margin-bottom:16px;">
+          <h1 style="margin:0 0 8px;" data-i18n="refs_h1">Arbetsreferenser du kan bevisa</h1>
+          <p style="margin:0;color:var(--pr-muted);font-size:14px;line-height:1.55;" data-i18n="refs_lead">
+            Samla verifierbara referenser från uppdrag och arbetsgivare. Dela en “Trust Profile” istället för att lämna ut telefonnummer till referenser.
+          </p>
+
+          <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <a class="pr-btn pr-btn-primary" href="/auth/linkedin" style="background:#0a66c2;border-color:#0a66c2;">
+              Sign in with LinkedIn
+            </a>
+            <span style="color:var(--pr-muted);font-size:12px;" data-i18n="refs_note">
+              Vi använder LinkedIn för att förenkla identitet och minska fraud.
+            </span>
+          </div>
+        </section>
+
+        <!-- ✅ Trust Profile mock (flyttad hit från startsidan) -->
+        <section class="pr-card" style="margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div style="width:44px;height:44px;border-radius:999px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-weight:900;">
+                S
+              </div>
+              <div>
+                <div style="font-weight:900;">Sofia Andersson</div>
+                <div style="color:var(--pr-muted);font-size:12px;">Senior Consultant · Stockholm, Sweden</div>
+              </div>
+            </div>
+
+            <button class="pr-btn pr-btn-ghost" type="button">Share</button>
+          </div>
+
+          <div style="margin-top:14px;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:14px;background:#fff;">
+            <div style="font-weight:900;margin-bottom:8px;">PeerRate Score: <span style="color:var(--pr-purple);">88</span> <span style="color:var(--pr-muted);font-weight:700;">of 100</span></div>
+
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+              <span style="font-size:12px;font-weight:800;padding:6px 10px;border-radius:999px;background:#eef2ff;color:var(--pr-purple);">Verified</span>
+              <span style="font-size:12px;font-weight:800;padding:6px 10px;border-radius:999px;background:#eef2ff;color:var(--pr-purple);">High</span>
+              <span style="font-size:12px;font-weight:800;padding:6px 10px;border-radius:999px;background:#eef2ff;color:var(--pr-purple);">Strong</span>
+            </div>
+
+            <div style="display:flex;gap:18px;flex-wrap:wrap;color:var(--pr-ink);">
+              <div style="flex:1;min-width:220px;">
+                <div style="font-weight:900;">Client Feedback:</div>
+                <div style="color:var(--pr-muted);font-size:13px;">Excellent</div>
+              </div>
+              <div style="flex:1;min-width:220px;">
+                <div style="font-weight:900;">Leadership & Collaboration:</div>
+                <div style="color:var(--pr-muted);font-size:13px;">Strong</div>
+              </div>
+              <div style="flex:1;min-width:220px;">
+                <div style="font-weight:900;">Consistency:</div>
+                <div style="color:var(--pr-muted);font-size:13px;">Recent & Stable</div>
+              </div>
+            </div>
+
+            <div style="margin-top:10px;color:var(--pr-muted);font-size:13px;">
+              <span style="font-weight:900;color:var(--pr-ink);">Verification Level:</span> High
+            </div>
+          </div>
+
+          <div style="margin-top:14px;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:14px;background:#fff;">
+            <div style="font-weight:900;margin-bottom:8px;">Recent Engagement</div>
+
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <div style="width:34px;height:34px;border-radius:10px;background:#f3f4f6;display:flex;align-items:center;justify-content:center;">🏛️</div>
+              <div style="flex:1;">
+                <div style="font-weight:900;">Large Bank <span style="color:var(--pr-muted);font-weight:700;">| Finance</span></div>
+                <div style="margin-top:4px;color:var(--pr-muted);font-size:13px;">
+                  Role: <b style="color:var(--pr-ink);">Member</b><br/>
+                  Skills: Project Management, Risk & Compliance, Data Analytics<br/>
+                  Led implementation of a compliance system for a major bank. Managed a team of 8 consultants.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;">
+            <div style="border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:12px;background:#fff;">
+              <div style="font-weight:900;color:#1d4ed8;">Client Reference</div>
+              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;font-style:italic;">
+                “Sofia delivered excellent results on time.”
+              </div>
+              <div style="margin-top:8px;color:var(--pr-muted);font-size:12px;">— Magnus S., Risk Director</div>
+            </div>
+
+            <div style="border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:12px;background:#fff;">
+              <div style="font-weight:900;color:#16a34a;">Manager Endorsement</div>
+              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;font-style:italic;">
+                “Great leader with strong strategic focus.”
+              </div>
+              <div style="margin-top:8px;color:var(--pr-muted);font-size:12px;">— Elin L., Consulting Director</div>
+            </div>
+
+            <div style="border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:12px;background:#fff;">
+              <div style="font-weight:900;color:#1d4ed8;">Team Feedback</div>
+              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;font-style:italic;">
+                “Sofia is an excellent collaborator and pragmatic problem solver.”
+              </div>
+              <div style="margin-top:8px;color:var(--pr-muted);font-size:12px;">— Erik J., Data Analyst</div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { initLandingLanguage } from '/modules/landing/language.js';
+    initLandingLanguage();
+  </script>
+  <script type="module" src="/modules/main.js"></script>
+</body>
+</html>
