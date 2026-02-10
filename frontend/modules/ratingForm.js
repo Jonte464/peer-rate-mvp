@@ -63,28 +63,34 @@ function getRatingWrapperEls() {
   ].filter(Boolean);
 }
 
-/** Dölj “Test utan inloggning” om den finns */
+/** Hitta (och dölj) “Test utan inloggning” om den finns */
 function hideTestWithoutLoginButton() {
   const byId =
     document.getElementById('test-without-login') ||
+    document.getElementById('test-without-login-btn') ||
     document.getElementById('testWithoutLogin') ||
-    document.getElementById('testWithoutLoginBtn');
+    document.getElementById('testWithoutLoginBtn') ||
+    document.getElementById('testWithoutLoginBtn2');
 
   if (byId) {
     byId.style.display = 'none';
+    byId.setAttribute('aria-hidden', 'true');
     return;
   }
 
   const btns = Array.from(document.querySelectorAll('button, a'));
   const hit = btns.find(el => (el.textContent || '').toLowerCase().includes('test utan inloggning'));
-  if (hit) hit.style.display = 'none';
+  if (hit) {
+    hit.style.display = 'none';
+    hit.setAttribute('aria-hidden', 'true');
+  }
 }
 
 /**
  * Bulletproof show/hide:
- * - göm login när inloggad
- * - visa rating wrapper(s) när inloggad
- * - undvik att lämna sidan tom pga fel id i HTML
+ * - Om element saknas: visa hellre mer än mindre (aldrig "vit" sida)
+ * - Inloggad: göm login, visa rating
+ * - Utloggad: visa login, göm rating
  */
 function setVisibility(isLoggedIn) {
   const loginCards = getLoginCardEls();
@@ -95,23 +101,40 @@ function setVisibility(isLoggedIn) {
     document.getElementById('ratingHint') ||
     null;
 
-  // Login UI
-  loginCards.forEach((el) => {
-    el.style.display = isLoggedIn ? 'none' : 'block';
-    el.classList.toggle('hidden', isLoggedIn);
-  });
+  const hasLoginTargets = loginCards.length > 0;
+  const hasRatingTargets = ratingWrappers.length > 0;
 
-  // Hint
+  // Failsafe: om vi inte hittar något att toggla, gör inget (undvik vit sida).
+  if (!hasLoginTargets && !hasRatingTargets) {
+    console.warn('[PeerRate] setVisibility: no targets found; skipping toggle to avoid blank UI.');
+    return;
+  }
+
+  // Om logged in men ratingWrappers saknas → visa login också (hellre dubbelt än tomt).
+  const shouldShowLogin = !isLoggedIn || (!hasRatingTargets && isLoggedIn);
+  const shouldShowRating = isLoggedIn && hasRatingTargets;
+
+  // Login UI
+  if (hasLoginTargets) {
+    loginCards.forEach((el) => {
+      el.style.display = shouldShowLogin ? 'block' : 'none';
+      el.classList.toggle('hidden', !shouldShowLogin);
+    });
+  }
+
+  // Hint (den sitter inne i rating-card i din HTML)
   if (hint) {
     hint.classList.toggle('hidden', isLoggedIn);
     hint.style.display = isLoggedIn ? 'none' : '';
   }
 
   // Rating UI
-  ratingWrappers.forEach((el) => {
-    el.style.display = isLoggedIn ? 'block' : 'none';
-    el.classList.toggle('hidden', !isLoggedIn);
-  });
+  if (hasRatingTargets) {
+    ratingWrappers.forEach((el) => {
+      el.style.display = shouldShowRating ? 'block' : 'none';
+      el.classList.toggle('hidden', !shouldShowRating);
+    });
+  }
 }
 
 function applyPendingToUI(p) {

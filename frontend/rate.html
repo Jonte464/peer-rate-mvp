@@ -132,30 +132,30 @@
           </section>
 
           <!-- ✅ KÄLLA (auto från extension: ?source=...&pageUrl=...) -->
-<section class="pr-card" id="rate-context-card" style="display:none;margin-bottom:16px;">
-  <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
-    <div style="flex:1;min-width:240px;">
-      <div style="font-weight:900;color:var(--pr-purple);margin-bottom:4px;">
-        Verifierad källa
-      </div>
-      <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;">
-        Källa: <span id="rate-context-source" style="font-weight:800;color:var(--pr-ink);">–</span><br/>
-        <a id="rate-context-link" href="#" target="_blank" rel="noopener noreferrer"
-           style="display:inline-block;margin-top:6px;font-weight:800;">
-          Visa sidan som triggar betyget →
-        </a>
-      </div>
-    </div>
+          <section class="pr-card" id="rate-context-card" style="display:none;margin-bottom:16px;">
+            <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+              <div style="flex:1;min-width:240px;">
+                <div style="font-weight:900;color:var(--pr-purple);margin-bottom:4px;">
+                  Verifierad källa
+                </div>
+                <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;">
+                  Källa: <span id="rate-context-source" style="font-weight:800;color:var(--pr-ink);">–</span><br/>
+                  <a id="rate-context-link" href="#" target="_blank" rel="noopener noreferrer"
+                     style="display:inline-block;margin-top:6px;font-weight:800;">
+                    Visa sidan som triggar betyget →
+                  </a>
+                </div>
+              </div>
 
-    <div style="min-width:240px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
-      <div style="font-weight:900;color:var(--pr-purple);margin-bottom:4px;">Tips</div>
-      <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;">
-        Vi kan förifylla “Källa” och ibland även “Verifierings-ID”.
-        Du kan alltid justera innan du skickar.
-      </div>
-    </div>
-  </div>
-</section>
+              <div style="min-width:240px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
+                <div style="font-weight:900;color:var(--pr-purple);margin-bottom:4px;">Tips</div>
+                <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;">
+                  Vi kan förifylla “Källa” och ibland även “Verifierings-ID”.
+                  Du kan alltid justera innan du skickar.
+                </div>
+              </div>
+            </div>
+          </section>
 
           <!-- LOGGA IN (visas när man är utloggad, döljs när man är inloggad av JS) -->
           <section class="pr-card" id="login-card">
@@ -165,24 +165,23 @@
             </p>
 
             <form id="rating-login-form" autocomplete="off">
-                <div class="pr-field">
-                    <label class="pr-label" for="login-email" data-i18n="rate_login_email_label">E-post</label>
-                    <input class="pr-input" id="login-email" name="email" type="email" placeholder="erik@example.com" />
-                </div>
+              <div class="pr-field">
+                <label class="pr-label" for="login-email" data-i18n="rate_login_email_label">E-post</label>
+                <input class="pr-input" id="login-email" name="email" type="email" placeholder="erik@example.com" />
+              </div>
 
-                <div class="pr-field">
-                    <label class="pr-label" for="login-password" data-i18n="rate_login_password_label">Lösenord</label>
-                    <input class="pr-input" id="login-password" name="password" type="password" data-i18n-placeholder="rate_login_password_ph" placeholder="Ditt lösenord" />
-                    <a href="/reset-password.html" style="display:inline-block;margin-top:6px;font-size:12px;color:#1d4ed8;text-decoration:none;font-weight:600;">Forgot your password?</a>
-                </div>
+              <div class="pr-field">
+                <label class="pr-label" for="login-password" data-i18n="rate_login_password_label">Lösenord</label>
+                <input class="pr-input" id="login-password" name="password" type="password" data-i18n-placeholder="rate_login_password_ph" placeholder="Ditt lösenord" />
+                <a href="/reset-password.html" style="display:inline-block;margin-top:6px;font-size:12px;color:#1d4ed8;text-decoration:none;font-weight:600;">Forgot your password?</a>
+              </div>
 
-                <div class="pr-actions">
-                    <button class="pr-btn pr-btn-primary" type="submit" id="login-btn" data-i18n="rate_login_btn">Logga in</button>
+              <div class="pr-actions">
+                <button class="pr-btn pr-btn-primary" type="submit" id="login-btn" data-i18n="rate_login_btn">Logga in</button>
                 <a class="pr-btn pr-btn-ghost" href="/customer.html" data-i18n="rate_signup">Registrera dig</a>
-                <button class="pr-btn pr-btn-ghost" type="button" id="test-without-login-btn" style="background:#f0f4f8;border-color:#1d4ed8;color:#1d4ed8;">Test utan inloggning</button>
-  </div>
+              </div>
 
-                <p id="login-status" style="margin-top:10px;color:var(--pr-muted);font-size:12px;"></p>
+              <p id="login-status" style="margin-top:10px;color:var(--pr-muted);font-size:12px;"></p>
             </form>
           </section>
 
@@ -191,77 +190,74 @@
             <h2 data-i18n="rate_title">Lämna ett betyg</h2>
 
             <p id="rating-login-hint" style="margin:0 0 10px;color:var(--pr-muted);font-size:12px;">
-                <span data-i18n="rate_login_hint_pre">
-                    Du behöver logga in för att kunna lämna betyg. Logga in ovan eller 
-                </span>
-
-                </span>
-                <a href="/customer.html" target="_blank" rel="noopener noreferrer" data-i18n="rate_login_hint_link">
-                    registrera dig här
-                </a><span data-i18n="rate_login_hint_post">.</span>
+              <span data-i18n="rate_login_hint_pre">
+                Du behöver logga in för att kunna lämna betyg. Logga in ovan eller
+              </span>
+              <a href="/customer.html" target="_blank" rel="noopener noreferrer" data-i18n="rate_login_hint_link">
+                registrera dig här
+              </a><span data-i18n="rate_login_hint_post">.</span>
             </p>
 
             <div id="rating-form-wrapper" class="hidden">
               <form id="rating-form" autocomplete="off">
-  <div class="pr-field">
-    <label class="pr-label" for="subject">
-      <span data-i18n="rate_form_subject_label">Vem betygsätter du?</span>
-      <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_subject_note">(användarnamn eller mejl)</span>
-    </label>
-    <input class="pr-input" id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
-  </div>
+                <div class="pr-field">
+                  <label class="pr-label" for="subject">
+                    <span data-i18n="rate_form_subject_label">Vem betygsätter du?</span>
+                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_subject_note">(användarnamn eller mejl)</span>
+                  </label>
+                  <input class="pr-input" id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
+                </div>
 
-  <div class="pr-field">
-    <label class="pr-label" for="rater">
-      <span data-i18n="rate_form_rater_label">Ditt namn/mejl</span>
-      <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_rater_note">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span>
-    </label>
-    <input class="pr-input" id="rater" name="rater" type="text" placeholder="" />
-  </div>
+                <div class="pr-field">
+                  <label class="pr-label" for="rater">
+                    <span data-i18n="rate_form_rater_label">Ditt namn/mejl</span>
+                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_rater_note">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span>
+                  </label>
+                  <input class="pr-input" id="rater" name="rater" type="text" placeholder="" />
+                </div>
 
-  <div class="pr-field">
-    <label class="pr-label" for="rating" data-i18n="rate_form_score_label">Betyg (1–5)</label>
-    <select class="pr-select" id="rating" name="score" required>
-      <option value="" disabled selected hidden data-i18n="rate_form_score_pick">Välj betyg</option>
-      <option value="1">1</option>
-      <option value="2">2</option>
-      <option value="3">3</option>
-      <option value="4">4</option>
-      <option value="5">5</option>
-    </select>
-  </div>
+                <div class="pr-field">
+                  <label class="pr-label" for="rating" data-i18n="rate_form_score_label">Betyg (1–5)</label>
+                  <select class="pr-select" id="rating" name="score" required>
+                    <option value="" disabled selected hidden data-i18n="rate_form_score_pick">Välj betyg</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                  </select>
+                </div>
 
-  <div class="pr-field">
-    <label class="pr-label" for="ratingSource">
-      <span data-i18n="rate_form_source_label">Varifrån kommer betyget?</span>
-      <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_optional">(valfritt)</span>
-    </label>
-    <select class="pr-select" id="ratingSource" name="source">
-      <option value="" selected data-i18n="rate_form_source_pick">Välj källa (valfritt)</option>
-      <option value="Blocket">Blocket</option>
-      <option value="Tradera">Tradera</option>
-      <option value="Airbnb">Airbnb</option>
-      <option value="Husknuten">Husknuten</option>
-      <option value="Tiptap">Tiptap</option>
-    </select>
-  </div>
+                <div class="pr-field">
+                  <label class="pr-label" for="ratingSource">
+                    <span data-i18n="rate_form_source_label">Varifrån kommer betyget?</span>
+                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_optional">(valfritt)</span>
+                  </label>
+                  <select class="pr-select" id="ratingSource" name="source">
+                    <option value="" selected data-i18n="rate_form_source_pick">Välj källa (valfritt)</option>
+                    <option value="Blocket">Blocket</option>
+                    <option value="Tradera">Tradera</option>
+                    <option value="Airbnb">Airbnb</option>
+                    <option value="Husknuten">Husknuten</option>
+                    <option value="Tiptap">Tiptap</option>
+                  </select>
+                </div>
 
                 <!-- (dolt) tidigare duplicerat block - lämnas kvar men inaktivt för att inte krocka -->
-<div class="pr-field" style="display:none;">
-  <label class="pr-label" for="ratingSource_unused">
-    Varifrån kommer betyget?
-    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span>
-  </label>
-  <select class="pr-select" id="ratingSource_unused" name="source_unused">
-    <option value="" selected>Välj källa (valfritt)</option>
-    <option value="Blocket">Blocket</option>
-    <option value="Tradera">Tradera</option>
-    <option value="Airbnb">Airbnb</option>
-    <option value="Husknuten">Husknuten</option>
-    <option value="Tiptap">Tiptap</option>
-  </select>
-</div>
-
+                <div class="pr-field" style="display:none;">
+                  <label class="pr-label" for="ratingSource_unused">
+                    Varifrån kommer betyget?
+                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span>
+                  </label>
+                  <select class="pr-select" id="ratingSource_unused" name="source_unused">
+                    <option value="" selected>Välj källa (valfritt)</option>
+                    <option value="Blocket">Blocket</option>
+                    <option value="Tradera">Tradera</option>
+                    <option value="Airbnb">Airbnb</option>
+                    <option value="Husknuten">Husknuten</option>
+                    <option value="Tiptap">Tiptap</option>
+                  </select>
+                </div>
 
                 <div class="pr-field">
                   <label class="pr-label" for="comment">
@@ -364,11 +360,10 @@
   </main>
 
   <script type="module">
-  import { initLandingLanguage } from '/modules/landing/language.js';
-  initLandingLanguage();
-</script>
+    import { initLandingLanguage } from '/modules/landing/language.js';
+    initLandingLanguage();
+  </script>
 
-<script type="module" src="/modules/main.js"></script>
-
+  <script type="module" src="/modules/main.js"></script>
 </body>
 </html>
