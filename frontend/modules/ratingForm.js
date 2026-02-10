@@ -48,6 +48,13 @@ function isRatePage() {
   return (window.location.pathname || '').toLowerCase().includes('/rate.html');
 }
 
+/**
+ * Visar/döljer login + rating-form på rate.html
+ * Förutsätter att du har:
+ * - #login-card
+ * - #rating-form-wrapper
+ * - #rating-login-hint (valfritt)
+ */
 function setVisibility(isLoggedIn) {
   const loginCard = document.getElementById('login-card');
   const ratingWrapper = document.getElementById('rating-form-wrapper');
@@ -92,10 +99,9 @@ function applyPendingToUI(p) {
     subjectInput.style.background = '#f7f8fb';
   }
 
-  // Source
+  // Source (låst om vi vet)
   const sourceSelect = form.querySelector('select[name="source"]');
   if (sourceSelect && p.source) {
-    // Vi mappar “tradera” -> "Tradera" (så dropdown matchar)
     const v = String(p.source).toLowerCase().includes('tradera') ? 'Tradera' : p.source;
     sourceSelect.value = v;
     sourceSelect.disabled = true;
@@ -145,19 +151,22 @@ export function initRatingLogin() {
   const pending = fromUrl || getPending();
   if (pending) applyPendingToUI(pending);
 
-
   // 2) bind login
   const loginForm = document.getElementById('rating-login-form');
   if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
 
-  // 3) om inloggad: visa form direkt + lås rater = user email
+  // 3) sätt UI-läge direkt baserat på session
   const user = auth.getUser?.() || null;
   setVisibility(!!user);
 
   if (user) {
     initRatingForm();
 
-    const raterInput = document.querySelector('#rating-form input[name="rater"]') || document.getElementById('rater');
+    // Lås rater = user email
+    const raterInput =
+      document.querySelector('#rating-form input[name="rater"]') ||
+      document.getElementById('rater');
+
     if (raterInput && user.email) {
       raterInput.value = user.email;
       raterInput.readOnly = true;
@@ -167,6 +176,17 @@ export function initRatingLogin() {
     const p = getPending();
     if (p) applyPendingToUI(p);
   }
+
+  // ✅ om login/logout sker i annan flik, uppdatera UI
+  window.addEventListener('storage', () => {
+    const u2 = auth.getUser?.() || null;
+    setVisibility(!!u2);
+    if (u2) {
+      try { initRatingForm(); } catch {}
+      const p = getPending();
+      if (p) applyPendingToUI(p);
+    }
+  });
 }
 
 async function handleLoginSubmit(e) {
@@ -190,13 +210,16 @@ async function handleLoginSubmit(e) {
 
     showNotification('success', 'Du är nu inloggad.', 'login-status');
 
-    // På rate.html: stanna kvar, visa form och prefill
+    // Om vi är på rate.html: stanna kvar och visa formuläret
     if (isRatePage()) {
       setVisibility(true);
       initRatingForm();
 
       const user = auth.getUser?.() || null;
-      const raterInput = document.querySelector('#rating-form input[name="rater"]') || document.getElementById('rater');
+      const raterInput =
+        document.querySelector('#rating-form input[name="rater"]') ||
+        document.getElementById('rater');
+
       if (raterInput && user?.email) {
         raterInput.value = user.email;
         raterInput.readOnly = true;
@@ -209,19 +232,9 @@ async function handleLoginSubmit(e) {
       return;
     }
 
-    // annars: beteende som tidigare
-        const isRatePage = window.location.pathname.includes('rate.html');
-
+    // På andra sidor: gå till profil
     window.setTimeout(() => {
-      if (isRatePage) {
-        // Stanna på rate.html och visa formuläret direkt
-        const user = auth.getUser?.() || null;
-        setRatingVisibility(!!user);
-        try { initRatingForm(); } catch {}
-      } else {
-        // På andra sidor: gå till profil
-        window.location.href = '/profile.html';
-      }
+      window.location.href = '/profile.html';
     }, 150);
 
   } catch (err) {
