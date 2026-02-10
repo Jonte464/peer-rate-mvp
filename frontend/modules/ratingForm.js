@@ -136,10 +136,15 @@ function captureFromUrl() {
 }
 
 export function initRatingLogin() {
+  // ✅ Se till att rating-kortet kan visas (inte låst till display:none från HTML)
+  const ratingCard = document.getElementById('rating-card');
+  if (ratingCard) ratingCard.style.display = 'block';
+
   // 1) fånga pending från URL
   const fromUrl = captureFromUrl();
   const pending = fromUrl || getPending();
   if (pending) applyPendingToUI(pending);
+
 
   // 2) bind login
   const loginForm = document.getElementById('rating-login-form');
@@ -205,9 +210,20 @@ async function handleLoginSubmit(e) {
     }
 
     // annars: beteende som tidigare
+        const isRatePage = window.location.pathname.includes('rate.html');
+
     window.setTimeout(() => {
-      window.location.href = '/profile.html';
-    }, 250);
+      if (isRatePage) {
+        // Stanna på rate.html och visa formuläret direkt
+        const user = auth.getUser?.() || null;
+        setRatingVisibility(!!user);
+        try { initRatingForm(); } catch {}
+      } else {
+        // På andra sidor: gå till profil
+        window.location.href = '/profile.html';
+      }
+    }, 150);
+
   } catch (err) {
     console.error('login error', err);
     showNotification('error', 'Tekniskt fel vid inloggning.', 'login-status');
