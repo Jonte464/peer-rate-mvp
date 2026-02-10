@@ -56,7 +56,12 @@
         <a class="menu-link" href="/#how"><div data-i18n="menu_how">Hur det funkar</div><span>→</span></a>
         <a class="menu-link" href="/#sim"><div data-i18n="menu_sim">Se värdet direkt</div><span>→</span></a>
         <a class="menu-link" href="/#globe"><div data-i18n="menu_globe">Global trust</div><span>→</span></a>
+
         <a class="menu-link" href="/rate.html"><div data-i18n="menu_rate">Lämna betyg</div><span>→</span></a>
+
+        <!-- ✅ Ny produkt -->
+        <a class="menu-link" href="/references.html"><div data-i18n="menu_refs">Arbetsreferenser</div><span>→</span></a>
+
         <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Registrera dig</div><span>→</span></a>
         <a class="menu-link" href="/profile.html"><div data-i18n="menu_profile">Min profil</div><span>→</span></a>
       </div>
@@ -105,7 +110,7 @@
       <!-- Allt här visas bara när man är inloggad -->
       <div id="profile-root" class="hidden">
 
-        <!-- Trust Profile Card (matches design) -->
+        <!-- Trust Profile Card (demo / kan bytas ut senare) -->
         <section class="trust-profile-card" style="background:#fff;border-radius:16px;padding:32px 32px 24px 32px;box-shadow:0 4px 24px rgba(0,0,0,0.07);margin-bottom:32px;position:relative;max-width:900px;margin-left:auto;margin-right:auto;">
           <button id="profile-share-btn" style="position:absolute;top:24px;right:32px;background:#f8fafc;border:1px solid #cbd5e1;color:#1d4ed8;padding:8px 22px 8px 22px;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(0,0,0,.03);">Share PeerRate</button>
           <div style="display:flex;align-items:center;gap:28px;">
@@ -172,16 +177,17 @@
             </div>
           </div>
         </section>
+
         <script>
-        // Share button logic
-        const shareBtn = document.getElementById('profile-share-btn');
-        if (shareBtn) {
-          shareBtn.addEventListener('click', function() {
-            navigator.clipboard.writeText(window.location.href);
-            shareBtn.textContent = 'Copied!';
-            setTimeout(()=>shareBtn.textContent='Share PeerRate',1200);
-          });
-        }
+          // Share button logic
+          const shareBtn = document.getElementById('profile-share-btn');
+          if (shareBtn) {
+            shareBtn.addEventListener('click', function() {
+              navigator.clipboard.writeText(window.location.href);
+              shareBtn.textContent = 'Copied!';
+              setTimeout(()=>shareBtn.textContent='Share PeerRate',1200);
+            });
+          }
         </script>
 
         <!-- ✅ Mitt omdöme (flyttad högst upp) -->
@@ -219,6 +225,30 @@
 
           <div id="ratings-graph" class="ratings-graph"></div>
           <div id="ratings-list" class="ratings-list"></div>
+        </section>
+
+        <!-- ✅ Arbetsreferenser / Work References (synkad card-design) -->
+        <section class="card" id="work-references-card">
+          <h2 data-i18n="work_refs_title">Arbetsreferenser</h2>
+          <p class="tiny muted" data-i18n="work_refs_lead">
+            Samla och visa verifierade arbetsreferenser från chefer, kollegor och uppdragsgivare.
+          </p>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+            <a href="/references.html" class="secondary" style="text-decoration:none;display:inline-block;padding:10px 14px;border-radius:10px;">
+              <span data-i18n="work_refs_open">Öppna arbetsreferenser</span> →
+            </a>
+            <a href="/references.html" class="secondary" style="text-decoration:none;display:inline-block;padding:10px 14px;border-radius:10px;">
+              <span data-i18n="work_refs_invite">Bjud in en referens</span> →
+            </a>
+          </div>
+
+          <div style="margin-top:12px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
+            <div style="font-weight:800;" data-i18n="work_refs_status_title">Status</div>
+            <div style="margin-top:6px;color:rgba(15,15,18,.65);font-size:13px;line-height:1.5;" data-i18n="work_refs_status_body">
+              (Demo) Här kommer dina referenser att listas. Nästa steg är att koppla detta till LinkedIn-inloggning och ett enkelt “be om referens”-flöde.
+            </div>
+          </div>
         </section>
 
         <!-- Mina uppgifter -->
@@ -270,14 +300,14 @@
         </section>
 
         <!-- eBay-koppling (tillfälligt dold) -->
-<section class="card hidden" id="ebay-card" style="display:none;">
-  <!-- eBay är tillfälligt avstängt i UI -->
-</section>
+        <section class="card hidden" id="ebay-card" style="display:none;">
+          <!-- eBay är tillfälligt avstängt i UI -->
+        </section>
 
         <!-- Tradera-koppling (tillfälligt dold) -->
-<section class="card hidden" id="tradera-card" style="display:none;">
-  <!-- Tradera är tillfälligt avstängt i UI -->
-</section>
+        <section class="card hidden" id="tradera-card" style="display:none;">
+          <!-- Tradera är tillfälligt avstängt i UI -->
+        </section>
 
         <!-- Logga ut -->
         <section class="card">
@@ -285,12 +315,6 @@
         </section>
 
       </div>
-
-      
-
-      
-
-      
 
       <div style="text-align:center;color:rgba(15,15,18,.55);font-size:12px;margin-top:18px;">
         © 2025 by PeerRate.
