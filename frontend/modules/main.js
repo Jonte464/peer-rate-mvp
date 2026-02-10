@@ -2,7 +2,13 @@
 // Huvudfil som startar rätt saker beroende på vilken sida man är på.
 
 import auth from './auth.js';
-import { updateUserBadge, updateAvatars, initProfilePage, initRatingLogin } from './profile.js';
+
+// ✅ initRatingLogin ska importeras härifrån:
+import { initRatingLogin } from './ratingForm.js';
+
+// Profile-funktioner (utan initRatingLogin här)
+import { updateUserBadge, updateAvatars, initProfilePage } from './profile.js';
+
 import { adminLoginForm, adminLogoutBtn } from './admin.js';
 import customerForm from './customer.js';
 
@@ -31,12 +37,10 @@ function applyRatingContextFromQuery() {
 
   if (!sourceRaw && !pageUrlRaw) return;
 
-  // 1) Visa källrutan om den finns
   const card = document.getElementById('rate-context-card');
   const sourceEl = document.getElementById('rate-context-source');
   const linkEl = document.getElementById('rate-context-link');
 
-  // Mappa "tradera" -> "Tradera" osv (så det matchar dina <option>-värden)
   const prettySourceMap = {
     tradera: 'Tradera',
     blocket: 'Blocket',
@@ -66,23 +70,19 @@ function applyRatingContextFromQuery() {
     }
   }
 
-  // 2) Förifyll dropdown "Varifrån kommer betyget?"
   const sourceSelect =
     document.querySelector('#rating-form select[name="source"]') ||
     document.getElementById('ratingSource');
 
   if (sourceSelect && prettySource && prettySource !== '–') {
-    // sätt bara om användaren inte redan valt något
     if (!sourceSelect.value) sourceSelect.value = prettySource;
   }
 
-  // 3) Förifyll "Motpart/annonslänk" i rapport-delen (om fältet finns)
   const reportLinkInput = document.getElementById('reportLink');
   if (reportLinkInput && decodedPageUrl) {
     if (!reportLinkInput.value) reportLinkInput.value = decodedPageUrl;
   }
 
-  // 4) Försök förifylla "Verifierings-ID" om vi kan hitta ett ID i URL:en
   const proofRefInput =
     document.querySelector('#rating-form input[name="proofRef"]') ||
     document.getElementById('proofRef');
@@ -93,22 +93,15 @@ function applyRatingContextFromQuery() {
   }
 }
 
-/**
- * Försök hitta ett vettigt referens-ID ur en URL.
- * Ex: Tradera item-länk kan innehålla .../item/<cat>/<objectId>/...
- */
 function extractProofIdFromUrl(url) {
   const u = (url || '').toLowerCase();
 
-  // Tradera item: /item/341380/704309999/....
   let m = u.match(/\/item\/\d+\/(\d+)/);
   if (m && m[1]) return `TRADERA-${m[1]}`;
 
-  // Tradera order: /my/order/<id>
   m = u.match(/\/my\/order\/([a-z0-9]+)/);
   if (m && m[1]) return `TRADERA-ORDER-${m[1]}`;
 
-  // Fallback: plocka en längre sifferserie (t.ex. ordernr)
   m = u.match(/(\d{6,})/);
   if (m && m[1]) return `REF-${m[1]}`;
 
@@ -124,7 +117,6 @@ window.addEventListener('DOMContentLoaded', () => {
   updateAvatars(user);
   updateTopUserPill(user);
 
-  // Initialize menu on all pages (not just landing)
   initLandingMenu();
 
   initUserDropdown({
@@ -143,26 +135,21 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const path = window.location.pathname || '';
 
-  // Profile page
   if (path.includes('/min-profil') || path.includes('profile.html') || path.includes('/profile')) {
     initProfilePage();
   }
 
-  // Rating page (rate.html eller om rating-card finns)
   const isRatingPage =
     path.includes('/lamna-betyg') ||
     path.includes('/rate.html') ||
     document.getElementById('rating-card');
 
   if (isRatingPage) {
-    initRatingLogin();
+    initRatingLogin();            // ✅ nu kommer den från ratingForm.js
     updateRatingLoginHint(user);
-
-    // ✅ NYTT: förifyll från query params (source/pageUrl)
     applyRatingContextFromQuery();
   }
 
-  // Landing-interaktioner (kör bara på startsidan där blocken faktiskt finns)
   const isIndex =
     path === '/' ||
     path.endsWith('/index.html') ||
@@ -173,7 +160,6 @@ window.addEventListener('DOMContentLoaded', () => {
     initLanding();
   }
 
-  // Håll top-user pill uppdaterad om login sker i annan flik
   window.addEventListener('storage', () => {
     updateTopUserPill(auth.getUser?.() || null);
   });
