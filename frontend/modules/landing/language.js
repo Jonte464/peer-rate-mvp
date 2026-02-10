@@ -17,6 +17,15 @@ export function initLandingLanguage() {
       menu_ask: 'Fråga om trust',
       user_logout: 'Logga ut',
 
+      // ✅ NYTT: arbetsreferenser
+      menu_refs: 'Arbetsreferenser',
+      work_refs_title: 'Arbetsreferenser',
+      work_refs_lead: 'Samla och visa verifierade arbetsreferenser från chefer, kollegor och uppdragsgivare.',
+      work_refs_open: 'Öppna arbetsreferenser',
+      work_refs_invite: 'Bjud in en referens',
+      work_refs_status_title: 'Status',
+      work_refs_status_body: '(Demo) Här kommer dina referenser att listas. Nästa steg är att koppla detta till LinkedIn-inloggning och ett enkelt “be om referens”-flöde.',
+
       hero_kicker: 'Peer-to-peer reputation',
       hero_h1: 'Förtroende du kan bevisa.',
       hero_p: 'PeerRate gör att du kan bära med dig verifierad trovärdighet mellan marknadsplatser. Inte känsla. Inte påståenden. Riktiga transaktioner — portabelt och svårt att fejka.',
@@ -85,18 +94,15 @@ export function initLandingLanguage() {
       rate_signup: 'Registrera dig',
       rate_title: 'Lämna ett betyg',
 
-      // ✅ login-hint (delad för att länken ska kunna översättas separat)
       rate_login_hint_pre: 'Du behöver logga in för att kunna lämna betyg. Logga in ovan eller ',
       rate_login_hint_link: 'registrera dig här',
       rate_login_hint_post: '.',
 
-      // ✅ login-form labels + placeholder + button
       rate_login_email_label: 'E-post',
       rate_login_password_label: 'Lösenord',
       rate_login_password_ph: 'Ditt lösenord',
       rate_login_btn: 'Logga in',
 
-      // ✅ rate-form (övre delen)
       rate_form_subject_label: 'Vem betygsätter du?',
       rate_form_subject_note: '(användarnamn eller mejl)',
       rate_form_rater_label: 'Ditt namn/mejl',
@@ -110,7 +116,6 @@ export function initLandingLanguage() {
       footer_profile: 'Profil',
       footer_ask: 'Fråga om trust',
 
-      // ✅ profile-sidan
       profile_badge_label: 'Inloggad som',
       profile_h1: 'Min profil',
       profile_lead: 'Här kan du se dina uppgifter och ditt samlade omdöme.',
@@ -136,7 +141,6 @@ export function initLandingLanguage() {
 
       profile_logout_btn: 'Logga ut',
 
-      // ✅ rate-sidan intro + FAQ
       rate_page_h1: 'Lämna ett betyg – snabbt, enkelt och verifierbart',
       rate_page_lead:
         'PeerRate hjälper dig att samla omdömen som du kan visa upp – oavsett plattform. När fler omdömen kopplas till verifierade affärer blir din PeerRate-rating starkare.',
@@ -169,6 +173,15 @@ export function initLandingLanguage() {
       menu_profile: 'My profile',
       menu_ask: 'See the 5P model',
       user_logout: 'Log out',
+
+      // ✅ NEW: work references
+      menu_refs: 'Work References',
+      work_refs_title: 'Work References',
+      work_refs_lead: 'Collect and showcase verified work references from managers, colleagues, and clients.',
+      work_refs_open: 'Open work references',
+      work_refs_invite: 'Invite a reference',
+      work_refs_status_title: 'Status',
+      work_refs_status_body: '(Demo) Your references will be listed here. Next step is connecting this to LinkedIn sign-in and a simple “request a reference” flow.',
 
       hero_kicker: 'Peer-to-peer reputation',
       hero_h1: 'Reputation you can prove.',
@@ -238,18 +251,15 @@ export function initLandingLanguage() {
       rate_signup: 'Sign up',
       rate_title: 'Leave a rating',
 
-      // ✅ login-hint
       rate_login_hint_pre: 'You need to log in to leave a rating. Log in above or ',
       rate_login_hint_link: 'sign up here',
       rate_login_hint_post: '.',
 
-      // ✅ login-form labels + placeholder + button
       rate_login_email_label: 'Email',
       rate_login_password_label: 'Password',
       rate_login_password_ph: 'Your password',
       rate_login_btn: 'Log in',
 
-      // ✅ rate-form (övre delen)
       rate_form_subject_label: 'Who are you rating?',
       rate_form_subject_note: '(username or email)',
       rate_form_rater_label: 'Your name/email',
@@ -263,7 +273,6 @@ export function initLandingLanguage() {
       footer_profile: 'Profile',
       footer_ask: 'Ask about trust',
 
-      // ✅ profile page
       profile_badge_label: 'Signed in as',
       profile_h1: 'My profile',
       profile_lead: 'Here you can see your details and your combined reputation.',
@@ -289,7 +298,6 @@ export function initLandingLanguage() {
 
       profile_logout_btn: 'Log out',
 
-      // ✅ rate page intro + FAQ
       rate_page_h1: 'Leave a review — quick, simple, and verifiable',
       rate_page_lead:
         'PeerRate helps you collect reviews you can show anywhere — regardless of platform. As more reviews get linked to verified transactions, your PeerRate rating becomes stronger.',
