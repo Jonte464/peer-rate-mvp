@@ -44,80 +44,74 @@ function isRatePage() {
 }
 
 /** Robust: hitta login-card även om id varierar */
-function getLoginCardEl() {
-  return (
-    document.getElementById('login-card') ||
-    document.getElementById('rating-login-card') ||
-    document.getElementById('rating-login') ||
-    document.querySelector('[data-role="rating-login"]') ||
-    null
-  );
+function getLoginCardEls() {
+  return [
+    document.getElementById('login-card'),
+    document.getElementById('rating-login-card'),
+    document.getElementById('rating-login'),
+    document.querySelector('[data-role="rating-login"]'),
+  ].filter(Boolean);
 }
 
-/** Robust: hitta wrapper för rating-form */
-function getRatingWrapperEl() {
-  return (
-    document.getElementById('rating-form-wrapper') ||
-    document.getElementById('rating-card') ||
-    document.getElementById('rating-form-card') ||
-    document.getElementById('rating-form') ||
-    null
-  );
+/** Robust: hitta alla tänkbara wrappers för rating-form */
+function getRatingWrapperEls() {
+  return [
+    document.getElementById('rating-form-wrapper'),
+    document.getElementById('rating-card'),
+    document.getElementById('rating-form-card'),
+    document.getElementById('rating-form'),
+  ].filter(Boolean);
 }
 
 /** Dölj “Test utan inloggning” om den finns */
 function hideTestWithoutLoginButton() {
-  // 1) försök via id om du har ett
   const byId =
     document.getElementById('test-without-login') ||
     document.getElementById('testWithoutLogin') ||
     document.getElementById('testWithoutLoginBtn');
+
   if (byId) {
     byId.style.display = 'none';
     return;
   }
 
-  // 2) fallback: leta upp knapp med text
   const btns = Array.from(document.querySelectorAll('button, a'));
   const hit = btns.find(el => (el.textContent || '').toLowerCase().includes('test utan inloggning'));
   if (hit) hit.style.display = 'none';
 }
 
+/**
+ * Bulletproof show/hide:
+ * - göm login när inloggad
+ * - visa rating wrapper(s) när inloggad
+ * - undvik att lämna sidan tom pga fel id i HTML
+ */
 function setVisibility(isLoggedIn) {
-  const loginCard = getLoginCardEl();
-  const ratingWrapper = getRatingWrapperEl();
+  const loginCards = getLoginCardEls();
+  const ratingWrappers = getRatingWrapperEls();
+
   const hint =
     document.getElementById('rating-login-hint') ||
     document.getElementById('ratingHint') ||
     null;
 
-  if (isLoggedIn) {
-    if (loginCard) {
-      loginCard.classList.add('hidden');
-      loginCard.style.display = 'none';
-    }
-    if (hint) hint.classList.add('hidden');
+  // Login UI
+  loginCards.forEach((el) => {
+    el.style.display = isLoggedIn ? 'none' : 'block';
+    el.classList.toggle('hidden', isLoggedIn);
+  });
 
-    if (ratingWrapper) {
-      ratingWrapper.classList.remove('hidden');
-      ratingWrapper.style.display = '';
-    }
-  } else {
-    if (loginCard) {
-      loginCard.classList.remove('hidden');
-      loginCard.style.display = '';
-    }
-    if (hint) hint.classList.remove('hidden');
-
-    if (ratingWrapper) {
-      // Om ratingWrapper råkar vara själva form-kortet, dölj bara om du har separat wrapper.
-      // Vi försöker vara försiktiga: om elementet ÄR formuläret (#rating-form) så lämnar vi display.
-      if (ratingWrapper.id !== 'rating-form') {
-        ratingWrapper.classList.add('hidden');
-        ratingWrapper.style.display = 'none';
-      }
-    }
+  // Hint
+  if (hint) {
+    hint.classList.toggle('hidden', isLoggedIn);
+    hint.style.display = isLoggedIn ? 'none' : '';
   }
+
+  // Rating UI
+  ratingWrappers.forEach((el) => {
+    el.style.display = isLoggedIn ? 'block' : 'none';
+    el.classList.toggle('hidden', !isLoggedIn);
+  });
 }
 
 function applyPendingToUI(p) {
