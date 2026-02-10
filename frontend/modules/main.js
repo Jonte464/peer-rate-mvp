@@ -6,7 +6,7 @@ import auth from './auth.js';
 // ✅ initRatingLogin ska importeras härifrån:
 import { initRatingLogin } from './ratingForm.js';
 
-// Profile-funktioner (utan initRatingLogin här)
+// Profile-funktioner
 import { updateUserBadge, updateAvatars, initProfilePage } from './profile.js';
 
 import { adminLoginForm, adminLogoutBtn } from './admin.js';
@@ -28,7 +28,6 @@ function updateRatingLoginHint(user) {
 
 /**
  * Läs ?source=...&pageUrl=... och förifyll rate-formulär där det går.
- * (Funkar både på rate.html och index om formuläret finns.)
  */
 function applyRatingContextFromQuery() {
   const params = new URLSearchParams(window.location.search || '');
@@ -46,10 +45,11 @@ function applyRatingContextFromQuery() {
     blocket: 'Blocket',
     airbnb: 'Airbnb',
     husknuten: 'Husknuten',
-    tiptap: 'Tiptap'
+    tiptap: 'Tiptap',
   };
 
-  const prettySource = prettySourceMap[sourceRaw.toLowerCase()] || (sourceRaw ? sourceRaw : '–');
+  const prettySource =
+    prettySourceMap[sourceRaw.toLowerCase()] || (sourceRaw ? sourceRaw : '–');
 
   let decodedPageUrl = '';
   try {
@@ -60,6 +60,7 @@ function applyRatingContextFromQuery() {
 
   if (card) card.style.display = 'block';
   if (sourceEl) sourceEl.textContent = prettySource;
+
   if (linkEl) {
     if (decodedPageUrl) {
       linkEl.href = decodedPageUrl;
@@ -108,7 +109,7 @@ function extractProofIdFromUrl(url) {
   return '';
 }
 
-window.addEventListener('DOMContentLoaded', () => {
+function initApp() {
   console.log('DOM ready');
 
   const user = auth.getUser?.() || null;
@@ -127,7 +128,7 @@ window.addEventListener('DOMContentLoaded', () => {
       updateTopUserPill(u2);
       updateUserBadge(u2);
       updateAvatars(u2);
-    }
+    },
   });
 
   if (customerForm) console.log('Customer form loaded');
@@ -135,33 +136,56 @@ window.addEventListener('DOMContentLoaded', () => {
 
   const path = window.location.pathname || '';
 
-  if (path.includes('/min-profil') || path.includes('profile.html') || path.includes('/profile')) {
+  // --- Profile ---
+  const isProfilePage =
+    path.includes('/min-profil') || path.includes('profile.html') || path.includes('/profile');
+  if (isProfilePage) {
     initProfilePage();
   }
 
+  // --- Rating (rate.html / rating-card) ---
   const isRatingPage =
     path.includes('/lamna-betyg') ||
     path.includes('/rate.html') ||
-    document.getElementById('rating-card');
+    !!document.getElementById('rating-card');
 
   if (isRatingPage) {
-    initRatingLogin();            // ✅ nu kommer den från ratingForm.js
+    initRatingLogin();
     updateRatingLoginHint(user);
     applyRatingContextFromQuery();
   }
 
+  // --- Landing (index) ---
   const isIndex =
     path === '/' ||
     path.endsWith('/index.html') ||
-    document.getElementById('slot-hero') ||
-    document.querySelector('.hero');
+    !!document.getElementById('slot-hero') ||
+    !!document.querySelector('.hero');
 
   if (isIndex) {
     initLanding();
   }
 
+  // Keep top-user pill updated if other tabs log in/out
   window.addEventListener('storage', () => {
     updateTopUserPill(auth.getUser?.() || null);
   });
+
+  // small heartbeat (optional)
   setInterval(() => updateTopUserPill(auth.getUser?.() || null), 1500);
-});
+}
+
+// Boot-safe: kör init även om DOMContentLoaded redan hänt
+function boot() {
+  try {
+    initApp();
+  } catch (e) {
+    console.error('main.js boot failed', e);
+  }
+}
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}

@@ -127,6 +127,14 @@
   </main>
 
   <!-- ✅ Single entrypoint: inject header → init language → load main.js -->
-  <script type="module" src="/modules/pageBootstrap.js"></script>
+  <!-- ✅ Single entrypoint: inject header → init language → load main.js -->
+<script type="module" src="/modules/pageBootstrap.js?v=2"></script>
+
+<!-- ✅ Page-specific init (Andreas yta) -->
+<script type="module">
+  import { initReferences } from '/modules/references/references.js';
+  initReferences();
+</script>
+
 </body>
 </html>
