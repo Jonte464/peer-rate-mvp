@@ -10,7 +10,6 @@
 </head>
 
 <body>
-
   <!-- ✅ Global TOP ROW injectas via pageBootstrap.js -->
   <div id="slot-top-row"></div>
 
@@ -19,100 +18,144 @@
       <div class="shell">
         <div class="pr-form-wrap" style="max-width: 980px; margin:0 auto;">
 
-          <!-- ✅ STARTA FRÅN EN PLATTFORM (NYTT) -->
-<section class="pr-card" id="platform-card" style="margin-bottom:16px;">
-  <h2 style="margin:0 0 8px;" data-i18n="rate_platform_title">Starta från en plattform</h2>
-
-  <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.45;"
-     data-i18n="rate_platform_lead">
-    Välj var affären skedde. Vi öppnar plattformen så att din extension kan plocka upp annons/profil och skicka tillbaka rätt info till PeerRate.
-  </p>
-
-  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
-    <div class="pr-field" style="flex:1;min-width:240px;margin:0;">
-      <label class="pr-label" for="platformSelect" data-i18n="rate_platform_label">Plattform</label>
-      <select class="pr-select" id="platformSelect">
-        <option value="" selected data-i18n="rate_platform_pick">Välj plattform…</option>
-        <option value="tradera">Tradera</option>
-        <option value="blocket">Blocket</option>
-        <option value="airbnb">Airbnb</option>
-        <option value="ebay">eBay</option>
-        <option value="tiptap">Tiptap</option>
-        <option value="hygglo">Hygglo</option>
-        <option value="husknuten">Husknuten</option>
-        <option value="facebook">Facebook Marketplace</option>
-      </select>
-    </div>
-
-    <button class="pr-btn pr-btn-primary" type="button" id="platformGoBtn" disabled style="min-width:200px;">
-      <span data-i18n="rate_platform_go">Öppna plattform</span> →
-    </button>
-  </div>
-
-  <div id="platformNote" style="margin-top:10px;color:var(--pr-muted);font-size:12px;line-height:1.45;">
-    <span data-i18n="rate_platform_note">
-      Tips: När du är inne på annonsen/profilen – klicka på extensionen. Du skickas tillbaka hit med “Verifierad källa” ifyllt.
-    </span>
-  </div>
-</section>
-
-          <!-- ✅ INTRO -->
-          <section class="pr-card" style="margin-bottom:16px; display:none;">
-            <h1 style="margin:0 0 6px;" data-i18n="rate_page_h1">Lämna ett betyg – snabbt, enkelt och verifierbart</h1>
-            <p style="margin:0;color:var(--pr-muted);font-size:14px;line-height:1.5;" data-i18n="rate_page_lead">
-              PeerRate hjälper dig att samla omdömen som du kan visa upp – oavsett plattform.
-              När fler omdömen kopplas till verifierade affärer blir din PeerRate-rating starkare.
+          <!-- ✅ HUB INTRO -->
+          <section class="pr-card" style="margin-bottom:16px;">
+            <h1 style="margin:0 0 6px;" data-i18n="rate_hub_h1">Lämna betyg – via verifierad affär</h1>
+            <p style="margin:0;color:var(--pr-muted);font-size:14px;line-height:1.55;" data-i18n="rate_hub_lead">
+              För att undvika spam och manipulation kan du bara lämna betyg när vi kan koppla det till en avslutad affär.
+              Välj hur du vill verifiera.
             </p>
+          </section>
 
-            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;">
-              <div style="flex:1;min-width:220px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
-                <div style="font-weight:800;color:var(--pr-purple);margin-bottom:4px;" data-i18n="rate_page_b1_title">1) Logga in</div>
-                <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_page_b1_text">Så kan vi koppla betyget till dig och minska spam.</div>
+          <!-- ✅ Steg 1: Verifieringsmetod -->
+          <section class="pr-card" style="margin-bottom:16px;">
+            <h2 style="margin:0 0 10px;" data-i18n="rate_method_title">Steg 1: Välj verifieringsmetod</h2>
+
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
+              <!-- Plattform -->
+              <div style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:14px;padding:14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                  <div>
+                    <div style="font-weight:900;color:var(--pr-purple);" data-i18n="rate_method_platform_title">
+                      Plattform (snabbast)
+                    </div>
+                    <div style="color:var(--pr-muted);font-size:12px;line-height:1.45;" data-i18n="rate_method_platform_lead">
+                      Öppna plattformen → hitta avslutad affär → klicka på extensionen → kom tillbaka hit.
+                    </div>
+                  </div>
+                  <button class="pr-btn pr-btn-primary" type="button" id="choosePlatformBtn">
+                    <span data-i18n="rate_method_choose_platform">Välj</span> →
+                  </button>
+                </div>
               </div>
 
-              <div style="flex:1;min-width:220px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
-                <div style="font-weight:800;color:var(--pr-purple);margin-bottom:4px;" data-i18n="rate_page_b2_title">2) Sätt betyg</div>
-                <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_page_b2_text">Ge 1–5 och lämna en kort kommentar (valfritt).</div>
-              </div>
-
-              <div style="flex:1;min-width:220px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
-                <div style="font-weight:800;color:var(--pr-purple);margin-bottom:4px;" data-i18n="rate_page_b3_title">3) Lägg verifiering</div>
-                <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_page_b3_text">Om du vill kan du ange order-ID/annonslänk för starkare trovärdighet.</div>
+              <!-- E-post -->
+              <div style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:14px;padding:14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                  <div>
+                    <div style="font-weight:900;color:var(--pr-purple);" data-i18n="rate_method_email_title">
+                      E-post/kvitton (automatiskt framöver)
+                    </div>
+                    <div style="color:var(--pr-muted);font-size:12px;line-height:1.45;" data-i18n="rate_method_email_lead">
+                      Koppla din inkorg så kan vi hitta avslutade affärer och ge dig färdiga betygsförslag.
+                    </div>
+                  </div>
+                  <button class="pr-btn pr-btn-ghost" type="button" id="chooseEmailBtn">
+                    <span data-i18n="rate_method_choose_email">Visa</span> →
+                  </button>
+                </div>
               </div>
             </div>
           </section>
 
-          <!-- ✅ FAQ -->
-          <section class="pr-card" style="margin-bottom:16px; display:none;">
-            <h2 style="margin:0 0 10px;" data-i18n="rate_faq_title">FAQ</h2>
+          <!-- ✅ Plattform-flöde (visas när man valt Plattform) -->
+          <section class="pr-card" id="platform-card" style="margin-bottom:16px; display:none;">
+            <h2 style="margin:0 0 8px;" data-i18n="rate_platform_title">Steg 2: Starta från en plattform</h2>
 
-            <details style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;">
-              <summary style="cursor:pointer;font-weight:800;color:var(--pr-purple);" data-i18n="rate_faq_q1">Måste jag logga in?</summary>
-              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_faq_a1">
-                Ja, för att minska spam och kunna koppla betyg till en riktig användare.
-              </div>
-            </details>
+            <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.45;"
+               data-i18n="rate_platform_lead">
+              Välj plattform och typ av affär. Vi öppnar plattformen – du letar upp den avslutade affären och klickar på extensionen.
+            </p>
 
-            <details style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;">
-              <summary style="cursor:pointer;font-weight:800;color:var(--pr-purple);" data-i18n="rate_faq_q2">Är kommentaren obligatorisk?</summary>
-              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_faq_a2">
-                Nej. Du kan lämna bara ett betyg. Kommentar gör oftast omdömet mer användbart.
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+              <div class="pr-field" style="flex:1;min-width:240px;margin:0;">
+                <label class="pr-label" for="platformSelect" data-i18n="rate_platform_label">Plattform</label>
+                <select class="pr-select" id="platformSelect">
+                  <option value="" selected data-i18n="rate_platform_pick">Välj plattform…</option>
+                  <option value="tradera">Tradera</option>
+                  <option value="blocket">Blocket</option>
+                  <option value="airbnb">Airbnb</option>
+                  <option value="ebay">eBay</option>
+                  <option value="tiptap">Tiptap</option>
+                  <option value="hygglo">Hygglo</option>
+                  <option value="husknuten">Husknuten</option>
+                  <option value="facebook">Facebook Marketplace</option>
+                </select>
               </div>
-            </details>
 
-            <details style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;margin-bottom:10px;">
-              <summary style="cursor:pointer;font-weight:800;color:var(--pr-purple);" data-i18n="rate_faq_q3">Vad är “Verifierings-ID”?</summary>
-              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_faq_a3">
-                Det är ett valfritt referensnummer som kan stärka trovärdigheten, t.ex. ordernummer eller annons-ID.
+              <div class="pr-field" style="flex:1;min-width:240px;margin:0;">
+                <label class="pr-label" for="platformFlow" data-i18n="rate_platform_flow_label">Typ av affär</label>
+                <select class="pr-select" id="platformFlow">
+                  <option value="" selected data-i18n="rate_platform_flow_pick">Välj…</option>
+                  <option value="buy" data-i18n="rate_platform_flow_buy">Köp</option>
+                  <option value="sell" data-i18n="rate_platform_flow_sell">Sälj</option>
+                  <option value="booking" data-i18n="rate_platform_flow_booking">Bokning/hyra</option>
+                  <option value="other" data-i18n="rate_platform_flow_other">Annat</option>
+                </select>
               </div>
-            </details>
 
-            <details style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
-              <summary style="cursor:pointer;font-weight:800;color:var(--pr-purple);" data-i18n="rate_faq_q4">Vad händer om jag rapporterar misstänkt bedrägeri?</summary>
-              <div style="margin-top:8px;color:var(--pr-muted);font-size:13px;line-height:1.45;" data-i18n="rate_faq_a4">
-                Då flaggas betyget för granskning. Vi kan kontakta dig om vi behöver mer info.
+              <button class="pr-btn pr-btn-primary" type="button" id="platformGoBtn" disabled style="min-width:200px;">
+                <span data-i18n="rate_platform_go">Öppna plattform</span> →
+              </button>
+            </div>
+
+            <div id="platformNote" style="margin-top:10px;color:var(--pr-muted);font-size:12px;line-height:1.55;">
+              <div id="platformSteps">
+                <b>Så gör du:</b>
+                <ol style="margin:6px 0 0 18px;padding:0;">
+                  <li>Öppna plattformen.</li>
+                  <li>Hitta den avslutade affären (gärna “order/receipt/kvitto” eller “completed”).</li>
+                  <li>Klicka på PeerRate-extensionen för att skicka verifierad info.</li>
+                </ol>
               </div>
-            </details>
+              <div style="margin-top:8px;">
+                <span data-i18n="rate_platform_note">
+                  Tips: När du skickat från extensionen kommer du tillbaka hit med “Verifierad källa” ifyllt.
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <!-- ✅ E-post-flöde (visas när man valt E-post) -->
+          <section class="pr-card" id="email-card" style="margin-bottom:16px; display:none;">
+            <h2 style="margin:0 0 8px;" data-i18n="rate_email_title">Steg 2: Verifiera via e-post/kvitton</h2>
+
+            <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.55;" data-i18n="rate_email_lead">
+              Kommer snart: Koppla Gmail/Outlook så kan vi automatiskt identifiera avslutade affärer och skapa betygsförslag.
+            </p>
+
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <button class="pr-btn pr-btn-primary" type="button" disabled style="opacity:.6;cursor:not-allowed;">
+                <span data-i18n="rate_email_connect">Koppla inkorg</span> (Coming soon)
+              </button>
+              <span style="color:var(--pr-muted);font-size:12px;" data-i18n="rate_email_note">
+                Under tiden: använd plattformsflödet (snabbast).
+              </span>
+            </div>
+          </section>
+
+          <!-- ✅ Verifierade affärer (tomt tills e-post / backend finns) -->
+          <section class="pr-card" id="verified-deals-card" style="margin-bottom:16px;">
+            <h2 style="margin:0 0 8px;" data-i18n="rate_verified_title">Verifierade affärer</h2>
+            <p style="margin:0 0 10px;color:var(--pr-muted);font-size:13px;line-height:1.55;" data-i18n="rate_verified_lead">
+              Här kommer dina identifierade avslutade affärer att synas. Därifrån kan du lämna betyg.
+            </p>
+
+            <div id="verified-empty" style="border:1px dashed rgba(0,0,0,.18);background:#fff;border-radius:14px;padding:12px;color:var(--pr-muted);font-size:13px;">
+              Inga verifierade affärer än.
+            </div>
+
+            <div id="verified-list" style="display:none;"></div>
           </section>
 
           <!-- ✅ KÄLLA (auto från extension: ?source=...&pageUrl=...) -->
@@ -134,18 +177,17 @@
               <div style="min-width:240px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
                 <div style="font-weight:900;color:var(--pr-purple);margin-bottom:4px;">Tips</div>
                 <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;">
-                  Vi kan förifylla “Källa” och ibland även “Verifierings-ID”.
-                  Du kan alltid justera innan du skickar.
+                  Nästa steg: När vi har hårda data (motpart, belopp, datum) visar vi ett låst betygsformulär.
                 </div>
               </div>
             </div>
           </section>
 
-          <!-- LOGGA IN (visas när man är utloggad, döljs när man är inloggad av JS) -->
+          <!-- ✅ LOGIN (kan behövas senare när man faktiskt betygsätter) -->
           <section class="pr-card" id="login-card">
             <h2 data-i18n="rate_login_title">Logga in</h2>
             <p style="margin:0 0 10px;color:var(--pr-muted);font-size:13px;" data-i18n="rate_login_lead">
-              Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.
+              Logga in med den e-post och det lösenord du registrerade dig med.
             </p>
 
             <form id="rating-login-form" autocomplete="off">
@@ -156,8 +198,11 @@
 
               <div class="pr-field">
                 <label class="pr-label" for="login-password" data-i18n="rate_login_password_label">Lösenord</label>
-                <input class="pr-input" id="login-password" name="password" type="password" data-i18n-placeholder="rate_login_password_ph" placeholder="Ditt lösenord" />
-                <a href="/reset-password.html" style="display:inline-block;margin-top:6px;font-size:12px;color:#1d4ed8;text-decoration:none;font-weight:600;">Forgot your password?</a>
+                <input class="pr-input" id="login-password" name="password" type="password"
+                       data-i18n-placeholder="rate_login_password_ph" placeholder="Ditt lösenord" />
+                <a href="/reset-password.html" style="display:inline-block;margin-top:6px;font-size:12px;color:#1d4ed8;text-decoration:none;font-weight:600;">
+                  Forgot your password?
+                </a>
               </div>
 
               <div class="pr-actions">
@@ -169,159 +214,7 @@
             </form>
           </section>
 
-          <!-- LÄMNA BETYG -->
-          <section class="pr-card" id="rating-card" style="display:none;">
-            <h2 data-i18n="rate_title">Lämna ett betyg</h2>
-
-            <p id="rating-login-hint" style="margin:0 0 10px;color:var(--pr-muted);font-size:12px;">
-              <span data-i18n="rate_login_hint_pre">
-                Du behöver logga in för att kunna lämna betyg. Logga in ovan eller
-              </span>
-              <a href="/customer.html" target="_blank" rel="noopener noreferrer" data-i18n="rate_login_hint_link">
-                registrera dig här
-              </a><span data-i18n="rate_login_hint_post">.</span>
-            </p>
-
-            <div id="rating-form-wrapper" class="hidden">
-              <form id="rating-form" autocomplete="off">
-                <div class="pr-field">
-                  <label class="pr-label" for="subject">
-                    <span data-i18n="rate_form_subject_label">Vem betygsätter du?</span>
-                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_subject_note">(användarnamn eller mejl)</span>
-                  </label>
-                  <input class="pr-input" id="subject" name="ratedUserEmail" type="text" placeholder="erik@example.com" required />
-                </div>
-
-                <div class="pr-field">
-                  <label class="pr-label" for="rater">
-                    <span data-i18n="rate_form_rater_label">Ditt namn/mejl</span>
-                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_rater_note">(valfritt – om du är inloggad fylls din e-post i automatiskt)</span>
-                  </label>
-                  <input class="pr-input" id="rater" name="rater" type="text" placeholder="" />
-                </div>
-
-                <div class="pr-field">
-                  <label class="pr-label" for="rating" data-i18n="rate_form_score_label">Betyg (1–5)</label>
-                  <select class="pr-select" id="rating" name="score" required>
-                    <option value="" disabled selected hidden data-i18n="rate_form_score_pick">Välj betyg</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                  </select>
-                </div>
-
-                <div class="pr-field">
-                  <label class="pr-label" for="ratingSource">
-                    <span data-i18n="rate_form_source_label">Varifrån kommer betyget?</span>
-                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;" data-i18n="rate_form_optional">(valfritt)</span>
-                  </label>
-                  <select class="pr-select" id="ratingSource" name="source">
-                    <option value="" selected data-i18n="rate_form_source_pick">Välj källa (valfritt)</option>
-                    <option value="Blocket">Blocket</option>
-                    <option value="Tradera">Tradera</option>
-                    <option value="Airbnb">Airbnb</option>
-                    <option value="Husknuten">Husknuten</option>
-                    <option value="Tiptap">Tiptap</option>
-                  </select>
-                </div>
-
-                <div class="pr-field">
-                  <label class="pr-label" for="comment">
-                    Kommentar
-                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span>
-                  </label>
-                  <textarea class="pr-textarea" id="comment" name="comment" placeholder=""></textarea>
-                </div>
-
-                <div class="pr-field">
-                  <label class="pr-label" for="proofRef">
-                    Verifierings-ID
-                    <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt, t.ex. ordernr)</span>
-                  </label>
-                  <input class="pr-input" id="proofRef" name="proofRef" type="text" placeholder="ORDER-123" />
-                </div>
-
-                <div style="margin-top:12px;">
-                  <label style="font-weight:700;color:var(--pr-purple);">
-                    <input type="checkbox" id="reportFlag" />
-                    Rapportera misstänkt bedrägeri
-                  </label>
-                  <div style="color:var(--pr-muted);font-size:12px;">
-                    Markera vid misstanke om bedrägeri/allvarligt regelbrott. Vi granskar ärendet och kan kontakta dig.
-                  </div>
-
-                  <div id="reportDetails" style="display:none;margin-top:10px;border:1px solid rgba(0,0,0,.08);background:#fff;padding:12px;border-radius:12px;">
-                    <div class="pr-field">
-                      <label class="pr-label" for="reportReason">Typ av problem</label>
-                      <select class="pr-select" id="reportReason">
-                        <option value="">Välj...</option>
-                        <option>Misstänkt bedrägeri</option>
-                        <option>Vilseledande identitet</option>
-                        <option>Obetald/utebliven leverans</option>
-                        <option>Falsk/felaktigt beskriven vara/tjänst</option>
-                        <option>Otillåten betalningsmetod/chargeback-abuse</option>
-                        <option>Annan oegentlighet</option>
-                      </select>
-                    </div>
-
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-                      <div style="flex:1;min-width:180px;">
-                        <label class="pr-label" for="reportDate">Datum</label>
-                        <input class="pr-input" id="reportDate" type="date" />
-                      </div>
-                      <div style="flex:1;min-width:180px;">
-                        <label class="pr-label" for="reportTime">Tid</label>
-                        <input class="pr-input" id="reportTime" type="time" />
-                      </div>
-                    </div>
-
-                    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
-                      <div style="flex:1;min-width:180px;">
-                        <label class="pr-label" for="reportAmount">Belopp (SEK) <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
-                        <input class="pr-input" id="reportAmount" type="number" min="0" step="1" placeholder="t.ex. 1200" />
-                      </div>
-                      <div style="flex:1;min-width:180px;">
-                        <label class="pr-label" for="reportLink">Motpart/annonslänk <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
-                        <input class="pr-input" id="reportLink" type="url" placeholder="https://annons-eller-profil" />
-                      </div>
-                    </div>
-
-                    <div class="pr-field" style="margin-top:8px;">
-                      <label class="pr-label" for="reportText">Beskrivning</label>
-                      <textarea class="pr-textarea" id="reportText" rows="4" placeholder="Beskriv kort vad som hänt, inkl. datum/ev. belopp."></textarea>
-                    </div>
-
-                    <div class="pr-field">
-                      <label class="pr-label" for="evidenceUrl">Bevislänk <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
-                      <input class="pr-input" type="url" id="evidenceUrl" placeholder="https://… (kvitto, order, chatt, e-post)" />
-                    </div>
-
-                    <div class="pr-field">
-                      <label class="pr-label" for="reportFiles">Ladda upp bevis <span style="font-weight:500;color:var(--pr-muted);font-size:12px;">(valfritt)</span></label>
-                      <input class="pr-input" id="reportFiles" type="file" accept=".jpg,.jpeg,.png,.pdf" multiple />
-                      <div style="font-size:12px;color:var(--pr-muted);margin-top:6px">Upp till 3 filer, max 2 MB/st. jpg/png/pdf.</div>
-                      <ul id="fileList" style="margin:6px 0 0;padding:0;list-style:none"></ul>
-
-                      <label style="margin-top:8px;font-weight:700;color:var(--pr-purple);display:block;">
-                        <input type="checkbox" id="reportConsent" />
-                        Jag intygar att uppgifterna är korrekta efter bästa förmåga och förstår att falska anmälningar kan leda till avstängning.
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="pr-actions" style="margin-top:14px;">
-                  <button class="pr-btn pr-btn-primary" type="submit">Skicka betyg</button>
-                  <button class="pr-btn pr-btn-ghost" type="button" id="reset-form">Avbryt</button>
-                </div>
-
-                <div id="notice" style="display:none;margin-top:12px;border-radius:12px;padding:10px 14px;font-weight:700;border:1px solid rgba(0,0,0,.08);background:#fff;"></div>
-              </form>
-            </div>
-          </section>
-
+          <!-- ❌ OBS: Inget öppet betygsformulär på denna sida längre. -->
         </div>
       </div>
     </section>
