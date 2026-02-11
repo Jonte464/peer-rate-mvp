@@ -29,16 +29,30 @@ function updateRatingLoginHint(user) {
 }
 
 /**
+ * Döljer login-kortet när användaren redan är inloggad.
+ * (På /rate.html vill du att "Steg 1: Logga in" ska försvinna när user finns.)
+ */
+function updateRateLoginCardVisibility(user) {
+  const loginCard = document.getElementById('login-card');
+  if (!loginCard) return;
+  loginCard.style.display = user ? 'none' : 'block';
+}
+
+/**
  * Läs ?source=...&pageUrl=... och förifyll rate-formulär där det går.
+ * Viktigt: Kontextkortet ska INTE visas om inga params finns.
  */
 function applyRatingContextFromQuery() {
   const params = new URLSearchParams(window.location.search || '');
   const sourceRaw = (params.get('source') || '').trim();
   const pageUrlRaw = (params.get('pageUrl') || '').trim();
 
+  // ✅ Forcera default: göm kontextkortet om vi inte har query
+  const card = document.getElementById('rate-context-card');
+  if (card) card.style.display = 'none';
+
   if (!sourceRaw && !pageUrlRaw) return;
 
-  const card = document.getElementById('rate-context-card');
   const sourceEl = document.getElementById('rate-context-source');
   const linkEl = document.getElementById('rate-context-link');
 
@@ -155,17 +169,24 @@ function initApp() {
     !!document.getElementById('rating-card');
 
   if (isRatingPage) {
-  // ✅ NYTT: dropdown-flöde (öppna plattform)
-  initRatingPlatform();
+    // ✅ NYTT: dropdown-flöde (öppna plattform)
+    initRatingPlatform();
 
-  // (om du fortfarande vill ha den andra också)
-  initPlatformPicker();
+    // (om du fortfarande vill ha den andra också)
+    initPlatformPicker();
 
-  // befintligt
-  initRatingLogin();
-  updateRatingLoginHint(user);
-  applyRatingContextFromQuery();
-}
+    // befintligt
+    initRatingLogin();
+
+    // ✅ Nytt: dölj login-kortet om inloggad
+    updateRateLoginCardVisibility(user);
+
+    // Hint kan vara kvar (döljs om inloggad)
+    updateRatingLoginHint(user);
+
+    // ✅ Kontextkort syns bara om query finns
+    applyRatingContextFromQuery();
+  }
 
   // --- Landing (index) ---
   const isIndex =
