@@ -19,6 +19,43 @@
       <div class="shell">
         <div class="pr-form-wrap" style="max-width: 980px; margin:0 auto;">
 
+          <!-- ✅ STARTA FRÅN EN PLATTFORM (NYTT) -->
+<section class="pr-card" id="platform-card" style="margin-bottom:16px;">
+  <h2 style="margin:0 0 8px;" data-i18n="rate_platform_title">Starta från en plattform</h2>
+
+  <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.45;"
+     data-i18n="rate_platform_lead">
+    Välj var affären skedde. Vi öppnar plattformen så att din extension kan plocka upp annons/profil och skicka tillbaka rätt info till PeerRate.
+  </p>
+
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+    <div class="pr-field" style="flex:1;min-width:240px;margin:0;">
+      <label class="pr-label" for="platformSelect" data-i18n="rate_platform_label">Plattform</label>
+      <select class="pr-select" id="platformSelect">
+        <option value="" selected data-i18n="rate_platform_pick">Välj plattform…</option>
+        <option value="tradera">Tradera</option>
+        <option value="blocket">Blocket</option>
+        <option value="airbnb">Airbnb</option>
+        <option value="ebay">eBay</option>
+        <option value="tiptap">Tiptap</option>
+        <option value="hygglo">Hygglo</option>
+        <option value="husknuten">Husknuten</option>
+        <option value="facebook">Facebook Marketplace</option>
+      </select>
+    </div>
+
+    <button class="pr-btn pr-btn-primary" type="button" id="platformGoBtn" disabled style="min-width:200px;">
+      <span data-i18n="rate_platform_go">Öppna plattform</span> →
+    </button>
+  </div>
+
+  <div id="platformNote" style="margin-top:10px;color:var(--pr-muted);font-size:12px;line-height:1.45;">
+    <span data-i18n="rate_platform_note">
+      Tips: När du är inne på annonsen/profilen – klicka på extensionen. Du skickas tillbaka hit med “Verifierad källa” ifyllt.
+    </span>
+  </div>
+</section>
+
           <!-- ✅ INTRO -->
           <section class="pr-card" style="margin-bottom:16px; display:none;">
             <h1 style="margin:0 0 6px;" data-i18n="rate_page_h1">Lämna ett betyg – snabbt, enkelt och verifierbart</h1>

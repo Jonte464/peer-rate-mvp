@@ -6,6 +6,8 @@ import auth from './auth.js';
 // ✅ initRatingLogin + initPlatformPicker:
 import { initRatingLogin, initPlatformPicker } from './ratingForm.js';
 
+import { initRatingPlatform } from './ratingPlatform.js';
+
 // Profile-funktioner
 import { updateUserBadge, updateAvatars, initProfilePage } from './profile.js';
 
@@ -153,14 +155,17 @@ function initApp() {
     !!document.getElementById('rating-card');
 
   if (isRatingPage) {
-    // ✅ NYTT: dropdown-flöde
-    initPlatformPicker();
+  // ✅ NYTT: dropdown-flöde (öppna plattform)
+  initRatingPlatform();
 
-    // befintligt
-    initRatingLogin();
-    updateRatingLoginHint(user);
-    applyRatingContextFromQuery();
-  }
+  // (om du fortfarande vill ha den andra också)
+  initPlatformPicker();
+
+  // befintligt
+  initRatingLogin();
+  updateRatingLoginHint(user);
+  applyRatingContextFromQuery();
+}
 
   // --- Landing (index) ---
   const isIndex =
