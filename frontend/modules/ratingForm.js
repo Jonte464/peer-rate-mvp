@@ -137,6 +137,146 @@ function setVisibility(isLoggedIn) {
   }
 }
 
+/** ✅ NYTT: dropdown → länk ut */
+export function initPlatformPicker() {
+  if (!isRatePage()) return;
+
+  const select = document.getElementById('platformSelect');
+  const goBtn = document.getElementById('platformGoBtn');
+  const instructions = document.getElementById('platformInstructions');
+
+  if (!select || !goBtn || !instructions) return;
+
+  const platforms = {
+    tradera: {
+      label: 'Tradera',
+      url: 'https://www.tradera.com/',
+      tip_sv: 'Öppna annonsen/ordern på Tradera. När du är på rätt sida kan extension skicka dig tillbaka hit med länk + källa.',
+      tip_en: 'Open the listing/order on Tradera. When you are on the right page, the extension can send you back here with link + source.'
+    },
+    blocket: {
+      label: 'Blocket',
+      url: 'https://www.blocket.se/',
+      tip_sv: 'Öppna annonsen eller profilen på Blocket. Extension kan sedan skicka tillbaka pageUrl hit för förifyllnad.',
+      tip_en: 'Open the listing or profile on Blocket. The extension can then send pageUrl back here for prefill.'
+    },
+    airbnb: {
+      label: 'Airbnb',
+      url: 'https://www.airbnb.com/',
+      tip_sv: 'Öppna resan/konversationen/listingen på Airbnb. Extension kan skicka tillbaka pageUrl hit.',
+      tip_en: 'Open the trip/thread/listing on Airbnb. The extension can send pageUrl back here.'
+    },
+    ebay: {
+      label: 'eBay',
+      url: 'https://www.ebay.com/',
+      tip_sv: 'Öppna din order eller säljarprofil på eBay. Extension kan skicka tillbaka pageUrl + källa.',
+      tip_en: 'Open your order or seller profile on eBay. The extension can send back pageUrl + source.'
+    },
+    tiptap: {
+      label: 'Tiptap',
+      url: 'https://tiptapp.se/',
+      tip_sv: 'Öppna relevant annons/konversation på Tiptap/Tiptapp. Extension kan skicka tillbaka pageUrl.',
+      tip_en: 'Open the relevant listing/thread on Tiptap/Tiptapp. The extension can send pageUrl back.'
+    },
+    hygglo: {
+      label: 'Hygglo',
+      url: 'https://www.hygglo.se/',
+      tip_sv: 'Öppna bokningen/annonsen på Hygglo. Extension kan skicka tillbaka pageUrl.',
+      tip_en: 'Open the booking/listing on Hygglo. The extension can send pageUrl back.'
+    },
+    husknuten: {
+      label: 'Husknuten',
+      url: 'https://husknuten.se/',
+      tip_sv: 'Öppna annonsen eller bokningen på Husknuten. Extension kan skicka tillbaka pageUrl.',
+      tip_en: 'Open the listing/booking on Husknuten. The extension can send pageUrl back.'
+    },
+    facebook_marketplace: {
+      label: 'Facebook Marketplace',
+      url: 'https://www.facebook.com/marketplace/',
+      tip_sv: 'Öppna annonsen eller konversationen i Marketplace. Extension kan skicka tillbaka pageUrl.',
+      tip_en: 'Open the listing or message thread in Marketplace. The extension can send pageUrl back.'
+    },
+  };
+
+  function getLang() {
+    // language.js sätter html lang
+    return (document.documentElement.lang || 'sv').toLowerCase().startsWith('en') ? 'en' : 'sv';
+  }
+
+  function setGoEnabled(enabled) {
+    goBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    goBtn.style.pointerEvents = enabled ? 'auto' : 'none';
+    goBtn.style.opacity = enabled ? '1' : '.55';
+  }
+
+  function renderTip(key) {
+    const p = platforms[key];
+    const lang = getLang();
+    if (!p) return;
+    instructions.textContent = (lang === 'en') ? (p.tip_en || '') : (p.tip_sv || '');
+  }
+
+  function onSelect() {
+    const key = select.value || '';
+    const p = platforms[key];
+
+    if (!p) {
+      goBtn.href = '#';
+      setGoEnabled(false);
+      return;
+    }
+
+    goBtn.href = p.url;
+    setGoEnabled(true);
+    renderTip(key);
+  }
+
+  // Preselect via query (?source=airbnb etc)
+  const qs = new URLSearchParams(window.location.search || '');
+  const sourceRaw = (qs.get('source') || '').trim().toLowerCase();
+
+  const sourceMap = {
+    tradera: 'tradera',
+    blocket: 'blocket',
+    airbnb: 'airbnb',
+    ebay: 'ebay',
+    tiptap: 'tiptap',
+    tiptapp: 'tiptap',
+    hygglo: 'hygglo',
+    husknuten: 'husknuten',
+    facebook: 'facebook_marketplace',
+    marketplace: 'facebook_marketplace',
+    'facebook marketplace': 'facebook_marketplace'
+  };
+
+  // Om vi har pending också: använd den om source saknas i URL
+  const pending = getPending();
+  const pendingSource = (pending?.source || '').toString().trim().toLowerCase();
+
+  const resolved =
+    sourceMap[sourceRaw] ||
+    sourceMap[pendingSource] ||
+    '';
+
+  if (resolved && platforms[resolved]) {
+    select.value = resolved;
+  }
+
+  // Init state
+  setGoEnabled(false);
+  onSelect();
+
+  select.addEventListener('change', onSelect);
+
+  // Om språk byts (data-i18n uppdaterar text), vill vi uppdatera tip
+  // Vi lyssnar på en enkel mutation: när html lang ändras.
+  const mo = new MutationObserver(() => {
+    const key = select.value || '';
+    if (platforms[key]) renderTip(key);
+  });
+  mo.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+}
+
 function applyPendingToUI(p) {
   if (!p) return;
 

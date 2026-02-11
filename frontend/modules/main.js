@@ -3,8 +3,8 @@
 
 import auth from './auth.js';
 
-// ✅ initRatingLogin ska importeras härifrån:
-import { initRatingLogin } from './ratingForm.js';
+// ✅ initRatingLogin + initPlatformPicker:
+import { initRatingLogin, initPlatformPicker } from './ratingForm.js';
 
 // Profile-funktioner
 import { updateUserBadge, updateAvatars, initProfilePage } from './profile.js';
@@ -46,6 +46,9 @@ function applyRatingContextFromQuery() {
     airbnb: 'Airbnb',
     husknuten: 'Husknuten',
     tiptap: 'Tiptap',
+    ebay: 'eBay',
+    hygglo: 'Hygglo',
+    facebook_marketplace: 'Facebook Marketplace',
   };
 
   const prettySource =
@@ -150,6 +153,10 @@ function initApp() {
     !!document.getElementById('rating-card');
 
   if (isRatingPage) {
+    // ✅ NYTT: dropdown-flöde
+    initPlatformPicker();
+
+    // befintligt
     initRatingLogin();
     updateRatingLoginHint(user);
     applyRatingContextFromQuery();

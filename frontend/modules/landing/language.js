@@ -16,6 +16,9 @@ export function initLandingLanguage() {
       menu_profile: 'Min profil',
       menu_ask: 'Fråga om trust',
       user_logout: 'Logga ut',
+      profile_workrefs_title: 'Arbetsreferenser',
+      profile_workrefs_lead: 'Samla och dela verifierbara referenser från uppdrag och arbetsgivare.',
+      profile_workrefs_btn: 'Öppna arbetsreferenser',
 
       // ✅ NYTT: arbetsreferenser
       menu_refs: 'Arbetsreferenser',
@@ -98,6 +101,18 @@ export function initLandingLanguage() {
       rate_login_hint_link: 'registrera dig här',
       rate_login_hint_post: '.',
 
+      // ✅ NYTT: Plattform-flöde + Kontextkort
+      rate_platform_title: 'Starta från en plattform',
+      rate_platform_lead: 'Välj var affären skedde så guidar vi dig till rätt plats. När du kommer tillbaka kan vi förifylla betyget med länk/källa.',
+      rate_platform_label: 'Välj plattform',
+      rate_platform_pick: 'Välj plattform…',
+      rate_platform_go: 'Gå till plattform',
+      rate_platform_skip: 'Jag är redan här – lämna betyg',
+      rate_platform_tip: 'Tips: öppna den sida/profil/annons där affären syns. Vår extension kan sedan skicka dig tillbaka hit med länk + källa.',
+      rate_context_title: 'Upptäckt kontext',
+      rate_context_from: 'Källa:',
+      rate_context_link: 'Öppna sidan',
+
       rate_login_email_label: 'E-post',
       rate_login_password_label: 'Lösenord',
       rate_login_password_ph: 'Ditt lösenord',
@@ -173,6 +188,9 @@ export function initLandingLanguage() {
       menu_profile: 'My profile',
       menu_ask: 'See the 5P model',
       user_logout: 'Log out',
+      profile_workrefs_title: 'Work References',
+      profile_workrefs_lead: 'Collect and share verifiable references from employers and assignments.',
+      profile_workrefs_btn: 'Open work references',
 
       // ✅ NEW: work references
       menu_refs: 'Work References',
@@ -254,6 +272,18 @@ export function initLandingLanguage() {
       rate_login_hint_pre: 'You need to log in to leave a rating. Log in above or ',
       rate_login_hint_link: 'sign up here',
       rate_login_hint_post: '.',
+
+      // ✅ NEW: Platform flow + Context card
+      rate_platform_title: 'Start from a platform',
+      rate_platform_lead: 'Choose where the transaction happened and we will guide you. When you come back, we can prefill the rating with link/source.',
+      rate_platform_label: 'Choose platform',
+      rate_platform_pick: 'Choose platform…',
+      rate_platform_go: 'Go to platform',
+      rate_platform_skip: 'I am already here — leave a rating',
+      rate_platform_tip: 'Tip: open the listing/profile/thread where the transaction is visible. Our extension can then send you back here with link + source.',
+      rate_context_title: 'Detected context',
+      rate_context_from: 'Source:',
+      rate_context_link: 'Open page',
 
       rate_login_email_label: 'Email',
       rate_login_password_label: 'Password',
