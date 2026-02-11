@@ -36,6 +36,23 @@ function mapRatingSource(input) {
   return 'OTHER';
 }
 
+function safeIsoToDate(s) {
+  if (!s) return null;
+  const str = String(s).trim();
+  if (!str) return null;
+  const d = new Date(str);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+}
+
+function toDecimalAmount(amountSek) {
+  if (amountSek === null || amountSek === undefined) return null;
+  const n = Number(amountSek);
+  if (Number.isNaN(n)) return null;
+  // Prisma Decimal kan ta number/string; vi skickar string för stabilitet
+  return String(n.toFixed(2));
+}
+
 // --- Validation ---
 const reportSchema = Joi.object({
   report_flag: Joi.boolean().optional(),
@@ -49,19 +66,27 @@ const reportSchema = Joi.object({
 const counterpartySchema = Joi.object({
   email: Joi.string().email().required(),
   name: Joi.string().max(120).allow('', null),
-  phone: Joi.string().max(40).allow('', null),
+  phone: Joi.string().max(80).allow('', null),
+
   addressStreet: Joi.string().max(120).allow('', null),
   addressZip: Joi.string().max(20).allow('', null),
   addressCity: Joi.string().max(80).allow('', null),
   country: Joi.string().max(60).allow('', null),
 
   platform: Joi.string().max(30).allow('', null),          // "TRADERA"
-  platformUsername: Joi.string().max(60).allow('', null),  // alias om vi hittar
+  platformUsername: Joi.string().max(80).allow('', null),  // alias om vi hittar
   pageUrl: Joi.string().uri().allow('', null),
 
   orderId: Joi.string().max(80).allow('', null),
   itemId: Joi.string().max(80).allow('', null),
-  amountSek: Joi.number().integer().min(0).max(100000000).allow(null),
+
+  amountSek: Joi.number().min(0).max(100000000).allow(null),
+  currency: Joi.string().max(10).allow('', null),
+
+  // Viktigt: extension kan skicka dateISO / completedAt (ISO-sträng)
+  dateISO: Joi.string().max(40).allow('', null),
+  completedAt: Joi.string().max(40).allow('', null),
+
   title: Joi.string().max(200).allow('', null),
 }).optional();
 
@@ -77,10 +102,10 @@ const createRatingSchema = Joi.object({
 });
 
 async function upsertCounterpartyDossier(counterparty) {
-  if (!counterparty || !counterparty.email) return;
+  if (!counterparty || !counterparty.email) return null;
 
   const subjectRef = normSubject(counterparty.email);
-  if (!subjectRef) return;
+  if (!subjectRef) return null;
 
   // 1) Kund (Customer) – fyll på endast om fält saknas (förstör inte befintlig data)
   const existing = await prisma.customer.findUnique({
@@ -88,7 +113,7 @@ async function upsertCounterpartyDossier(counterparty) {
   });
 
   if (!existing) {
-    await prisma.customer.create({
+    const created = await prisma.customer.create({
       data: {
         subjectRef,
         email: counterparty.email.toLowerCase(),
@@ -98,53 +123,113 @@ async function upsertCounterpartyDossier(counterparty) {
         addressZip: counterparty.addressZip || null,
         addressCity: counterparty.addressCity || null,
         country: counterparty.country || 'SE',
+        // passwordHash lämnas null => “presumtiv”
       },
     });
-  } else {
-    const dataToUpdate = {};
-    if (!existing.email) dataToUpdate.email = counterparty.email.toLowerCase();
-    if (!existing.fullName && counterparty.name) dataToUpdate.fullName = counterparty.name;
-    if (!existing.phone && counterparty.phone) dataToUpdate.phone = counterparty.phone;
-    if (!existing.addressStreet && counterparty.addressStreet) dataToUpdate.addressStreet = counterparty.addressStreet;
-    if (!existing.addressZip && counterparty.addressZip) dataToUpdate.addressZip = counterparty.addressZip;
-    if (!existing.addressCity && counterparty.addressCity) dataToUpdate.addressCity = counterparty.addressCity;
-    if (!existing.country && counterparty.country) dataToUpdate.country = counterparty.country;
 
-    if (Object.keys(dataToUpdate).length) {
-      await prisma.customer.update({
-        where: { subjectRef },
-        data: dataToUpdate,
-      });
-    }
-  }
-
-  // 2) Extern profil (ExternalProfile) – om vi har username
-  if (counterparty.platform && String(counterparty.platform).toUpperCase() === 'TRADERA' && counterparty.platformUsername) {
-    const customer = await prisma.customer.findUnique({ where: { subjectRef } });
-    if (customer) {
-      const found = await prisma.externalProfile.findFirst({
-        where: {
-          customerId: customer.id,
+    // 2) Extern profil (ExternalProfile) – om vi har username
+    if (
+      counterparty.platform &&
+      String(counterparty.platform).toUpperCase() === 'TRADERA' &&
+      counterparty.platformUsername
+    ) {
+      await prisma.externalProfile.create({
+        data: {
+          customerId: created.id,
           platform: 'TRADERA',
           username: counterparty.platformUsername,
+          profileJson: counterparty.pageUrl ? { pageUrl: counterparty.pageUrl } : undefined,
         }
       });
+    }
 
-      if (!found) {
-        await prisma.externalProfile.create({
-          data: {
-            customerId: customer.id,
-            platform: 'TRADERA',
-            username: counterparty.platformUsername,
-            profileJson: counterparty.pageUrl ? { pageUrl: counterparty.pageUrl } : undefined,
-          }
-        });
+    return created;
+  }
+
+  // update only missing
+  const dataToUpdate = {};
+  if (!existing.email) dataToUpdate.email = counterparty.email.toLowerCase();
+  if (!existing.fullName && counterparty.name) dataToUpdate.fullName = counterparty.name;
+  if (!existing.phone && counterparty.phone) dataToUpdate.phone = counterparty.phone;
+  if (!existing.addressStreet && counterparty.addressStreet) dataToUpdate.addressStreet = counterparty.addressStreet;
+  if (!existing.addressZip && counterparty.addressZip) dataToUpdate.addressZip = counterparty.addressZip;
+  if (!existing.addressCity && counterparty.addressCity) dataToUpdate.addressCity = counterparty.addressCity;
+  if (!existing.country && counterparty.country) dataToUpdate.country = counterparty.country;
+
+  const updated = Object.keys(dataToUpdate).length
+    ? await prisma.customer.update({ where: { subjectRef }, data: dataToUpdate })
+    : existing;
+
+  // 2) Extern profil (ExternalProfile) – om vi har username och den saknas
+  if (
+    counterparty.platform &&
+    String(counterparty.platform).toUpperCase() === 'TRADERA' &&
+    counterparty.platformUsername
+  ) {
+    const found = await prisma.externalProfile.findFirst({
+      where: {
+        customerId: updated.id,
+        platform: 'TRADERA',
+        username: counterparty.platformUsername,
       }
+    });
+
+    if (!found) {
+      await prisma.externalProfile.create({
+        data: {
+          customerId: updated.id,
+          platform: 'TRADERA',
+          username: counterparty.platformUsername,
+          profileJson: counterparty.pageUrl ? { pageUrl: counterparty.pageUrl } : undefined,
+        }
+      });
     }
   }
 
-  // (MVP) Vi skapar inte TraderaOrder än – det kräver mer modellering för roll osv.
-  // Men vi har redan sparat bevis i proofRef + pageUrl i betyget.
+  return updated;
+}
+
+async function createTransactionFromCounterparty(customerId, counterparty, proofRef) {
+  if (!customerId) return null;
+  if (!counterparty) return null;
+
+  const occurredAt =
+    safeIsoToDate(counterparty.completedAt) ||
+    safeIsoToDate(counterparty.dateISO) ||
+    null;
+
+  const externalRef =
+    (counterparty.orderId || '').toString().trim() ||
+    (proofRef || '').toString().trim() ||
+    null;
+
+  const evidenceUrl =
+    (counterparty.pageUrl || '').toString().trim() ||
+    null;
+
+  const currency =
+    (counterparty.currency || '').toString().trim() ||
+    'SEK';
+
+  const amount = toDecimalAmount(counterparty.amountSek);
+
+  // Om vi inte har någon hård data alls: skapa inte transaction
+  if (!externalRef && !evidenceUrl && !occurredAt && amount === null) {
+    return null;
+  }
+
+  const tx = await prisma.transaction.create({
+    data: {
+      customerId,
+      amount: amount,
+      currency,
+      occurredAt,
+      externalRef,
+      evidenceUrl,
+    }
+  });
+
+  return tx;
 }
 
 /* -------------------------------------------------------
@@ -191,9 +276,37 @@ router.post('/ratings', async (req, res) => {
       ratingSource,
     });
 
-    // 2) spara kundakt (motpart) om vi fick in data från extension
+    // 2) spara kundakt (motpart) + skapa transaction med belopp/datum/order/url
+    let tx = null;
     if (value.counterparty) {
-      await upsertCounterpartyDossier(value.counterparty);
+      const cpCustomer = await upsertCounterpartyDossier(value.counterparty);
+
+      // Om createRating skapade rating mot en viss customerId (subject),
+      // då är det den vi vill sätta transaction på.
+      // (cpCustomer.id bör matcha customerId om subject=email=counterparty.email)
+      const subjectCustomerId = cpCustomer?.id || customerId;
+
+      tx = await createTransactionFromCounterparty(subjectCustomerId, value.counterparty, proofRef);
+
+      if (tx?.id) {
+        await prisma.rating.update({
+          where: { id: ratingId },
+          data: {
+            transactionId: tx.id,
+            verificationId: value.counterparty.orderId || proofRef || null,
+            // proofRef finns redan ofta, men safe:
+            proofRef: proofRef || value.counterparty.orderId || null,
+          }
+        });
+      } else {
+        // ändå sätt verificationId om vi har orderId
+        if (value.counterparty.orderId && !proofRef) {
+          await prisma.rating.update({
+            where: { id: ratingId },
+            data: { verificationId: value.counterparty.orderId }
+          });
+        }
+      }
     }
 
     // 3) ev report
@@ -216,7 +329,7 @@ router.post('/ratings', async (req, res) => {
       }
     }
 
-    return res.status(201).json({ ok: true });
+    return res.status(201).json({ ok: true, transactionId: tx?.id || null });
   } catch (e) {
     if (e && e.code === 'DUP_24H') {
       return res.status(409).json({
