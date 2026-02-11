@@ -184,8 +184,7 @@ function initApp() {
     // Hint kan vara kvar (döljs om inloggad)
     updateRatingLoginHint(user);
 
-    // ✅ Kontextkort syns bara om query finns
-    applyRatingContextFromQuery();
+
   }
 
   // --- Landing (index) ---

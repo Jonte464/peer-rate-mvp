@@ -9,10 +9,32 @@ const TTL_MS = 1000 * 60 * 60 * 24;
 function now() { return Date.now(); }
 function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
+/**
+ * Robust base64->json:
+ * - Stöd för äldre payload: btoa(JSON.stringify(obj))
+ * - Stöd för UTF-8-säker variant: btoa(unescape(encodeURIComponent(JSON.stringify(obj))))
+ */
 function readB64Json(b64) {
+  if (!b64) return null;
   try {
     const cleaned = decodeURIComponent(b64);
-    return safeParse(atob(cleaned));
+
+    // 1) testa "vanlig" atob först
+    try {
+      const raw = atob(cleaned);
+      const j = safeParse(raw);
+      if (j && typeof j === 'object') return j;
+    } catch {}
+
+    // 2) testa UTF-8-variant
+    try {
+      const raw = atob(cleaned);
+      const utf8 = decodeURIComponent(escape(raw));
+      const j2 = safeParse(utf8);
+      if (j2 && typeof j2 === 'object') return j2;
+    } catch {}
+
+    return null;
   } catch {
     return null;
   }
@@ -89,8 +111,10 @@ function hideTestWithoutLoginButton() {
 /**
  * Bulletproof show/hide:
  * - Om element saknas: visa hellre mer än mindre (aldrig "vit" sida)
- * - Inloggad: göm login, visa rating
- * - Utloggad: visa login, göm rating
+ * - Inloggad: göm login, visa rating (om rating targets finns)
+ * - Utloggad: visa login, göm rating (om rating targets finns)
+ *
+ * OBS: På nya rate.html finns inget öppet formulär - då finns ofta inga rating targets.
  */
 function setVisibility(isLoggedIn) {
   const loginCards = getLoginCardEls();
@@ -122,13 +146,13 @@ function setVisibility(isLoggedIn) {
     });
   }
 
-  // Hint (den sitter inne i rating-card i din HTML)
+  // Hint
   if (hint) {
     hint.classList.toggle('hidden', isLoggedIn);
     hint.style.display = isLoggedIn ? 'none' : '';
   }
 
-  // Rating UI
+  // Rating UI (legacy)
   if (hasRatingTargets) {
     ratingWrappers.forEach((el) => {
       el.style.display = shouldShowRating ? 'block' : 'none';
@@ -137,83 +161,91 @@ function setVisibility(isLoggedIn) {
   }
 }
 
-/** ✅ NYTT: dropdown → länk ut */
+/** ✅ Dropdown → länk ut (om du använder den på rate.html) */
 export function initPlatformPicker() {
   if (!isRatePage()) return;
 
   const select = document.getElementById('platformSelect');
   const goBtn = document.getElementById('platformGoBtn');
-  const instructions = document.getElementById('platformInstructions');
 
-  if (!select || !goBtn || !instructions) return;
+  // Viktigt: din nuvarande rate.html har INTE element med id="platformInstructions".
+  // Därför gör vi denna init tolerant.
+  const instructions =
+    document.getElementById('platformInstructions') ||
+    document.getElementById('platformNote') ||
+    null;
+
+  if (!select || !goBtn) return;
 
   const platforms = {
     tradera: {
       label: 'Tradera',
       url: 'https://www.tradera.com/',
-      tip_sv: 'Öppna annonsen/ordern på Tradera. När du är på rätt sida kan extension skicka dig tillbaka hit med länk + källa.',
-      tip_en: 'Open the listing/order on Tradera. When you are on the right page, the extension can send you back here with link + source.'
+      tip_sv: 'Öppna ordern på Tradera. När du är på rätt sida: klicka på PeerRate-extensionen.',
+      tip_en: 'Open the order on Tradera. When you are on the right page: click the PeerRate extension.'
     },
     blocket: {
       label: 'Blocket',
       url: 'https://www.blocket.se/',
-      tip_sv: 'Öppna annonsen eller profilen på Blocket. Extension kan sedan skicka tillbaka pageUrl hit för förifyllnad.',
-      tip_en: 'Open the listing or profile on Blocket. The extension can then send pageUrl back here for prefill.'
+      tip_sv: 'Öppna annons/profil. Klicka extensionen för att skicka verifierad info.',
+      tip_en: 'Open listing/profile. Click the extension to send verified info.'
     },
     airbnb: {
       label: 'Airbnb',
       url: 'https://www.airbnb.com/',
-      tip_sv: 'Öppna resan/konversationen/listingen på Airbnb. Extension kan skicka tillbaka pageUrl hit.',
-      tip_en: 'Open the trip/thread/listing on Airbnb. The extension can send pageUrl back here.'
+      tip_sv: 'Öppna resa/konversation. Klicka extensionen för att skicka verifierad info.',
+      tip_en: 'Open trip/thread. Click the extension to send verified info.'
     },
     ebay: {
       label: 'eBay',
       url: 'https://www.ebay.com/',
-      tip_sv: 'Öppna din order eller säljarprofil på eBay. Extension kan skicka tillbaka pageUrl + källa.',
-      tip_en: 'Open your order or seller profile on eBay. The extension can send back pageUrl + source.'
+      tip_sv: 'Öppna order. Klicka extensionen för att skicka verifierad info.',
+      tip_en: 'Open order. Click the extension to send verified info.'
     },
     tiptap: {
       label: 'Tiptap',
       url: 'https://tiptapp.se/',
-      tip_sv: 'Öppna relevant annons/konversation på Tiptap/Tiptapp. Extension kan skicka tillbaka pageUrl.',
-      tip_en: 'Open the relevant listing/thread on Tiptap/Tiptapp. The extension can send pageUrl back.'
+      tip_sv: 'Öppna relevant sida. Klicka extensionen för att skicka verifierad info.',
+      tip_en: 'Open relevant page. Click the extension to send verified info.'
     },
     hygglo: {
       label: 'Hygglo',
       url: 'https://www.hygglo.se/',
-      tip_sv: 'Öppna bokningen/annonsen på Hygglo. Extension kan skicka tillbaka pageUrl.',
-      tip_en: 'Open the booking/listing on Hygglo. The extension can send pageUrl back.'
+      tip_sv: 'Öppna bokning. Klicka extensionen för att skicka verifierad info.',
+      tip_en: 'Open booking. Click the extension to send verified info.'
     },
     husknuten: {
       label: 'Husknuten',
       url: 'https://husknuten.se/',
-      tip_sv: 'Öppna annonsen eller bokningen på Husknuten. Extension kan skicka tillbaka pageUrl.',
-      tip_en: 'Open the listing/booking on Husknuten. The extension can send pageUrl back.'
+      tip_sv: 'Öppna bokning. Klicka extensionen för att skicka verifierad info.',
+      tip_en: 'Open booking. Click the extension to send verified info.'
     },
     facebook_marketplace: {
       label: 'Facebook Marketplace',
       url: 'https://www.facebook.com/marketplace/',
-      tip_sv: 'Öppna annonsen eller konversationen i Marketplace. Extension kan skicka tillbaka pageUrl.',
-      tip_en: 'Open the listing or message thread in Marketplace. The extension can send pageUrl back.'
+      tip_sv: 'Öppna annons/konversation. Klicka extensionen för att skicka verifierad info.',
+      tip_en: 'Open listing/thread. Click the extension to send verified info.'
     },
   };
 
   function getLang() {
-    // language.js sätter html lang
     return (document.documentElement.lang || 'sv').toLowerCase().startsWith('en') ? 'en' : 'sv';
   }
 
   function setGoEnabled(enabled) {
-    goBtn.setAttribute('aria-disabled', enabled ? 'false' : 'true');
+    // din button är <button>, inte <a>
+    goBtn.disabled = !enabled;
     goBtn.style.pointerEvents = enabled ? 'auto' : 'none';
     goBtn.style.opacity = enabled ? '1' : '.55';
   }
 
   function renderTip(key) {
     const p = platforms[key];
+    if (!p || !instructions) return;
     const lang = getLang();
-    if (!p) return;
-    instructions.textContent = (lang === 'en') ? (p.tip_en || '') : (p.tip_sv || '');
+    const tip = (lang === 'en') ? (p.tip_en || '') : (p.tip_sv || '');
+    // instructions kan vara ett helt block — vi skriver bara en kort text
+    instructions.textContent = tip;
   }
 
   function onSelect() {
@@ -221,12 +253,10 @@ export function initPlatformPicker() {
     const p = platforms[key];
 
     if (!p) {
-      goBtn.href = '#';
       setGoEnabled(false);
       return;
     }
 
-    goBtn.href = p.url;
     setGoEnabled(true);
     renderTip(key);
   }
@@ -249,7 +279,6 @@ export function initPlatformPicker() {
     'facebook marketplace': 'facebook_marketplace'
   };
 
-  // Om vi har pending också: använd den om source saknas i URL
   const pending = getPending();
   const pendingSource = (pending?.source || '').toString().trim().toLowerCase();
 
@@ -262,14 +291,19 @@ export function initPlatformPicker() {
     select.value = resolved;
   }
 
-  // Init state
   setGoEnabled(false);
   onSelect();
-
   select.addEventListener('change', onSelect);
 
-  // Om språk byts (data-i18n uppdaterar text), vill vi uppdatera tip
-  // Vi lyssnar på en enkel mutation: när html lang ändras.
+  // Öppna plattform
+  goBtn.addEventListener('click', () => {
+    const key = (select.value || '').trim();
+    const p = platforms[key];
+    if (!p) return;
+    window.open(p.url, '_blank', 'noopener,noreferrer');
+  });
+
+  // Uppdatera tip vid språkbyte
   const mo = new MutationObserver(() => {
     const key = select.value || '';
     if (platforms[key]) renderTip(key);
@@ -277,72 +311,400 @@ export function initPlatformPicker() {
   mo.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 }
 
-function applyPendingToUI(p) {
+/**
+ * Normalisera payload från extension/query till ett internt "pending"-format
+ * så resten av UI alltid kan utgå från samma fält.
+ */
+function normalizeIncoming(inObj) {
+  const obj = (inObj && typeof inObj === 'object') ? { ...inObj } : {};
+  const out = { ...obj };
+
+  // source/pageUrl/proofRef
+  out.source = out.source || obj.source || '';
+  out.pageUrl = out.pageUrl || obj.pageUrl || '';
+
+  // Stöd för nya payloaden: { deal: { ... , counterparty: { email/username/name } } }
+  const deal = obj.deal || obj.counterparty?.deal || null;
+  const cp = (deal && deal.counterparty) ? deal.counterparty : (obj.counterparty || null);
+
+  // subjectEmail: primärt cp.email
+  out.subjectEmail =
+    obj.subjectEmail ||
+    cp?.email ||
+    obj.subject ||
+    '';
+
+  // counterparty: håll en tydlig struktur
+  out.counterparty = {
+    ...(obj.counterparty && typeof obj.counterparty === 'object' ? obj.counterparty : {}),
+    ...(cp && typeof cp === 'object' ? cp : {}),
+  };
+
+  // dealinfo (om finns)
+  out.deal = deal && typeof deal === 'object' ? deal : (obj.deal || undefined);
+
+  // proofRef: helst orderId, annars proofRef, annars pageUrl
+  out.proofRef =
+    obj.proofRef ||
+    deal?.orderId ||
+    obj.counterparty?.orderId ||
+    out.pageUrl ||
+    '';
+
+  // Källa-presentation: om source är "tradera" gör vi "Tradera"
+  const s = String(out.source || '').toLowerCase();
+  if (s === 'tradera') out.source = 'Tradera';
+
+  return out;
+}
+
+/**
+ * Visa "Verifierad källa" kortet från pending, om det finns.
+ */
+function applyPendingContextCard(p) {
   if (!p) return;
 
-  // Context-card
   const ctxCard = document.getElementById('rate-context-card');
   const ctxSource = document.getElementById('rate-context-source');
   const ctxLink = document.getElementById('rate-context-link');
 
   if (ctxCard) ctxCard.style.display = '';
   if (ctxSource) ctxSource.textContent = (p.source || '–');
+
   if (ctxLink && p.pageUrl) {
     ctxLink.href = p.pageUrl;
     ctxLink.style.display = '';
-  }
-
-  const form = document.getElementById('rating-form');
-  if (!form) return;
-
-  // Subject = email (HÅRD)
-  const subjectInput = form.querySelector('input[name="ratedUserEmail"]');
-  const email = p.subjectEmail || p?.counterparty?.email || null;
-  if (subjectInput && email) {
-    subjectInput.value = email;
-    subjectInput.readOnly = true;
-    subjectInput.style.background = '#f7f8fb';
-  }
-
-  // Source (låst)
-  const sourceSelect = form.querySelector('select[name="source"]');
-  if (sourceSelect && p.source) {
-    const v = String(p.source).toLowerCase().includes('tradera') ? 'Tradera' : p.source;
-    sourceSelect.value = v;
-    sourceSelect.disabled = true;
-  }
-
-  // proofRef
-  const proof = form.querySelector('input[name="proofRef"]');
-  if (proof && (p.proofRef || p?.counterparty?.orderId)) {
-    proof.value = p.proofRef || p.counterparty.orderId;
+  } else if (ctxLink) {
+    ctxLink.style.display = 'none';
   }
 }
 
+/**
+ * Rendera en "Verifierad affär" i listan + skapa låst rating-form om inloggad.
+ */
+function renderVerifiedDealUI(p) {
+  if (!isRatePage()) return;
+
+  const emptyEl = document.getElementById('verified-empty');
+  const listEl = document.getElementById('verified-list');
+
+  if (!emptyEl || !listEl) return;
+
+  // saknas pending eller saknas identifierare -> visa tomt läge
+  const hasAnything = !!(p?.proofRef || p?.pageUrl || p?.subjectEmail || p?.counterparty?.email || p?.counterparty?.username);
+  if (!p || !hasAnything) {
+    emptyEl.style.display = '';
+    listEl.style.display = 'none';
+    listEl.innerHTML = '';
+    removeLockedFormCard();
+    return;
+  }
+
+  // visa list
+  emptyEl.style.display = 'none';
+  listEl.style.display = '';
+  listEl.innerHTML = '';
+
+  const cpEmail = p.subjectEmail || p?.counterparty?.email || '';
+  const cpUser = p?.counterparty?.username || '';
+  const deal = p.deal || {};
+  const orderId = deal.orderId || p.proofRef || '';
+  const amount = (deal.amount != null) ? deal.amount : (deal.amountSek != null ? deal.amountSek : null);
+  const currency = deal.currency || (amount != null ? 'SEK' : '');
+  const date = deal.date || deal.dateISO || '';
+
+  const card = document.createElement('div');
+  card.style.border = '1px solid rgba(0,0,0,.08)';
+  card.style.background = '#fff';
+  card.style.borderRadius = '14px';
+  card.style.padding = '12px';
+
+  const left = document.createElement('div');
+  left.style.display = 'grid';
+  left.style.gridTemplateColumns = 'repeat(2,minmax(0,1fr))';
+  left.style.gap = '10px';
+
+  left.innerHTML = `
+    <div>
+      <div style="font-size:12px;color:var(--pr-muted);">Källa</div>
+      <div style="font-weight:900;">${escapeHtml(p.source || '–')}</div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--pr-muted);">Proof</div>
+      <div style="font-weight:900;word-break:break-word;">${escapeHtml(orderId || '–')}</div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--pr-muted);">Motpart</div>
+      <div style="font-weight:900;word-break:break-word;">
+        ${escapeHtml(cpEmail || cpUser || '–')}
+      </div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--pr-muted);">Belopp / Datum</div>
+      <div style="font-weight:900;">
+        ${amount != null ? `${escapeHtml(String(amount))} ${escapeHtml(currency || '')}` : '–'}
+        ${date ? ` • ${escapeHtml(date)}` : ''}
+      </div>
+    </div>
+  `;
+
+  const actions = document.createElement('div');
+  actions.style.marginTop = '10px';
+  actions.style.display = 'flex';
+  actions.style.gap = '10px';
+  actions.style.flexWrap = 'wrap';
+  actions.style.alignItems = 'center';
+
+  const link = document.createElement('a');
+  link.href = p.pageUrl || '#';
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = 'Visa källan →';
+  link.style.fontWeight = '800';
+  link.style.textDecoration = 'none';
+  link.style.color = '#1d4ed8';
+  link.style.display = p.pageUrl ? 'inline-block' : 'none';
+
+  actions.appendChild(link);
+
+  card.appendChild(left);
+  card.appendChild(actions);
+  listEl.appendChild(card);
+
+  // Skapa låst betygsform (Steg 3) när användaren är inloggad
+  const user = auth.getUser?.() || null;
+  if (user) {
+    ensureLockedFormCard(p, user);
+  } else {
+    // utloggad: ta bort form (om den finns) – användaren ska logga in först
+    removeLockedFormCard();
+  }
+}
+
+function ensureLockedFormCard(p, user) {
+  // Finns redan?
+  if (document.getElementById('locked-rating-card')) {
+    // uppdatera ev visade fält
+    updateLockedFormWithPending(p, user);
+    return;
+  }
+
+  const anchor = document.getElementById('verified-deals-card') || document.getElementById('rate-context-card');
+  if (!anchor || !anchor.parentElement) return;
+
+  const card = document.createElement('section');
+  card.className = 'pr-card';
+  card.id = 'locked-rating-card';
+  card.style.marginBottom = '16px';
+
+  card.innerHTML = `
+    <h2 style="margin:0 0 8px;">Steg 3: Lämna omdöme</h2>
+    <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.55;">
+      Formuläret är låst till verifierad affär. Du kan bara välja betyg och skriva kommentar.
+    </p>
+
+    <div id="locked-meta" style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:14px;padding:12px;margin-bottom:12px;"></div>
+
+    <form id="locked-rating-form" autocomplete="off">
+      <input type="hidden" name="ratedUserEmail" />
+      <input type="hidden" name="source" />
+      <input type="hidden" name="proofRef" />
+      <input type="hidden" name="rater" />
+
+      <div class="pr-field">
+        <label class="pr-label" for="locked-score">Betyg</label>
+        <select class="pr-select" id="locked-score" name="score" required>
+          <option value="" selected>Välj…</option>
+          <option value="1">1 – Mycket dåligt</option>
+          <option value="2">2 – Dåligt</option>
+          <option value="3">3 – Okej</option>
+          <option value="4">4 – Bra</option>
+          <option value="5">5 – Mycket bra</option>
+        </select>
+      </div>
+
+      <div class="pr-field">
+        <label class="pr-label" for="locked-comment">Kommentar (valfritt)</label>
+        <textarea class="pr-textarea" id="locked-comment" name="comment" rows="4"
+          placeholder="Vad fungerade bra/dåligt?"></textarea>
+      </div>
+
+      <div class="pr-actions">
+        <button class="pr-btn pr-btn-primary" type="submit">Skicka omdöme</button>
+      </div>
+
+      <p id="locked-notice" style="margin-top:10px;color:var(--pr-muted);font-size:12px;"></p>
+    </form>
+  `;
+
+  // Placera efter verifierade affärer-kortet
+  anchor.parentElement.insertBefore(card, anchor.nextSibling);
+
+  // bind submit
+  const form = document.getElementById('locked-rating-form');
+  if (form) {
+    form.addEventListener('submit', handleLockedSubmit);
+  }
+
+  updateLockedFormWithPending(p, user);
+}
+
+function removeLockedFormCard() {
+  const el = document.getElementById('locked-rating-card');
+  if (el) el.remove();
+}
+
+function updateLockedFormWithPending(p, user) {
+  const meta = document.getElementById('locked-meta');
+  const form = document.getElementById('locked-rating-form');
+  if (!meta || !form) return;
+
+  const deal = p.deal || {};
+  const cpEmail = p.subjectEmail || p?.counterparty?.email || '';
+  const cpUser = p?.counterparty?.username || '';
+  const orderId = deal.orderId || p.proofRef || '';
+  const amount = (deal.amount != null) ? deal.amount : (deal.amountSek != null ? deal.amountSek : null);
+  const currency = deal.currency || (amount != null ? 'SEK' : '');
+  const date = deal.date || deal.dateISO || '';
+
+  meta.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+      <div>
+        <div style="font-size:12px;color:var(--pr-muted);">Motpart</div>
+        <div style="font-weight:900;word-break:break-word;">${escapeHtml(cpEmail || cpUser || '–')}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--pr-muted);">Källa</div>
+        <div style="font-weight:900;">${escapeHtml(p.source || '–')}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--pr-muted);">Order/Proof</div>
+        <div style="font-weight:900;word-break:break-word;">${escapeHtml(orderId || '–')}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--pr-muted);">Belopp / Datum</div>
+        <div style="font-weight:900;">
+          ${amount != null ? `${escapeHtml(String(amount))} ${escapeHtml(currency || '')}` : '–'}
+          ${date ? ` • ${escapeHtml(date)}` : ''}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Hidden fields (låsning)
+  form.querySelector('input[name="ratedUserEmail"]').value = cpEmail || '';
+  form.querySelector('input[name="source"]').value = p.source || '';
+  form.querySelector('input[name="proofRef"]').value = p.proofRef || '';
+  form.querySelector('input[name="rater"]').value = user?.email || '';
+}
+
+async function handleLockedSubmit(e) {
+  e.preventDefault();
+
+  const form = e.currentTarget;
+  const user = auth.getUser?.() || null;
+  if (!user) {
+    showNotification('error', 'Du måste logga in för att skicka omdöme.', 'locked-notice');
+    return;
+  }
+
+  const subjectEmail = form.querySelector('input[name="ratedUserEmail"]')?.value?.trim() || '';
+  const score = Number(form.querySelector('select[name="score"]')?.value || 0);
+  const comment = form.querySelector('textarea[name="comment"]')?.value?.trim() || '';
+  const proofRef = form.querySelector('input[name="proofRef"]')?.value?.trim() || '';
+  const sourceRaw = form.querySelector('input[name="source"]')?.value?.trim() || '';
+  const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || user.email;
+
+  if (!subjectEmail) {
+    showNotification('error', 'Motpart saknas i verifierad affär.', 'locked-notice');
+    return;
+  }
+  if (!score) {
+    showNotification('error', 'Välj ett betyg.', 'locked-notice');
+    return;
+  }
+
+  const pending = getPending();
+  const counterparty = pending?.counterparty || pending?.deal?.counterparty || null;
+  const deal = pending?.deal || null;
+
+  const payload = {
+    subject: subjectEmail,
+    rating: Number(score),
+    rater: raterVal || undefined,
+    comment: comment || undefined,
+    proofRef: proofRef || undefined,
+    source: sourceRaw || undefined,
+    counterparty: counterparty || undefined,
+    deal: deal || undefined, // om backend ignorerar ok; annars bra för framtiden
+  };
+
+  const btn = form.querySelector('button[type="submit"]');
+  if (btn) btn.disabled = true;
+
+  try {
+    const result = await api.createRating(payload);
+    if (!result || result.ok === false) {
+      showNotification('error', result?.error || 'Kunde inte spara betyget.', 'locked-notice');
+      if (btn) btn.disabled = false;
+      return;
+    }
+
+    clearPending();
+    showNotification('success', 'Tack! Ditt omdöme är sparat.', 'locked-notice');
+    form.reset();
+    removeLockedFormCard();
+
+    // återställ listan
+    renderVerifiedDealUI(getPending());
+    if (btn) btn.disabled = false;
+  } catch (err) {
+    console.error('locked submit error', err);
+    showNotification('error', 'Tekniskt fel. Försök igen om en stund.', 'locked-notice');
+    if (btn) btn.disabled = false;
+  }
+}
+
+/**
+ * Läs query och skriv pending.
+ * Stöd:
+ * - ?pr= (payload)
+ * - ?source=&pageUrl=&proofRef=
+ */
 function captureFromUrl() {
   const qs = new URLSearchParams(window.location.search || '');
   const pr = qs.get('pr');
   const source = qs.get('source') || '';
   const pageUrl = qs.get('pageUrl') || '';
+  const proofRef = qs.get('proofRef') || '';
 
-  if (!pr && !source && !pageUrl) return null;
+  if (!pr && !source && !pageUrl && !proofRef) return null;
 
   if (pr) {
     const decoded = readB64Json(pr);
     if (decoded && typeof decoded === 'object') {
+      // fyll från query om saknas
       if (!decoded.source && source) decoded.source = source;
       if (!decoded.pageUrl && pageUrl) decoded.pageUrl = pageUrl;
-      setPending(decoded);
-      return decoded;
+      if (!decoded.proofRef && proofRef) decoded.proofRef = proofRef;
+
+      const normalized = normalizeIncoming(decoded);
+      setPending(normalized);
+      return normalized;
     }
   }
 
-  const existing = getPending();
-  if (!existing) {
-    setPending({ source: source || undefined, pageUrl: pageUrl || undefined });
-    return getPending();
-  }
-  return existing;
+  // inga pr-data, men query har source/pageUrl
+  const existing = getPending() || {};
+  const merged = normalizeIncoming({
+    ...existing,
+    source: source || existing.source,
+    pageUrl: pageUrl || existing.pageUrl,
+    proofRef: proofRef || existing.proofRef,
+  });
+
+  setPending(merged);
+  return merged;
 }
 
 function initPlatformStarter() {
@@ -355,7 +717,7 @@ function initPlatformStarter() {
     blocket:  { label: 'Blocket', url: 'https://www.blocket.se/' },
     airbnb:   { label: 'Airbnb',  url: 'https://www.airbnb.com/' },
     ebay:     { label: 'eBay',    url: 'https://www.ebay.com/' },
-    tiptap:   { label: 'Tiptap',  url: 'https://www.tiptap.se/' },
+    tiptap:   { label: 'Tiptap',  url: 'https://www.tiptapp.se/' },
     hygglo:   { label: 'Hygglo',  url: 'https://www.hygglo.se/' },
     husknuten:{ label: 'Husknuten', url: 'https://www.husknuten.se/' },
     facebook: { label: 'Facebook Marketplace', url: 'https://www.facebook.com/marketplace/' },
@@ -371,6 +733,10 @@ function initPlatformStarter() {
     if (key && platforms[key]) {
       const existing = getPending() || {};
       setPending({ ...existing, source: platforms[key].label });
+      // rendera om UI
+      const p = getPending();
+      applyPendingContextCard(p);
+      renderVerifiedDealUI(p);
     }
     syncBtn();
   });
@@ -385,13 +751,24 @@ function initPlatformStarter() {
   syncBtn();
 }
 
+/**
+ * Legacy: initRatingLogin har tidigare också initat öppet betygsform.
+ * Nu använder vi den främst för login + pending + render av verifierad affär.
+ */
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
+  initPlatformStarter();
 
   // 1) pending från URL
   const fromUrl = captureFromUrl();
   const pending = fromUrl || getPending();
-  if (pending) applyPendingToUI(pending);
+
+  if (pending) {
+    applyPendingContextCard(pending);
+    renderVerifiedDealUI(pending);
+  } else {
+    renderVerifiedDealUI(null);
+  }
 
   // 2) bind login
   const loginForm = document.getElementById('rating-login-form');
@@ -401,32 +778,17 @@ export function initRatingLogin() {
   const user = auth.getUser?.() || null;
   setVisibility(!!user);
 
-  if (user) {
-    initRatingForm();
-
-    // Lås rater = user email
-    const raterInput =
-      document.querySelector('#rating-form input[name="rater"]') ||
-      document.getElementById('rater');
-
-    if (raterInput && user.email) {
-      raterInput.value = user.email;
-      raterInput.readOnly = true;
-      raterInput.style.background = '#f7f8fb';
-    }
-
-    const p = getPending();
-    if (p) applyPendingToUI(p);
-  }
-
   // 4) om login/logout sker i annan flik
   window.addEventListener('storage', () => {
     const u2 = auth.getUser?.() || null;
     setVisibility(!!u2);
-    if (u2) {
-      try { initRatingForm(); } catch {}
-      const p = getPending();
-      if (p) applyPendingToUI(p);
+
+    const p2 = getPending();
+    if (p2) {
+      applyPendingContextCard(p2);
+      renderVerifiedDealUI(p2);
+    } else {
+      renderVerifiedDealUI(null);
     }
   });
 }
@@ -452,25 +814,15 @@ async function handleLoginSubmit(e) {
 
     showNotification('success', 'Du är nu inloggad.', 'login-status');
 
-    // På rate.html: stanna, göm login, visa form
+    // På rate.html: stanna, göm login, visa låst form om pending finns
     if (isRatePage()) {
       setVisibility(true);
-      initRatingForm();
-
-      const user = auth.getUser?.() || null;
-      const raterInput =
-        document.querySelector('#rating-form input[name="rater"]') ||
-        document.getElementById('rater');
-
-      if (raterInput && user?.email) {
-        raterInput.value = user.email;
-        raterInput.readOnly = true;
-        raterInput.style.background = '#f7f8fb';
-      }
 
       const p = getPending();
-      if (p) applyPendingToUI(p);
-
+      if (p) {
+        applyPendingContextCard(p);
+        renderVerifiedDealUI(p);
+      }
       return;
     }
 
@@ -485,6 +837,10 @@ async function handleLoginSubmit(e) {
   }
 }
 
+/**
+ * Legacy: om du har andra sidor som fortfarande använder ett öppet rating-form.
+ * Vi lämnar kvar dessa exports för kompatibilitet.
+ */
 export function initRatingForm() {
   const form = document.getElementById('rating-form');
   if (!form) return;
@@ -548,4 +904,13 @@ async function handleSubmit(e) {
     showNotification('error', 'Tekniskt fel. Försök igen om en stund.', 'notice');
     if (btn) btn.disabled = false;
   }
+}
+
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
 }

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "PeerRate – Tradera trigger (MVP)",
-  "version": "0.1.1",
-  "description": "Visar en 'Betygsätt med PeerRate'-knapp på utvalda Tradera-sidor.",
+  "name": "PeerRate – Verified Deal Trigger (MVP)",
+  "version": "0.2.0",
+  "description": "Skickar verifierad affärsinfo från plattformar (börjar med Tradera) till PeerRate.",
   "action": {
     "default_title": "PeerRate",
     "default_popup": "popup.html"
@@ -12,7 +12,9 @@
     "https://tradera.com/*",
     "https://www.tradera.com/*",
     "https://tradera.se/*",
-    "https://www.tradera.se/*"
+    "https://www.tradera.se/*",
+    "https://peerrate.ai/*",
+    "https://www.peerrate.ai/*"
   ],
   "background": {
     "service_worker": "service-worker.js"
