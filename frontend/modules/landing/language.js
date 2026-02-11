@@ -113,6 +113,13 @@ export function initLandingLanguage() {
       rate_context_from: 'Källa:',
       rate_context_link: 'Öppna sidan',
 
+      rate_platform_title: 'Starta från en plattform',
+      rate_platform_lead: 'Välj var affären skedde. Vi öppnar plattformen så att din extension kan plocka upp annons/profil och skicka tillbaka rätt info till PeerRate.',
+      rate_platform_label: 'Plattform',
+      rate_platform_pick: 'Välj plattform…',
+      rate_platform_go: 'Öppna plattform',
+      rate_platform_note: 'Tips: När du är inne på annonsen/profilen – klicka på extensionen. Du skickas tillbaka hit med “Verifierad källa” ifyllt.',
+
       rate_login_email_label: 'E-post',
       rate_login_password_label: 'Lösenord',
       rate_login_password_ph: 'Ditt lösenord',
@@ -284,6 +291,13 @@ export function initLandingLanguage() {
       rate_context_title: 'Detected context',
       rate_context_from: 'Source:',
       rate_context_link: 'Open page',
+
+      rate_platform_title: 'Start from a platform',
+      rate_platform_lead: 'Choose where the transaction happened. We open the platform so your browser extension can capture the listing/profile and send the right context back to PeerRate.',
+      rate_platform_label: 'Platform',
+      rate_platform_pick: 'Choose platform…',
+      rate_platform_go: 'Open platform',
+      rate_platform_note: 'Tip: When you are on the listing/profile — click the extension. You will be sent back here with “Verified source” filled in.',
 
       rate_login_email_label: 'Email',
       rate_login_password_label: 'Password',

@@ -345,6 +345,46 @@ function captureFromUrl() {
   return existing;
 }
 
+function initPlatformStarter() {
+  const select = document.getElementById('platformSelect');
+  const btn = document.getElementById('platformGoBtn');
+  if (!select || !btn) return;
+
+  const platforms = {
+    tradera:  { label: 'Tradera', url: 'https://www.tradera.com/' },
+    blocket:  { label: 'Blocket', url: 'https://www.blocket.se/' },
+    airbnb:   { label: 'Airbnb',  url: 'https://www.airbnb.com/' },
+    ebay:     { label: 'eBay',    url: 'https://www.ebay.com/' },
+    tiptap:   { label: 'Tiptap',  url: 'https://www.tiptap.se/' },
+    hygglo:   { label: 'Hygglo',  url: 'https://www.hygglo.se/' },
+    husknuten:{ label: 'Husknuten', url: 'https://www.husknuten.se/' },
+    facebook: { label: 'Facebook Marketplace', url: 'https://www.facebook.com/marketplace/' },
+  };
+
+  const syncBtn = () => {
+    const key = (select.value || '').trim();
+    btn.disabled = !key || !platforms[key];
+  };
+
+  select.addEventListener('change', () => {
+    const key = (select.value || '').trim();
+    if (key && platforms[key]) {
+      const existing = getPending() || {};
+      setPending({ ...existing, source: platforms[key].label });
+    }
+    syncBtn();
+  });
+
+  btn.addEventListener('click', () => {
+    const key = (select.value || '').trim();
+    const p = platforms[key];
+    if (!p) return;
+    window.open(p.url, '_blank', 'noopener,noreferrer');
+  });
+
+  syncBtn();
+}
+
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
 
