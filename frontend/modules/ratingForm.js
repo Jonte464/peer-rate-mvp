@@ -9,17 +9,24 @@ const TTL_MS = 1000 * 60 * 60 * 24;
 function now() { return Date.now(); }
 function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
+/**
+ * Robust base64->json:
+ * - Stöd för äldre payload: btoa(JSON.stringify(obj))
+ * - Stöd för UTF-8-säker variant: btoa(unescape(encodeURIComponent(JSON.stringify(obj))))
+ */
 function readB64Json(b64) {
   if (!b64) return null;
   try {
     const cleaned = decodeURIComponent(b64);
 
+    // 1) testa "vanlig" atob först
     try {
       const raw = atob(cleaned);
       const j = safeParse(raw);
       if (j && typeof j === 'object') return j;
     } catch {}
 
+    // 2) testa UTF-8-variant
     try {
       const raw = atob(cleaned);
       const utf8 = decodeURIComponent(escape(raw));
@@ -58,6 +65,7 @@ function isRatePage() {
   return (window.location.pathname || '').toLowerCase().includes('/rate.html');
 }
 
+/** Robust: hitta login-card även om id varierar */
 function getLoginCardEls() {
   return [
     document.getElementById('login-card'),
@@ -67,6 +75,7 @@ function getLoginCardEls() {
   ].filter(Boolean);
 }
 
+/** Robust: hitta alla tänkbara wrappers för rating-form */
 function getRatingWrapperEls() {
   return [
     document.getElementById('rating-form-wrapper'),
@@ -76,6 +85,7 @@ function getRatingWrapperEls() {
   ].filter(Boolean);
 }
 
+/** Hitta (och dölj) “Test utan inloggning” om den finns */
 function hideTestWithoutLoginButton() {
   const byId =
     document.getElementById('test-without-login') ||
@@ -98,6 +108,14 @@ function hideTestWithoutLoginButton() {
   }
 }
 
+/**
+ * Bulletproof show/hide:
+ * - Om element saknas: visa hellre mer än mindre (aldrig "vit" sida)
+ * - Inloggad: göm login, visa rating (om rating targets finns)
+ * - Utloggad: visa login, göm rating (om rating targets finns)
+ *
+ * OBS: På nya rate.html finns inget öppet formulär - då finns ofta inga rating targets.
+ */
 function setVisibility(isLoggedIn) {
   const loginCards = getLoginCardEls();
   const ratingWrappers = getRatingWrapperEls();
@@ -110,14 +128,17 @@ function setVisibility(isLoggedIn) {
   const hasLoginTargets = loginCards.length > 0;
   const hasRatingTargets = ratingWrappers.length > 0;
 
+  // Failsafe: om vi inte hittar något att toggla, gör inget (undvik vit sida).
   if (!hasLoginTargets && !hasRatingTargets) {
     console.warn('[PeerRate] setVisibility: no targets found; skipping toggle to avoid blank UI.');
     return;
   }
 
+  // Om logged in men ratingWrappers saknas → visa login också (hellre dubbelt än tomt).
   const shouldShowLogin = !isLoggedIn || (!hasRatingTargets && isLoggedIn);
   const shouldShowRating = isLoggedIn && hasRatingTargets;
 
+  // Login UI
   if (hasLoginTargets) {
     loginCards.forEach((el) => {
       el.style.display = shouldShowLogin ? 'block' : 'none';
@@ -125,11 +146,13 @@ function setVisibility(isLoggedIn) {
     });
   }
 
+  // Hint
   if (hint) {
     hint.classList.toggle('hidden', isLoggedIn);
     hint.style.display = isLoggedIn ? 'none' : '';
   }
 
+  // Rating UI (legacy)
   if (hasRatingTargets) {
     ratingWrappers.forEach((el) => {
       el.style.display = shouldShowRating ? 'block' : 'none';
@@ -138,12 +161,13 @@ function setVisibility(isLoggedIn) {
   }
 }
 
-/** ✅ Dropdown → länk ut */
+/** ✅ Dropdown → länk ut (om du använder den på rate.html) */
 export function initPlatformPicker() {
   if (!isRatePage()) return;
 
   const select = document.getElementById('platformSelect');
   const goBtn = document.getElementById('platformGoBtn');
+
   const instructions =
     document.getElementById('platformInstructions') ||
     document.getElementById('platformNote') ||
@@ -223,16 +247,15 @@ export function initPlatformPicker() {
   function onSelect() {
     const key = select.value || '';
     const p = platforms[key];
-
     if (!p) {
       setGoEnabled(false);
       return;
     }
-
     setGoEnabled(true);
     renderTip(key);
   }
 
+  // Preselect via query (?source=airbnb etc)
   const qs = new URLSearchParams(window.location.search || '');
   const sourceRaw = (qs.get('source') || '').trim().toLowerCase();
 
@@ -280,6 +303,10 @@ export function initPlatformPicker() {
   mo.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 }
 
+/**
+ * Normalisera payload från extension/query till ett internt "pending"-format
+ * så resten av UI alltid kan utgå från samma fält.
+ */
 function normalizeIncoming(inObj) {
   const obj = (inObj && typeof inObj === 'object') ? { ...inObj } : {};
   const out = { ...obj };
@@ -316,6 +343,49 @@ function normalizeIncoming(inObj) {
   return out;
 }
 
+/**
+ * Sanera counterparty så vi bara skickar fält backend accepterar (Joi).
+ * + mappar username -> platformUsername (om relevant).
+ */
+function sanitizeCounterparty(cp, deal) {
+  if (!cp || typeof cp !== 'object') return undefined;
+
+  const platform = (deal?.platform || cp.platform || '').toString().toUpperCase();
+  const username = cp.platformUsername || cp.username || null;
+
+  const clean = {
+    email: cp.email || undefined,
+    name: cp.name || undefined,
+    phone: cp.phone || undefined,
+    addressStreet: cp.addressStreet || undefined,
+    addressZip: cp.addressZip || undefined,
+    addressCity: cp.addressCity || undefined,
+    country: cp.country || undefined,
+
+    platform: platform || undefined,
+    platformUsername: username || undefined,
+    pageUrl: cp.pageUrl || deal?.pageUrl || undefined,
+
+    orderId: cp.orderId || deal?.orderId || undefined,
+    itemId: cp.itemId || deal?.itemId || undefined,
+    amountSek: (cp.amountSek ?? deal?.amountSek ?? undefined),
+    title: cp.title || deal?.title || undefined,
+  };
+
+  // Ta bort undefined/empty
+  Object.keys(clean).forEach((k) => {
+    if (clean[k] === undefined || clean[k] === null || clean[k] === '') delete clean[k];
+  });
+
+  // email måste finnas för att skicka
+  if (!clean.email) return undefined;
+
+  return clean;
+}
+
+/**
+ * Visa "Verifierad källa" kortet från pending, om det finns.
+ */
 function applyPendingContextCard(p) {
   if (!p) return;
 
@@ -334,6 +404,9 @@ function applyPendingContextCard(p) {
   }
 }
 
+/**
+ * Rendera en "Verifierad affär" i listan + skapa låst rating-form om inloggad.
+ */
 function renderVerifiedDealUI(p) {
   if (!isRatePage()) return;
 
@@ -362,7 +435,6 @@ function renderVerifiedDealUI(p) {
   const amount = (deal.amount != null) ? deal.amount : (deal.amountSek != null ? deal.amountSek : null);
   const currency = deal.currency || (amount != null ? 'SEK' : '');
   const date = deal.date || deal.dateISO || '';
-  const phone = (p?.counterparty?.phone || deal?.counterparty?.phone || '').trim?.() || (p?.counterparty?.phone || deal?.counterparty?.phone || '');
 
   const card = document.createElement('div');
   card.style.border = '1px solid rgba(0,0,0,.08)';
@@ -378,27 +450,24 @@ function renderVerifiedDealUI(p) {
   left.innerHTML = `
     <div>
       <div style="font-size:12px;color:var(--pr-muted);">Källa</div>
-      <div>${escapeHtml(p.source || '–')}</div>
+      <div style="font-weight:700;">${escapeHtml(p.source || '–')}</div>
     </div>
     <div>
       <div style="font-size:12px;color:var(--pr-muted);">Proof</div>
-      <div style="word-break:break-word;">${escapeHtml(orderId || '–')}</div>
+      <div style="font-weight:700;word-break:break-word;">${escapeHtml(orderId || '–')}</div>
     </div>
     <div>
       <div style="font-size:12px;color:var(--pr-muted);">Motpart</div>
-      <div style="word-break:break-word;">${escapeHtml(cpEmail || cpUser || '–')}</div>
+      <div style="font-weight:700;word-break:break-word;">
+        ${escapeHtml(cpEmail || cpUser || '–')}
+      </div>
     </div>
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Belopp</div>
-      <div>${amount != null ? `${escapeHtml(String(amount))} ${escapeHtml(currency || '')}` : '–'}</div>
-    </div>
-    <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Datum</div>
-      <div>${date ? escapeHtml(date) : '–'}</div>
-    </div>
-    <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Telefon</div>
-      <div>${phone ? escapeHtml(phone) : '–'}</div>
+      <div style="font-size:12px;color:var(--pr-muted);">Belopp / Datum</div>
+      <div style="font-weight:700;">
+        ${amount != null ? `${escapeHtml(String(amount))} ${escapeHtml(currency || '')}` : '–'}
+        ${date ? ` • ${escapeHtml(date)}` : ''}
+      </div>
     </div>
   `;
 
@@ -483,7 +552,7 @@ function ensureLockedFormCard(p, user) {
         <button class="pr-btn pr-btn-primary" type="submit">Skicka omdöme</button>
       </div>
 
-      <p id="locked-notice" style="margin-top:10px;color:var(--pr-muted);font-size:12px;"></p>
+      <div id="locked-notice" class="notice" style="margin-top:10px;"></div>
     </form>
   `;
 
@@ -514,33 +583,27 @@ function updateLockedFormWithPending(p, user) {
   const amount = (deal.amount != null) ? deal.amount : (deal.amountSek != null ? deal.amountSek : null);
   const currency = deal.currency || (amount != null ? 'SEK' : '');
   const date = deal.date || deal.dateISO || '';
-  const phone = (p?.counterparty?.phone || deal?.counterparty?.phone || '').trim?.() || (p?.counterparty?.phone || deal?.counterparty?.phone || '');
 
   meta.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
       <div>
         <div style="font-size:12px;color:var(--pr-muted);">Motpart</div>
-        <div style="word-break:break-word;">${escapeHtml(cpEmail || cpUser || '–')}</div>
+        <div style="font-weight:700;word-break:break-word;">${escapeHtml(cpEmail || cpUser || '–')}</div>
       </div>
       <div>
         <div style="font-size:12px;color:var(--pr-muted);">Källa</div>
-        <div>${escapeHtml(p.source || '–')}</div>
+        <div style="font-weight:700;">${escapeHtml(p.source || '–')}</div>
       </div>
       <div>
         <div style="font-size:12px;color:var(--pr-muted);">Order/Proof</div>
-        <div style="word-break:break-word;">${escapeHtml(orderId || '–')}</div>
+        <div style="font-weight:700;word-break:break-word;">${escapeHtml(orderId || '–')}</div>
       </div>
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Belopp</div>
-        <div>${amount != null ? `${escapeHtml(String(amount))} ${escapeHtml(currency || '')}` : '–'}</div>
-      </div>
-      <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Datum</div>
-        <div>${date ? escapeHtml(date) : '–'}</div>
-      </div>
-      <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Telefon</div>
-        <div>${phone ? escapeHtml(phone) : '–'}</div>
+        <div style="font-size:12px;color:var(--pr-muted);">Belopp / Datum</div>
+        <div style="font-weight:700;">
+          ${amount != null ? `${escapeHtml(String(amount))} ${escapeHtml(currency || '')}` : '–'}
+          ${date ? ` • ${escapeHtml(date)}` : ''}
+        </div>
       </div>
     </div>
   `;
@@ -549,6 +612,24 @@ function updateLockedFormWithPending(p, user) {
   form.querySelector('input[name="source"]').value = p.source || '';
   form.querySelector('input[name="proofRef"]').value = p.proofRef || '';
   form.querySelector('input[name="rater"]').value = user?.email || '';
+}
+
+function setSubmitLoading(form, isLoading) {
+  const btn = form?.querySelector('button[type="submit"]');
+  if (!btn) return;
+
+  if (isLoading) {
+    if (!btn.dataset.origText) btn.dataset.origText = btn.textContent || 'Skicka omdöme';
+    btn.disabled = true;
+    btn.textContent = 'Skickar…';
+    btn.style.opacity = '.75';
+    btn.style.pointerEvents = 'none';
+  } else {
+    btn.disabled = false;
+    btn.textContent = btn.dataset.origText || 'Skicka omdöme';
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
+  }
 }
 
 async function handleLockedSubmit(e) {
@@ -578,14 +659,11 @@ async function handleLockedSubmit(e) {
   }
 
   const pending = getPending();
-  const pendingCounterparty = pending?.counterparty || pending?.deal?.counterparty || {};
+  const rawCounterparty = pending?.counterparty || pending?.deal?.counterparty || null;
   const deal = pending?.deal || null;
 
-  // ✅ KRITISK FIX: backend kräver counterparty.email om counterparty skickas
-  const counterparty = {
-    ...(pendingCounterparty && typeof pendingCounterparty === 'object' ? pendingCounterparty : {}),
-    email: subjectEmail,
-  };
+  // ✅ Sanera så backend-Joi aldrig får okända keys (t.ex. counterparty.username)
+  const counterparty = sanitizeCounterparty(rawCounterparty, deal);
 
   const payload = {
     subject: subjectEmail,
@@ -594,46 +672,46 @@ async function handleLockedSubmit(e) {
     comment: comment || undefined,
     proofRef: proofRef || undefined,
     source: sourceRaw || undefined,
-    counterparty,
+    counterparty: counterparty || undefined,
     deal: deal || undefined,
   };
 
-  const btn = form.querySelector('button[type="submit"]');
-  if (btn) btn.disabled = true;
+  setSubmitLoading(form, true);
 
   try {
     const result = await api.createRating(payload);
-
     if (!result || result.ok === false) {
-      // ✅ Om backend spärrar pga "redan betygsatt affär"
-      if (result?.status === 409) {
-        clearPending();
-        showNotification('error', result?.error || 'Du har redan lämnat omdöme för denna affär.', 'locked-notice');
-        removeLockedFormCard();
-        renderVerifiedDealUI(getPending());
-        if (btn) btn.disabled = false;
-        return;
-      }
-
-      showNotification('error', result?.error || 'Kunde inte spara betyget.', 'locked-notice');
-      if (btn) btn.disabled = false;
+      const msg = result?.error || 'Kunde inte spara betyget.';
+      showNotification('error', msg, 'locked-notice');
+      setSubmitLoading(form, false);
       return;
     }
 
     clearPending();
-    showNotification('success', 'Tack! Ditt omdöme är sparat.', 'locked-notice');
-    form.reset();
-    removeLockedFormCard();
 
-    renderVerifiedDealUI(getPending());
-    if (btn) btn.disabled = false;
+    // ✅ Tydlig feedback
+    showNotification('success', 'Tack! Ditt omdöme är sparat.', 'locked-notice');
+
+    // Lås UI lite kort så användaren verkligen ser att det gick
+    form.reset();
+    setTimeout(() => {
+      removeLockedFormCard();
+      renderVerifiedDealUI(getPending()); // visar tom-lista efter clearPending
+    }, 450);
+
   } catch (err) {
     console.error('locked submit error', err);
     showNotification('error', 'Tekniskt fel. Försök igen om en stund.', 'locked-notice');
-    if (btn) btn.disabled = false;
+    setSubmitLoading(form, false);
   }
 }
 
+/**
+ * Läs query och skriv pending.
+ * Stöd:
+ * - ?pr= (payload)
+ * - ?source=&pageUrl=&proofRef=
+ */
 function captureFromUrl() {
   const qs = new URLSearchParams(window.location.search || '');
   const pr = qs.get('pr');
@@ -711,6 +789,10 @@ function initPlatformStarter() {
   syncBtn();
 }
 
+/**
+ * Legacy: initRatingLogin har tidigare också initat öppet betygsform.
+ * Nu använder vi den främst för login + pending + render av verifierad affär.
+ */
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
   initPlatformStarter();
@@ -787,6 +869,10 @@ async function handleLoginSubmit(e) {
   }
 }
 
+/**
+ * Legacy: om du har andra sidor som fortfarande använder ett öppet rating-form.
+ * Vi lämnar kvar dessa exports för kompatibilitet.
+ */
 export function initRatingForm() {
   const form = document.getElementById('rating-form');
   if (!form) return;
@@ -816,8 +902,9 @@ async function handleSubmit(e) {
   }
 
   const pending = getPending();
-  const pendingCounterparty = pending?.counterparty || {};
-  const counterparty = { ...(pendingCounterparty || {}), email: subjectEmail };
+  const rawCounterparty = pending?.counterparty || null;
+  const deal = pending?.deal || null;
+  const counterparty = sanitizeCounterparty(rawCounterparty, deal);
 
   const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || null;
 
@@ -828,7 +915,8 @@ async function handleSubmit(e) {
     comment: comment || undefined,
     proofRef: proofRef || undefined,
     source: sourceRaw || undefined,
-    counterparty,
+    counterparty: counterparty || undefined,
+    deal: deal || undefined,
   };
 
   const btn = form.querySelector('button[type="submit"]');
@@ -837,19 +925,13 @@ async function handleSubmit(e) {
   try {
     const result = await api.createRating(payload);
     if (!result || result.ok === false) {
-      if (result?.status === 409) {
-        clearPending();
-        showNotification('error', result?.error || 'Du har redan lämnat omdöme för denna affär.', 'notice');
-        if (btn) btn.disabled = false;
-        return;
-      }
       showNotification('error', result?.error || 'Kunde inte spara betyget.', 'notice');
       if (btn) btn.disabled = false;
       return;
     }
 
     clearPending();
-    showNotification('success', 'Tack för ditt omdöme!', 'notice');
+    showNotification('success', 'Tack! Ditt omdöme är sparat.', 'notice');
     form.reset();
     if (btn) btn.disabled = false;
   } catch (err) {
