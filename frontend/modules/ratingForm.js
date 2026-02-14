@@ -128,17 +128,14 @@ function setVisibility(isLoggedIn) {
   const hasLoginTargets = loginCards.length > 0;
   const hasRatingTargets = ratingWrappers.length > 0;
 
-  // Failsafe: om vi inte hittar något att toggla, gör inget (undvik vit sida).
   if (!hasLoginTargets && !hasRatingTargets) {
     console.warn('[PeerRate] setVisibility: no targets found; skipping toggle to avoid blank UI.');
     return;
   }
 
-  // Om logged in men ratingWrappers saknas → visa login också (hellre dubbelt än tomt).
   const shouldShowLogin = !isLoggedIn || (!hasRatingTargets && isLoggedIn);
   const shouldShowRating = isLoggedIn && hasRatingTargets;
 
-  // Login UI
   if (hasLoginTargets) {
     loginCards.forEach((el) => {
       el.style.display = shouldShowLogin ? 'block' : 'none';
@@ -146,13 +143,11 @@ function setVisibility(isLoggedIn) {
     });
   }
 
-  // Hint
   if (hint) {
     hint.classList.toggle('hidden', isLoggedIn);
     hint.style.display = isLoggedIn ? 'none' : '';
   }
 
-  // Rating UI (legacy)
   if (hasRatingTargets) {
     ratingWrappers.forEach((el) => {
       el.style.display = shouldShowRating ? 'block' : 'none';
@@ -192,37 +187,37 @@ export function initPlatformPicker() {
       label: 'Airbnb',
       url: 'https://www.airbnb.com/',
       tip_sv: 'Öppna resa/konversation. Klicka extensionen för att skicka verifierad info.',
-      tip_en: 'Open trip/thread. Click the extension to send verified info.'
+      tip_en: 'Open trip/thread. Click the PeerRate extension.'
     },
     ebay: {
       label: 'eBay',
       url: 'https://www.ebay.com/',
       tip_sv: 'Öppna order. Klicka extensionen för att skicka verifierad info.',
-      tip_en: 'Open order. Click the extension to send verified info.'
+      tip_en: 'Open order. Click the PeerRate extension.'
     },
     tiptap: {
       label: 'Tiptap',
       url: 'https://tiptapp.se/',
       tip_sv: 'Öppna relevant sida. Klicka extensionen för att skicka verifierad info.',
-      tip_en: 'Open relevant page. Click the extension to send verified info.'
+      tip_en: 'Open relevant page. Click the PeerRate extension.'
     },
     hygglo: {
       label: 'Hygglo',
       url: 'https://www.hygglo.se/',
       tip_sv: 'Öppna bokning. Klicka extensionen för att skicka verifierad info.',
-      tip_en: 'Open booking. Click the extension to send verified info.'
+      tip_en: 'Open booking. Click the PeerRate extension.'
     },
     husknuten: {
       label: 'Husknuten',
       url: 'https://husknuten.se/',
       tip_sv: 'Öppna bokning. Klicka extensionen för att skicka verifierad info.',
-      tip_en: 'Open booking. Click the extension to send verified info.'
+      tip_en: 'Open booking. Click the PeerRate extension.'
     },
     facebook_marketplace: {
       label: 'Facebook Marketplace',
       url: 'https://www.facebook.com/marketplace/',
       tip_sv: 'Öppna annons/konversation. Klicka extensionen för att skicka verifierad info.',
-      tip_en: 'Open listing/thread. Click the extension to send verified info.'
+      tip_en: 'Open listing/thread. Click the PeerRate extension.'
     },
   };
 
@@ -255,7 +250,6 @@ export function initPlatformPicker() {
     renderTip(key);
   }
 
-  // Preselect via query (?source=airbnb etc)
   const qs = new URLSearchParams(window.location.search || '');
   const sourceRaw = (qs.get('source') || '').trim().toLowerCase();
 
@@ -276,14 +270,8 @@ export function initPlatformPicker() {
   const pending = getPending();
   const pendingSource = (pending?.source || '').toString().trim().toLowerCase();
 
-  const resolved =
-    sourceMap[sourceRaw] ||
-    sourceMap[pendingSource] ||
-    '';
-
-  if (resolved && platforms[resolved]) {
-    select.value = resolved;
-  }
+  const resolved = sourceMap[sourceRaw] || sourceMap[pendingSource] || '';
+  if (resolved && platforms[resolved]) select.value = resolved;
 
   setGoEnabled(false);
   onSelect();
@@ -305,7 +293,6 @@ export function initPlatformPicker() {
 
 /**
  * Normalisera payload från extension/query till ett internt "pending"-format
- * så resten av UI alltid kan utgå från samma fält.
  */
 function normalizeIncoming(inObj) {
   const obj = (inObj && typeof inObj === 'object') ? { ...inObj } : {};
@@ -343,10 +330,7 @@ function normalizeIncoming(inObj) {
   return out;
 }
 
-/**
- * Sanera counterparty så vi bara skickar fält backend accepterar (Joi).
- * + mappar username -> platformUsername (om relevant).
- */
+/** Sanera counterparty så vi aldrig skickar okända keys till backend-Joi */
 function sanitizeCounterparty(cp, deal) {
   if (!cp || typeof cp !== 'object') return undefined;
 
@@ -372,15 +356,91 @@ function sanitizeCounterparty(cp, deal) {
     title: cp.title || deal?.title || undefined,
   };
 
-  // Ta bort undefined/empty
   Object.keys(clean).forEach((k) => {
     if (clean[k] === undefined || clean[k] === null || clean[k] === '') delete clean[k];
   });
 
-  // email måste finnas för att skicka
   if (!clean.email) return undefined;
-
   return clean;
+}
+
+/** Liten toast som matchar sitens look (via CSS-variabler) */
+function showToast(type, message) {
+  try {
+    const existing = document.getElementById('pr-toast');
+    if (existing) existing.remove();
+
+    const t = document.createElement('div');
+    t.id = 'pr-toast';
+    t.setAttribute('role', 'status');
+    t.setAttribute('aria-live', 'polite');
+
+    // inline-stil för att slippa ändra CSS-filer
+    t.style.position = 'fixed';
+    t.style.left = '50%';
+    t.style.bottom = '22px';
+    t.style.transform = 'translateX(-50%)';
+    t.style.zIndex = '9999';
+    t.style.maxWidth = '92vw';
+    t.style.padding = '12px 14px';
+    t.style.borderRadius = '14px';
+    t.style.boxShadow = '0 10px 30px rgba(0,0,0,.18)';
+    t.style.border = '1px solid rgba(0,0,0,.10)';
+    t.style.background = '#fff';
+    t.style.color = 'var(--pr-text, #111)';
+    t.style.fontSize = '14px';
+    t.style.fontWeight = '600';
+
+    const bar = document.createElement('div');
+    bar.style.height = '3px';
+    bar.style.borderRadius = '999px';
+    bar.style.marginBottom = '8px';
+    bar.style.opacity = '.9';
+    // håll det enkelt: grön för success, röd för error
+    bar.style.background = (type === 'success') ? '#16a34a' : '#dc2626';
+
+    const txt = document.createElement('div');
+    txt.textContent = message;
+
+    t.appendChild(bar);
+    t.appendChild(txt);
+
+    document.body.appendChild(t);
+
+    setTimeout(() => {
+      try { t.remove(); } catch {}
+    }, 3500);
+  } catch {}
+}
+
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
+function formatAmount(amount, currency) {
+  if (amount === null || amount === undefined || amount === '') return '–';
+  const cur = currency || 'SEK';
+  return `${escapeHtml(String(amount))} ${escapeHtml(cur)}`.trim();
+}
+
+function formatDateShort(date) {
+  if (!date) return '–';
+  return escapeHtml(String(date));
+}
+
+function formatAddress(cp) {
+  const parts = [
+    cp?.addressStreet,
+    cp?.addressZip,
+    cp?.addressCity,
+    cp?.country
+  ].filter(Boolean).map(x => String(x).trim()).filter(Boolean);
+  return parts.length ? escapeHtml(parts.join(', ')) : '–';
 }
 
 /**
@@ -415,7 +475,7 @@ function renderVerifiedDealUI(p) {
 
   if (!emptyEl || !listEl) return;
 
-  const hasAnything = !!(p?.proofRef || p?.pageUrl || p?.subjectEmail || p?.counterparty?.email || p?.counterparty?.username);
+  const hasAnything = !!(p?.proofRef || p?.pageUrl || p?.subjectEmail || p?.counterparty?.email);
   if (!p || !hasAnything) {
     emptyEl.style.display = '';
     listEl.style.display = 'none';
@@ -428,10 +488,14 @@ function renderVerifiedDealUI(p) {
   listEl.style.display = '';
   listEl.innerHTML = '';
 
-  const cpEmail = p.subjectEmail || p?.counterparty?.email || '';
-  const cpUser = p?.counterparty?.username || '';
   const deal = p.deal || {};
-  const orderId = deal.orderId || p.proofRef || '';
+  const cp = p.counterparty || {};
+  const cpEmail = p.subjectEmail || cp.email || '–';
+  const cpName = cp.name || '–';
+  const cpPhone = cp.phone || '–';
+  const cpAddress = formatAddress(cp);
+
+  const orderId = deal.orderId || p.proofRef || '–';
   const amount = (deal.amount != null) ? deal.amount : (deal.amountSek != null ? deal.amountSek : null);
   const currency = deal.currency || (amount != null ? 'SEK' : '');
   const date = deal.date || deal.dateISO || '';
@@ -442,32 +506,48 @@ function renderVerifiedDealUI(p) {
   card.style.borderRadius = '14px';
   card.style.padding = '12px';
 
-  const left = document.createElement('div');
-  left.style.display = 'grid';
-  left.style.gridTemplateColumns = 'repeat(2,minmax(0,1fr))';
-  left.style.gap = '10px';
+  const grid = document.createElement('div');
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(2,minmax(0,1fr))';
+  grid.style.gap = '10px';
 
-  left.innerHTML = `
+  const valStyle = 'font-weight:600;word-break:break-word;'; // ✅ ingen super-fetstil
+
+  grid.innerHTML = `
     <div>
       <div style="font-size:12px;color:var(--pr-muted);">Källa</div>
-      <div style="font-weight:700;">${escapeHtml(p.source || '–')}</div>
+      <div style="${valStyle}">${escapeHtml(p.source || '–')}</div>
     </div>
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Proof</div>
-      <div style="font-weight:700;word-break:break-word;">${escapeHtml(orderId || '–')}</div>
+      <div style="font-size:12px;color:var(--pr-muted);">Order/Proof</div>
+      <div style="${valStyle}">${escapeHtml(orderId)}</div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;color:var(--pr-muted);">Motpart (e-post)</div>
+      <div style="${valStyle}">${escapeHtml(cpEmail)}</div>
     </div>
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Motpart</div>
-      <div style="font-weight:700;word-break:break-word;">
-        ${escapeHtml(cpEmail || cpUser || '–')}
-      </div>
+      <div style="font-size:12px;color:var(--pr-muted);">Namn</div>
+      <div style="${valStyle}">${escapeHtml(cpName)}</div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;color:var(--pr-muted);">Telefon</div>
+      <div style="${valStyle}">${escapeHtml(cpPhone)}</div>
     </div>
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Belopp / Datum</div>
-      <div style="font-weight:700;">
-        ${amount != null ? `${escapeHtml(String(amount))} ${escapeHtml(currency || '')}` : '–'}
-        ${date ? ` • ${escapeHtml(date)}` : ''}
-      </div>
+      <div style="font-size:12px;color:var(--pr-muted);">Adress</div>
+      <div style="${valStyle}">${cpAddress}</div>
+    </div>
+
+    <div>
+      <div style="font-size:12px;color:var(--pr-muted);">Belopp</div>
+      <div style="${valStyle}">${formatAmount(amount, currency)}</div>
+    </div>
+    <div>
+      <div style="font-size:12px;color:var(--pr-muted);">Datum</div>
+      <div style="${valStyle}">${formatDateShort(date)}</div>
     </div>
   `;
 
@@ -483,14 +563,14 @@ function renderVerifiedDealUI(p) {
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
   link.textContent = 'Visa källan →';
-  link.style.fontWeight = '800';
+  link.style.fontWeight = '700';
   link.style.textDecoration = 'none';
   link.style.color = '#1d4ed8';
   link.style.display = p.pageUrl ? 'inline-block' : 'none';
 
   actions.appendChild(link);
 
-  card.appendChild(left);
+  card.appendChild(grid);
   card.appendChild(actions);
   listEl.appendChild(card);
 
@@ -559,9 +639,7 @@ function ensureLockedFormCard(p, user) {
   anchor.parentElement.insertBefore(card, anchor.nextSibling);
 
   const form = document.getElementById('locked-rating-form');
-  if (form) {
-    form.addEventListener('submit', handleLockedSubmit);
-  }
+  if (form) form.addEventListener('submit', handleLockedSubmit);
 
   updateLockedFormWithPending(p, user);
 }
@@ -577,33 +655,55 @@ function updateLockedFormWithPending(p, user) {
   if (!meta || !form) return;
 
   const deal = p.deal || {};
-  const cpEmail = p.subjectEmail || p?.counterparty?.email || '';
-  const cpUser = p?.counterparty?.username || '';
-  const orderId = deal.orderId || p.proofRef || '';
+  const cp = p.counterparty || {};
+  const cpEmail = p.subjectEmail || cp.email || '';
+  const cpName = cp.name || '–';
+  const cpPhone = cp.phone || '–';
+  const cpAddress = formatAddress(cp);
+
+  const orderId = deal.orderId || p.proofRef || '–';
   const amount = (deal.amount != null) ? deal.amount : (deal.amountSek != null ? deal.amountSek : null);
   const currency = deal.currency || (amount != null ? 'SEK' : '');
   const date = deal.date || deal.dateISO || '';
 
+  const valStyle = 'font-weight:600;word-break:break-word;';
+
   meta.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Motpart</div>
-        <div style="font-weight:700;word-break:break-word;">${escapeHtml(cpEmail || cpUser || '–')}</div>
+        <div style="font-size:12px;color:var(--pr-muted);">Motpart (e-post)</div>
+        <div style="${valStyle}">${escapeHtml(cpEmail || '–')}</div>
       </div>
       <div>
         <div style="font-size:12px;color:var(--pr-muted);">Källa</div>
-        <div style="font-weight:700;">${escapeHtml(p.source || '–')}</div>
+        <div style="${valStyle}">${escapeHtml(p.source || '–')}</div>
+      </div>
+
+      <div>
+        <div style="font-size:12px;color:var(--pr-muted);">Namn</div>
+        <div style="${valStyle}">${escapeHtml(cpName)}</div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--pr-muted);">Telefon</div>
+        <div style="${valStyle}">${escapeHtml(cpPhone)}</div>
+      </div>
+
+      <div>
+        <div style="font-size:12px;color:var(--pr-muted);">Adress</div>
+        <div style="${valStyle}">${cpAddress}</div>
       </div>
       <div>
         <div style="font-size:12px;color:var(--pr-muted);">Order/Proof</div>
-        <div style="font-weight:700;word-break:break-word;">${escapeHtml(orderId || '–')}</div>
+        <div style="${valStyle}">${escapeHtml(orderId)}</div>
+      </div>
+
+      <div>
+        <div style="font-size:12px;color:var(--pr-muted);">Belopp</div>
+        <div style="${valStyle}">${formatAmount(amount, currency)}</div>
       </div>
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Belopp / Datum</div>
-        <div style="font-weight:700;">
-          ${amount != null ? `${escapeHtml(String(amount))} ${escapeHtml(currency || '')}` : '–'}
-          ${date ? ` • ${escapeHtml(date)}` : ''}
-        </div>
+        <div style="font-size:12px;color:var(--pr-muted);">Datum</div>
+        <div style="${valStyle}">${formatDateShort(date)}</div>
       </div>
     </div>
   `;
@@ -630,6 +730,19 @@ function setSubmitLoading(form, isLoading) {
     btn.style.opacity = '';
     btn.style.pointerEvents = '';
   }
+}
+
+function isDuplicateRatingError(result) {
+  const msg = (result?.error || result?.message || '').toString().toLowerCase();
+  const raw = (result?.raw || '').toString().toLowerCase();
+
+  // fånga typiska varianter
+  if (result?.status === 409) return true;
+  if (msg.includes('duplicate')) return true;
+  if (msg.includes('already') && (msg.includes('rating') || msg.includes('betyg') || msg.includes('omdöme'))) return true;
+  if (msg.includes('redan') && (msg.includes('lämn') || msg.includes('skick'))) return true;
+  if (raw.includes('duplicate')) return true;
+  return false;
 }
 
 async function handleLockedSubmit(e) {
@@ -662,7 +775,6 @@ async function handleLockedSubmit(e) {
   const rawCounterparty = pending?.counterparty || pending?.deal?.counterparty || null;
   const deal = pending?.deal || null;
 
-  // ✅ Sanera så backend-Joi aldrig får okända keys (t.ex. counterparty.username)
   const counterparty = sanitizeCounterparty(rawCounterparty, deal);
 
   const payload = {
@@ -681,24 +793,21 @@ async function handleLockedSubmit(e) {
   try {
     const result = await api.createRating(payload);
     if (!result || result.ok === false) {
-      const msg = result?.error || 'Kunde inte spara betyget.';
-      showNotification('error', msg, 'locked-notice');
+      if (isDuplicateRatingError(result)) {
+        showNotification('error', 'Omdöme har redan lämnats för denna affär.', 'locked-notice');
+      } else {
+        showNotification('error', result?.error || 'Kunde inte spara betyget.', 'locked-notice');
+      }
       setSubmitLoading(form, false);
       return;
     }
 
+    // ✅ direkt: ta bort formuläret, men visa toast kvar
     clearPending();
+    removeLockedFormCard();
+    renderVerifiedDealUI(getPending()); // kommer rendera tomt-läge
 
-    // ✅ Tydlig feedback
-    showNotification('success', 'Tack! Ditt omdöme är sparat.', 'locked-notice');
-
-    // Lås UI lite kort så användaren verkligen ser att det gick
-    form.reset();
-    setTimeout(() => {
-      removeLockedFormCard();
-      renderVerifiedDealUI(getPending()); // visar tom-lista efter clearPending
-    }, 450);
-
+    showToast('success', 'Tack! Ditt omdöme är sparat.');
   } catch (err) {
     console.error('locked submit error', err);
     showNotification('error', 'Tekniskt fel. Försök igen om en stund.', 'locked-notice');
@@ -708,9 +817,6 @@ async function handleLockedSubmit(e) {
 
 /**
  * Läs query och skriv pending.
- * Stöd:
- * - ?pr= (payload)
- * - ?source=&pageUrl=&proofRef=
  */
 function captureFromUrl() {
   const qs = new URLSearchParams(window.location.search || '');
@@ -790,8 +896,7 @@ function initPlatformStarter() {
 }
 
 /**
- * Legacy: initRatingLogin har tidigare också initat öppet betygsform.
- * Nu använder vi den främst för login + pending + render av verifierad affär.
+ * initRatingLogin = login + pending + render verifierad affär
  */
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
@@ -870,8 +975,7 @@ async function handleLoginSubmit(e) {
 }
 
 /**
- * Legacy: om du har andra sidor som fortfarande använder ett öppet rating-form.
- * Vi lämnar kvar dessa exports för kompatibilitet.
+ * Legacy open rating form (om andra sidor använder den)
  */
 export function initRatingForm() {
   const form = document.getElementById('rating-form');
@@ -925,7 +1029,11 @@ async function handleSubmit(e) {
   try {
     const result = await api.createRating(payload);
     if (!result || result.ok === false) {
-      showNotification('error', result?.error || 'Kunde inte spara betyget.', 'notice');
+      if (isDuplicateRatingError(result)) {
+        showNotification('error', 'Omdöme har redan lämnats för denna affär.', 'notice');
+      } else {
+        showNotification('error', result?.error || 'Kunde inte spara betyget.', 'notice');
+      }
       if (btn) btn.disabled = false;
       return;
     }
@@ -939,13 +1047,4 @@ async function handleSubmit(e) {
     showNotification('error', 'Tekniskt fel. Försök igen om en stund.', 'notice');
     if (btn) btn.disabled = false;
   }
-}
-
-function escapeHtml(s) {
-  return String(s ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;');
 }
