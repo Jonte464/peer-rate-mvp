@@ -19,10 +19,36 @@ async function getOrCreateCustomerBySubjectRef(subjectRef) {
 
 /** Skapa rating och returnera ids */
 async function createRating(item) {
-  // item: { subjectRef, rating, comment, raterName, raterEmail?, proofRef, createdAt, ratingSource?/source? }
   const customer = await getOrCreateCustomerBySubjectRef(item.subjectRef);
 
-  // Dubblettspärr 24h per raterName (om satt)
+  // ✅ NYTT: spärr per affär (proofRef) och raterEmail (eller raterName)
+  if (item.proofRef) {
+    const where = {
+      customerId: customer.id,
+      proofRef: item.proofRef,
+      ...(item.raterEmail
+        ? { raterEmail: item.raterEmail }
+        : item.raterName
+          ? { raterName: item.raterName }
+          : {}),
+    };
+
+    // Om vi varken har raterEmail eller raterName kan vi inte spärra säkert,
+    // men i ditt flöde skickar vi rater=email.
+    if (where.raterEmail || where.raterName) {
+      const dupProof = await prisma.rating.findFirst({
+        where,
+        select: { id: true },
+      });
+      if (dupProof) {
+        const err = new Error('duplicate_proof');
+        err.code = 'DUP_PROOF';
+        throw err;
+      }
+    }
+  }
+
+  // (Legacy) Dubblettspärr 24h per raterName (om satt)
   if (item.raterName) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const dup = await prisma.rating.findFirst({
@@ -46,14 +72,11 @@ async function createRating(item) {
       score: item.rating,
       text: item.comment || null,
 
-      // Vem gav omdömet?
       raterName: item.raterName || null,
       raterEmail: item.raterEmail || null,
 
-      // Verifierings-info
       proofRef: item.proofRef || null,
 
-      // Källa (Blocket, Tradera, Tiptap, …)
       ratingSource: item.ratingSource || item.source || 'OTHER',
 
       ...(item.createdAt ? { createdAt: new Date(item.createdAt) } : {}),
@@ -64,7 +87,7 @@ async function createRating(item) {
   return { ok: true, customerId: customer.id, ratingId: rating.id };
 }
 
-/** Lista ratings för subjectRef (senaste först) */
+// ... resten exakt som innan
 async function listRatingsBySubjectRef(subjectRef) {
   const customer = await prisma.customer.findUnique({
     where: { subjectRef },
@@ -92,7 +115,6 @@ async function listRatingsBySubjectRef(subjectRef) {
     const subject = r.customer?.subjectRef || subjectRef;
     const hasProof = !!(r.proofRef && r.proofRef.length > 0);
 
-    // Maskad variant om vi vill dölja hela mejlen
     let raterMasked = null;
     if (r.raterName) {
       raterMasked = r.raterName;
@@ -117,7 +139,6 @@ async function listRatingsBySubjectRef(subjectRef) {
       rating: r.score,
       comment: r.text || '',
 
-      // Rådata – dessa använder vi i UI för "av <namn>"
       raterName: r.raterName || null,
       raterEmail: r.raterEmail || null,
       raterMasked,
@@ -125,14 +146,11 @@ async function listRatingsBySubjectRef(subjectRef) {
       hasProof,
       proofHash: null,
       createdAt: r.createdAt.toISOString(),
-
-      // Källa till betyget
       ratingSource: r.ratingSource || 'OTHER',
     };
   });
 }
 
-/** Snitt för en subjectRef */
 async function averageForSubjectRef(subjectRef) {
   const customer = await prisma.customer.findUnique({
     where: { subjectRef },
@@ -150,7 +168,6 @@ async function averageForSubjectRef(subjectRef) {
   return { count, average: Number(avg.toFixed(2)) };
 }
 
-/** Senaste ratings globalt */
 async function listRecentRatings(limit = 20) {
   const rows = await prisma.rating.findMany({
     orderBy: { createdAt: 'desc' },
@@ -193,7 +210,6 @@ async function listRecentRatings(limit = 20) {
       hasProof,
       proofHash: null,
       createdAt: r.createdAt.toISOString(),
-
       ratingSource: r.ratingSource || 'OTHER',
     };
   });
