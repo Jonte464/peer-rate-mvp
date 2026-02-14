@@ -128,7 +128,7 @@ function setVisibility(isLoggedIn) {
   const hasLoginTargets = loginCards.length > 0;
   const hasRatingTargets = ratingWrappers.length > 0;
 
-  // Failsafe: om vi inte hittar något att toggla, gör inget (undvik vit sida).
+  // Failsafe
   if (!hasLoginTargets && !hasRatingTargets) {
     console.warn('[PeerRate] setVisibility: no targets found; skipping toggle to avoid blank UI.');
     return;
@@ -138,7 +138,6 @@ function setVisibility(isLoggedIn) {
   const shouldShowLogin = !isLoggedIn || (!hasRatingTargets && isLoggedIn);
   const shouldShowRating = isLoggedIn && hasRatingTargets;
 
-  // Login UI
   if (hasLoginTargets) {
     loginCards.forEach((el) => {
       el.style.display = shouldShowLogin ? 'block' : 'none';
@@ -146,13 +145,11 @@ function setVisibility(isLoggedIn) {
     });
   }
 
-  // Hint
   if (hint) {
     hint.classList.toggle('hidden', isLoggedIn);
     hint.style.display = isLoggedIn ? 'none' : '';
   }
 
-  // Rating UI (legacy)
   if (hasRatingTargets) {
     ratingWrappers.forEach((el) => {
       el.style.display = shouldShowRating ? 'block' : 'none';
@@ -161,15 +158,13 @@ function setVisibility(isLoggedIn) {
   }
 }
 
-/** ✅ Dropdown → länk ut (om du använder den på rate.html) */
+/** ✅ Dropdown → länk ut */
 export function initPlatformPicker() {
   if (!isRatePage()) return;
 
   const select = document.getElementById('platformSelect');
   const goBtn = document.getElementById('platformGoBtn');
 
-  // Viktigt: din nuvarande rate.html har INTE element med id="platformInstructions".
-  // Därför gör vi denna init tolerant.
   const instructions =
     document.getElementById('platformInstructions') ||
     document.getElementById('platformNote') ||
@@ -233,7 +228,6 @@ export function initPlatformPicker() {
   }
 
   function setGoEnabled(enabled) {
-    // din button är <button>, inte <a>
     goBtn.disabled = !enabled;
     goBtn.style.pointerEvents = enabled ? 'auto' : 'none';
     goBtn.style.opacity = enabled ? '1' : '.55';
@@ -244,7 +238,6 @@ export function initPlatformPicker() {
     if (!p || !instructions) return;
     const lang = getLang();
     const tip = (lang === 'en') ? (p.tip_en || '') : (p.tip_sv || '');
-    // instructions kan vara ett helt block — vi skriver bara en kort text
     instructions.textContent = tip;
   }
 
@@ -261,7 +254,6 @@ export function initPlatformPicker() {
     renderTip(key);
   }
 
-  // Preselect via query (?source=airbnb etc)
   const qs = new URLSearchParams(window.location.search || '');
   const sourceRaw = (qs.get('source') || '').trim().toLowerCase();
 
@@ -295,7 +287,6 @@ export function initPlatformPicker() {
   onSelect();
   select.addEventListener('change', onSelect);
 
-  // Öppna plattform
   goBtn.addEventListener('click', () => {
     const key = (select.value || '').trim();
     const p = platforms[key];
@@ -303,7 +294,6 @@ export function initPlatformPicker() {
     window.open(p.url, '_blank', 'noopener,noreferrer');
   });
 
-  // Uppdatera tip vid språkbyte
   const mo = new MutationObserver(() => {
     const key = select.value || '';
     if (platforms[key]) renderTip(key);
@@ -313,37 +303,30 @@ export function initPlatformPicker() {
 
 /**
  * Normalisera payload från extension/query till ett internt "pending"-format
- * så resten av UI alltid kan utgå från samma fält.
  */
 function normalizeIncoming(inObj) {
   const obj = (inObj && typeof inObj === 'object') ? { ...inObj } : {};
   const out = { ...obj };
 
-  // source/pageUrl/proofRef
   out.source = out.source || obj.source || '';
   out.pageUrl = out.pageUrl || obj.pageUrl || '';
 
-  // Stöd för nya payloaden: { deal: { ... , counterparty: { email/username/name } } }
   const deal = obj.deal || obj.counterparty?.deal || null;
   const cp = (deal && deal.counterparty) ? deal.counterparty : (obj.counterparty || null);
 
-  // subjectEmail: primärt cp.email
   out.subjectEmail =
     obj.subjectEmail ||
     cp?.email ||
     obj.subject ||
     '';
 
-  // counterparty: håll en tydlig struktur
   out.counterparty = {
     ...(obj.counterparty && typeof obj.counterparty === 'object' ? obj.counterparty : {}),
     ...(cp && typeof cp === 'object' ? cp : {}),
   };
 
-  // dealinfo (om finns)
   out.deal = deal && typeof deal === 'object' ? deal : (obj.deal || undefined);
 
-  // proofRef: helst orderId, annars proofRef, annars pageUrl
   out.proofRef =
     obj.proofRef ||
     deal?.orderId ||
@@ -351,16 +334,12 @@ function normalizeIncoming(inObj) {
     out.pageUrl ||
     '';
 
-  // Källa-presentation: om source är "tradera" gör vi "Tradera"
   const s = String(out.source || '').toLowerCase();
   if (s === 'tradera') out.source = 'Tradera';
 
   return out;
 }
 
-/**
- * Visa "Verifierad källa" kortet från pending, om det finns.
- */
 function applyPendingContextCard(p) {
   if (!p) return;
 
@@ -379,9 +358,30 @@ function applyPendingContextCard(p) {
   }
 }
 
-/**
- * Rendera en "Verifierad affär" i listan + skapa låst rating-form om inloggad.
- */
+/** Små UI-hjälpare för “inte allt fetstil” */
+function kv(label, value, opts = {}) {
+  const {
+    strong = false,
+    mono = false,
+  } = opts;
+
+  const v = (value == null || String(value).trim() === '') ? '–' : String(value);
+
+  const valueStyle = [
+    `color:var(--pr-ink);`,
+    mono ? 'font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;' : '',
+    strong ? 'font-weight:800;' : 'font-weight:600;',
+    'word-break:break-word;',
+  ].filter(Boolean).join('');
+
+  return `
+    <div>
+      <div style="font-size:12px;color:var(--pr-muted);">${escapeHtml(label)}</div>
+      <div style="${valueStyle}">${escapeHtml(v)}</div>
+    </div>
+  `;
+}
+
 function renderVerifiedDealUI(p) {
   if (!isRatePage()) return;
 
@@ -390,7 +390,6 @@ function renderVerifiedDealUI(p) {
 
   if (!emptyEl || !listEl) return;
 
-  // saknas pending eller saknas identifierare -> visa tomt läge
   const hasAnything = !!(p?.proofRef || p?.pageUrl || p?.subjectEmail || p?.counterparty?.email || p?.counterparty?.username);
   if (!p || !hasAnything) {
     emptyEl.style.display = '';
@@ -400,13 +399,14 @@ function renderVerifiedDealUI(p) {
     return;
   }
 
-  // visa list
   emptyEl.style.display = 'none';
   listEl.style.display = '';
   listEl.innerHTML = '';
 
   const cpEmail = p.subjectEmail || p?.counterparty?.email || '';
   const cpUser = p?.counterparty?.username || '';
+  const cpPhone = p?.counterparty?.phone || '';
+
   const deal = p.deal || {};
   const orderId = deal.orderId || p.proofRef || '';
   const amount = (deal.amount != null) ? deal.amount : (deal.amountSek != null ? deal.amountSek : null);
@@ -419,33 +419,18 @@ function renderVerifiedDealUI(p) {
   card.style.borderRadius = '14px';
   card.style.padding = '12px';
 
-  const left = document.createElement('div');
-  left.style.display = 'grid';
-  left.style.gridTemplateColumns = 'repeat(2,minmax(0,1fr))';
-  left.style.gap = '10px';
+  const grid = document.createElement('div');
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(190px, 1fr))';
+  grid.style.gap = '10px';
 
-  left.innerHTML = `
-    <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Källa</div>
-      <div style="font-weight:900;">${escapeHtml(p.source || '–')}</div>
-    </div>
-    <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Proof</div>
-      <div style="font-weight:900;word-break:break-word;">${escapeHtml(orderId || '–')}</div>
-    </div>
-    <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Motpart</div>
-      <div style="font-weight:900;word-break:break-word;">
-        ${escapeHtml(cpEmail || cpUser || '–')}
-      </div>
-    </div>
-    <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Belopp / Datum</div>
-      <div style="font-weight:900;">
-        ${amount != null ? `${escapeHtml(String(amount))} ${escapeHtml(currency || '')}` : '–'}
-        ${date ? ` • ${escapeHtml(date)}` : ''}
-      </div>
-    </div>
+  grid.innerHTML = `
+    ${kv('Källa', p.source || '–', { strong: true })}
+    ${kv('Proof', orderId || '–', { mono: true, strong: true })}
+    ${kv('Motpart', (cpEmail || cpUser || '–'), { strong: true })}
+    ${kv('Belopp', amount != null ? `${amount} ${currency || ''}`.trim() : '–')}
+    ${kv('Datum', date || '–')}
+    ${kv('Telefon', cpPhone || '–')}
   `;
 
   const actions = document.createElement('div');
@@ -460,31 +445,27 @@ function renderVerifiedDealUI(p) {
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
   link.textContent = 'Visa källan →';
-  link.style.fontWeight = '800';
+  link.style.fontWeight = '700';
   link.style.textDecoration = 'none';
   link.style.color = '#1d4ed8';
   link.style.display = p.pageUrl ? 'inline-block' : 'none';
 
   actions.appendChild(link);
 
-  card.appendChild(left);
+  card.appendChild(grid);
   card.appendChild(actions);
   listEl.appendChild(card);
 
-  // Skapa låst betygsform (Steg 3) när användaren är inloggad
   const user = auth.getUser?.() || null;
   if (user) {
     ensureLockedFormCard(p, user);
   } else {
-    // utloggad: ta bort form (om den finns) – användaren ska logga in först
     removeLockedFormCard();
   }
 }
 
 function ensureLockedFormCard(p, user) {
-  // Finns redan?
   if (document.getElementById('locked-rating-card')) {
-    // uppdatera ev visade fält
     updateLockedFormWithPending(p, user);
     return;
   }
@@ -537,14 +518,10 @@ function ensureLockedFormCard(p, user) {
     </form>
   `;
 
-  // Placera efter verifierade affärer-kortet
   anchor.parentElement.insertBefore(card, anchor.nextSibling);
 
-  // bind submit
   const form = document.getElementById('locked-rating-form');
-  if (form) {
-    form.addEventListener('submit', handleLockedSubmit);
-  }
+  if (form) form.addEventListener('submit', handleLockedSubmit);
 
   updateLockedFormWithPending(p, user);
 }
@@ -562,36 +539,24 @@ function updateLockedFormWithPending(p, user) {
   const deal = p.deal || {};
   const cpEmail = p.subjectEmail || p?.counterparty?.email || '';
   const cpUser = p?.counterparty?.username || '';
+  const cpPhone = p?.counterparty?.phone || '';
+
   const orderId = deal.orderId || p.proofRef || '';
   const amount = (deal.amount != null) ? deal.amount : (deal.amountSek != null ? deal.amountSek : null);
   const currency = deal.currency || (amount != null ? 'SEK' : '');
   const date = deal.date || deal.dateISO || '';
 
   meta.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
-      <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Motpart</div>
-        <div style="font-weight:900;word-break:break-word;">${escapeHtml(cpEmail || cpUser || '–')}</div>
-      </div>
-      <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Källa</div>
-        <div style="font-weight:900;">${escapeHtml(p.source || '–')}</div>
-      </div>
-      <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Order/Proof</div>
-        <div style="font-weight:900;word-break:break-word;">${escapeHtml(orderId || '–')}</div>
-      </div>
-      <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Belopp / Datum</div>
-        <div style="font-weight:900;">
-          ${amount != null ? `${escapeHtml(String(amount))} ${escapeHtml(currency || '')}` : '–'}
-          ${date ? ` • ${escapeHtml(date)}` : ''}
-        </div>
-      </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(190px, 1fr));gap:10px;">
+      ${kv('Motpart', (cpEmail || cpUser || '–'), { strong: true })}
+      ${kv('Källa', p.source || '–', { strong: true })}
+      ${kv('Order/Proof', orderId || '–', { mono: true, strong: true })}
+      ${kv('Belopp', amount != null ? `${amount} ${currency || ''}`.trim() : '–')}
+      ${kv('Datum', date || '–')}
+      ${kv('Telefon', cpPhone || '–')}
     </div>
   `;
 
-  // Hidden fields (låsning)
   form.querySelector('input[name="ratedUserEmail"]').value = cpEmail || '';
   form.querySelector('input[name="source"]').value = p.source || '';
   form.querySelector('input[name="proofRef"]').value = p.proofRef || '';
@@ -636,7 +601,7 @@ async function handleLockedSubmit(e) {
     proofRef: proofRef || undefined,
     source: sourceRaw || undefined,
     counterparty: counterparty || undefined,
-    deal: deal || undefined, // om backend ignorerar ok; annars bra för framtiden
+    deal: deal || undefined,
   };
 
   const btn = form.querySelector('button[type="submit"]');
@@ -655,7 +620,6 @@ async function handleLockedSubmit(e) {
     form.reset();
     removeLockedFormCard();
 
-    // återställ listan
     renderVerifiedDealUI(getPending());
     if (btn) btn.disabled = false;
   } catch (err) {
@@ -667,9 +631,6 @@ async function handleLockedSubmit(e) {
 
 /**
  * Läs query och skriv pending.
- * Stöd:
- * - ?pr= (payload)
- * - ?source=&pageUrl=&proofRef=
  */
 function captureFromUrl() {
   const qs = new URLSearchParams(window.location.search || '');
@@ -683,7 +644,6 @@ function captureFromUrl() {
   if (pr) {
     const decoded = readB64Json(pr);
     if (decoded && typeof decoded === 'object') {
-      // fyll från query om saknas
       if (!decoded.source && source) decoded.source = source;
       if (!decoded.pageUrl && pageUrl) decoded.pageUrl = pageUrl;
       if (!decoded.proofRef && proofRef) decoded.proofRef = proofRef;
@@ -694,7 +654,6 @@ function captureFromUrl() {
     }
   }
 
-  // inga pr-data, men query har source/pageUrl
   const existing = getPending() || {};
   const merged = normalizeIncoming({
     ...existing,
@@ -733,7 +692,6 @@ function initPlatformStarter() {
     if (key && platforms[key]) {
       const existing = getPending() || {};
       setPending({ ...existing, source: platforms[key].label });
-      // rendera om UI
       const p = getPending();
       applyPendingContextCard(p);
       renderVerifiedDealUI(p);
@@ -751,15 +709,10 @@ function initPlatformStarter() {
   syncBtn();
 }
 
-/**
- * Legacy: initRatingLogin har tidigare också initat öppet betygsform.
- * Nu använder vi den främst för login + pending + render av verifierad affär.
- */
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
   initPlatformStarter();
 
-  // 1) pending från URL
   const fromUrl = captureFromUrl();
   const pending = fromUrl || getPending();
 
@@ -770,15 +723,12 @@ export function initRatingLogin() {
     renderVerifiedDealUI(null);
   }
 
-  // 2) bind login
   const loginForm = document.getElementById('rating-login-form');
   if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
 
-  // 3) sätt UI direkt baserat på session
   const user = auth.getUser?.() || null;
   setVisibility(!!user);
 
-  // 4) om login/logout sker i annan flik
   window.addEventListener('storage', () => {
     const u2 = auth.getUser?.() || null;
     setVisibility(!!u2);
@@ -814,7 +764,6 @@ async function handleLoginSubmit(e) {
 
     showNotification('success', 'Du är nu inloggad.', 'login-status');
 
-    // På rate.html: stanna, göm login, visa låst form om pending finns
     if (isRatePage()) {
       setVisibility(true);
 
@@ -826,7 +775,6 @@ async function handleLoginSubmit(e) {
       return;
     }
 
-    // Annars: till profil
     window.setTimeout(() => {
       window.location.href = '/profile.html';
     }, 150);
@@ -839,7 +787,6 @@ async function handleLoginSubmit(e) {
 
 /**
  * Legacy: om du har andra sidor som fortfarande använder ett öppet rating-form.
- * Vi lämnar kvar dessa exports för kompatibilitet.
  */
 export function initRatingForm() {
   const form = document.getElementById('rating-form');
