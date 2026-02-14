@@ -14,50 +14,25 @@ const {
   listRecentRatings,
 } = require('../storage');
 
-const { saveTraderaOrders } = require('../storage.tradera');
-
 const { nowIso, normSubject, mapReportReason } = require('../helpers');
 
 const router = express.Router();
 
+/** Mappa svensk benämning -> enum RatingSource */
 function mapRatingSource(input) {
   if (!input) return 'OTHER';
   const v = String(input).trim().toLowerCase();
+
   if (v.includes('blocket')) return 'BLOCKET';
   if (v.includes('tradera')) return 'TRADERA';
   if (v.includes('airbnb')) return 'AIRBNB';
   if (v.includes('husknuten')) return 'HUSKNUTEN';
   if (v.includes('tiptap')) return 'TIPTAP';
+
   return 'OTHER';
 }
 
-function isEmail(s) {
-  if (!s) return false;
-  const v = String(s).trim();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-}
-
-function toDateOrNull(v) {
-  if (!v) return null;
-  const s = String(v).trim();
-  if (!s) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-    const d = new Date(`${s}T00:00:00.000Z`);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
-}
-
-function parseAmount(v) {
-  if (v === null || v === undefined || v === '') return null;
-  if (typeof v === 'number') return v;
-  const s = String(v).trim();
-  if (!s) return null;
-  const normalized = s.replace(/\s+/g, '').replace(',', '.');
-  const n = Number(normalized);
-  return Number.isNaN(n) ? null : n;
-}
+// --- Validation ---
 
 const reportSchema = Joi.object({
   report_flag: Joi.boolean().optional(),
@@ -67,8 +42,14 @@ const reportSchema = Joi.object({
   report_consent: Joi.boolean().optional(),
 }).unknown(true);
 
+// “kundakt”-underlag från extension
 const counterpartySchema = Joi.object({
   email: Joi.string().email().required(),
+
+  // OBS: ibland skickar extension/ratingForm "username" istället för "platformUsername"
+  username: Joi.string().max(60).allow('', null),
+  platformUsername: Joi.string().max(60).allow('', null),
+
   name: Joi.string().max(120).allow('', null),
   phone: Joi.string().max(40).allow('', null),
   addressStreet: Joi.string().max(120).allow('', null),
@@ -76,41 +57,27 @@ const counterpartySchema = Joi.object({
   addressCity: Joi.string().max(80).allow('', null),
   country: Joi.string().max(60).allow('', null),
 
-  platform: Joi.string().max(30).allow('', null),
-  platformUsername: Joi.string().max(60).allow('', null),
+  platform: Joi.string().max(30).allow('', null), // "TRADERA"
   pageUrl: Joi.string().uri().allow('', null),
 
   orderId: Joi.string().max(80).allow('', null),
   itemId: Joi.string().max(80).allow('', null),
   amountSek: Joi.number().integer().min(0).max(100000000).allow(null),
   title: Joi.string().max(200).allow('', null),
+}).unknown(true).optional();
 
-  date: Joi.string().max(40).allow('', null),
-  dateISO: Joi.string().max(60).allow('', null),
-}).optional();
-
+// “deal”-underlag från extension (verifierad affär)
 const dealSchema = Joi.object({
-  platform: Joi.string().max(30).allow('', null),
-  source: Joi.string().max(30).allow('', null),
-  pageUrl: Joi.string().uri().allow('', null),
-
+  platform: Joi.string().max(30).allow('', null), // "TRADERA"
   orderId: Joi.string().max(80).allow('', null),
   itemId: Joi.string().max(80).allow('', null),
   title: Joi.string().max(200).allow('', null),
-
   amount: Joi.alternatives(Joi.number(), Joi.string()).allow(null),
-  amountSek: Joi.alternatives(Joi.number(), Joi.string()).allow(null),
+  amountSek: Joi.number().integer().min(0).max(100000000).allow(null),
   currency: Joi.string().max(10).allow('', null),
-
   date: Joi.string().max(40).allow('', null),
-  dateISO: Joi.string().max(60).allow('', null),
-  completedAt: Joi.string().max(60).allow('', null),
-
-  counterparty: Joi.object({
-    email: Joi.string().email().allow('', null),
-    username: Joi.string().max(80).allow('', null),
-    phone: Joi.string().max(40).allow('', null),
-  }).unknown(true).allow(null),
+  dateISO: Joi.string().max(40).allow('', null),
+  pageUrl: Joi.string().uri().allow('', null),
 }).unknown(true).optional();
 
 const createRatingSchema = Joi.object({
@@ -119,53 +86,74 @@ const createRatingSchema = Joi.object({
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().max(1000).allow('', null),
   proofRef: Joi.string().max(200).allow('', null),
-  source: Joi.string().allow('', null),
+  source: Joi.string().allow('', null), // källa (Blocket, Tradera, ...)
+
   report: reportSchema.optional(),
   counterparty: counterpartySchema,
   deal: dealSchema,
-}).unknown(true);
+}).unknown(true); // ✅ viktigt: stoppa inte framtida fält
+
+function looksLikePhone(s) {
+  const v = String(s || '').trim();
+  if (!v) return false;
+  // enkel heuristik: innehåller siffror och minst 6 siffror totalt
+  const digits = v.replace(/\D/g, '');
+  return digits.length >= 6;
+}
 
 async function upsertCounterpartyDossier(counterparty) {
   if (!counterparty || !counterparty.email) return;
 
-  const subjectRef = normSubject(counterparty.email);
+  // ✅ Rädda felmappning: om name råkar vara telefon och phone saknas
+  const cp = { ...counterparty };
+  if ((!cp.phone || !String(cp.phone).trim()) && looksLikePhone(cp.name)) {
+    cp.phone = cp.name;
+    cp.name = null;
+  }
+
+  const subjectRef = normSubject(cp.email);
   if (!subjectRef) return;
 
+  // 1) Kund (Customer) – fyll på endast om fält saknas
   const existing = await prisma.customer.findUnique({ where: { subjectRef } });
 
   if (!existing) {
     await prisma.customer.create({
       data: {
         subjectRef,
-        email: counterparty.email.toLowerCase(),
-        fullName: counterparty.name || null,
-        phone: counterparty.phone || null,
-        addressStreet: counterparty.addressStreet || null,
-        addressZip: counterparty.addressZip || null,
-        addressCity: counterparty.addressCity || null,
-        country: counterparty.country || 'SE',
+        email: cp.email.toLowerCase(),
+        fullName: cp.name || null,
+        phone: cp.phone || null,
+        addressStreet: cp.addressStreet || null,
+        addressZip: cp.addressZip || null,
+        addressCity: cp.addressCity || null,
+        country: cp.country || 'SE',
       },
     });
   } else {
     const dataToUpdate = {};
-    if (!existing.email) dataToUpdate.email = counterparty.email.toLowerCase();
-    if (!existing.fullName && counterparty.name) dataToUpdate.fullName = counterparty.name;
-    if (!existing.phone && counterparty.phone) dataToUpdate.phone = counterparty.phone;
-    if (!existing.addressStreet && counterparty.addressStreet) dataToUpdate.addressStreet = counterparty.addressStreet;
-    if (!existing.addressZip && counterparty.addressZip) dataToUpdate.addressZip = counterparty.addressZip;
-    if (!existing.addressCity && counterparty.addressCity) dataToUpdate.addressCity = counterparty.addressCity;
-    if (!existing.country && counterparty.country) dataToUpdate.country = counterparty.country;
+    if (!existing.email) dataToUpdate.email = cp.email.toLowerCase();
+    if (!existing.fullName && cp.name) dataToUpdate.fullName = cp.name;
+    if (!existing.phone && cp.phone) dataToUpdate.phone = cp.phone;
+    if (!existing.addressStreet && cp.addressStreet) dataToUpdate.addressStreet = cp.addressStreet;
+    if (!existing.addressZip && cp.addressZip) dataToUpdate.addressZip = cp.addressZip;
+    if (!existing.addressCity && cp.addressCity) dataToUpdate.addressCity = cp.addressCity;
+    if (!existing.country && cp.country) dataToUpdate.country = cp.country;
 
     if (Object.keys(dataToUpdate).length) {
       await prisma.customer.update({ where: { subjectRef }, data: dataToUpdate });
     }
   }
 
-  if (counterparty.platform && String(counterparty.platform).toUpperCase() === 'TRADERA' && counterparty.platformUsername) {
+  // 2) Extern profil (ExternalProfile) – om vi har username
+  const platform = (cp.platform || '').toString().toUpperCase();
+  const username = cp.platformUsername || cp.username || null;
+
+  if (platform === 'TRADERA' && username) {
     const customer = await prisma.customer.findUnique({ where: { subjectRef } });
     if (customer) {
       const found = await prisma.externalProfile.findFirst({
-        where: { customerId: customer.id, platform: 'TRADERA', username: counterparty.platformUsername },
+        where: { customerId: customer.id, platform: 'TRADERA', username },
       });
 
       if (!found) {
@@ -173,109 +161,38 @@ async function upsertCounterpartyDossier(counterparty) {
           data: {
             customerId: customer.id,
             platform: 'TRADERA',
-            username: counterparty.platformUsername,
-            profileJson: counterparty.pageUrl ? { pageUrl: counterparty.pageUrl } : undefined,
-          }
+            username,
+            profileJson: cp.pageUrl ? { pageUrl: cp.pageUrl } : undefined,
+          },
         });
       }
     }
   }
 }
 
-async function upsertVerifiedDealForRater({ ratingSource, raterEmail, subjectEmail, counterparty, deal }) {
-  if (ratingSource !== 'TRADERA') return;
-
-  const rater = (raterEmail || '').trim().toLowerCase();
-  if (!isEmail(rater)) return;
-
-  const raterRef = normSubject(rater);
-  if (!raterRef) return;
-
-  const raterCustomer = await prisma.customer.upsert({
-    where: { subjectRef: raterRef },
-    update: { email: rater },
-    create: { subjectRef: raterRef, email: rater },
-    select: { id: true },
-  });
-
-  let profile = await prisma.externalProfile.findFirst({
-    where: { customerId: raterCustomer.id, platform: 'TRADERA' },
-  });
-
-  if (!profile) {
-    profile = await prisma.externalProfile.create({
-      data: {
-        customerId: raterCustomer.id,
-        platform: 'TRADERA',
-        username: rater,
-        status: 'ACTIVE',
-        lastSyncedAt: new Date(),
-      },
-    });
-  }
-
-  const d = deal || {};
-  const cp = (d.counterparty && typeof d.counterparty === 'object') ? d.counterparty : (counterparty || {});
-
-  const orderId = (d.orderId || counterparty?.orderId || '').toString().trim();
-  if (!orderId) return;
-
-  const itemId = (d.itemId || counterparty?.itemId || null);
-  const title = (d.title || counterparty?.title || null);
-
-  const amount = parseAmount(d.amount ?? d.amountSek ?? counterparty?.amountSek ?? null);
-  const currency = (d.currency || 'SEK').toString().trim().toUpperCase() || 'SEK';
-
-  const completedAt =
-    toDateOrNull(d.completedAt) ||
-    toDateOrNull(d.dateISO) ||
-    toDateOrNull(d.date) ||
-    toDateOrNull(counterparty?.dateISO) ||
-    toDateOrNull(counterparty?.date) ||
-    null;
-
-  const counterpartyEmail =
-    (cp?.email || subjectEmail || counterparty?.email || '').toString().trim().toLowerCase() || null;
-
-  const rawJson = {
-    source: 'rating-submit',
-    capturedAt: new Date().toISOString(),
-    pageUrl: d.pageUrl || counterparty?.pageUrl || null,
-    phone: cp?.phone || counterparty?.phone || null,
-    original: { deal: d, counterparty },
-  };
-
-  await saveTraderaOrders(profile.id, [
-    {
-      traderaOrderId: orderId,
-      traderaItemId: itemId || null,
-      title: title || '(verifierad affär)',
-      amount: amount != null ? String(amount) : null,
-      currency,
-      role: 'BUYER',
-      counterpartyAlias: cp?.username || null,
-      counterpartyEmail,
-      completedAt: completedAt ? completedAt.toISOString() : null,
-      rawJson,
-    },
-  ]);
-}
-
+/* -------------------------------------------------------
+   POST /api/ratings – skapa betyg
+   ------------------------------------------------------- */
 router.post('/ratings', async (req, res) => {
-  const { error, value } = createRatingSchema.validate(req.body);
+  const { error, value } = createRatingSchema.validate(req.body, { abortEarly: false });
+
   if (error) {
-    return res.status(400).json({ ok: false, error: 'Ogiltig inmatning', details: error.details });
+    return res.status(400).json({
+      ok: false,
+      error: 'Ogiltig inmatning',
+      details: error.details,
+    });
   }
 
   const subjectRef = normSubject(value.subject);
   const rating = value.rating;
   const comment = (value.comment || '').toString().trim();
-  const raterName = (value.rater || '').toString().trim() || null;
-  const raterEmail = isEmail(value.rater) ? String(value.rater).trim().toLowerCase() : null;
+  const raterRaw = (value.rater || '').toString().trim() || null;
   const proofRef = (value.proofRef || '').toString().trim() || null;
 
   const ratingSource = mapRatingSource(value.source);
 
+  // Säkerhet: om counterparty skickas måste subject matcha counterparty.email
   if (value.counterparty?.email) {
     const a = normSubject(value.subject);
     const b = normSubject(value.counterparty.email);
@@ -288,29 +205,24 @@ router.post('/ratings', async (req, res) => {
   }
 
   try {
+    // 1) skapa rating
+    // OBS: just nu lagras raterRaw i raterName (legacy). Vi kan förbättra senare
     const { customerId, ratingId } = await createRating({
       subjectRef,
       rating,
       comment,
-      raterName,
-      raterEmail,
+      raterName: raterRaw,
       proofRef,
       createdAt: nowIso(),
       ratingSource,
     });
 
+    // 2) spara kundakt (motpart) om vi fick in data från extension
     if (value.counterparty) {
       await upsertCounterpartyDossier(value.counterparty);
     }
 
-    await upsertVerifiedDealForRater({
-      ratingSource,
-      raterEmail: value.rater,
-      subjectEmail: value.subject,
-      counterparty: value.counterparty || null,
-      deal: value.deal || null,
-    });
-
+    // 3) ev report
     const r = value.report || null;
     if (r) {
       const flagged = r.report_flag === true || !!r.report_reason || !!r.report_text;
@@ -330,12 +242,6 @@ router.post('/ratings', async (req, res) => {
 
     return res.status(201).json({ ok: true });
   } catch (e) {
-    if (e && e.code === 'DUP_PROOF') {
-      return res.status(409).json({
-        ok: false,
-        error: 'Du har redan lämnat omdöme för denna affär.',
-      });
-    }
     if (e && e.code === 'DUP_24H') {
       return res.status(409).json({
         ok: false,
@@ -347,10 +253,14 @@ router.post('/ratings', async (req, res) => {
   }
 });
 
+/* -------------------------------------------------------
+   GET /api/ratings – lista betyg för subject
+   ------------------------------------------------------- */
 router.get('/ratings', async (req, res) => {
   const subject = normSubject(req.query.subject || '');
-  if (!subject) return res.status(400).json({ ok: false, error: 'Ange subject i querystring.' });
-
+  if (!subject) {
+    return res.status(400).json({ ok: false, error: 'Ange subject i querystring.' });
+  }
   try {
     const list = await listRatingsBySubjectRef(subject);
     res.json({ ok: true, count: list.length, ratings: list });
@@ -362,8 +272,9 @@ router.get('/ratings', async (req, res) => {
 
 router.get('/ratings/average', async (req, res) => {
   const subject = normSubject(req.query.subject || '');
-  if (!subject) return res.status(400).json({ ok: false, error: 'Ange subject i querystring.' });
-
+  if (!subject) {
+    return res.status(400).json({ ok: false, error: 'Ange subject i querystring.' });
+  }
   try {
     const { count, average } = await averageForSubjectRef(subject);
     res.json({ ok: true, subject, count, average });
