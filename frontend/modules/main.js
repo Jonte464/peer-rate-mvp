@@ -174,4 +174,56 @@ window.addEventListener('DOMContentLoaded', () => {
     updateTopUserPill(auth.getUser?.() || null);
   });
   setInterval(() => updateTopUserPill(auth.getUser?.() || null), 1500);
+
+  // Intercept LinkedIn auth links and open in a popup window so login happens
+  // without navigating the main page. When the popup completes the OAuth flow
+  // the server writes a `peerRateUser` cookie which we poll for here, then
+  // copy into localStorage and update the UI.
+  function openLinkedInPopup(e) {
+    e.preventDefault();
+    const url = this.href;
+    const width = 600;
+    const height = 700;
+    const left = window.screenX + Math.max(0, (window.outerWidth - width) / 2);
+    const top = window.screenY + Math.max(0, (window.outerHeight - height) / 2.5);
+    const win = window.open(url, 'LinkedInAuth', `width=${width},height=${height},left=${left},top=${top}`);
+    if (!win) return; // popup blocked
+
+    const checkInterval = 500;
+    const iv = setInterval(() => {
+      try {
+        // If popup closed, stop polling
+        if (win.closed) {
+          clearInterval(iv);
+          return;
+        }
+      } catch (_) {}
+
+      // Check for peerRateUser cookie
+      const match = document.cookie.match(/(?:^|; )peerRateUser=([^;]+)/);
+      if (match && match[1]) {
+        try {
+          const decoded = decodeURIComponent(match[1]);
+          const parsed = JSON.parse(decoded);
+          if (parsed) {
+            // Save to localStorage and update UI
+            auth.setUser(parsed);
+            updateTopUserPill(auth.getUser?.() || null);
+            updateUserBadge(auth.getUser?.() || null);
+            updateAvatars(auth.getUser?.() || null);
+          }
+        } catch (err) {
+          // ignore
+        }
+        // Clear cookie so we don't repeatedly process it
+        document.cookie = 'peerRateUser=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        clearInterval(iv);
+        try { win.close(); } catch (_) {}
+      }
+    }, checkInterval);
+  }
+
+  document.querySelectorAll('a[href="/auth/linkedin"]').forEach((a) => {
+    a.addEventListener('click', openLinkedInPopup);
+  });
 });
