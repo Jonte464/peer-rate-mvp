@@ -119,6 +119,9 @@ async function saveTraderaOrders(externalProfileId, orders) {
  * Hämta Tradera-data för en kund via subjectRef (e-post).
  * Detta ska användas av "Min profil" för att rendera Tradera-blocket.
  * Vi begränsar oss till de senaste 12 månaderna.
+ *
+ * ✅ NYTT: hasRating = true/false per order genom match mot Rating:
+ *          ratingSource=TRADERA och proofRef=traderaOrderId
  */
 async function getTraderaSummaryBySubjectRef(subjectRef, opts = {}) {
   const customer = await prisma.customer.findUnique({
@@ -126,7 +129,12 @@ async function getTraderaSummaryBySubjectRef(subjectRef, opts = {}) {
     select: { id: true },
   });
   if (!customer) {
-    return { hasTradera: false, profile: null, orders: [] };
+    return {
+      hasTradera: false,
+      profile: null,
+      orders: [],
+      summary: { totalOrders: 0, ratedOrders: 0, unratedOrders: 0 },
+    };
   }
 
   const externalProfile = await prisma.externalProfile.findFirst({
@@ -137,8 +145,13 @@ async function getTraderaSummaryBySubjectRef(subjectRef, opts = {}) {
   });
 
   if (!externalProfile) {
-    return { hasTradera: false, profile: null, orders: [] };
-    }
+    return {
+      hasTradera: false,
+      profile: null,
+      orders: [],
+      summary: { totalOrders: 0, ratedOrders: 0, unratedOrders: 0 },
+    };
+  }
 
   const take = typeof opts.limit === 'number' ? opts.limit : 50;
 
@@ -156,6 +169,26 @@ async function getTraderaSummaryBySubjectRef(subjectRef, opts = {}) {
     take,
   });
 
+  // ✅ Batch-check mot Rating-tabellen (ingen N+1)
+  const orderIds = orders.map((o) => o.traderaOrderId).filter(Boolean);
+  let ratedSet = new Set();
+
+  if (orderIds.length) {
+    const rated = await prisma.rating.findMany({
+      where: {
+        ratingSource: 'TRADERA',
+        proofRef: { in: orderIds },
+      },
+      select: { proofRef: true },
+    });
+
+    ratedSet = new Set(
+      rated
+        .map((r) => r.proofRef)
+        .filter(Boolean)
+    );
+  }
+
   const profileJson = externalProfile.profileJson || {};
   const profile = {
     username: externalProfile.username || null,
@@ -171,26 +204,31 @@ async function getTraderaSummaryBySubjectRef(subjectRef, opts = {}) {
       : null,
   };
 
-  const mappedOrders = orders.map((o) => ({
-    id: o.id,
-    traderaOrderId: o.traderaOrderId,
-    traderaItemId: o.traderaItemId,
-    title: o.title,
-    amount: o.amount ? o.amount.toString() : null,
-    currency: o.currency || 'SEK',
-    role: o.role, // "BUYER" | "SELLER"
-    counterpartyAlias: o.counterpartyAlias || null,
-    counterpartyEmail: o.counterpartyEmail || null,
-    completedAt: o.completedAt ? o.completedAt.toISOString() : null,
-    // I nästa steg kan vi sätta hasRating=true om vi kopplar mot rating-tabellen.
-    hasRating: false,
-  }));
+  const mappedOrders = orders.map((o) => {
+    const hasRating = ratedSet.has(o.traderaOrderId);
+    return {
+      id: o.id,
+      traderaOrderId: o.traderaOrderId,
+      traderaItemId: o.traderaItemId,
+      title: o.title,
+      amount: o.amount ? o.amount.toString() : null,
+      currency: o.currency || 'SEK',
+      role: o.role, // "BUYER" | "SELLER"
+      counterpartyAlias: o.counterpartyAlias || null,
+      counterpartyEmail: o.counterpartyEmail || null,
+      completedAt: o.completedAt ? o.completedAt.toISOString() : null,
+      hasRating,
+    };
+  });
 
   const totalOrders = mappedOrders.length;
+  const ratedOrders = mappedOrders.filter((o) => o.hasRating).length;
+  const unratedOrders = totalOrders - ratedOrders;
+
   const summary = {
     totalOrders,
-    ratedOrders: 0, // TODO: kan räknas mot rating-tabellen i ett senare steg
-    unratedOrders: totalOrders,
+    ratedOrders,
+    unratedOrders,
   };
 
   return {
