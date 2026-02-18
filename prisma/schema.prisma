@@ -74,13 +74,13 @@ model Rating {
   customerId    String
   transactionId String?
 
-  // NYTT: koppling till affärshändelse (Deal)
+  // ✅ koppling till affärshändelse (Deal)
   dealId String?
 
   // Betyg 1–5
   score Int
 
-  // NYTT: varifrån detta betyg kommer (Blocket, Tradera, osv)
+  // varifrån detta betyg kommer (Blocket, Tradera, osv)
   ratingSource RatingSource @default(OTHER)
 
   // Kommentar (från formulärets kommentarsfält)
@@ -90,7 +90,7 @@ model Rating {
   raterName  String?
   raterEmail String? // Om användaren skriver in e-post
 
-  // Verifierings-ID (t.ex. ORDER-123)
+  // Verifierings-ID (t.ex. ORDER-123) (legacy-ish)
   verificationId String?
 
   // Historiskt fält – lämnas kvar för bakåtkomp.
@@ -105,15 +105,13 @@ model Rating {
   customer    Customer     @relation(fields: [customerId], references: [id])
   transaction Transaction? @relation(fields: [transactionId], references: [id])
 
-  // NYTT: relation till Deal
+  // ✅ relation till Deal
   deal Deal? @relation(fields: [dealId], references: [id])
 
   // En rating kan ha 0..n rapporter kopplade
   reports Report[]
 
-  // ✅ NYTT: hindra dubbla omdömen för samma affär (per rater)
-  // Gäller när proofRef finns (t.ex. Tradera orderId) + ratingSource.
-  // Du får då 409/unique-constraint om någon försöker lämna igen.
+  // ✅ hindra dubbla omdömen för samma affär (per rater)
   @@unique([customerId, ratingSource, proofRef, raterName])
   @@index([customerId])
   @@index([transactionId])
@@ -227,11 +225,9 @@ model ExternalProfile {
   // Generellt extern-id (t.ex. Tradera userId)
   externalUserId String?
 
-  // (Legacy/generellt) - kan användas för enklare tokens, men för eBay använder vi fälten nedan
   authToken          String?
   authTokenExpiresAt DateTime?
 
-  // ✅ NYTT: Krypterade OAuth-tokens (eBay nu, men kan användas även för andra plattformar)
   accessTokenEnc        String?
   refreshTokenEnc       String?
   accessTokenExpiresAt  DateTime?
@@ -239,10 +235,8 @@ model ExternalProfile {
   scopes                String?
   tokenType             String?
 
-  // Rå profil-data från extern plattform (t.ex. feedback, ratings, osv.)
   profileJson Json?
 
-  // Alternativ C: vi kan lagra ett krypterat lösenord + cookies (t.ex. för Blocket-scrape)
   encryptedPassword String?
   cookiesJson       Json?
 
@@ -284,35 +278,54 @@ model Listing {
 }
 
 /**
- * Affärshändelse (Deal) – underlag för omdömen
+ * ✅ Affärshändelse (Deal) – underlag för omdömen
+ * Nu utökad så den kan representera verifierade extension-deals (t.ex. Tradera)
  */
 model Deal {
   id String @id @default(uuid())
 
+  // Koppling mot Listing (Blocket-scrape use-case)
   listingId String?
   listing   Listing? @relation(fields: [listingId], references: [id])
 
+  // Krav i nuvarande modell: vi sätter default till "den som blir betygsatt" för extension-flödet
   sellerId String
   seller   Customer @relation("CustomerDealsAsSeller", fields: [sellerId], references: [id])
 
   buyerId String?
   buyer   Customer? @relation("CustomerDealsAsBuyer", fields: [buyerId], references: [id])
 
+  // ✅ Plattform för dealen (TRADERA/BLOCKET/EBAY)
+  platform ExternalPlatform @default(BLOCKET)
+
   source DealSource @default(BLOCKET_SCRAPE)
   status DealStatus @default(PENDING_RATING)
 
+  // Legacy blocket-fält
   blocketTitle String?
   blocketPrice Int?
 
+  // ✅ Extension/partner-deal fält
+  externalProofRef String?  // t.ex. Tradera orderId
+  externalItemId   String?  // t.ex. Tradera itemId
+  externalPageUrl  String?  // URL till källsidan
+  title            String?
+  amount           Decimal? @db.Decimal(12, 2)
+  currency         String?  @default("SEK")
+
   completedAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   ratings Rating[]
 
+  // ✅ Unik affär per plattform + proofRef/orderId
+  @@unique([platform, externalProofRef])
   @@index([sellerId])
   @@index([buyerId])
   @@index([listingId])
+  @@index([platform])
+  @@index([externalProofRef])
   @@index([createdAt])
 }
 
@@ -351,7 +364,6 @@ model TraderaOrder {
 /**
  * Enum-typer
  */
-
 enum TraderaOrderRole {
   BUYER
   SELLER
@@ -373,7 +385,6 @@ enum ReportStatus {
   REJECTED
 }
 
-// Externa plattformar
 enum ExternalPlatform {
   BLOCKET
   TRADERA
@@ -400,6 +411,7 @@ enum DealStatus {
 
 enum DealSource {
   BLOCKET_SCRAPE
+  TRADERA_EXTENSION
   MANUAL
   PARTNER_API
 }
@@ -435,8 +447,8 @@ model AgentMessage {
   conversationId String
   conversation   AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
-  role             String // "user" | "assistant"
-  content          String  @db.Text
+  role             String
+  content          String @db.Text
   model            String?
   promptTokens     Int?
   completionTokens Int?

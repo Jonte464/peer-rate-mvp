@@ -1,4 +1,4 @@
-// backend/storage.ratings.js — Prisma-lagring för betyg (ratings)
+// backend/storage/storage.ratings.js — Prisma-lagring för betyg (ratings)
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
@@ -7,13 +7,13 @@ const prisma = new PrismaClient();
 async function getOrCreateCustomerBySubjectRef(subjectRef) {
   const existing = await prisma.customer.findUnique({
     where: { subjectRef },
-    select: { id: true, subjectRef: true },
+    select: { id: true, subjectRef: true, email: true },
   });
   if (existing) return existing;
 
   return prisma.customer.create({
     data: { subjectRef },
-    select: { id: true, subjectRef: true },
+    select: { id: true, subjectRef: true, email: true },
   });
 }
 
@@ -23,9 +23,91 @@ function isEmail(s) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 }
 
+function mapRatingSourceToPlatform(ratingSource) {
+  const rs = String(ratingSource || '').toUpperCase();
+  if (rs === 'TRADERA') return 'TRADERA';
+  if (rs === 'BLOCKET') return 'BLOCKET';
+  if (rs === 'EBAY') return 'EBAY';
+  return null;
+}
+
+function parseDealCompletedAt(deal) {
+  const iso = deal?.dateISO || deal?.date || null;
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function parseAmount(deal) {
+  // deal.amount kan vara number/string, deal.amountSek är integer
+  const raw = deal?.amount ?? null;
+  if (raw !== null && raw !== undefined && raw !== '') {
+    const n = typeof raw === 'number' ? raw : Number(String(raw).replace(',', '.'));
+    if (!Number.isNaN(n)) return n;
+  }
+  const sek = deal?.amountSek;
+  if (typeof sek === 'number' && !Number.isNaN(sek)) return sek;
+  return null;
+}
+
+/** Upsert Deal baserat på plattform + proofRef(orderId) */
+async function upsertDealForVerifiedRating({ customerId, ratingSource, proofRef, deal }) {
+  const platform = mapRatingSourceToPlatform(ratingSource) || (deal?.platform ? String(deal.platform).toUpperCase() : null);
+  const externalProofRef = (proofRef || deal?.orderId || '').toString().trim() || null;
+
+  // Krav för “Verified Deals”: vi behöver plattform + proofRef
+  if (!platform || !externalProofRef) return null;
+
+  const data = {
+    // Nuvarande Deal-modell kräver sellerId -> vi sätter den till “den som blir betygsatt” (customerId)
+    sellerId: customerId,
+
+    platform,
+    source: platform === 'TRADERA' ? 'TRADERA_EXTENSION' : 'PARTNER_API',
+    status: 'PENDING_RATING',
+
+    externalProofRef,
+    externalItemId: deal?.itemId ? String(deal.itemId) : null,
+    externalPageUrl: deal?.pageUrl ? String(deal.pageUrl) : null,
+    title: deal?.title ? String(deal.title) : null,
+
+    amount: (() => {
+      const n = parseAmount(deal);
+      return n === null ? null : n;
+    })(),
+    currency: deal?.currency ? String(deal.currency) : (platform === 'TRADERA' ? 'SEK' : 'SEK'),
+
+    completedAt: parseDealCompletedAt(deal),
+  };
+
+  // Prisma upsert kräver unique constraint: @@unique([platform, externalProofRef])
+  const dealRow = await prisma.deal.upsert({
+    where: {
+      platform_externalProofRef: {
+        platform,
+        externalProofRef,
+      },
+    },
+    create: data,
+    update: {
+      // uppdatera bara om ny data kommer in
+      externalItemId: data.externalItemId || undefined,
+      externalPageUrl: data.externalPageUrl || undefined,
+      title: data.title || undefined,
+      amount: data.amount === null ? undefined : data.amount,
+      currency: data.currency || undefined,
+      completedAt: data.completedAt || undefined,
+      updatedAt: new Date(),
+    },
+    select: { id: true, status: true },
+  });
+
+  return dealRow;
+}
+
 /** Skapa rating och returnera ids */
 async function createRating(item) {
-  // item: { subjectRef, rating, comment, raterName, raterEmail, proofRef, createdAt, ratingSource?/source? }
+  // item: { subjectRef, rating, comment, raterName, raterEmail, proofRef, createdAt, ratingSource, deal? }
   const customer = await getOrCreateCustomerBySubjectRef(item.subjectRef);
 
   const proofRef = (item.proofRef || '').toString().trim() || null;
@@ -41,27 +123,47 @@ async function createRating(item) {
       ? String(item.raterName).trim()
       : (item.raterName ? String(item.raterName).trim() : null);
 
-  // ✅ 1) Hård regel: samma rater + samma proofRef + samma mottagare -> stoppa
-  // (extra check innan DB-unique, så vi kan ge bättre error-kod)
-  if (proofRef && raterEmail) {
-    const existingSameDeal = await prisma.rating.findFirst({
-      where: {
-        customerId: customer.id,
-        proofRef,
-        raterEmail,
-      },
-      select: { id: true },
-    });
+  const ratingSource = item.ratingSource || item.source || 'OTHER';
 
-    if (existingSameDeal) {
-      const err = new Error('duplicate_deal');
-      err.code = 'DUP_DEAL';
-      throw err;
+  // ✅ 0) Upsert Deal (om verifierad deal finns)
+  // Vi gör detta tidigt så vi kan koppla rating.dealId.
+  const dealRow = await upsertDealForVerifiedRating({
+    customerId: customer.id,
+    ratingSource,
+    proofRef,
+    deal: item.deal || null,
+  });
+  const dealId = dealRow?.id || null;
+
+  // ✅ 1) Hård regel: stoppa dubbelrating för samma affär per rater
+  // (extra check innan DB-unique, för bättre felkod)
+  if (proofRef) {
+    const where = {
+      customerId: customer.id,
+      proofRef,
+      ratingSource,
+    };
+
+    // matcha antingen raterEmail eller raterName (beroende på vad vi har)
+    if (raterEmail) where.raterEmail = raterEmail;
+    if (!raterEmail && raterName) where.raterName = raterName;
+
+    // om inget rater alls: vi kan inte göra "per rater" check här (DB-unique fångar vissa fall via raterName)
+    if (raterEmail || raterName) {
+      const existingSameDeal = await prisma.rating.findFirst({
+        where,
+        select: { id: true },
+      });
+
+      if (existingSameDeal) {
+        const err = new Error('duplicate_deal');
+        err.code = 'DUP_DEAL';
+        throw err;
+      }
     }
   }
 
   // ✅ 2) Behåll din gamla 24h-spärr (bakåtkomp / extra skydd)
-  // Dubblettspärr 24h per raterName (om satt)
   if (raterName) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const dup = await prisma.rating.findFirst({
@@ -79,26 +181,37 @@ async function createRating(item) {
     }
   }
 
+  // ✅ 3) Skapa rating (nu med dealId)
   const rating = await prisma.rating.create({
     data: {
       customerId: customer.id,
+      dealId: dealId || null,
+
       score: item.rating,
       text: item.comment || null,
 
-      // Vem gav omdömet?
       raterName: raterName || null,
       raterEmail: raterEmail || null,
 
-      // Verifierings-info
       proofRef: proofRef || null,
-
-      // Källa (Blocket, Tradera, Tiptap, …)
-      ratingSource: item.ratingSource || item.source || 'OTHER',
+      ratingSource,
 
       ...(item.createdAt ? { createdAt: new Date(item.createdAt) } : {}),
     },
     select: { id: true },
   });
+
+  // ✅ 4) Markera deal som RATED (om vi har en deal kopplad)
+  if (dealId) {
+    try {
+      await prisma.deal.update({
+        where: { id: dealId },
+        data: { status: 'RATED' },
+      });
+    } catch (_) {
+      // inte kritiskt om detta failar
+    }
+  }
 
   return { ok: true, customerId: customer.id, ratingId: rating.id };
 }
@@ -123,6 +236,7 @@ async function listRatingsBySubjectRef(subjectRef) {
       proofRef: true,
       ratingSource: true,
       createdAt: true,
+      dealId: true,
       customer: { select: { subjectRef: true } },
     },
   });
@@ -161,6 +275,7 @@ async function listRatingsBySubjectRef(subjectRef) {
       proofHash: null,
       createdAt: r.createdAt.toISOString(),
       ratingSource: r.ratingSource || 'OTHER',
+      dealId: r.dealId || null,
     };
   });
 }
@@ -225,6 +340,7 @@ async function listRecentRatings(limit = 20) {
       proofHash: null,
       createdAt: r.createdAt.toISOString(),
       ratingSource: r.ratingSource || 'OTHER',
+      dealId: r.dealId || null,
     };
   });
 }

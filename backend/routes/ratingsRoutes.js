@@ -52,7 +52,6 @@ const reportSchema = Joi.object({
 const counterpartySchema = Joi.object({
   email: Joi.string().email().required(),
 
-  // OBS: ibland skickar extension/ratingForm "username" istället för "platformUsername"
   username: Joi.string().max(60).allow('', null),
   platformUsername: Joi.string().max(60).allow('', null),
 
@@ -92,12 +91,12 @@ const createRatingSchema = Joi.object({
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().max(1000).allow('', null),
   proofRef: Joi.string().max(200).allow('', null),
-  source: Joi.string().allow('', null), // källa (Blocket, Tradera, ...)
+  source: Joi.string().allow('', null),
 
   report: reportSchema.optional(),
   counterparty: counterpartySchema,
   deal: dealSchema,
-}).unknown(true); // ✅ viktigt: stoppa inte framtida fält
+}).unknown(true);
 
 function looksLikePhone(s) {
   const v = String(s || '').trim();
@@ -109,7 +108,6 @@ function looksLikePhone(s) {
 async function upsertCounterpartyDossier(counterparty) {
   if (!counterparty || !counterparty.email) return;
 
-  // ✅ Rädda felmappning: om name råkar vara telefon och phone saknas
   const cp = { ...counterparty };
   if ((!cp.phone || !String(cp.phone).trim()) && looksLikePhone(cp.name)) {
     cp.phone = cp.name;
@@ -191,14 +189,18 @@ router.post('/ratings', async (req, res) => {
   const rating = value.rating;
   const comment = (value.comment || '').toString().trim();
 
-  const proofRef = (value.proofRef || '').toString().trim() || null;
   const ratingSource = mapRatingSource(value.source);
 
   const raterRaw = (value.rater || '').toString().trim() || null;
   const raterEmail = raterRaw && isEmail(raterRaw) ? raterRaw.toLowerCase() : null;
   const raterName = raterEmail ? null : raterRaw;
 
-  // Säkerhet: om counterparty skickas måste subject matcha counterparty.email
+  // proofRef: använd explicit proofRef, annars deal.orderId om den finns
+  const proofRef =
+    (value.proofRef || '').toString().trim() ||
+    (value.deal?.orderId ? String(value.deal.orderId).trim() : '') ||
+    null;
+
   if (value.counterparty?.email) {
     const a = normSubject(value.subject);
     const b = normSubject(value.counterparty.email);
@@ -211,7 +213,7 @@ router.post('/ratings', async (req, res) => {
   }
 
   try {
-    // 1) skapa rating
+    // 1) skapa rating (+ Deal upsert i storage)
     const { customerId, ratingId } = await createRating({
       subjectRef,
       rating,
@@ -221,6 +223,7 @@ router.post('/ratings', async (req, res) => {
       proofRef,
       createdAt: nowIso(),
       ratingSource,
+      deal: value.deal || null,
     });
 
     // 2) spara kundakt (motpart) om vi fick in data från extension
@@ -248,7 +251,6 @@ router.post('/ratings', async (req, res) => {
 
     return res.status(201).json({ ok: true });
   } catch (e) {
-    // ✅ Ny: dubbelomdöme för samma affär (vår egen kod)
     if (e && e.code === 'DUP_DEAL') {
       return res.status(409).json({
         ok: false,
@@ -257,7 +259,6 @@ router.post('/ratings', async (req, res) => {
       });
     }
 
-    // ✅ Bakåtkomp: gamla 24h-spärren
     if (e && e.code === 'DUP_24H') {
       return res.status(409).json({
         ok: false,
@@ -266,9 +267,7 @@ router.post('/ratings', async (req, res) => {
       });
     }
 
-    // ✅ Ny: DB-unique constraint (P2002) -> samma affär
     if (e && e.code === 'P2002') {
-      // vi returnerar samma text för att vara konsekventa
       return res.status(409).json({
         ok: false,
         error: 'Omdöme har redan lämnats för denna affär.',
