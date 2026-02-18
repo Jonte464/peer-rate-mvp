@@ -111,6 +111,10 @@ model Rating {
   // En rating kan ha 0..n rapporter kopplade
   reports Report[]
 
+  // ✅ NYTT: hindra dubbla omdömen för samma affär (per rater)
+  // Gäller när proofRef finns (t.ex. Tradera orderId) + ratingSource.
+  // Du får då 409/unique-constraint om någon försöker lämna igen.
+  @@unique([customerId, ratingSource, proofRef, raterName])
   @@index([customerId])
   @@index([transactionId])
   @@index([dealId])

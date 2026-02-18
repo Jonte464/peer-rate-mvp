@@ -32,6 +32,12 @@ function mapRatingSource(input) {
   return 'OTHER';
 }
 
+function isEmail(s) {
+  const v = String(s || '').trim();
+  if (!v) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+}
+
 // --- Validation ---
 
 const reportSchema = Joi.object({
@@ -96,7 +102,6 @@ const createRatingSchema = Joi.object({
 function looksLikePhone(s) {
   const v = String(s || '').trim();
   if (!v) return false;
-  // enkel heuristik: innehåller siffror och minst 6 siffror totalt
   const digits = v.replace(/\D/g, '');
   return digits.length >= 6;
 }
@@ -114,7 +119,6 @@ async function upsertCounterpartyDossier(counterparty) {
   const subjectRef = normSubject(cp.email);
   if (!subjectRef) return;
 
-  // 1) Kund (Customer) – fyll på endast om fält saknas
   const existing = await prisma.customer.findUnique({ where: { subjectRef } });
 
   if (!existing) {
@@ -145,7 +149,6 @@ async function upsertCounterpartyDossier(counterparty) {
     }
   }
 
-  // 2) Extern profil (ExternalProfile) – om vi har username
   const platform = (cp.platform || '').toString().toUpperCase();
   const username = cp.platformUsername || cp.username || null;
 
@@ -187,10 +190,13 @@ router.post('/ratings', async (req, res) => {
   const subjectRef = normSubject(value.subject);
   const rating = value.rating;
   const comment = (value.comment || '').toString().trim();
-  const raterRaw = (value.rater || '').toString().trim() || null;
-  const proofRef = (value.proofRef || '').toString().trim() || null;
 
+  const proofRef = (value.proofRef || '').toString().trim() || null;
   const ratingSource = mapRatingSource(value.source);
+
+  const raterRaw = (value.rater || '').toString().trim() || null;
+  const raterEmail = raterRaw && isEmail(raterRaw) ? raterRaw.toLowerCase() : null;
+  const raterName = raterEmail ? null : raterRaw;
 
   // Säkerhet: om counterparty skickas måste subject matcha counterparty.email
   if (value.counterparty?.email) {
@@ -206,12 +212,12 @@ router.post('/ratings', async (req, res) => {
 
   try {
     // 1) skapa rating
-    // OBS: just nu lagras raterRaw i raterName (legacy). Vi kan förbättra senare
     const { customerId, ratingId } = await createRating({
       subjectRef,
       rating,
       comment,
-      raterName: raterRaw,
+      raterName,
+      raterEmail,
       proofRef,
       createdAt: nowIso(),
       ratingSource,
@@ -242,12 +248,34 @@ router.post('/ratings', async (req, res) => {
 
     return res.status(201).json({ ok: true });
   } catch (e) {
+    // ✅ Ny: dubbelomdöme för samma affär (vår egen kod)
+    if (e && e.code === 'DUP_DEAL') {
+      return res.status(409).json({
+        ok: false,
+        error: 'Omdöme har redan lämnats för denna affär.',
+        code: 'DUPLICATE_DEAL',
+      });
+    }
+
+    // ✅ Bakåtkomp: gamla 24h-spärren
     if (e && e.code === 'DUP_24H') {
       return res.status(409).json({
         ok: false,
         error: 'Du har redan lämnat betyg för denna mottagare senaste 24 timmarna.',
+        code: 'DUPLICATE_24H',
       });
     }
+
+    // ✅ Ny: DB-unique constraint (P2002) -> samma affär
+    if (e && e.code === 'P2002') {
+      // vi returnerar samma text för att vara konsekventa
+      return res.status(409).json({
+        ok: false,
+        error: 'Omdöme har redan lämnats för denna affär.',
+        code: 'DUPLICATE_DEAL',
+      });
+    }
+
     console.error('[POST /api/ratings] error:', e);
     return res.status(500).json({ ok: false, error: 'Kunde inte spara betyg' });
   }
