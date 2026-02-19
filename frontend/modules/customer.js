@@ -1,118 +1,71 @@
-// frontend/modules/customer.js - Registrering (matchar backend storage/createCustomer)
+// frontend/modules/customer.js
+// Minimal registrering: email + password (+ confirm)
 
 import { el, showNotification, clearNotice } from './utils.js';
 
-const customerForm = el('customer-form');
+const form = el('customer-form');
 
 function getVal(id) {
-  return el(id)?.value?.trim() || '';
+  const n = el(id);
+  return n ? (n.value || '').trim() : '';
 }
 
-function getChecked(id) {
-  return Boolean(el(id)?.checked);
-}
+if (form) {
+  console.log('Customer form loaded (minimal)');
 
-async function readJsonSafe(res) {
-  try {
-    return await res.json();
-  } catch {
-    return null;
-  }
-}
-
-if (customerForm) {
-  customerForm.addEventListener('submit', async (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearNotice();
 
-    const firstName = getVal('cust-firstName');
-    const lastName = getVal('cust-lastName');
-    const fullName = `${firstName} ${lastName}`.trim();
+    const email = getVal('cust-email');
+    const password = getVal('cust-password');
+    const passwordConfirm = getVal('cust-passwordConfirm');
 
-    const email = getVal('cust-email').toLowerCase();
-    const emailConfirm = getVal('cust-emailConfirm').toLowerCase();
-
-    const password = el('cust-password')?.value || '';
-    const passwordConfirm = el('cust-passwordConfirm')?.value || '';
-
-    const termsAccepted = getChecked('cust-termsAccepted');
-    const thirdPartyConsent = getChecked('cust-thirdPartyConsent');
-
-    // --- Enkel validering i frontend ---
     if (!email) {
       showNotification('error', 'Fyll i e-post.', 'cust-notice');
       return;
     }
-    if (emailConfirm && emailConfirm !== email) {
-      showNotification('error', 'E-postadresserna matchar inte.', 'cust-notice');
+    if (!password || password.length < 8) {
+      showNotification('error', 'Lösenord måste vara minst 8 tecken.', 'cust-notice');
       return;
     }
-    if (!password || password.length < 6) {
-      showNotification('error', 'Lösenordet måste vara minst 6 tecken.', 'cust-notice');
-      return;
-    }
-    if (passwordConfirm && passwordConfirm !== password) {
+    if (password !== passwordConfirm) {
       showNotification('error', 'Lösenorden matchar inte.', 'cust-notice');
       return;
     }
-    if (!termsAccepted) {
-      showNotification('error', 'Du måste acceptera villkoren för att registrera dig.', 'cust-notice');
-      return;
-    }
 
-    // --- Payload som backend med största sannolikhet förväntar sig ---
-    const body = {
-      subjectRef: email,               // vi använder email som subjectRef
-      fullName: fullName || null,
-      personalNumber: getVal('cust-personalNumber') || null,
-      email: email,
-      phone: getVal('cust-phone') || null,
-      addressStreet: getVal('cust-addressStreet') || null,
-      addressZip: getVal('cust-addressZip') || null,
-      addressCity: getVal('cust-addressCity') || null,
-      country: getVal('cust-country') || null,
-      password,                        // backend ska hasha detta -> passwordHash
-      thirdPartyConsent,
-      termsAccepted,                   // om backend ignorerar ok, annars bra att ha
-    };
+    const payload = { email, password };
+    console.log('DEBUG register payload:', payload);
 
-    console.log('DEBUG customer payload (before send):', body);
-
-    let res;
+    let response;
     try {
-      res = await fetch('/api/customers', {
+      response = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
     } catch (err) {
-      console.error('Customer fetch error:', err);
+      console.error('Register network error:', err);
       showNotification('error', 'Kunde inte kontakta servern. Försök igen.', 'cust-notice');
       return;
     }
 
-    const data = await readJsonSafe(res);
+    let data = {};
+    try {
+      data = await response.json();
+    } catch (_) {}
 
-    if (res.status === 409) {
-      showNotification(
-        'error',
-        data?.error || 'Det finns redan ett konto med samma e-post/personnummer.',
-        'cust-notice'
-      );
+    if (response.status === 409) {
+      showNotification('error', data?.error || 'Det finns redan ett konto med den e-posten.', 'cust-notice');
       return;
     }
 
-    if (!res.ok) {
-      // Viktigt: visa serverns feltext så vi snabbt ser exakt vad som saknas
-      const msg = data?.error || data?.message || `Registrering misslyckades (${res.status}).`;
-      showNotification('error', msg, 'cust-notice');
-      console.warn('Register failed:', { status: res.status, data });
+    if (!response.ok) {
+      showNotification('error', data?.error || 'Registrering misslyckades.', 'cust-notice');
       return;
     }
 
-    showNotification('success', 'Konto skapat! Du kan nu logga in.', 'cust-notice');
-    customerForm.reset();
+    showNotification('success', 'Klart! Kontot är skapat. Du kan logga in nu.', 'cust-notice');
+    form.reset();
   });
 }
-
-export default customerForm;
