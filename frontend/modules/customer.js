@@ -6,9 +6,14 @@ function setStatus(msg) {
   if (el) el.textContent = msg || '';
 }
 
-const form = document.getElementById('customer-form');
+export function initCustomerForm() {
+  const form = document.getElementById('customer-form');
+  if (!form) return null;
 
-if (form) {
+  // Undvik att vi råkar lägga på flera listeners vid om-init
+  if (form.dataset.bound === '1') return form;
+  form.dataset.bound = '1';
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     setStatus('');
@@ -31,15 +36,12 @@ if (form) {
       return;
     }
 
-    // Steg 1 payload (bara email + lösenord)
     const payload = {
       email,
       emailConfirm: email,
       password,
       passwordConfirm: confirm,
-
-      // Just nu har din UI inga checkboxar – men backend accepterar att de saknas.
-      // Om du vill kan vi senare lägga in checkboxar och göra dem “måste vara ikryssade”.
+      // samtycken kan läggas till senare när du har checkboxar i UI
       // thirdPartyConsent: true,
       // termsAccepted: true,
     };
@@ -75,10 +77,14 @@ if (form) {
     }
 
     setStatus('Klart! Konto skapat. Du kan nu logga in.');
-    showNotification?.('success', 'Konto skapat! Du kan nu logga in.', 'customer-status');
-
-    // valfritt: form.reset();
+    if (typeof showNotification === 'function') {
+      showNotification('success', 'Konto skapat! Du kan nu logga in.', 'customer-status');
+    }
   });
+
+  return form;
 }
 
+// För bakåtkompabilitet om något fortfarande importerar default:
+const form = initCustomerForm();
 export default form;
