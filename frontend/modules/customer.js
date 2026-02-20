@@ -1,121 +1,84 @@
 // frontend/modules/customer.js
-// Robust registrering: skickar med minimifält som backend kan kräva.
+import { showNotification } from './utils.js';
 
-import { showNotification, clearNotice } from './utils.js';
-
-function pickValue(selectors) {
-  for (const sel of selectors) {
-    const el = document.querySelector(sel);
-    if (el && typeof el.value === 'string') return el.value.trim();
-  }
-  return '';
+function setStatus(msg) {
+  const el = document.getElementById('customer-status');
+  if (el) el.textContent = msg || '';
 }
 
-function pickChecked(selectors) {
-  for (const sel of selectors) {
-    const el = document.querySelector(sel);
-    if (el && typeof el.checked === 'boolean') return el.checked;
-  }
-  return false;
-}
+const form = document.getElementById('customer-form');
 
-export function initCustomerForm() {
-  const form =
-    document.getElementById('customer-form') ||
-    document.querySelector('form');
-
-  if (!form) return;
-
-  console.log('Customer form loaded');
-
+if (form) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    clearNotice();
+    setStatus('');
 
-    const email = pickValue([
-      '#cust-email',
-      '#email',
-      'input[name="email"]',
-      'input[type="email"]',
-    ]);
-
-    const password = pickValue([
-      '#cust-password',
-      '#password',
-      'input[name="password"]',
-      'input[type="password"]',
-    ]);
-
-    const passwordConfirm = pickValue([
-      '#cust-passwordConfirm',
-      '#passwordConfirm',
-      '#password2',
-      'input[name="passwordConfirm"]',
-      'input[name="password2"]',
-    ]);
-
-    // Om sidan inte har checkboxes, sätt rimliga defaults (MVP)
-    const termsAccepted =
-      pickChecked(['#cust-termsAccepted', '#termsAccepted', 'input[name="termsAccepted"]']) || true;
-
-    const thirdPartyConsent =
-      pickChecked(['#cust-thirdPartyConsent', '#thirdPartyConsent', 'input[name="thirdPartyConsent"]']) || false;
-
-    // Backend verkar kräva namn mm. Om fälten inte finns i UI: sätt defaults.
-    const firstName = pickValue(['#cust-firstName', '#firstName', 'input[name="firstName"]']) || 'Okänd';
-    const lastName = pickValue(['#cust-lastName', '#lastName', 'input[name="lastName"]']) || 'Användare';
-
-    const body = {
-      firstName,
-      lastName,
-      email,
-      password,
-      passwordConfirm,
-      termsAccepted,
-      thirdPartyConsent,
-    };
-
-    console.log('DEBUG customer payload (before send):', body);
+    const email = (document.getElementById('email')?.value || '').trim();
+    const password = document.getElementById('password')?.value || '';
+    const password2 = document.getElementById('password2')?.value || '';
 
     if (!email) {
-      showNotification('error', 'Fyll i e-post.', 'cust-notice');
+      setStatus('Fyll i e-post.');
       return;
     }
     if (!password || password.length < 8) {
-      showNotification('error', 'Lösenord måste vara minst 8 tecken.', 'cust-notice');
+      setStatus('Lösenord måste vara minst 8 tecken.');
       return;
     }
-    if (password !== passwordConfirm) {
-      showNotification('error', 'Lösenorden matchar inte.', 'cust-notice');
+    const confirm = password2 || password;
+    if (password !== confirm) {
+      setStatus('Lösenorden matchar inte.');
       return;
     }
 
-    let response;
+    // Steg 1 payload (bara email + lösenord)
+    const payload = {
+      email,
+      emailConfirm: email,
+      password,
+      passwordConfirm: confirm,
+
+      // Just nu har din UI inga checkboxar – men backend accepterar att de saknas.
+      // Om du vill kan vi senare lägga in checkboxar och göra dem “måste vara ikryssade”.
+      // thirdPartyConsent: true,
+      // termsAccepted: true,
+    };
+
+    console.log('DEBUG customer payload (step1):', payload);
+
+    let resp;
     try {
-      response = await fetch('/api/customers', {
+      resp = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(payload),
       });
     } catch (err) {
       console.error('Customer fetch error:', err);
-      showNotification('error', 'Kunde inte kontakta servern.', 'cust-notice');
+      setStatus('Kunde inte kontakta servern. Försök igen.');
       return;
     }
 
-    const raw = await response.text();
     let data = {};
-    try { data = JSON.parse(raw); } catch (_) {}
+    try { data = await resp.json(); } catch {}
 
-    console.log('DEBUG /api/customers status:', response.status, 'response:', data || raw);
+    console.log('DEBUG /api/customers status:', resp.status, 'response:', data);
 
-    if (!response.ok) {
-      const msg = data?.error || data?.message || 'Något gick fel vid registreringen.';
-      showNotification('error', msg, 'cust-notice');
+    if (resp.status === 409) {
+      setStatus(data?.error || 'Det finns redan ett konto med denna e-post.');
       return;
     }
 
-    showNotification('success', 'Tack! Ditt konto är skapat.', 'cust-notice');
-    form.reset();
+    if (!resp.ok) {
+      setStatus(data?.error || 'Något gick fel vid registreringen.');
+      return;
+    }
+
+    setStatus('Klart! Konto skapat. Du kan nu logga in.');
+    showNotification?.('success', 'Konto skapat! Du kan nu logga in.', 'customer-status');
+
+    // valfritt: form.reset();
   });
 }
+
+export default form;

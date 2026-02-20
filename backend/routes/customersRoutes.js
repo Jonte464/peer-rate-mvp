@@ -19,62 +19,111 @@ const {
 const prisma = new PrismaClient();
 const router = express.Router();
 
-/** Skapa kund – validering */
-const createCustomerSchema = Joi.object({
+/**
+ * =========================
+ *  SCHEMAS
+ * =========================
+ */
+
+// Steg 1: Minimal registrering (email + lösenord)
+const createCustomerStep1Schema = Joi.object({
+  email: Joi.string().email().required(),
+  emailConfirm: Joi.string().email().allow('', null).optional(), // om ej skickas -> vi sätter = email
+  password: Joi.string().min(8).max(100).required(),
+  passwordConfirm: Joi.string().min(8).max(100).required(),
+
+  // Valfria samtycken i steg 1 (din customer.html har inga checkboxar just nu)
+  // Om du börjar skicka dem senare: de måste vara true om de finns.
+  thirdPartyConsent: Joi.boolean().valid(true).optional(),
+  termsAccepted: Joi.boolean().valid(true).optional(),
+});
+
+// Steg 2: Komplettera profil (personuppgifter etc)
+const createCustomerStep2Schema = Joi.object({
   firstName: Joi.string().min(2).max(100).required(),
   lastName: Joi.string().min(2).max(100).required(),
   personalNumber: Joi.string()
     .custom((value, helpers) => {
-      if (!isValidPersonalNumber(value)) {
-        return helpers.error('any.invalid');
-      }
+      if (!isValidPersonalNumber(value)) return helpers.error('any.invalid');
       return value;
     })
     .required(),
+
   email: Joi.string().email().required(),
   emailConfirm: Joi.string().email().required(),
-  password: Joi.string().min(8).max(100).required(),
-  passwordConfirm: Joi.string().min(8).max(100).required(),
-  phone: Joi.string()
-    .pattern(/^[0-9+\s\-()]*$/)
-    .allow('', null),
+
+  // I steg 2 brukar man INTE vilja byta lösenord här – men vi stödjer om det skickas
+  password: Joi.string().min(8).max(100).allow('', null).optional(),
+  passwordConfirm: Joi.string().min(8).max(100).allow('', null).optional(),
+
+  phone: Joi.string().pattern(/^[0-9+\s\-()]*$/).allow('', null),
   addressStreet: Joi.string().max(200).allow('', null),
   addressZip: Joi.string().max(20).allow('', null),
   addressCity: Joi.string().max(100).allow('', null),
   country: Joi.string().max(100).allow('', null),
 
-  // NYTT: Blocket-fält (valfria)
+  // Blocket valfritt
   blocketEmail: Joi.string().email().allow('', null),
   blocketPassword: Joi.string().min(1).max(200).allow('', null),
 
-  // Samtycken – måste vara TRUE
-  thirdPartyConsent: Joi.boolean().valid(true).required(),
-  termsAccepted: Joi.boolean().valid(true).required(),
+  // I steg 2 kan vi kräva true (om ni vill). Jag sätter OPTIONAL här också för att inte låsa er.
+  thirdPartyConsent: Joi.boolean().valid(true).optional(),
+  termsAccepted: Joi.boolean().valid(true).optional(),
 });
 
-/* -------------------------------------------------------
-   POST /api/customers – registrera kund
-   ------------------------------------------------------- */
-router.post('/customers', async (req, res) => {
-  // Normalisera checkboxar innan validering
-  const raw = req.body || {};
-  console.log('DEBUG raw req.body (incoming):', JSON.stringify(raw));
+/**
+ * Hjälp: gör “vänligt fält”-namn till felmeddelanden
+ */
+function friendlyFieldName(key) {
+  switch (key) {
+    case 'firstName': return 'förnamn';
+    case 'lastName': return 'efternamn';
+    case 'personalNumber': return 'personnummer';
+    case 'email': return 'e-post';
+    case 'emailConfirm': return 'bekräfta e-post';
+    case 'phone': return 'telefonnummer';
+    case 'addressStreet': return 'gatuadress';
+    case 'addressZip': return 'postnummer';
+    case 'addressCity': return 'ort';
+    case 'country': return 'land';
+    case 'password': return 'lösenord';
+    case 'passwordConfirm': return 'bekräfta lösenord';
+    case 'blocketEmail': return 'Blocket-e-post';
+    case 'blocketPassword': return 'Blocket-lösenord';
+    case 'thirdPartyConsent': return 'samtycke till tredjepartsdata';
+    case 'termsAccepted': return 'godkännande av villkor och integritetspolicy';
+    default: return null;
+  }
+}
 
+/**
+ * =========================
+ *  POST /api/customers
+ *  - Steg 1: email + password
+ *  - Steg 2: komplettera profil
+ * =========================
+ */
+router.post('/customers', async (req, res) => {
+  const raw = req.body || {};
+
+  // Normalisera checkboxar (om de råkar komma som "on"/"true"/etc)
   const body = {
     ...raw,
     thirdPartyConsent: normalizeCheckbox(raw.thirdPartyConsent),
     termsAccepted: normalizeCheckbox(raw.termsAccepted),
   };
 
-  console.log(
-    'DEBUG backend /api/customers body:',
-    'thirdPartyConsent =',
-    body.thirdPartyConsent,
-    'termsAccepted =',
-    body.termsAccepted
-  );
+  // Avgör om detta är steg 2 (om personuppgifter finns)
+  const isStep2 =
+    !!body.firstName ||
+    !!body.lastName ||
+    !!body.personalNumber ||
+    !!body.addressStreet ||
+    !!body.addressZip ||
+    !!body.addressCity;
 
-  const { error, value } = createCustomerSchema.validate(body);
+  const schema = isStep2 ? createCustomerStep2Schema : createCustomerStep1Schema;
+  const { error, value } = schema.validate(body, { abortEarly: true });
 
   if (error) {
     const firstDetail = error.details && error.details[0];
@@ -82,228 +131,162 @@ router.post('/customers', async (req, res) => {
       (firstDetail && firstDetail.context && firstDetail.context.key) ||
       (firstDetail && firstDetail.path && firstDetail.path[0]);
 
-    let friendlyField = null;
-    switch (key) {
-      case 'firstName':
-        friendlyField = 'förnamn';
-        break;
-      case 'lastName':
-        friendlyField = 'efternamn';
-        break;
-      case 'personalNumber':
-        friendlyField = 'personnummer';
-        break;
-      case 'email':
-        friendlyField = 'e-post';
-        break;
-      case 'emailConfirm':
-        friendlyField = 'bekräfta e-post';
-        break;
-      case 'phone':
-        friendlyField = 'telefonnummer';
-        break;
-      case 'addressStreet':
-        friendlyField = 'gatuadress';
-        break;
-      case 'addressZip':
-        friendlyField = 'postnummer';
-        break;
-      case 'addressCity':
-        friendlyField = 'ort';
-        break;
-      case 'country':
-        friendlyField = 'land';
-        break;
-      case 'password':
-        friendlyField = 'lösenord';
-        break;
-      case 'passwordConfirm':
-        friendlyField = 'bekräfta lösenord';
-        break;
-      case 'blocketEmail':
-        friendlyField = 'Blocket-e-post';
-        break;
-      case 'blocketPassword':
-        friendlyField = 'Blocket-lösenord';
-        break;
-      case 'thirdPartyConsent':
-        friendlyField = 'samtycke till tredjepartsdata';
-        break;
-      case 'termsAccepted':
-        friendlyField = 'godkännande av villkor och integritetspolicy';
-        break;
-      default:
-        friendlyField = null;
-    }
-
-    // Specialfall: ogiltigt personnummer
     if (key === 'personalNumber') {
-      return res
-        .status(400)
-        .json({ ok: false, error: 'Ogiltigt personnummer.' });
+      return res.status(400).json({ ok: false, error: 'Ogiltigt personnummer.' });
     }
 
-    const msg = friendlyField
-      ? `Kontrollera fältet: ${friendlyField}.`
+    const friendly = friendlyFieldName(key);
+    const msg = friendly
+      ? `Kontrollera fältet: ${friendly}.`
       : 'En eller flera uppgifter är ogiltiga. Kontrollera formuläret.';
 
     return res.status(400).json({ ok: false, error: msg });
   }
 
+  // Email + confirm
   const emailTrim = String(value.email || '').trim().toLowerCase();
-  const emailConfirmTrim = String(value.emailConfirm || '')
-    .trim()
-    .toLowerCase();
+  const emailConfirmTrim = String(value.emailConfirm || '').trim().toLowerCase() || emailTrim;
 
   if (!emailTrim || emailTrim !== emailConfirmTrim) {
-    return res
-      .status(400)
-      .json({ ok: false, error: 'E-postadresserna matchar inte.' });
+    return res.status(400).json({ ok: false, error: 'E-postadresserna matchar inte.' });
   }
 
-  if (value.password !== value.passwordConfirm) {
-    return res
-      .status(400)
-      .json({ ok: false, error: 'Lösenorden matchar inte.' });
+  // Password + confirm
+  // Steg 2: password kan vara tomt => då byter vi inte lösenord.
+  const hasPasswordInRequest = typeof value.password === 'string' && value.password.length > 0;
+  if (!isStep2 || hasPasswordInRequest) {
+    if ((value.password || '') !== (value.passwordConfirm || '')) {
+      return res.status(400).json({ ok: false, error: 'Lösenorden matchar inte.' });
+    }
   }
 
   const subjectRef = normSubject(emailTrim);
-  const personalNumberClean = clean(value.personalNumber);
 
-  // Här vet vi: thirdPartyConsent = true, termsAccepted = true (validerat av Joi)
-  const fullName =
-    `${clean(value.firstName) || ''} ${clean(value.lastName) || ''}`.trim() ||
-    null;
-  const passwordHash = await bcrypt.hash(value.password, 10);
-
-  // NYTT: plocka ut Blocket-fält (valfria)
-  const blocketEmail =
-    (value.blocketEmail && String(value.blocketEmail).trim()) || '';
+  // Blocket (valfritt)
+  const blocketEmail = (value.blocketEmail && String(value.blocketEmail).trim()) || '';
   const blocketPassword = value.blocketPassword || '';
 
   try {
-    // 1) Finns det redan en kund med denna subjectRef (dvs e-post som subject)?
     const existingBySubject = await prisma.customer.findUnique({
       where: { subjectRef },
     });
 
-    // 2) Finns det någon annan kund med samma personnummer?
-    const existingByPn = await prisma.customer.findUnique({
-      where: { personalNumber: personalNumberClean },
-    });
-
-    if (
-      existingByPn &&
-      (!existingBySubject || existingByPn.id !== existingBySubject.id)
-    ) {
-      return res.status(409).json({
-        ok: false,
-        error: 'Det finns redan en användare med samma personnummer.',
+    // Om steg 2: kontrollera personnummer-unikhet
+    let personalNumberClean = null;
+    if (isStep2) {
+      personalNumberClean = clean(value.personalNumber);
+      const existingByPn = await prisma.customer.findUnique({
+        where: { personalNumber: personalNumberClean },
       });
+
+      if (
+        existingByPn &&
+        (!existingBySubject || existingByPn.id !== existingBySubject.id)
+      ) {
+        return res.status(409).json({
+          ok: false,
+          error: 'Det finns redan en användare med samma personnummer.',
+        });
+      }
     }
+
+    // Hasha lösenord om vi ska spara/uppdatera
+    const passwordHash = (!isStep2 || hasPasswordInRequest)
+      ? await bcrypt.hash(value.password, 10)
+      : null;
+
+    // Bygg data beroende på steg
+    const step1Data = {
+      subjectRef,
+      email: emailTrim,
+      passwordHash, // alltid i steg 1
+      // Samtycken: om de saknas blir det false (bra tills ni lägger till checkboxar)
+      thirdPartyConsent: value.thirdPartyConsent === true,
+      termsAccepted: value.termsAccepted === true,
+    };
+
+    const fullName =
+      isStep2
+        ? (`${clean(value.firstName) || ''} ${clean(value.lastName) || ''}`.trim() || null)
+        : null;
+
+    const step2Data = {
+      subjectRef,
+      email: emailTrim,
+      fullName,
+      personalNumber: personalNumberClean,
+      phone: normalizePhone(value.phone),
+      addressStreet: clean(value.addressStreet),
+      addressZip: clean(value.addressZip),
+      addressCity: clean(value.addressCity),
+      country: clean(value.country),
+      // Uppdatera lösenord endast om skickat
+      ...(passwordHash ? { passwordHash } : {}),
+      thirdPartyConsent: value.thirdPartyConsent === true,
+      termsAccepted: value.termsAccepted === true,
+    };
 
     let customer;
 
     if (existingBySubject) {
-      // Om den redan har ett lösenord: det är ett "riktigt" konto -> stoppa
-      if (existingBySubject.passwordHash) {
+      // Om konto redan “riktigt” och vi är i steg 1 => blocka dubbelregistrering
+      if (!isStep2 && existingBySubject.passwordHash) {
         return res.status(409).json({
           ok: false,
-          error:
-            'Det finns redan ett registrerat konto med denna e-postadress.',
+          error: 'Det finns redan ett registrerat konto med denna e-postadress.',
         });
       }
 
-      // Annars: uppgradera "skugganvändaren" (skapad via tidigare betyg)
       customer = await prisma.customer.update({
         where: { id: existingBySubject.id },
-        data: {
-          subjectRef, // oförändrat egentligen
-          fullName,
-          personalNumber: personalNumberClean,
-          email: emailTrim,
-          phone: normalizePhone(value.phone),
-          addressStreet: clean(value.addressStreet),
-          addressZip: clean(value.addressZip),
-          addressCity: clean(value.addressCity),
-          country: clean(value.country),
-          passwordHash,
-          thirdPartyConsent: value.thirdPartyConsent === true,
-          termsAccepted: value.termsAccepted === true,
-        },
+        data: isStep2 ? step2Data : step1Data,
       });
     } else {
-      // Ingen kund alls – skapa ny
       customer = await prisma.customer.create({
-        data: {
-          subjectRef,
-          fullName,
-          personalNumber: personalNumberClean,
-          email: emailTrim,
-          phone: normalizePhone(value.phone),
-          addressStreet: clean(value.addressStreet),
-          addressZip: clean(value.addressZip),
-          addressCity: clean(value.addressCity),
-          country: clean(value.country),
-          passwordHash,
-          thirdPartyConsent: value.thirdPartyConsent === true,
-          termsAccepted: value.termsAccepted === true,
-        },
+        data: isStep2 ? step2Data : step1Data,
       });
     }
 
-    // Starta Blocket-koppling i bakgrunden om båda fälten är ifyllda
+    // Blocket-koppling i bakgrunden (om båda finns)
     if (blocketEmail && blocketPassword) {
       connectBlocketProfile(customer.id, blocketEmail, blocketPassword)
-        .then(() => {
-          console.log(
-            `Blocket-profil kopplad för kund ${customer.id} (${blocketEmail})`
-          );
-        })
-        .catch((err) => {
-          console.error(
-            `Misslyckades att koppla Blocket-profil för kund ${customer.id}`,
-            err
-          );
-        });
+        .then(() => console.log(`Blocket-profil kopplad för kund ${customer.id}`))
+        .catch((err) => console.error(`Misslyckades koppla Blocket-profil för kund ${customer.id}`, err));
     }
 
-    return res.status(201).json({
+    return res.status(existingBySubject ? 200 : 201).json({
       ok: true,
       customer: {
         id: customer.id,
-        fullName: customer.fullName,
+        fullName: customer.fullName || null,
         email: customer.email,
         subjectRef: customer.subjectRef,
       },
+      flow: isStep2 ? 'step2' : 'step1',
     });
   } catch (e) {
     console.error('[POST /api/customers] error:', e);
 
     if (e.code === 'P2002') {
-      // Fallback om någon unik-constraint ändå smäller
       return res.status(409).json({
         ok: false,
-        error:
-          'Det finns redan en användare med samma e-post eller personnummer.',
+        error: 'Det finns redan en användare med samma e-post eller personnummer.',
       });
     }
 
-    return res
-      .status(500)
-      .json({ ok: false, error: 'Kunde inte skapa kund.' });
+    return res.status(500).json({ ok: false, error: 'Kunde inte skapa kund.' });
   }
 });
 
-/* -------------------------------------------------------
-   GET /api/customers – sök kunder
-   ------------------------------------------------------- */
+/**
+ * =========================
+ * GET /api/customers – sök kunder (admin)
+ * =========================
+ */
 router.get('/customers', async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) {
-    return res
-      .status(400)
-      .json({ ok: false, error: 'Ange q i querystring.' });
+    return res.status(400).json({ ok: false, error: 'Ange q i querystring.' });
   }
 
   try {
