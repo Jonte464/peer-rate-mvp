@@ -1,52 +1,47 @@
 // frontend/modules/customer.js
-// Minimal registrering: email + password (+ confirm)
+// Hanterar registreringslogik (customer.html)
 
 import { el, showNotification, clearNotice } from './utils.js';
 
-const form = el('customer-form');
+export function initCustomerForm() {
+  const customerForm = document.getElementById('customer-form');
+  if (!customerForm) return;
 
-function getVal(id) {
-  const n = el(id);
-  return n ? (n.value || '').trim() : '';
-}
+  console.log('Customer form loaded');
 
-if (form) {
-  console.log('Customer form loaded (minimal)');
-
-  form.addEventListener('submit', async (e) => {
+  customerForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearNotice();
 
-    const email = getVal('cust-email');
-    const password = getVal('cust-password');
-    const passwordConfirm = getVal('cust-passwordConfirm');
+    const body = {
+      firstName: el('cust-firstName')?.value?.trim() || '',
+      lastName: el('cust-lastName')?.value?.trim() || '',
+      personalNumber: el('cust-personalNumber')?.value?.trim() || '',
+      email: el('cust-email')?.value?.trim() || '',
+      emailConfirm: el('cust-emailConfirm')?.value?.trim() || '',
+      password: el('cust-password')?.value || '',
+      passwordConfirm: el('cust-passwordConfirm')?.value || '',
+      phone: el('cust-phone')?.value?.trim() || '',
+      addressStreet: el('cust-addressStreet')?.value?.trim() || '',
+      addressZip: el('cust-addressZip')?.value?.trim() || '',
+      addressCity: el('cust-addressCity')?.value?.trim() || '',
+      country: el('cust-country')?.value?.trim() || '',
+      thirdPartyConsent: el('cust-thirdPartyConsent')?.checked || false,
+      termsAccepted: el('cust-termsAccepted')?.checked || false,
+    };
 
-    if (!email) {
-      showNotification('error', 'Fyll i e-post.', 'cust-notice');
-      return;
-    }
-    if (!password || password.length < 8) {
-      showNotification('error', 'Lösenord måste vara minst 8 tecken.', 'cust-notice');
-      return;
-    }
-    if (password !== passwordConfirm) {
-      showNotification('error', 'Lösenorden matchar inte.', 'cust-notice');
-      return;
-    }
-
-    const payload = { email, password };
-    console.log('DEBUG register payload:', payload);
+    console.log('DEBUG customer payload (before send):', body);
 
     let response;
     try {
       response = await fetch('/api/customers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(body),
       });
     } catch (err) {
-      console.error('Register network error:', err);
-      showNotification('error', 'Kunde inte kontakta servern. Försök igen.', 'cust-notice');
+      console.error('Customer fetch error:', err);
+      showNotification('error', 'Kunde inte kontakta servern.', 'cust-notice');
       return;
     }
 
@@ -55,17 +50,14 @@ if (form) {
       data = await response.json();
     } catch (_) {}
 
-    if (response.status === 409) {
-      showNotification('error', data?.error || 'Det finns redan ett konto med den e-posten.', 'cust-notice');
-      return;
-    }
-
     if (!response.ok) {
-      showNotification('error', data?.error || 'Registrering misslyckades.', 'cust-notice');
+      const message =
+        data?.error || data?.message || 'Något gick fel vid registreringen.';
+      showNotification('error', message, 'cust-notice');
       return;
     }
 
-    showNotification('success', 'Klart! Kontot är skapat. Du kan logga in nu.', 'cust-notice');
-    form.reset();
+    showNotification('success', 'Tack! Din registrering är mottagen.', 'cust-notice');
+    customerForm.reset();
   });
 }

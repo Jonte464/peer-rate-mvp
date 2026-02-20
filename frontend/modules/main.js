@@ -12,7 +12,7 @@ import { initRatingPlatform } from './ratingPlatform.js';
 import { updateUserBadge, updateAvatars, initProfilePage } from './profile.js';
 
 import { adminLoginForm, adminLogoutBtn } from './admin.js';
-import customerForm from './customer.js';
+import { initCustomerForm } from './customer.js';
 
 import { initLanding } from './landing/init.js';
 import { updateTopUserPill, initUserDropdown } from './landing/topUser.js';
@@ -150,10 +150,14 @@ function initApp() {
     },
   });
 
-  if (customerForm) console.log('Customer form loaded');
   if (adminLoginForm && adminLogoutBtn) console.log('Admin functionality loaded');
 
   const path = window.location.pathname || '';
+
+  // --- Customer / registrering ---
+if (document.getElementById('customer-form')) {
+  initCustomerForm();
+}
 
   // --- Profile ---
   const isProfilePage =
