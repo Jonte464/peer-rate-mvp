@@ -1,5 +1,5 @@
 // frontend/modules/customer.js
-// Robust registreringslogik för customer.html (tål olika input-id:n)
+// Robust registrering: skickar med minimifält som backend kan kräva.
 
 import { showNotification, clearNotice } from './utils.js';
 
@@ -32,7 +32,6 @@ export function initCustomerForm() {
     e.preventDefault();
     clearNotice();
 
-    // ✅ Hitta fält även om de heter olika i HTML
     const email = pickValue([
       '#cust-email',
       '#email',
@@ -55,19 +54,20 @@ export function initCustomerForm() {
       'input[name="password2"]',
     ]);
 
-    const termsAccepted = pickChecked([
-      '#cust-termsAccepted',
-      '#termsAccepted',
-      'input[name="termsAccepted"]',
-    ]);
+    // Om sidan inte har checkboxes, sätt rimliga defaults (MVP)
+    const termsAccepted =
+      pickChecked(['#cust-termsAccepted', '#termsAccepted', 'input[name="termsAccepted"]']) || true;
 
-    const thirdPartyConsent = pickChecked([
-      '#cust-thirdPartyConsent',
-      '#thirdPartyConsent',
-      'input[name="thirdPartyConsent"]',
-    ]);
+    const thirdPartyConsent =
+      pickChecked(['#cust-thirdPartyConsent', '#thirdPartyConsent', 'input[name="thirdPartyConsent"]']) || false;
+
+    // Backend verkar kräva namn mm. Om fälten inte finns i UI: sätt defaults.
+    const firstName = pickValue(['#cust-firstName', '#firstName', 'input[name="firstName"]']) || 'Okänd';
+    const lastName = pickValue(['#cust-lastName', '#lastName', 'input[name="lastName"]']) || 'Användare';
 
     const body = {
+      firstName,
+      lastName,
       email,
       password,
       passwordConfirm,
@@ -77,9 +77,8 @@ export function initCustomerForm() {
 
     console.log('DEBUG customer payload (before send):', body);
 
-    // ✅ Snabb client-side check (så du ser direkt om email blir tom)
     if (!email) {
-      showNotification('error', 'E-post saknas (fältet hittas inte i sidan).', 'cust-notice');
+      showNotification('error', 'Fyll i e-post.', 'cust-notice');
       return;
     }
     if (!password || password.length < 8) {
