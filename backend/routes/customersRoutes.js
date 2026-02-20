@@ -25,17 +25,19 @@ const router = express.Router();
  * =========================
  */
 
-// Steg 1: Minimal registrering (email + lösenord)
+// Steg 1: Minimal registrering (email + lösenord + villkor)
 const createCustomerStep1Schema = Joi.object({
   email: Joi.string().email().required(),
   emailConfirm: Joi.string().email().allow('', null).optional(), // om ej skickas -> vi sätter = email
   password: Joi.string().min(8).max(100).required(),
   passwordConfirm: Joi.string().min(8).max(100).required(),
 
-  // Valfria samtycken i steg 1 (din customer.html har inga checkboxar just nu)
-  // Om du börjar skicka dem senare: de måste vara true om de finns.
+  // ✅ NYTT: i steg 1 kräver vi att användaren godkänner villkoren
+  termsAccepted: Joi.boolean().valid(true).required(),
+
+  // ✅ För MVP: vi vill inte kräva en separat checkbox för tredjepartsdata i steg 1.
+  // Den kan skickas senare, men om den skickas måste den vara true.
   thirdPartyConsent: Joi.boolean().valid(true).optional(),
-  termsAccepted: Joi.boolean().valid(true).optional(),
 });
 
 // Steg 2: Komplettera profil (personuppgifter etc)
@@ -67,6 +69,7 @@ const createCustomerStep2Schema = Joi.object({
   blocketPassword: Joi.string().min(1).max(200).allow('', null),
 
   // I steg 2 kan vi kräva true (om ni vill). Jag sätter OPTIONAL här också för att inte låsa er.
+  // Om de skickas måste de vara true.
   thirdPartyConsent: Joi.boolean().valid(true).optional(),
   termsAccepted: Joi.boolean().valid(true).optional(),
 });
@@ -99,7 +102,7 @@ function friendlyFieldName(key) {
 /**
  * =========================
  *  POST /api/customers
- *  - Steg 1: email + password
+ *  - Steg 1: email + password + terms
  *  - Steg 2: komplettera profil
  * =========================
  */
@@ -121,6 +124,22 @@ router.post('/customers', async (req, res) => {
     !!body.addressStreet ||
     !!body.addressZip ||
     !!body.addressCity;
+
+  // ✅ NYTT: MVP-genväg
+  // Om användaren godkänner villkor i steg 1 men vi saknar thirdPartyConsent,
+  // sätt thirdPartyConsent=true så flödet funkar utan extra checkbox.
+  if (!isStep2 && body.termsAccepted === true && (raw.thirdPartyConsent === undefined || raw.thirdPartyConsent === null || raw.thirdPartyConsent === '')) {
+    body.thirdPartyConsent = true;
+  }
+
+  console.log('DEBUG /api/customers incoming:', {
+    isStep2,
+    email: body.email,
+    termsAccepted: body.termsAccepted,
+    thirdPartyConsent: body.thirdPartyConsent,
+    hasFirstName: !!body.firstName,
+    hasPersonalNumber: !!body.personalNumber,
+  });
 
   const schema = isStep2 ? createCustomerStep2Schema : createCustomerStep1Schema;
   const { error, value } = schema.validate(body, { abortEarly: true });
@@ -200,7 +219,6 @@ router.post('/customers', async (req, res) => {
       subjectRef,
       email: emailTrim,
       passwordHash, // alltid i steg 1
-      // Samtycken: om de saknas blir det false (bra tills ni lägger till checkboxar)
       thirdPartyConsent: value.thirdPartyConsent === true,
       termsAccepted: value.termsAccepted === true,
     };
@@ -220,7 +238,6 @@ router.post('/customers', async (req, res) => {
       addressZip: clean(value.addressZip),
       addressCity: clean(value.addressCity),
       country: clean(value.country),
-      // Uppdatera lösenord endast om skickat
       ...(passwordHash ? { passwordHash } : {}),
       thirdPartyConsent: value.thirdPartyConsent === true,
       termsAccepted: value.termsAccepted === true,
