@@ -49,7 +49,6 @@
       .shell{ padding: 0 14px; }
     }
 
-    /* TOP ROW (matchar index) */
     .top-row{
       position: sticky;
       top: 0;
@@ -143,12 +142,7 @@
       white-space: nowrap;
     }
 
-    /* PAGE */
-    .page{
-      min-height: calc(100vh - 70px);
-      display:flex;
-      align-items: stretch;
-    }
+    .page{ min-height: calc(100vh - 70px); display:flex; align-items: stretch; }
 
     .bg-hero{
       position: relative;
@@ -207,18 +201,9 @@
       box-shadow: 0 18px 70px rgba(0,0,0,.08);
       padding: 18px;
     }
-    .side-card h3{
-      margin: 0 0 8px;
-      letter-spacing: -.01em;
-    }
-    .side-card p{
-      margin: 0;
-      color: rgba(11,22,51,.70);
-      font-size: 13px;
-      line-height: 1.55;
-    }
+    .side-card h3{ margin: 0 0 8px; letter-spacing: -.01em; }
+    .side-card p{ margin: 0; color: rgba(11,22,51,.70); font-size: 13px; line-height: 1.55; }
 
-    /* Form (använder gärna pr-theme-klasser om du vill) */
     .field{ margin-top: 12px; }
     .label{ display:block; font-weight: 750; font-size: 13px; margin-bottom: 6px; }
     .input{
@@ -234,6 +219,17 @@
       border-color: rgba(29,78,216,.35);
       box-shadow: 0 0 0 6px rgba(29,78,216,.08);
     }
+
+    .checkrow{
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      margin-top: 14px;
+      font-size: 13px;
+      color: rgba(15,15,18,.78);
+      line-height: 1.45;
+    }
+    .checkrow input{ margin-top: 3px; }
 
     .actions{
       display:flex;
@@ -281,8 +277,6 @@
 </head>
 
 <body>
-
-  <!-- TOP ROW -->
   <header class="top-row">
     <div class="shell top-row-inner">
       <a class="brand soft-hover" href="/#top">
@@ -297,7 +291,7 @@
 
       <div class="top-actions">
         <a class="btn-pill soft-hover" href="/#sim">5P-modellen</a>
-        <a class="btn-pill soft-hover" href="/#rate">Lämna betyg</a>
+        <a class="btn-pill soft-hover" href="/rate.html">Lämna betyg</a>
       </div>
     </div>
   </header>
@@ -313,12 +307,9 @@
         </div>
 
         <div class="signup-grid">
-
-          <!-- SIGNUP CARD -->
           <div class="card">
             <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;">Skapa konto</h2>
 
-            <!-- OBS: justera id:n här om customer.js använder andra -->
             <form id="customer-form" autocomplete="off">
               <div class="field">
                 <label class="label" for="email">E-post</label>
@@ -332,8 +323,16 @@
 
               <div class="field">
                 <label class="label" for="password2">Upprepa lösenord</label>
-                <input class="input" id="password2" name="password2" type="password" placeholder="Upprepa lösenord" autocomplete="new-password" />
+                <input class="input" id="password2" name="password2" type="password" placeholder="Upprepa lösenord" required autocomplete="new-password" />
               </div>
+
+              <!-- NYTT: krävs för backend (termsAccepted + thirdPartyConsent) -->
+              <label class="checkrow">
+                <input type="checkbox" id="termsAccepted" />
+                <span>
+                  Jag godkänner villkoren och integritetspolicyn (kommer som bilaga senare) och att trust kan baseras på verifierade transaktioner.
+                </span>
+              </label>
 
               <div class="actions">
                 <button class="btn btn-primary soft-hover" type="submit">Registrera</button>
@@ -341,13 +340,8 @@
 
               <p class="note" id="customer-status"></p>
             </form>
-
-            <p class="note">
-              Genom att registrera dig godkänner du våra villkor och att trust kan baseras på verifierade transaktioner.
-            </p>
           </div>
 
-          <!-- SIDE INFO -->
           <aside class="side-card">
             <h3>Vad får du?</h3>
             <p>
@@ -362,7 +356,6 @@
               <a class="btn soft-hover" href="/profile.html">Min profil</a>
             </div>
           </aside>
-
         </div>
       </div>
     </section>
