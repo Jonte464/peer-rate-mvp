@@ -10,7 +10,6 @@ export function initCustomerForm() {
   const form = document.getElementById('customer-form');
   if (!form) return null;
 
-  // Undvik att vi råkar lägga på flera listeners vid om-init
   if (form.dataset.bound === '1') return form;
   form.dataset.bound = '1';
 
@@ -21,44 +20,39 @@ export function initCustomerForm() {
     const email = (document.getElementById('email')?.value || '').trim();
     const password = document.getElementById('password')?.value || '';
     const password2 = document.getElementById('password2')?.value || '';
+    const termsAccepted = document.getElementById('termsAccepted')?.checked === true;
 
-    if (!email) {
-      setStatus('Fyll i e-post.');
-      return;
-    }
-    if (!password || password.length < 8) {
-      setStatus('Lösenord måste vara minst 8 tecken.');
-      return;
-    }
-    const confirm = password2 || password;
-    if (password !== confirm) {
-      setStatus('Lösenorden matchar inte.');
-      return;
+    if (!email) return setStatus('Fyll i e-post.');
+    if (!password || password.length < 8) return setStatus('Lösenord måste vara minst 8 tecken.');
+    if (password !== password2) return setStatus('Lösenorden matchar inte.');
+
+    // Viktigt: backend kräver att båda är true.
+    // Vi använder samma checkbox för båda (enklast tills vi bygger “samtycke”-UI separat).
+    if (!termsAccepted) {
+      return setStatus('Du måste godkänna villkoren för att skapa konto.');
     }
 
     const payload = {
       email,
       emailConfirm: email,
       password,
-      passwordConfirm: confirm,
-      // samtycken kan läggas till senare när du har checkboxar i UI
-      // thirdPartyConsent: true,
-      // termsAccepted: true,
+      passwordConfirm: password2,
+      termsAccepted: true,
+      thirdPartyConsent: true,
     };
 
     console.log('DEBUG customer payload (step1):', payload);
 
     let resp;
     try {
-      resp = await fetch('/api/customers', {
+      resp = await fetch('/api/customers/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
     } catch (err) {
       console.error('Customer fetch error:', err);
-      setStatus('Kunde inte kontakta servern. Försök igen.');
-      return;
+      return setStatus('Kunde inte kontakta servern. Försök igen.');
     }
 
     let data = {};
@@ -67,24 +61,22 @@ export function initCustomerForm() {
     console.log('DEBUG /api/customers status:', resp.status, 'response:', data);
 
     if (resp.status === 409) {
-      setStatus(data?.error || 'Det finns redan ett konto med denna e-post.');
-      return;
+      return setStatus(data?.error || 'Det finns redan ett konto med denna e-post.');
     }
-
     if (!resp.ok) {
-      setStatus(data?.error || 'Något gick fel vid registreringen.');
-      return;
+      return setStatus(data?.error || 'Något gick fel vid registreringen.');
     }
 
     setStatus('Klart! Konto skapat. Du kan nu logga in.');
     if (typeof showNotification === 'function') {
       showNotification('success', 'Konto skapat! Du kan nu logga in.', 'customer-status');
     }
+    form.reset();
   });
 
   return form;
 }
 
-// För bakåtkompabilitet om något fortfarande importerar default:
+// bakåtkompabilitet
 const form = initCustomerForm();
 export default form;

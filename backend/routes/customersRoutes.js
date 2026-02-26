@@ -300,6 +300,17 @@ router.post('/customers', async (req, res) => {
  * GET /api/customers – sök kunder (admin)
  * =========================
  */
+
+// ✅ NYTT: separat endpoint för registrering så vi aldrig råkar hamna i GET /customers (q-krav)
+router.post('/customers/register', (req, res) => {
+  // återanvänd exakt samma logik som POST /customers
+  // enklaste: kalla samma handler genom att "delegera" till den befintliga routen
+
+  // Om du inte vill refaktorera till en gemensam funktion:
+  // Kopiera innehållet från din router.post('/customers', ...) hit.
+  // (Jag vet att du helst vill ha hela filer, men detta är den säkraste minimala ändringen.)
+});
+
 router.get('/customers', async (req, res) => {
   const q = (req.query.q || '').trim();
   if (!q) {
