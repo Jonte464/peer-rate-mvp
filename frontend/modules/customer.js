@@ -6,6 +6,18 @@ function setStatus(msg) {
   if (el) el.textContent = msg || '';
 }
 
+function notify(type, msg) {
+  if (typeof showNotification === 'function') {
+    showNotification(type, msg, 'customer-status');
+  } else {
+    setStatus(msg);
+  }
+}
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 export function initCustomerForm() {
   const form = document.getElementById('customer-form');
   if (!form) return null;
@@ -25,12 +37,7 @@ export function initCustomerForm() {
     if (!email) return setStatus('Fyll i e-post.');
     if (!password || password.length < 8) return setStatus('Lösenord måste vara minst 8 tecken.');
     if (password !== password2) return setStatus('Lösenorden matchar inte.');
-
-    // Viktigt: backend kräver att båda är true.
-    // Vi använder samma checkbox för båda (enklast tills vi bygger “samtycke”-UI separat).
-    if (!termsAccepted) {
-      return setStatus('Du måste godkänna villkoren för att skapa konto.');
-    }
+    if (!termsAccepted) return setStatus('Du måste godkänna villkoren för att skapa konto.');
 
     const payload = {
       email,
@@ -42,41 +49,61 @@ export function initCustomerForm() {
     };
 
     console.log('DEBUG customer payload (step1):', payload);
+    notify('info', 'Registrerar...');
+
+    // 🔥 VIKTIGT: Bypass-proxy för test (byt tillbaka senare om proxy fixas)
+    const url = 'https://api.peerrate.ai/api/customers/register';
+    // Om du vill testa proxyvägen igen senare, använd:
+    // const url = '/api/customers/register';
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
     let resp;
     try {
-      resp = await fetch('/api/customers/register', {
+      resp = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify(payload),
+        signal: controller.signal,
       });
     } catch (err) {
+      clearTimeout(timeout);
       console.error('Customer fetch error:', err);
-      return setStatus('Kunde inte kontakta servern. Försök igen.');
+
+      if (err?.name === 'AbortError') {
+        return notify('error', 'Servern svarar inte (timeout). Försök igen.');
+      }
+      return notify('error', 'Kunde inte kontakta servern. Försök igen.');
+    } finally {
+      clearTimeout(timeout);
     }
 
     let data = {};
-    try { data = await resp.json(); } catch {}
+    let rawText = '';
+    try {
+      rawText = await resp.text();
+      try { data = JSON.parse(rawText); } catch { data = { raw: rawText }; }
+    } catch {}
 
-    console.log('DEBUG /api/customers status:', resp.status, 'response:', data);
+    console.log('DEBUG /api/customers status:', resp.status, 'ok:', resp.ok, 'response:', data);
 
     if (resp.status === 409) {
-      return setStatus(data?.error || 'Det finns redan ett konto med denna e-post.');
+      return notify('error', data?.error || 'Det finns redan ett konto med denna e-post.');
     }
     if (!resp.ok) {
-      return setStatus(data?.error || 'Något gick fel vid registreringen.');
+      return notify('error', data?.error || `Något gick fel vid registreringen (status ${resp.status}).`);
     }
 
-    setStatus('Klart! Konto skapat. Du kan nu logga in.');
-    if (typeof showNotification === 'function') {
-      showNotification('success', 'Konto skapat! Du kan nu logga in.', 'customer-status');
-    }
+    notify('success', 'Tack! Konto skapat. Du kan nu logga in.');
     form.reset();
+
+    // Liten paus så användaren ser meddelandet
+    await sleep(600);
   });
 
   return form;
 }
 
-// bakåtkompabilitet
 const form = initCustomerForm();
 export default form;
