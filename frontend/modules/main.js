@@ -13,6 +13,7 @@ import { updateUserBadge, updateAvatars, initProfilePage } from './profile.js';
 
 import { adminLoginForm, adminLogoutBtn } from './admin.js';
 import { initCustomerForm } from './customer.js';
+import { initRatingContextGuards } from './ratingContext.js';
 
 import { initLanding } from './landing/init.js';
 import { updateTopUserPill, initUserDropdown } from './landing/topUser.js';
