@@ -1,8 +1,5 @@
 // frontend/modules/customer.js
-// 2-stegsregistrering:
-// Steg 1: POST /api/customers (email+password+terms)
-// Steg 2: POST /api/customers (förnamn+efternamn+personnummer+adress...)
-// När steg 2 är klart -> redirect till /profile.html
+// 2-stegsregistrering med bakåtkompatibel export: initCustomerForm()
 
 import { showNotification } from './utils.js';
 
@@ -11,12 +8,11 @@ function el(id) {
 }
 
 function notify(type, msg) {
-  // återanvänd er notifieringskomponent om den finns
   if (typeof showNotification === 'function') {
     showNotification(type, msg, 'customer-notice');
     return;
   }
-  const n = el('customer-notice');
+  const n = el('customer-notice') || el('customer-status');
   if (n) n.textContent = msg || '';
 }
 
@@ -56,13 +52,9 @@ async function postJson(path, payload, { timeoutMs = 15000 } = {}) {
 }
 
 function showStep2(email) {
-  // göm steg 1, visa steg 2
   el('step1-card')?.classList.add('hidden');
   el('step2-card')?.classList.remove('hidden');
-
-  if (email) {
-    sessionStorage.setItem('peerRateRegisterEmail', email);
-  }
+  if (email) sessionStorage.setItem('peerRateRegisterEmail', email);
 }
 
 function getStep2Email() {
@@ -70,7 +62,7 @@ function getStep2Email() {
 }
 
 function bindStep1() {
-  const form = el('step1-form');
+  const form = el('step1-form') || el('customer-form'); // fallback om du råkar ha gamla id:n
   if (!form) return;
 
   if (form.dataset.bound === '1') return;
@@ -80,11 +72,16 @@ function bindStep1() {
     e.preventDefault();
     notify('info', 'Skapar konto…');
 
-    const email = (el('step1-email')?.value || '').trim().toLowerCase();
-    const emailConfirm = (el('step1-email-confirm')?.value || '').trim().toLowerCase();
-    const password = el('step1-password')?.value || '';
-    const passwordConfirm = el('step1-password-confirm')?.value || '';
-    const termsAccepted = el('step1-terms')?.checked === true;
+    // Nya id:n
+    const email = (el('step1-email')?.value || el('email')?.value || '').trim().toLowerCase();
+    const emailConfirm = (el('step1-email-confirm')?.value || email).trim().toLowerCase();
+
+    const password = el('step1-password')?.value || el('password')?.value || '';
+    const passwordConfirm = el('step1-password-confirm')?.value || el('password2')?.value || '';
+
+    const termsAccepted =
+      el('step1-terms')?.checked === true ||
+      el('termsAccepted')?.checked === true;
 
     if (!email) return notify('error', 'Fyll i e-post.');
     if (email !== emailConfirm) return notify('error', 'E-postadresserna matchar inte.');
@@ -92,14 +89,12 @@ function bindStep1() {
     if (password !== passwordConfirm) return notify('error', 'Lösenorden matchar inte.');
     if (!termsAccepted) return notify('error', 'Du måste godkänna villkoren för att skapa konto.');
 
-    // Steg 1 payload (din backend kräver termsAccepted=true)
     const payload = {
       email,
       emailConfirm,
       password,
       passwordConfirm,
       termsAccepted: true,
-      // ni har MVP-genväg, men vi skickar explicit för att vara tydliga
       thirdPartyConsent: true,
     };
 
@@ -147,7 +142,6 @@ function bindStep2() {
     if (!lastName || lastName.length < 2) return notify('error', 'Fyll i efternamn (minst 2 tecken).');
     if (!personalNumber) return notify('error', 'Fyll i personnummer.');
 
-    // Steg 2 payload (presence av personuppgifter => backend tolkar som steg 2)
     const payload = {
       firstName,
       lastName,
@@ -171,8 +165,6 @@ function bindStep2() {
       console.log('DEBUG step2 response:', res);
 
       notify('success', 'Profil sparad!');
-
-      // städa upp och vidare till profil
       sessionStorage.removeItem('peerRateRegisterEmail');
       window.location.href = '/profile.html';
     } catch (err) {
@@ -186,17 +178,23 @@ function bindStep2() {
 }
 
 export function initCustomerPage() {
-  // Om användaren redan gjort steg 1 (refresh / återkommer) -> visa steg 2 direkt
   const savedEmail = getStep2Email();
-  if (savedEmail) {
-    showStep2(savedEmail);
-  }
+  if (savedEmail) showStep2(savedEmail);
 
   bindStep1();
   bindStep2();
 }
 
-// Auto-init
+/**
+ * Bakåtkompatibilitet:
+ * Din main.js verkar importera { initCustomerForm } från ./customer.js
+ * Vi mappar den till initCustomerPage så allt fortsätter funka utan ändring i main.js.
+ */
+export function initCustomerForm() {
+  return initCustomerPage();
+}
+
+// Auto-init (som tidigare)
 initCustomerPage();
 
 export default initCustomerPage;
