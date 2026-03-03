@@ -1,19 +1,39 @@
 // frontend/modules/customer.js
-// 2-stegsregistrering med bakåtkompatibel export: initCustomerForm()
+// Robust 2-stegsregistrering som funkar även om HTML-id:n varierar.
 
 import { showNotification } from './utils.js';
 
-function el(id) {
+function $(id) {
   return document.getElementById(id);
 }
 
+function setText(msg) {
+  const a = $('customer-notice');
+  const b = $('customer-status');
+  if (a) a.textContent = msg || '';
+  if (b) b.textContent = msg || '';
+}
+
 function notify(type, msg) {
-  if (typeof showNotification === 'function') {
-    showNotification(type, msg, 'customer-notice');
-    return;
+  // Försök använda din befintliga notifiering om den finns
+  try {
+    if (typeof showNotification === 'function') {
+      // Prova båda id:n (olika sidor använder olika)
+      if ($('customer-notice')) showNotification(type, msg, 'customer-notice');
+      else if ($('customer-status')) showNotification(type, msg, 'customer-status');
+      else showNotification(type, msg);
+      return;
+    }
+  } catch (_) {}
+
+  // Fallback: skriv i textfält
+  setText(msg);
+
+  // Sista fallback: alert om inget finns
+  if (!$('customer-notice') && !$('customer-status') && msg) {
+    // eslint-disable-next-line no-alert
+    alert(msg);
   }
-  const n = el('customer-notice') || el('customer-status');
-  if (n) n.textContent = msg || '';
 }
 
 async function postJson(path, payload, { timeoutMs = 15000 } = {}) {
@@ -51,37 +71,72 @@ async function postJson(path, payload, { timeoutMs = 15000 } = {}) {
   }
 }
 
-function showStep2(email) {
-  el('step1-card')?.classList.add('hidden');
-  el('step2-card')?.classList.remove('hidden');
-  if (email) sessionStorage.setItem('peerRateRegisterEmail', email);
+function saveEmailForStep2(email) {
+  sessionStorage.setItem('peerRateRegisterEmail', (email || '').trim().toLowerCase());
 }
 
-function getStep2Email() {
+function getEmailForStep2() {
   return (sessionStorage.getItem('peerRateRegisterEmail') || '').trim().toLowerCase();
 }
 
-function bindStep1() {
-  const form = el('step1-form') || el('customer-form'); // fallback om du råkar ha gamla id:n
-  if (!form) return;
+function showStep2UI(email) {
+  if (email) saveEmailForStep2(email);
 
+  // 1) Om du har card-wrappers med id:n
+  const step1Card = $('step1-card');
+  const step2Card = $('step2-card');
+  if (step1Card && step2Card) {
+    step1Card.classList.add('hidden');
+    step2Card.classList.remove('hidden');
+    step2Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  // 2) Om du har sektioner markerade med data-step="1"/"2"
+  const step1Els = document.querySelectorAll('[data-step="1"]');
+  const step2Els = document.querySelectorAll('[data-step="2"]');
+  if (step1Els.length || step2Els.length) {
+    step1Els.forEach((n) => n.classList.add('hidden'));
+    step2Els.forEach((n) => n.classList.remove('hidden'));
+    if (step2Els[0]) step2Els[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  // 3) Om vi hittar step2-formuläret: scrolla dit och visa tydlig text
+  const step2Form = $('step2-form');
+  if (step2Form) {
+    notify('success', 'Konto skapat! Fortsätt med steg 2 nedan.');
+    step2Form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  // 4) Annars: ingen UI-del för steg 2 hittades
+  notify('success', 'Konto skapat! (Steg 2-form hittades inte på sidan – kontrollera att den finns i HTML.)');
+}
+
+function bindStep1() {
+  const form =
+    $('step1-form') ||
+    $('customer-form'); // fallback om din gamla HTML fortfarande används
+
+  if (!form) return;
   if (form.dataset.bound === '1') return;
   form.dataset.bound = '1';
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    notify('info', 'Skapar konto…');
+    setText('');
 
-    // Nya id:n
-    const email = (el('step1-email')?.value || el('email')?.value || '').trim().toLowerCase();
-    const emailConfirm = (el('step1-email-confirm')?.value || email).trim().toLowerCase();
+    const email = (($('step1-email')?.value || $('email')?.value || '')).trim().toLowerCase();
+    const emailConfirm = (($('step1-email-confirm')?.value || email)).trim().toLowerCase();
 
-    const password = el('step1-password')?.value || el('password')?.value || '';
-    const passwordConfirm = el('step1-password-confirm')?.value || el('password2')?.value || '';
+    const password = $('step1-password')?.value || $('password')?.value || '';
+    const passwordConfirm =
+      $('step1-password-confirm')?.value || $('password2')?.value || '';
 
     const termsAccepted =
-      el('step1-terms')?.checked === true ||
-      el('termsAccepted')?.checked === true;
+      $('step1-terms')?.checked === true ||
+      $('termsAccepted')?.checked === true;
 
     if (!email) return notify('error', 'Fyll i e-post.');
     if (email !== emailConfirm) return notify('error', 'E-postadresserna matchar inte.');
@@ -98,12 +153,16 @@ function bindStep1() {
       thirdPartyConsent: true,
     };
 
+    console.log('DEBUG customer payload (step1):', payload);
+    notify('info', 'Skapar konto…');
+
     try {
       const res = await postJson('/api/customers', payload);
       console.log('DEBUG step1 response:', res);
 
-      notify('success', 'Konto skapat. Fortsätt med steg 2.');
-      showStep2(email);
+      // Visa text + gå till steg 2
+      notify('success', 'Tack! Konto skapat.');
+      showStep2UI(email);
     } catch (err) {
       console.error('Step1 error:', err);
       if (err?.name === 'AbortError') return notify('error', 'Servern svarar inte (timeout). Försök igen.');
@@ -114,29 +173,27 @@ function bindStep1() {
 }
 
 function bindStep2() {
-  const form = el('step2-form');
+  const form = $('step2-form');
   if (!form) return;
-
   if (form.dataset.bound === '1') return;
   form.dataset.bound = '1';
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    notify('info', 'Sparar profil…');
+    setText('');
 
-    const email = getStep2Email();
-    if (!email) return notify('error', 'Saknar e-post från steg 1. Gå tillbaka och skapa konto först.');
+    const email = getEmailForStep2();
+    if (!email) return notify('error', 'Saknar e-post från steg 1. Gör steg 1 först.');
 
-    const firstName = (el('step2-firstName')?.value || '').trim();
-    const lastName = (el('step2-lastName')?.value || '').trim();
-    const personalNumber = (el('step2-personalNumber')?.value || '').trim();
+    const firstName = (($('step2-firstName')?.value || '')).trim();
+    const lastName = (($('step2-lastName')?.value || '')).trim();
+    const personalNumber = (($('step2-personalNumber')?.value || '')).trim();
 
-    const phone = (el('step2-phone')?.value || '').trim();
-    const country = (el('step2-country')?.value || '').trim();
-
-    const addressStreet = (el('step2-addressStreet')?.value || '').trim();
-    const addressZip = (el('step2-addressZip')?.value || '').trim();
-    const addressCity = (el('step2-addressCity')?.value || '').trim();
+    const phone = (($('step2-phone')?.value || '')).trim();
+    const country = (($('step2-country')?.value || '')).trim();
+    const addressStreet = (($('step2-addressStreet')?.value || '')).trim();
+    const addressZip = (($('step2-addressZip')?.value || '')).trim();
+    const addressCity = (($('step2-addressCity')?.value || '')).trim();
 
     if (!firstName || firstName.length < 2) return notify('error', 'Fyll i förnamn (minst 2 tecken).');
     if (!lastName || lastName.length < 2) return notify('error', 'Fyll i efternamn (minst 2 tecken).');
@@ -146,19 +203,19 @@ function bindStep2() {
       firstName,
       lastName,
       personalNumber,
-
       email,
       emailConfirm: email,
-
       phone: phone || null,
       addressStreet: addressStreet || null,
       addressZip: addressZip || null,
       addressCity: addressCity || null,
       country: country || null,
-
       termsAccepted: true,
       thirdPartyConsent: true,
     };
+
+    console.log('DEBUG customer payload (step2):', payload);
+    notify('info', 'Sparar profil…');
 
     try {
       const res = await postJson('/api/customers', payload);
@@ -178,23 +235,20 @@ function bindStep2() {
 }
 
 export function initCustomerPage() {
-  const savedEmail = getStep2Email();
-  if (savedEmail) showStep2(savedEmail);
+  // Om man laddar om mitt i steg 2: försök visa steg 2
+  const saved = getEmailForStep2();
+  if (saved) showStep2UI(saved);
 
   bindStep1();
   bindStep2();
 }
 
-/**
- * Bakåtkompatibilitet:
- * Din main.js verkar importera { initCustomerForm } från ./customer.js
- * Vi mappar den till initCustomerPage så allt fortsätter funka utan ändring i main.js.
- */
+// Bakåtkompatibilitet: din main.js kan importera initCustomerForm
 export function initCustomerForm() {
   return initCustomerPage();
 }
 
-// Auto-init (som tidigare)
+// Auto-init
 initCustomerPage();
 
 export default initCustomerPage;
