@@ -1,13 +1,14 @@
 // frontend/modules/ratingContext.js
-// 1) Rensar “rating context” när användaren byter konto
-// 2) Lagrar pending deal per användare
-// 3) Visar en “gate/overlay” på rate.html om pending deal finns
+// Fixar att pending-deals inte läcker mellan användare genom att:
+// - upptäcka user switch kontinuerligt
+// - rensa legacy keys och anon-pending
+// - spara pending per användare (sessionStorage)
 
 import auth from "./auth.js";
 
 const LAST_USER_KEY = "peerRateLastUserKey";
 
-// Legacy keys som kan ligga kvar från äldre kod/extension
+// Legacy keys (från äldre kod/extension/experiment)
 const LEGACY_CONTEXT_KEYS = [
   "peerRateRatingContext",
   "peerRateRateContext",
@@ -16,17 +17,12 @@ const LEGACY_CONTEXT_KEYS = [
   "rateContext",
   "peerRateDraftRating",
   "peerRatePendingRating",
+  "peerRatePendingDeal",
 ];
 
-function getUserKey() {
-  const u = auth.getUser?.() || null;
-  const email = (u?.email || u?.customer?.email || "").trim().toLowerCase();
-  // Om ingen email finns (ej inloggad): använd "anon"
-  return email || "anon";
-}
-
-function perUserKey(base) {
-  return `${base}:${getUserKey()}`;
+// Ny per-user nyckel
+function perUserKey(base, userKey) {
+  return `${base}:${userKey}`;
 }
 
 function safeJsonParse(s) {
@@ -37,14 +33,36 @@ function safeJsonParse(s) {
   }
 }
 
-function clearLegacyContext() {
-  // Rensa legacy storage keys (både localStorage och sessionStorage)
+// Försök hitta email även om auth.getUser() inte hunnit uppdateras ännu
+function getBestEmailGuess() {
+  const u = auth.getUser?.() || null;
+  const emailFromAuth = (u?.email || u?.customer?.email || "").trim().toLowerCase();
+  if (emailFromAuth) return emailFromAuth;
+
+  // Fallback: leta i vanliga localStorage-nycklar
+  const candidates = ["peerRateUser", "peerRateCustomer", "user", "customer"];
+  for (const k of candidates) {
+    const raw = localStorage.getItem(k);
+    const obj = safeJsonParse(raw);
+    const e = (obj?.email || obj?.customer?.email || "").trim().toLowerCase();
+    if (e) return e;
+  }
+
+  return "";
+}
+
+function getUserKey() {
+  return getBestEmailGuess() || "anon";
+}
+
+function clearAllPendingEverywhere() {
+  // Rensa legacy
   for (const k of LEGACY_CONTEXT_KEYS) {
     try { localStorage.removeItem(k); } catch {}
     try { sessionStorage.removeItem(k); } catch {}
   }
 
-  // Rensa även per-user pending i sessionStorage (för säkerhets skull)
+  // Rensa ALLA per-user pending i sessionStorage
   try {
     const prefix = "peerRatePendingDeal:";
     for (let i = sessionStorage.length - 1; i >= 0; i--) {
@@ -54,41 +72,18 @@ function clearLegacyContext() {
   } catch {}
 }
 
-function maybeClearOnUserSwitch() {
-  const now = getUserKey();
-  const prev = (localStorage.getItem(LAST_USER_KEY) || "").trim().toLowerCase();
-
-  if (prev && prev !== now) {
-    // ✅ användaren bytte konto => rensa gamla pending/prefill
-    clearLegacyContext();
-  }
-
-  localStorage.setItem(LAST_USER_KEY, now);
-}
-
-function readPendingDeal() {
-  // 1) Per-user pending deal (sessionStorage)
-  const v = sessionStorage.getItem(perUserKey("peerRatePendingDeal"));
+function readPendingDealFor(userKey) {
+  const v = sessionStorage.getItem(perUserKey("peerRatePendingDeal", userKey));
   const obj = safeJsonParse(v);
-  if (obj && typeof obj === "object") return obj;
-
-  // 2) Legacy (om något gammalt ligger kvar)
-  const legacy =
-    safeJsonParse(sessionStorage.getItem("peerRatePendingDeal")) ||
-    safeJsonParse(localStorage.getItem("peerRatePendingDeal")) ||
-    safeJsonParse(localStorage.getItem("peerRateRatingContext"));
-
-  if (legacy && typeof legacy === "object") return legacy;
-
-  return null;
+  return obj && typeof obj === "object" ? obj : null;
 }
 
-function writePendingDeal(deal) {
-  sessionStorage.setItem(perUserKey("peerRatePendingDeal"), JSON.stringify(deal || {}));
+function writePendingDealFor(userKey, deal) {
+  sessionStorage.setItem(perUserKey("peerRatePendingDeal", userKey), JSON.stringify(deal || {}));
 }
 
-function clearPendingDeal() {
-  sessionStorage.removeItem(perUserKey("peerRatePendingDeal"));
+function clearPendingDealFor(userKey) {
+  sessionStorage.removeItem(perUserKey("peerRatePendingDeal", userKey));
 }
 
 function readDealFromQuery() {
@@ -114,13 +109,20 @@ function readDealFromQuery() {
   };
 }
 
+function removeQueryParams() {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("source");
+    url.searchParams.delete("pageUrl");
+    url.searchParams.delete("proofRef");
+    window.history.replaceState({}, "", url.toString());
+  } catch {}
+}
+
 function createOverlayIfNeeded(deal) {
   if (!deal) return;
-
-  // Om overlay redan finns -> gör inget
   if (document.getElementById("pr-pending-overlay")) return;
 
-  // Lägg en blockerande overlay
   const overlay = document.createElement("div");
   overlay.id = "pr-pending-overlay";
   overlay.style.cssText = `
@@ -180,30 +182,19 @@ function createOverlayIfNeeded(deal) {
   overlay.appendChild(card);
   document.body.appendChild(overlay);
 
-  const closeBtn = card.querySelector("#pr-pending-close");
-  const goBtn = card.querySelector("#pr-pending-go");
-  const clearBtn = card.querySelector("#pr-pending-clear");
-
   const hide = () => overlay.remove();
 
-  closeBtn?.addEventListener("click", hide);
+  card.querySelector("#pr-pending-close")?.addEventListener("click", hide);
 
-  clearBtn?.addEventListener("click", () => {
-    clearPendingDeal();
+  card.querySelector("#pr-pending-clear")?.addEventListener("click", () => {
+    // Rensa allt pending (säkrast)
+    clearAllPendingEverywhere();
+    removeQueryParams();
     hide();
-    // även rensa query params utan reload (så den inte kommer tillbaka)
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("source");
-      url.searchParams.delete("pageUrl");
-      url.searchParams.delete("proofRef");
-      window.history.replaceState({}, "", url.toString());
-    } catch {}
   });
 
-  goBtn?.addEventListener("click", () => {
+  card.querySelector("#pr-pending-go")?.addEventListener("click", () => {
     hide();
-    // Scrolla till rating-form om den finns
     const form =
       document.getElementById("rating-form") ||
       document.getElementById("rating-card") ||
@@ -212,7 +203,6 @@ function createOverlayIfNeeded(deal) {
   });
 }
 
-// små helpers för att undvika att vi råkar injicera konstiga tecken i HTML
 function escapeHtml(s) {
   return String(s || "")
     .replaceAll("&", "&amp;")
@@ -223,31 +213,53 @@ function escapeAttr(s) {
   return String(s || "").replaceAll('"', "%22");
 }
 
-/**
- * Körs från main.js
- */
 export function initRatingContextGuards() {
-  maybeClearOnUserSwitch();
+  // 1) Kör direkt
+  let last = (localStorage.getItem(LAST_USER_KEY) || "").trim().toLowerCase();
+  let current = getUserKey();
+  localStorage.setItem(LAST_USER_KEY, current);
 
-  // Spara deal från query (extension skickar ofta source + pageUrl)
+  // 2) Om vi just bytt användare: rensa ALL pending direkt
+  if (last && last !== current) {
+    clearAllPendingEverywhere();
+  }
+
+  // 3) Läs deal från query och spara per user
   const dealFromQuery = readDealFromQuery();
   if (dealFromQuery) {
-    writePendingDeal(dealFromQuery);
+    writePendingDealFor(current, dealFromQuery);
+    removeQueryParams(); // viktigt så den inte återkommer efter refresh
   }
 
-  // Visa overlay endast på rate-sidan
+  // 4) Om pending ligger kvar under "anon" men vi nu är inloggade: flytta
+  if (current !== "anon") {
+    const anon = readPendingDealFor("anon");
+    const mine = readPendingDealFor(current);
+    if (anon && !mine) {
+      writePendingDealFor(current, anon);
+    }
+    clearPendingDealFor("anon");
+  }
+
+  // 5) Visa overlay på rate.html om pending finns
   const path = (window.location.pathname || "").toLowerCase();
   const isRate =
-    path.endsWith("/rate.html") ||
-    path.includes("/rate") ||
-    !!document.getElementById("rating-card") ||
-    !!document.getElementById("rating-form");
+    path.endsWith("/rate.html") || path.includes("/rate") ||
+    !!document.getElementById("rating-card") || !!document.getElementById("rating-form");
 
-  if (!isRate) return;
-
-  const pending = readPendingDeal();
-  if (pending) {
-    // Vänta lite så att sidan hinner rita UI först
-    setTimeout(() => createOverlayIfNeeded(pending), 120);
+  if (isRate) {
+    const pending = readPendingDealFor(current);
+    if (pending) setTimeout(() => createOverlayIfNeeded(pending), 120);
   }
+
+  // 6) SUPERviktigt: poll var 500ms och känn av user switch (för logout/login utan reload)
+  setInterval(() => {
+    const now = getUserKey();
+    const prev = (localStorage.getItem(LAST_USER_KEY) || "").trim().toLowerCase();
+    if (prev && now !== prev) {
+      clearAllPendingEverywhere();
+      localStorage.setItem(LAST_USER_KEY, now);
+      // Om du vill: location.reload(); men vi låter sidan leva vidare
+    }
+  }, 500);
 }
