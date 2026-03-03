@@ -49,6 +49,7 @@
       .shell{ padding: 0 14px; }
     }
 
+    /* VIKTIGT: id="top-row" så att global meny kan initiera */
     .top-row{
       position: sticky;
       top: 0;
@@ -265,6 +266,7 @@
       color: var(--w-muted);
       font-size: 12px;
       line-height: 1.45;
+      min-height: 18px;
     }
 
     .footer{
@@ -273,11 +275,22 @@
       font-size: 12px;
       border-top: 1px solid var(--w-border);
     }
+
+    /* Step 2 */
+    .hidden{ display:none !important; }
+    .grid-2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 680px){
+      .grid-2{ grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 
-<body>
-  <header class="top-row">
+<body data-page="customer">
+  <header id="top-row" class="top-row">
     <div class="shell top-row-inner">
       <a class="brand soft-hover" href="/#top">
         <div class="logo-badge" aria-hidden="true">
@@ -289,9 +302,10 @@
         </div>
       </a>
 
-      <div class="top-actions">
+      <div class="top-actions" id="top-actions">
         <a class="btn-pill soft-hover" href="/#sim">5P-modellen</a>
         <a class="btn-pill soft-hover" href="/rate.html">Lämna betyg</a>
+        <!-- Hamburgare injiceras av main.js om den saknas -->
       </div>
     </div>
   </header>
@@ -308,38 +322,101 @@
 
         <div class="signup-grid">
           <div class="card">
-            <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;">Skapa konto</h2>
 
-            <form id="customer-form" autocomplete="off">
-              <div class="field">
-                <label class="label" for="email">E-post</label>
-                <input class="input" id="email" name="email" type="email" placeholder="du@example.com" required autocomplete="email" />
-              </div>
+            <!-- STEG 1 -->
+            <div id="step1-block">
+              <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;">Steg 1: Skapa konto</h2>
 
-              <div class="field">
-                <label class="label" for="password">Lösenord</label>
-                <input class="input" id="password" name="password" type="password" placeholder="Minst 8 tecken" required autocomplete="new-password" />
-              </div>
+              <form id="customer-form" autocomplete="off">
+                <div class="field">
+                  <label class="label" for="email">E-post</label>
+                  <input class="input" id="email" name="email" type="email" placeholder="du@example.com" required autocomplete="email" />
+                </div>
 
-              <div class="field">
-                <label class="label" for="password2">Upprepa lösenord</label>
-                <input class="input" id="password2" name="password2" type="password" placeholder="Upprepa lösenord" required autocomplete="new-password" />
-              </div>
+                <div class="field">
+                  <label class="label" for="password">Lösenord</label>
+                  <input class="input" id="password" name="password" type="password" placeholder="Minst 8 tecken" required autocomplete="new-password" />
+                </div>
 
-              <!-- NYTT: krävs för backend (termsAccepted + thirdPartyConsent) -->
-              <label class="checkrow">
-                <input type="checkbox" id="termsAccepted" />
-                <span>
-                  Jag godkänner villkoren och integritetspolicyn (kommer som bilaga senare) och att trust kan baseras på verifierade transaktioner.
-                </span>
-              </label>
+                <div class="field">
+                  <label class="label" for="password2">Upprepa lösenord</label>
+                  <input class="input" id="password2" name="password2" type="password" placeholder="Upprepa lösenord" required autocomplete="new-password" />
+                </div>
 
-              <div class="actions">
-                <button class="btn btn-primary soft-hover" type="submit">Registrera</button>
-              </div>
+                <label class="checkrow">
+                  <input type="checkbox" id="termsAccepted" />
+                  <span>
+                    Jag godkänner villkoren och integritetspolicyn och att trust kan baseras på verifierade transaktioner.
+                  </span>
+                </label>
 
-              <p class="note" id="customer-status"></p>
-            </form>
+                <div class="actions">
+                  <button class="btn btn-primary soft-hover" type="submit">Registrera</button>
+                </div>
+
+                <p class="note" id="customer-status"></p>
+              </form>
+            </div>
+
+            <!-- STEG 2 -->
+            <div id="step2-block" class="hidden">
+              <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;">Steg 2: Komplettera profil</h2>
+              <p class="note" style="margin-top:0;">
+                Detta krävs för att din profil ska bli “complete”.
+              </p>
+
+              <form id="complete-profile-form" autocomplete="off">
+                <div class="field">
+                  <label class="label" for="cp-email">E-post (låst)</label>
+                  <input class="input" id="cp-email" name="cp-email" type="email" readonly />
+                </div>
+
+                <div class="grid-2">
+                  <div class="field">
+                    <label class="label" for="firstName">Förnamn</label>
+                    <input class="input" id="firstName" name="firstName" type="text" required />
+                  </div>
+                  <div class="field">
+                    <label class="label" for="lastName">Efternamn</label>
+                    <input class="input" id="lastName" name="lastName" type="text" required />
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label" for="personalNumber">Personnummer</label>
+                  <input class="input" id="personalNumber" name="personalNumber" type="text" placeholder="YYYYMMDD-XXXX" required />
+                </div>
+
+                <div class="field">
+                  <label class="label" for="address1">Adress</label>
+                  <input class="input" id="address1" name="address1" type="text" placeholder="Gata och nummer" required />
+                </div>
+
+                <div class="grid-2">
+                  <div class="field">
+                    <label class="label" for="postalCode">Postnummer</label>
+                    <input class="input" id="postalCode" name="postalCode" type="text" placeholder="123 45" required />
+                  </div>
+                  <div class="field">
+                    <label class="label" for="city">Ort</label>
+                    <input class="input" id="city" name="city" type="text" required />
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label class="label" for="phone">Telefon (valfritt)</label>
+                  <input class="input" id="phone" name="phone" type="tel" placeholder="+46..." />
+                </div>
+
+                <div class="actions">
+                  <button class="btn btn-primary soft-hover" type="submit">Spara & fortsätt</button>
+                  <a class="btn soft-hover" href="/profile.html">Hoppa över (ej rekommenderat)</a>
+                </div>
+
+                <p class="note" id="profile-status"></p>
+              </form>
+            </div>
+
           </div>
 
           <aside class="side-card">

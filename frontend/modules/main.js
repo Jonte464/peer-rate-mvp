@@ -47,7 +47,7 @@ function applyRatingContextFromQuery() {
   const sourceRaw = (params.get('source') || '').trim();
   const pageUrlRaw = (params.get('pageUrl') || '').trim();
 
-  // ✅ Forcera default: göm kontextkortet om vi inte har query
+  // ✅ Default: göm kontextkortet om vi inte har query
   const card = document.getElementById('rate-context-card');
   if (card) card.style.display = 'none';
 
@@ -128,8 +128,64 @@ function extractProofIdFromUrl(url) {
   return '';
 }
 
+/**
+ * ✅ Robust hook-fix för meny:
+ * Vissa sidor (customer.html) hade .top-row men saknade id="top-row".
+ * landing/menu.js brukar ofta leta efter #top-row eller specifika hooks.
+ *
+ * Den här funktionen:
+ * - Sätter id="top-row" om header/top-row finns men saknar id
+ * - Skapar #top-actions om den saknas (så menyn har någonstans att injicera knappar)
+ */
+function ensureMenuHooks() {
+  // 1) top-row
+  const existingTopRow = document.getElementById('top-row');
+  if (!existingTopRow) {
+    const header = document.querySelector('header.top-row') || document.querySelector('.top-row');
+    if (header && !header.id) header.id = 'top-row';
+  }
+
+  const topRow = document.getElementById('top-row');
+  if (!topRow) return;
+
+  // 2) top-actions (valfritt, men bra att ha)
+  let topActions = document.getElementById('top-actions');
+  if (!topActions) {
+    // försök hitta en befintlig container
+    topActions = topRow.querySelector('.top-actions');
+    if (topActions) {
+      topActions.id = 'top-actions';
+    } else {
+      // skapa en om den inte finns
+      topActions = document.createElement('div');
+      topActions.id = 'top-actions';
+      topActions.className = 'top-actions';
+      // försök lägga den på rimligt ställe
+      const shellInner =
+        topRow.querySelector('.top-row-inner') ||
+        topRow.querySelector('.shell') ||
+        topRow;
+      shellInner.appendChild(topActions);
+    }
+  }
+}
+
+/**
+ * ✅ Kör en init-funktion men låt inte den krascha hela sidan.
+ */
+function safeInit(name, fn) {
+  try {
+    if (typeof fn === 'function') fn();
+  } catch (e) {
+    console.warn(`${name} failed (non-blocking)`, e);
+  }
+}
+
 function initApp() {
   console.log('DOM ready');
+
+  // ✅ Viktigt: fixa hooks innan vi initierar meny/dropdown
+  ensureMenuHooks();
 
   const user = auth.getUser?.() || null;
 
@@ -137,33 +193,36 @@ function initApp() {
   updateAvatars(user);
   updateTopUserPill(user);
 
-  initLandingMenu();
+  // ✅ Menyn var problemet på customer.html -> gör init robust
+  safeInit('initLandingMenu', initLandingMenu);
 
-  initUserDropdown({
-    auth,
-    getUser: () => auth.getUser?.() || null,
-    onAfterLogout: () => {
-      const u2 = auth.getUser?.() || null;
-      updateTopUserPill(u2);
-      updateUserBadge(u2);
-      updateAvatars(u2);
-    },
-  });
+  safeInit('initUserDropdown', () =>
+    initUserDropdown({
+      auth,
+      getUser: () => auth.getUser?.() || null,
+      onAfterLogout: () => {
+        const u2 = auth.getUser?.() || null;
+        updateTopUserPill(u2);
+        updateUserBadge(u2);
+        updateAvatars(u2);
+      },
+    })
+  );
 
   if (adminLoginForm && adminLogoutBtn) console.log('Admin functionality loaded');
 
   const path = window.location.pathname || '';
 
   // --- Customer / registrering ---
-if (document.getElementById('customer-form')) {
-  initCustomerForm();
-}
+  if (document.getElementById('customer-form')) {
+    safeInit('initCustomerForm', initCustomerForm);
+  }
 
   // --- Profile ---
   const isProfilePage =
     path.includes('/min-profil') || path.includes('profile.html') || path.includes('/profile');
   if (isProfilePage) {
-    initProfilePage();
+    safeInit('initProfilePage', initProfilePage);
   }
 
   // --- Rating (rate.html / rating-card) ---
@@ -173,22 +232,23 @@ if (document.getElementById('customer-form')) {
     !!document.getElementById('rating-card');
 
   if (isRatingPage) {
-    // ✅ NYTT: dropdown-flöde (öppna plattform)
-    initRatingPlatform();
+    // ✅ Kontext från query ska appliceras här (den fanns men kallades inte)
+    safeInit('applyRatingContextFromQuery', applyRatingContextFromQuery);
+
+    // ✅ dropdown-flöde (öppna plattform)
+    safeInit('initRatingPlatform', initRatingPlatform);
 
     // (om du fortfarande vill ha den andra också)
-    initPlatformPicker();
+    safeInit('initPlatformPicker', initPlatformPicker);
 
     // befintligt
-    initRatingLogin();
+    safeInit('initRatingLogin', initRatingLogin);
 
     // ✅ Nytt: dölj login-kortet om inloggad
     updateRateLoginCardVisibility(user);
 
     // Hint kan vara kvar (döljs om inloggad)
     updateRatingLoginHint(user);
-
-
   }
 
   // --- Landing (index) ---
@@ -199,7 +259,7 @@ if (document.getElementById('customer-form')) {
     !!document.querySelector('.hero');
 
   if (isIndex) {
-    initLanding();
+    safeInit('initLanding', initLanding);
   }
 
   // Keep top-user pill updated if other tabs log in/out

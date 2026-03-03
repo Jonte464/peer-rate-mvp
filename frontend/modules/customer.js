@@ -79,8 +79,16 @@ function getEmailForStep2() {
   return (sessionStorage.getItem('peerRateRegisterEmail') || '').trim().toLowerCase();
 }
 
+function setLockedEmailIfPresent(email) {
+  const cp = $('cp-email');
+  if (cp && email) cp.value = email;
+}
+
 function showStep2UI(email) {
-  if (email) saveEmailForStep2(email);
+  if (email) {
+    saveEmailForStep2(email);
+    setLockedEmailIfPresent(email);
+  }
 
   // 1) Om du har card-wrappers med id:n
   const step1Card = $('step1-card');
@@ -103,8 +111,19 @@ function showStep2UI(email) {
   }
 
   // 3) Om vi hittar step2-formuläret: scrolla dit och visa tydlig text
-  const step2Form = $('step2-form');
+  const step2Form = $('step2-form') || $('complete-profile-form');
   if (step2Form) {
+    // Om din nya HTML använder step1-block/step2-block
+    const step1Block = $('step1-block');
+    const step2Block = $('step2-block');
+    if (step1Block && step2Block) {
+      step1Block.classList.add('hidden');
+      step2Block.classList.remove('hidden');
+      step2Block.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      notify('success', 'Konto skapat! Fortsätt med steg 2 nedan.');
+      return;
+    }
+
     notify('success', 'Konto skapat! Fortsätt med steg 2 nedan.');
     step2Form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     return;
@@ -160,7 +179,6 @@ function bindStep1() {
       const res = await postJson('/api/customers', payload);
       console.log('DEBUG step1 response:', res);
 
-      // Visa text + gå till steg 2
       notify('success', 'Tack! Konto skapat.');
       showStep2UI(email);
     } catch (err) {
@@ -173,7 +191,8 @@ function bindStep1() {
 }
 
 function bindStep2() {
-  const form = $('step2-form');
+  // ✅ Stöd både gamla och nya id:n
+  const form = $('step2-form') || $('complete-profile-form');
   if (!form) return;
   if (form.dataset.bound === '1') return;
   form.dataset.bound = '1';
@@ -184,20 +203,34 @@ function bindStep2() {
 
     const email = getEmailForStep2();
     if (!email) return notify('error', 'Saknar e-post från steg 1. Gör steg 1 först.');
+    setLockedEmailIfPresent(email);
 
-    const firstName = (($('step2-firstName')?.value || '')).trim();
-    const lastName = (($('step2-lastName')?.value || '')).trim();
-    const personalNumber = (($('step2-personalNumber')?.value || '')).trim();
+    // ✅ Läs från både gamla step2-* och nya fält-id:n
+    const firstName = (($('step2-firstName')?.value || $('firstName')?.value || '')).trim();
+    const lastName = (($('step2-lastName')?.value || $('lastName')?.value || '')).trim();
+    const personalNumber = (($('step2-personalNumber')?.value || $('personalNumber')?.value || '')).trim();
 
-    const phone = (($('step2-phone')?.value || '')).trim();
+    const phone = (($('step2-phone')?.value || $('phone')?.value || '')).trim();
+
+    // Adress: gamla fält eller nya
     const country = (($('step2-country')?.value || '')).trim();
-    const addressStreet = (($('step2-addressStreet')?.value || '')).trim();
-    const addressZip = (($('step2-addressZip')?.value || '')).trim();
-    const addressCity = (($('step2-addressCity')?.value || '')).trim();
+
+    const addressStreet = (($('step2-addressStreet')?.value || $('address1')?.value || '')).trim();
+    const addressZip = (($('step2-addressZip')?.value || $('postalCode')?.value || '')).trim();
+    const addressCity = (($('step2-addressCity')?.value || $('city')?.value || '')).trim();
 
     if (!firstName || firstName.length < 2) return notify('error', 'Fyll i förnamn (minst 2 tecken).');
     if (!lastName || lastName.length < 2) return notify('error', 'Fyll i efternamn (minst 2 tecken).');
     if (!personalNumber) return notify('error', 'Fyll i personnummer.');
+
+    // Om vi har nya UI:t för adress: gör dem obligatoriska där
+    // (Saknas de i gamla UI:t så skickas null och backend får avgöra.)
+    const hasNewAddressUI = !!$('address1') || !!$('postalCode') || !!$('city');
+    if (hasNewAddressUI) {
+      if (!addressStreet) return notify('error', 'Fyll i adress.');
+      if (!addressZip) return notify('error', 'Fyll i postnummer.');
+      if (!addressCity) return notify('error', 'Fyll i ort.');
+    }
 
     const payload = {
       firstName,
@@ -218,6 +251,7 @@ function bindStep2() {
     notify('info', 'Sparar profil…');
 
     try {
+      // ✅ Ni har beslutat att /api/customers används för steg 1 + 2
       const res = await postJson('/api/customers', payload);
       console.log('DEBUG step2 response:', res);
 

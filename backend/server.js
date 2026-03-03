@@ -50,7 +50,8 @@ let ratingsRoutes,
   blocketRoutes,
   traderaRoutes,
   ebayRoutes,
-  agentRoutes;
+  agentRoutes,
+  onboardingRoutes;
 
 if (dbConfigured) {
   const load = (name, p) => assertRouter(name, require(p));
@@ -63,6 +64,9 @@ if (dbConfigured) {
   traderaRoutes = load("traderaRoutes", "./routes/traderaRoutes");
   ebayRoutes = load("ebayRoutes", "./routes/ebayRoutes");
   agentRoutes = load("agentRoutes", "./routes/agentRoutes");
+
+  // ✅ NYTT: onboarding routes (additivt)
+  onboardingRoutes = load("onboardingRoutes", "./routes/onboardingRoutes");
 } else {
   console.warn("⚠️ DATABASE_URL not set — skipping DB-backed routes (development fallback).");
 }
@@ -139,6 +143,10 @@ app.use(
 // -----------------------------
 if (ratingsRoutes) app.use("/api", ratingsRoutes);
 if (customersRoutes) app.use("/api", customersRoutes);
+
+// ✅ NYTT: onboarding (mountas under /api)
+if (onboardingRoutes) app.use("/api", onboardingRoutes);
+
 app.use("/api", authRoutes);
 
 if (adminRoutes) app.use("/api/admin", adminRoutes);
