@@ -1,114 +1,145 @@
-<!-- frontend/partials/index/customer.html -->
-<section class="page">
-  <!-- UNIVERSAL TOP ROW (hamburgare etc) -->
-  <div id="top-row"></div>
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Registrera dig – PeerRate</title>
 
-  <main class="container" style="max-width: 1000px; margin: 0 auto; padding: 24px 16px;">
-    <h1 style="margin: 0 0 8px;">Registrera dig</h1>
-    <p class="muted" style="margin: 0 0 18px;">
-      Steg 1 skapar ditt konto. Steg 2 behöver du fylla i för att kunna använda profilen fullt ut.
-    </p>
+    <!-- Om du har en global CSS, behåll gärna den här -->
+    <link rel="stylesheet" href="/partials/index/style.css" />
 
-    <!-- NOTIS -->
-    <div id="customer-notice" class="tiny" style="margin: 10px 0;"></div>
+    <!-- Fallback om style.css inte hittas: sidan funkar ändå -->
+    <style>
+      .container { max-width: 1000px; margin: 0 auto; padding: 24px 16px; }
+      .muted { opacity: .75; }
+      .tiny { font-size: 12px; }
+      .card { border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 16px; background: rgba(255,255,255,.03); }
+      .hidden { display: none !important; }
+      .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+      label { font-weight: 600; }
+      input { padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.16); background: rgba(0,0,0,.12); color: inherit; }
+      button.primary { padding: 10px 14px; border-radius: 10px; border: 0; cursor: pointer; font-weight: 700; }
+      .grid2 { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+      @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+    </style>
+  </head>
 
-    <!-- STEG 1 -->
-    <section id="step1-card" class="card" style="padding: 16px; margin-bottom: 16px;">
-      <h2 style="margin: 0 0 12px; font-size: 18px;">Steg 1: Skapa konto</h2>
+  <!-- data-page hjälper (om main.js använder det) att veta vilken modul som ska initieras -->
+  <body data-page="customer">
+    <section class="page">
+      <!-- UNIVERSAL TOP ROW (hamburgare etc) -->
+      <div id="top-row"></div>
 
-      <form id="step1-form" autocomplete="on">
-        <div class="form-row">
-          <label for="step1-email">E-post</label>
-          <input id="step1-email" type="email" placeholder="du@example.com" required />
-        </div>
+      <main class="container">
+        <h1 style="margin: 0 0 8px;">Registrera dig</h1>
+        <p class="muted" style="margin: 0 0 18px;">
+          Steg 1 skapar ditt konto. Steg 2 kompletterar din profil.
+        </p>
 
-        <div class="form-row">
-          <label for="step1-email-confirm">Upprepa e-post</label>
-          <input id="step1-email-confirm" type="email" placeholder="du@example.com" required />
-        </div>
+        <!-- NOTIS / STATUS -->
+        <div id="customer-notice" class="tiny" style="margin: 10px 0;"></div>
 
-        <div class="form-row">
-          <label for="step1-password">Lösenord</label>
-          <input id="step1-password" type="password" minlength="8" placeholder="Minst 8 tecken" required />
-        </div>
+        <!-- STEG 1 -->
+        <section id="step1-card" class="card" style="margin-bottom: 16px;">
+          <h2 style="margin: 0 0 12px; font-size: 18px;">Steg 1: Skapa konto</h2>
 
-        <div class="form-row">
-          <label for="step1-password-confirm">Upprepa lösenord</label>
-          <input id="step1-password-confirm" type="password" minlength="8" placeholder="Upprepa lösenord" required />
-        </div>
+          <form id="step1-form" autocomplete="on">
+            <div class="form-row">
+              <label for="step1-email">E-post</label>
+              <input id="step1-email" type="email" placeholder="du@example.com" required />
+            </div>
 
-        <label style="display:flex; gap:10px; align-items:flex-start; margin: 10px 0;">
-          <input id="step1-terms" type="checkbox" required style="margin-top: 4px;" />
-          <span class="tiny">
-            Jag godkänner villkoren och integritetspolicyn (kommer som bilaga senare) och att trust kan baseras på verifierade transaktioner.
-          </span>
-        </label>
+            <div class="form-row">
+              <label for="step1-email-confirm">Upprepa e-post</label>
+              <input id="step1-email-confirm" type="email" placeholder="du@example.com" required />
+            </div>
 
-        <button id="step1-submit" type="submit" class="primary" style="margin-top: 8px;">
-          Skapa konto och fortsätt →
-        </button>
-      </form>
+            <div class="form-row">
+              <label for="step1-password">Lösenord</label>
+              <input id="step1-password" type="password" minlength="8" placeholder="Minst 8 tecken" required />
+            </div>
+
+            <div class="form-row">
+              <label for="step1-password-confirm">Upprepa lösenord</label>
+              <input id="step1-password-confirm" type="password" minlength="8" placeholder="Upprepa lösenord" required />
+            </div>
+
+            <label style="display:flex; gap:10px; align-items:flex-start; margin: 10px 0;">
+              <input id="step1-terms" type="checkbox" required style="margin-top: 4px;" />
+              <span class="tiny">
+                Jag godkänner villkoren och integritetspolicyn (kommer som bilaga senare) och att trust kan baseras på verifierade transaktioner.
+              </span>
+            </label>
+
+            <button id="step1-submit" type="submit" class="primary" style="margin-top: 8px;">
+              Skapa konto och fortsätt →
+            </button>
+          </form>
+        </section>
+
+        <!-- STEG 2 -->
+        <section id="step2-card" class="card hidden">
+          <h2 style="margin: 0 0 12px; font-size: 18px;">Steg 2: Komplettera din profil</h2>
+          <p class="tiny muted" style="margin-top: 0;">
+            Det här steget krävs för att profilen ska bli “klar”.
+          </p>
+
+          <form id="step2-form" autocomplete="on">
+            <div class="grid2">
+              <div class="form-row">
+                <label for="step2-firstName">Förnamn</label>
+                <input id="step2-firstName" type="text" minlength="2" required />
+              </div>
+
+              <div class="form-row">
+                <label for="step2-lastName">Efternamn</label>
+                <input id="step2-lastName" type="text" minlength="2" required />
+              </div>
+
+              <div class="form-row" style="grid-column: 1 / -1;">
+                <label for="step2-personalNumber">Personnummer</label>
+                <input id="step2-personalNumber" type="text" placeholder="ÅÅÅÅMMDD-XXXX" required />
+              </div>
+
+              <div class="form-row">
+                <label for="step2-phone">Telefon</label>
+                <input id="step2-phone" type="tel" placeholder="+46..." />
+              </div>
+
+              <div class="form-row">
+                <label for="step2-country">Land</label>
+                <input id="step2-country" type="text" value="Sverige" />
+              </div>
+
+              <div class="form-row" style="grid-column: 1 / -1;">
+                <label for="step2-addressStreet">Adress</label>
+                <input id="step2-addressStreet" type="text" placeholder="Gatuadress" />
+              </div>
+
+              <div class="form-row">
+                <label for="step2-addressZip">Postnummer</label>
+                <input id="step2-addressZip" type="text" />
+              </div>
+
+              <div class="form-row">
+                <label for="step2-addressCity">Ort</label>
+                <input id="step2-addressCity" type="text" />
+              </div>
+            </div>
+
+            <!-- håll kvar "true" även i steg 2 -->
+            <input id="step2-termsAccepted" type="hidden" value="true" />
+            <input id="step2-thirdPartyConsent" type="hidden" value="true" />
+
+            <button id="step2-submit" type="submit" class="primary" style="margin-top: 12px;">
+              Spara profil ✓
+            </button>
+          </form>
+        </section>
+      </main>
     </section>
 
-    <!-- STEG 2 -->
-    <section id="step2-card" class="card hidden" style="padding: 16px;">
-      <h2 style="margin: 0 0 12px; font-size: 18px;">Steg 2: Komplettera din profil</h2>
-
-      <p class="tiny muted" style="margin-top: 0;">
-        Det här steget krävs för att profilen ska bli “klar”.
-      </p>
-
-      <form id="step2-form" autocomplete="on">
-        <div class="form-grid" style="display:grid; gap: 12px; grid-template-columns: 1fr 1fr;">
-          <div class="form-row">
-            <label for="step2-firstName">Förnamn</label>
-            <input id="step2-firstName" type="text" minlength="2" required />
-          </div>
-
-          <div class="form-row">
-            <label for="step2-lastName">Efternamn</label>
-            <input id="step2-lastName" type="text" minlength="2" required />
-          </div>
-
-          <div class="form-row" style="grid-column: 1 / -1;">
-            <label for="step2-personalNumber">Personnummer</label>
-            <input id="step2-personalNumber" type="text" placeholder="ÅÅÅÅMMDD-XXXX" required />
-          </div>
-
-          <div class="form-row">
-            <label for="step2-phone">Telefon</label>
-            <input id="step2-phone" type="tel" placeholder="+46..." />
-          </div>
-
-          <div class="form-row">
-            <label for="step2-country">Land</label>
-            <input id="step2-country" type="text" value="Sverige" />
-          </div>
-
-          <div class="form-row" style="grid-column: 1 / -1;">
-            <label for="step2-addressStreet">Adress</label>
-            <input id="step2-addressStreet" type="text" placeholder="Gatuadress" />
-          </div>
-
-          <div class="form-row">
-            <label for="step2-addressZip">Postnummer</label>
-            <input id="step2-addressZip" type="text" />
-          </div>
-
-          <div class="form-row">
-            <label for="step2-addressCity">Ort</label>
-            <input id="step2-addressCity" type="text" />
-          </div>
-        </div>
-
-        <!-- Vi skickar även med termsAccepted + thirdPartyConsent om du vill hålla dem “true” i steg 2 -->
-        <input id="step2-termsAccepted" type="hidden" value="true" />
-        <input id="step2-thirdPartyConsent" type="hidden" value="true" />
-
-        <button id="step2-submit" type="submit" class="primary" style="margin-top: 12px;">
-          Spara profil ✓
-        </button>
-      </form>
-    </section>
-  </main>
-</section>
+    <!-- VIKTIGT: detta brukar vara anledningen till att hamburgaren inte funkar på just customer.html -->
+    <script type="module" src="/modules/main.js"></script>
+  </body>
+</html>
