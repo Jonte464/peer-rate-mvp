@@ -158,30 +158,41 @@ function ensureMenuHooks() {
 }
 
 /**
- * ✅ Fallback-hamburger:
- * Om initLandingMenu() inte skapar någon hamburgare på sidan,
- * skapa en enkel hamburger + overlay/drawer.
- *
- * Den här körs "idempotent" och påverkar inte andra sidor om det redan finns en menyknapp.
+ * ✅ Fallback-hamburger (ENDAST för customer-sidan)
+ * Vi vill inte skapa dubbla menyer på andra sidor där landing/menu.js redan funkar.
  */
-function ensureHamburgerFallback() {
+function ensureHamburgerFallbackOnlyOnCustomer() {
+  const path = (window.location.pathname || '').toLowerCase();
+  const dataPage = (document.body?.dataset?.page || '').toLowerCase();
+  const isCustomer =
+    dataPage === 'customer' || path.endsWith('/customer.html') || path.includes('/customer');
+
+  if (!isCustomer) return;
+
   const topRow = document.getElementById('top-row');
   if (!topRow) return;
 
   const topActions = document.getElementById('top-actions') || topRow.querySelector('.top-actions');
   if (!topActions) return;
 
-  // Om det redan finns en tydlig menyknapp, gör inget.
-  if (document.getElementById('pr-menu-btn')) return;
+  // Om det redan finns en menyknapp (från landing/menu.js eller annan), gör inget.
+  // Vi checkar efter vanliga "hamburger-ikoner" och även vår egen id.
+  const alreadyHasMenuButton =
+    !!document.getElementById('pr-menu-btn') ||
+    !!topActions.querySelector('button[aria-label*="meny" i]') ||
+    !!topActions.querySelector('button[title*="meny" i]') ||
+    !!topActions.querySelector('button, a') && topActions.textContent.includes('☰');
 
-  // Skapa knapp (visas alltid)
+  if (alreadyHasMenuButton) return;
+
+  // Skapa knapp
   const btn = document.createElement('button');
   btn.id = 'pr-menu-btn';
   btn.type = 'button';
   btn.className = 'btn-pill soft-hover';
   btn.setAttribute('aria-label', 'Öppna meny');
   btn.textContent = '☰';
-  btn.style.display = 'inline-flex'; // säkerställ att den inte blir "display:none"
+  btn.style.display = 'inline-flex';
   btn.style.alignItems = 'center';
   btn.style.justifyContent = 'center';
   btn.style.minWidth = '44px';
@@ -280,8 +291,8 @@ function initApp() {
     console.warn('initLandingMenu failed (non-blocking)', e);
   }
 
-  // ✅ NYTT: om initLandingMenu inte skapade hamburger -> skapa fallback
-  ensureHamburgerFallback();
+  // ✅ Fallback bara på customer-sidan (för att undvika dubbla hamburgare på andra sidor)
+  ensureHamburgerFallbackOnlyOnCustomer();
 
   try {
     initUserDropdown({
@@ -321,7 +332,6 @@ function initApp() {
     !!document.getElementById('rating-card');
 
   if (isRatingPage) {
-    // ✅ Var definierad men saknades ofta i boot
     applyRatingContextFromQuery();
 
     initRatingPlatform();

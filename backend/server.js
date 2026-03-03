@@ -42,6 +42,7 @@ const linkedinAuth = assertRouter("linkedinAuth", require("./routes/linkedinAuth
 
 // DB-backed routes are optional in local dev — only load when DATABASE_URL set
 const dbConfigured = Boolean(process.env.DATABASE_URL);
+
 let ratingsRoutes,
   customersRoutes,
   adminRoutes,
@@ -51,10 +52,12 @@ let ratingsRoutes,
   traderaRoutes,
   ebayRoutes,
   agentRoutes,
-  onboardingRoutes;
+  onboardingRoutes,
+  meRoutes;
 
 if (dbConfigured) {
   const load = (name, p) => assertRouter(name, require(p));
+
   ratingsRoutes = load("ratingsRoutes", "./routes/ratingsRoutes");
   customersRoutes = load("customersRoutes", "./routes/customersRoutes");
   adminRoutes = load("adminRoutes", "./routes/adminRoutes");
@@ -65,8 +68,11 @@ if (dbConfigured) {
   ebayRoutes = load("ebayRoutes", "./routes/ebayRoutes");
   agentRoutes = load("agentRoutes", "./routes/agentRoutes");
 
-  // ✅ NYTT: onboarding routes (additivt)
+  // ✅ Onboarding routes
   onboardingRoutes = load("onboardingRoutes", "./routes/onboardingRoutes");
+
+  // ✅ "me" compatibility routes (för profile.html etc)
+  meRoutes = load("meRoutes", "./routes/meRoutes");
 } else {
   console.warn("⚠️ DATABASE_URL not set — skipping DB-backed routes (development fallback).");
 }
@@ -143,13 +149,16 @@ app.use(
 // -----------------------------
 if (ratingsRoutes) app.use("/api", ratingsRoutes);
 if (customersRoutes) app.use("/api", customersRoutes);
-
-// ✅ NYTT: onboarding (mountas under /api)
 if (onboardingRoutes) app.use("/api", onboardingRoutes);
+if (meRoutes) app.use("/api", meRoutes);
 
+// Auth routes (läggs alltid in)
 app.use("/api", authRoutes);
 
+// Admin
 if (adminRoutes) app.use("/api/admin", adminRoutes);
+
+// Övrigt
 if (externalDataRoutes) app.use("/api", externalDataRoutes);
 if (blocketRoutes) app.use("/api", blocketRoutes);
 if (integrationsRoutes) app.use("/api", integrationsRoutes);
