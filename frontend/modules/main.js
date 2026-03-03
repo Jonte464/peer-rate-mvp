@@ -13,7 +13,7 @@ import { updateUserBadge, updateAvatars, initProfilePage } from './profile.js';
 
 import { adminLoginForm, adminLogoutBtn } from './admin.js';
 import { initCustomerForm } from './customer.js';
-import { initRatingContextGuards } from './ratingContext.js';
+import { initRatingContextGuards } from "./ratingContext.js";
 
 import { initLanding } from './landing/init.js';
 import { updateTopUserPill, initUserDropdown } from './landing/topUser.js';
@@ -275,6 +275,7 @@ function ensureHamburgerFallbackOnlyOnCustomer() {
 
 function initApp() {
   console.log('DOM ready');
+  initRatingContextGuards();
 
   // ✅ Viktigt: fixa hooks innan vi initierar menyer
   ensureMenuHooks();

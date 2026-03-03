@@ -2,63 +2,41 @@
 import { showNotification } from './utils.js';
 import auth, { login } from './auth.js';
 import api from './api.js';
+import { getPendingDeal, setPendingDeal, clearPendingDeal } from './ratingContext.js';
 
-const PENDING_KEY = 'peerrate_pending_rating_v2';
+// Pending ska INTE ligga i localStorage (läcker mellan användare).
+// Vi använder ratingContext.js som lagrar pending per user i sessionStorage.
 const TTL_MS = 1000 * 60 * 60 * 24;
 
 function now() { return Date.now(); }
-function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
-/**
- * Robust base64->json:
- * - Stöd för äldre payload: btoa(JSON.stringify(obj))
- * - Stöd för UTF-8-säker variant: btoa(unescape(encodeURIComponent(JSON.stringify(obj))))
- */
-function readB64Json(b64) {
-  if (!b64) return null;
+// Wrapper: spara pending per användare
+function setPending(data) {
   try {
-    const cleaned = decodeURIComponent(b64);
+    setPendingDeal({ ...(data || {}), _ts: now() });
+  } catch {}
+}
 
-    // 1) testa "vanlig" atob först
-    try {
-      const raw = atob(cleaned);
-      const j = safeParse(raw);
-      if (j && typeof j === 'object') return j;
-    } catch {}
+function getPending() {
+  try {
+    const parsed = getPendingDeal();
+    if (!parsed) return null;
 
-    // 2) testa UTF-8-variant
-    try {
-      const raw = atob(cleaned);
-      const utf8 = decodeURIComponent(escape(raw));
-      const j2 = safeParse(utf8);
-      if (j2 && typeof j2 === 'object') return j2;
-    } catch {}
-
-    return null;
+    // TTL
+    if (now() - (parsed._ts || 0) > TTL_MS) {
+      clearPendingDeal();
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
 }
 
-function setPending(data) {
-  try { localStorage.setItem(PENDING_KEY, JSON.stringify({ ...data, _ts: now() })); } catch {}
-}
-
-function getPending() {
-  try {
-    const raw = localStorage.getItem(PENDING_KEY);
-    const parsed = raw ? safeParse(raw) : null;
-    if (!parsed) return null;
-    if (now() - (parsed._ts || 0) > TTL_MS) {
-      localStorage.removeItem(PENDING_KEY);
-      return null;
-    }
-    return parsed;
-  } catch { return null; }
-}
-
 function clearPending() {
-  try { localStorage.removeItem(PENDING_KEY); } catch {}
+  try { clearPendingDeal(); } catch {}
+  // extra säkerhet: rensa gammal legacy-key om den råkar ligga kvar från tidigare deploys
+  try { localStorage.removeItem('peerrate_pending_rating_v2'); } catch {}
 }
 
 function isRatePage() {
