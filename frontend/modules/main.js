@@ -30,7 +30,6 @@ function updateRatingLoginHint(user) {
 
 /**
  * Döljer login-kortet när användaren redan är inloggad.
- * (På /rate.html vill du att "Steg 1: Logga in" ska försvinna när user finns.)
  */
 function updateRateLoginCardVisibility(user) {
   const loginCard = document.getElementById('login-card');
@@ -40,14 +39,12 @@ function updateRateLoginCardVisibility(user) {
 
 /**
  * Läs ?source=...&pageUrl=... och förifyll rate-formulär där det går.
- * Viktigt: Kontextkortet ska INTE visas om inga params finns.
  */
 function applyRatingContextFromQuery() {
   const params = new URLSearchParams(window.location.search || '');
   const sourceRaw = (params.get('source') || '').trim();
   const pageUrlRaw = (params.get('pageUrl') || '').trim();
 
-  // ✅ Default: göm kontextkortet om vi inte har query
   const card = document.getElementById('rate-context-card');
   if (card) card.style.display = 'none';
 
@@ -129,18 +126,12 @@ function extractProofIdFromUrl(url) {
 }
 
 /**
- * ✅ Robust hook-fix för meny:
- * Vissa sidor (customer.html) hade .top-row men saknade id="top-row".
- * landing/menu.js brukar ofta leta efter #top-row eller specifika hooks.
- *
- * Den här funktionen:
- * - Sätter id="top-row" om header/top-row finns men saknar id
- * - Skapar #top-actions om den saknas (så menyn har någonstans att injicera knappar)
+ * ✅ Fixar hooks som menyer ofta kräver:
+ * - Om header/top-row finns men saknar id="top-row", sätt det.
+ * - Om top-actions saknar id="top-actions", sätt det (eller skapa).
  */
 function ensureMenuHooks() {
-  // 1) top-row
-  const existingTopRow = document.getElementById('top-row');
-  if (!existingTopRow) {
+  if (!document.getElementById('top-row')) {
     const header = document.querySelector('header.top-row') || document.querySelector('.top-row');
     if (header && !header.id) header.id = 'top-row';
   }
@@ -148,43 +139,132 @@ function ensureMenuHooks() {
   const topRow = document.getElementById('top-row');
   if (!topRow) return;
 
-  // 2) top-actions (valfritt, men bra att ha)
   let topActions = document.getElementById('top-actions');
   if (!topActions) {
-    // försök hitta en befintlig container
-    topActions = topRow.querySelector('.top-actions');
-    if (topActions) {
-      topActions.id = 'top-actions';
-    } else {
-      // skapa en om den inte finns
-      topActions = document.createElement('div');
-      topActions.id = 'top-actions';
-      topActions.className = 'top-actions';
-      // försök lägga den på rimligt ställe
-      const shellInner =
-        topRow.querySelector('.top-row-inner') ||
-        topRow.querySelector('.shell') ||
-        topRow;
-      shellInner.appendChild(topActions);
+    const existing = topRow.querySelector('.top-actions');
+    if (existing) {
+      existing.id = 'top-actions';
+      topActions = existing;
     }
+  }
+
+  if (!topActions) {
+    const inner = topRow.querySelector('.top-row-inner') || topRow;
+    const div = document.createElement('div');
+    div.id = 'top-actions';
+    div.className = 'top-actions';
+    inner.appendChild(div);
   }
 }
 
 /**
- * ✅ Kör en init-funktion men låt inte den krascha hela sidan.
+ * ✅ Fallback-hamburger:
+ * Om initLandingMenu() inte skapar någon hamburgare på sidan,
+ * skapa en enkel hamburger + overlay/drawer.
+ *
+ * Den här körs "idempotent" och påverkar inte andra sidor om det redan finns en menyknapp.
  */
-function safeInit(name, fn) {
-  try {
-    if (typeof fn === 'function') fn();
-  } catch (e) {
-    console.warn(`${name} failed (non-blocking)`, e);
+function ensureHamburgerFallback() {
+  const topRow = document.getElementById('top-row');
+  if (!topRow) return;
+
+  const topActions = document.getElementById('top-actions') || topRow.querySelector('.top-actions');
+  if (!topActions) return;
+
+  // Om det redan finns en tydlig menyknapp, gör inget.
+  if (document.getElementById('pr-menu-btn')) return;
+
+  // Skapa knapp (visas alltid)
+  const btn = document.createElement('button');
+  btn.id = 'pr-menu-btn';
+  btn.type = 'button';
+  btn.className = 'btn-pill soft-hover';
+  btn.setAttribute('aria-label', 'Öppna meny');
+  btn.textContent = '☰';
+  btn.style.display = 'inline-flex'; // säkerställ att den inte blir "display:none"
+  btn.style.alignItems = 'center';
+  btn.style.justifyContent = 'center';
+  btn.style.minWidth = '44px';
+
+  topActions.appendChild(btn);
+
+  // Overlay
+  let overlay = document.getElementById('pr-menu-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'pr-menu-overlay';
+    overlay.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,.35);
+      opacity: 0; pointer-events: none; transition: opacity 160ms ease;
+      z-index: 9998;
+    `;
+    document.body.appendChild(overlay);
   }
+
+  // Drawer
+  let drawer = document.getElementById('pr-menu-drawer');
+  if (!drawer) {
+    drawer = document.createElement('nav');
+    drawer.id = 'pr-menu-drawer';
+    drawer.style.cssText = `
+      position: fixed; top: 0; right: 0; height: 100vh; width: min(360px, 88vw);
+      background: rgba(255,255,255,.98); border-left: 1px solid rgba(15,15,18,.10);
+      transform: translateX(102%); transition: transform 200ms ease;
+      z-index: 9999; padding: 16px;
+      box-shadow: -20px 0 60px rgba(0,0,0,.12);
+      display: flex; flex-direction: column; gap: 10px;
+    `;
+
+    drawer.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding: 6px 2px;">
+        <div style="font-weight:800; letter-spacing:-.01em;">PeerRate</div>
+        <button id="pr-menu-close" class="btn-pill soft-hover" type="button" aria-label="Stäng meny">✕</button>
+      </div>
+
+      <a href="/#top" class="btn-pill soft-hover" style="justify-content:flex-start; text-decoration:none;">Hem</a>
+      <a href="/#sim" class="btn-pill soft-hover" style="justify-content:flex-start; text-decoration:none;">5P-modellen</a>
+      <a href="/rate.html" class="btn-pill soft-hover" style="justify-content:flex-start; text-decoration:none;">Lämna betyg</a>
+      <a href="/profile.html" class="btn-pill soft-hover" style="justify-content:flex-start; text-decoration:none;">Min profil</a>
+      <a href="/customer.html" class="btn-pill soft-hover" style="justify-content:flex-start; text-decoration:none;">Registrera</a>
+
+      <div style="margin-top:auto; font-size:12px; opacity:.65; padding: 10px 2px;">
+        © PeerRate
+      </div>
+    `;
+    document.body.appendChild(drawer);
+  }
+
+  const closeBtn = drawer.querySelector('#pr-menu-close');
+
+  const open = () => {
+    overlay.style.opacity = '1';
+    overlay.style.pointerEvents = 'auto';
+    drawer.style.transform = 'translateX(0)';
+  };
+
+  const close = () => {
+    overlay.style.opacity = '0';
+    overlay.style.pointerEvents = 'none';
+    drawer.style.transform = 'translateX(102%)';
+  };
+
+  btn.addEventListener('click', () => {
+    const isOpen = overlay.style.pointerEvents === 'auto';
+    if (isOpen) close();
+    else open();
+  });
+
+  overlay.addEventListener('click', close);
+  closeBtn?.addEventListener('click', close);
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+  });
 }
 
 function initApp() {
   console.log('DOM ready');
 
-  // ✅ Viktigt: fixa hooks innan vi initierar meny/dropdown
+  // ✅ Viktigt: fixa hooks innan vi initierar menyer
   ensureMenuHooks();
 
   const user = auth.getUser?.() || null;
@@ -193,10 +273,17 @@ function initApp() {
   updateAvatars(user);
   updateTopUserPill(user);
 
-  // ✅ Menyn var problemet på customer.html -> gör init robust
-  safeInit('initLandingMenu', initLandingMenu);
+  // Meny (om den kastar fel ska appen ändå fortsätta)
+  try {
+    initLandingMenu();
+  } catch (e) {
+    console.warn('initLandingMenu failed (non-blocking)', e);
+  }
 
-  safeInit('initUserDropdown', () =>
+  // ✅ NYTT: om initLandingMenu inte skapade hamburger -> skapa fallback
+  ensureHamburgerFallback();
+
+  try {
     initUserDropdown({
       auth,
       getUser: () => auth.getUser?.() || null,
@@ -206,8 +293,10 @@ function initApp() {
         updateUserBadge(u2);
         updateAvatars(u2);
       },
-    })
-  );
+    });
+  } catch (e) {
+    console.warn('initUserDropdown failed (non-blocking)', e);
+  }
 
   if (adminLoginForm && adminLogoutBtn) console.log('Admin functionality loaded');
 
@@ -215,14 +304,14 @@ function initApp() {
 
   // --- Customer / registrering ---
   if (document.getElementById('customer-form')) {
-    safeInit('initCustomerForm', initCustomerForm);
+    initCustomerForm();
   }
 
   // --- Profile ---
   const isProfilePage =
     path.includes('/min-profil') || path.includes('profile.html') || path.includes('/profile');
   if (isProfilePage) {
-    safeInit('initProfilePage', initProfilePage);
+    initProfilePage();
   }
 
   // --- Rating (rate.html / rating-card) ---
@@ -232,22 +321,14 @@ function initApp() {
     !!document.getElementById('rating-card');
 
   if (isRatingPage) {
-    // ✅ Kontext från query ska appliceras här (den fanns men kallades inte)
-    safeInit('applyRatingContextFromQuery', applyRatingContextFromQuery);
+    // ✅ Var definierad men saknades ofta i boot
+    applyRatingContextFromQuery();
 
-    // ✅ dropdown-flöde (öppna plattform)
-    safeInit('initRatingPlatform', initRatingPlatform);
+    initRatingPlatform();
+    initPlatformPicker();
+    initRatingLogin();
 
-    // (om du fortfarande vill ha den andra också)
-    safeInit('initPlatformPicker', initPlatformPicker);
-
-    // befintligt
-    safeInit('initRatingLogin', initRatingLogin);
-
-    // ✅ Nytt: dölj login-kortet om inloggad
     updateRateLoginCardVisibility(user);
-
-    // Hint kan vara kvar (döljs om inloggad)
     updateRatingLoginHint(user);
   }
 
@@ -259,7 +340,7 @@ function initApp() {
     !!document.querySelector('.hero');
 
   if (isIndex) {
-    safeInit('initLanding', initLanding);
+    initLanding();
   }
 
   // Keep top-user pill updated if other tabs log in/out
@@ -267,7 +348,6 @@ function initApp() {
     updateTopUserPill(auth.getUser?.() || null);
   });
 
-  // small heartbeat (optional)
   setInterval(() => updateTopUserPill(auth.getUser?.() || null), 1500);
 }
 
