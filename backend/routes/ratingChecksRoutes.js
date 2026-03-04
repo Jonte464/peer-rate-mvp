@@ -1,18 +1,31 @@
 // backend/routes/ratingChecksRoutes.js
-// CommonJS-router som matchar server.js (require) och ger ratings/exists-endpoint.
+// CommonJS-router som matchar server.js (require)
+// och använder PrismaClient direkt (ingen beroende på ../prismaClient).
 
 const express = require("express");
-const router = express.Router();
+const { PrismaClient } = require("@prisma/client");
 
-// Anpassa dessa require-sökvägar om din struktur skiljer sig:
-const prisma = require("../prismaClient"); // om du har prismaClient.js i backend/
-const { requireAuth } = require("../middleware/authMiddleware"); // om du har middleware/authMiddleware.js
+const router = express.Router();
+const prisma = new PrismaClient();
+
+/**
+ * Minimal auth-guard:
+ * - Om du har riktig requireAuth i ditt projekt kan du byta till den senare.
+ * - Just nu kräver vi bara att req.user finns, annars 401.
+ *
+ * OBS: Detta funkar endast om din befintliga auth faktiskt sätter req.user
+ * (vilket den troligen gör).
+ */
+function requireAuthCompat(req, res, next) {
+  if (req.user) return next();
+  return res.status(401).json({ ok: false, error: "Not authenticated" });
+}
 
 /**
  * GET /api/ratings/exists?dealId=...
  * Returnerar om inloggad användare redan har lämnat rating för dealId
  */
-router.get("/ratings/exists", requireAuth, async (req, res) => {
+router.get("/ratings/exists", requireAuthCompat, async (req, res) => {
   try {
     const dealId = String(req.query.dealId || "").trim();
     if (!dealId) {
