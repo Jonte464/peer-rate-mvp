@@ -44,6 +44,7 @@ const linkedinAuth = assertRouter("linkedinAuth", require("./routes/linkedinAuth
 const dbConfigured = Boolean(process.env.DATABASE_URL);
 
 let ratingsRoutes,
+  ratingChecksRoutes, // ✅ NEW: "har redan betygsatt?"-endpoint för extension
   customersRoutes,
   adminRoutes,
   integrationsRoutes,
@@ -59,6 +60,7 @@ if (dbConfigured) {
   const load = (name, p) => assertRouter(name, require(p));
 
   ratingsRoutes = load("ratingsRoutes", "./routes/ratingsRoutes");
+  ratingChecksRoutes = load("ratingChecksRoutes", "./routes/ratingChecksRoutes"); // ✅ NEW
   customersRoutes = load("customersRoutes", "./routes/customersRoutes");
   adminRoutes = load("adminRoutes", "./routes/adminRoutes");
   integrationsRoutes = load("integrationsRoutes", "./routes/integrationsRoutes");
@@ -80,8 +82,13 @@ if (dbConfigured) {
 const app = express();
 
 // --- Config ---
-const PORT = Number(process.env.PORT || 3001);
-const HOST = process.env.HOST || "0.0.0.0";
+// ✅ Render kräver att du lyssnar på process.env.PORT.
+// Defaulta till 10000 lokalt om PORT saknas.
+const PORT = Number(process.env.PORT || 10000);
+
+// ✅ Viktigt: Bind till 0.0.0.0 på Render (inte 127.0.0.1 / localhost)
+const HOST = "0.0.0.0";
+
 const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
 const corsOriginRaw = process.env.CORS_ORIGIN || "*";
 
@@ -148,6 +155,7 @@ app.use(
 // Routes
 // -----------------------------
 if (ratingsRoutes) app.use("/api", ratingsRoutes);
+if (ratingChecksRoutes) app.use("/api", ratingChecksRoutes); // ✅ NEW
 if (customersRoutes) app.use("/api", customersRoutes);
 if (onboardingRoutes) app.use("/api", onboardingRoutes);
 if (meRoutes) app.use("/api", meRoutes);
@@ -180,6 +188,7 @@ app.get("/health", (_req, res) => {
     time: new Date().toISOString(),
     env: process.env.NODE_ENV || "development",
     port: PORT,
+    host: HOST,
     corsOrigin: corsOriginRaw,
     uptimeSec: Math.round(process.uptime()),
   });
@@ -206,11 +215,10 @@ app.get("*", (req, res, next) => {
 });
 
 // --- Start ---
+// ✅ Render måste se en öppen port. Därför lyssnar vi på PORT och 0.0.0.0
 const server = app.listen(PORT, HOST, () => {
-  const addr = server.address();
-  const host = addr && addr.address ? addr.address : HOST;
-  const port = addr && addr.port ? addr.port : PORT;
-  console.log(`PeerRate server listening on ${host}:${port}`);
+  console.log(`PeerRate server listening on http://${HOST}:${PORT}`);
+  console.log(`[env] NODE_ENV=${process.env.NODE_ENV || "development"}  dbConfigured=${dbConfigured}`);
 });
 
 server.on("error", (err) => {
