@@ -1,5 +1,11 @@
 // frontend/modules/ratingContext.js
-// Pending-deals per användare + blockerande overlay på rate.html
+// Fixar att pending-deals inte läcker mellan användare genom att:
+// - upptäcka user switch kontinuerligt
+// - rensa legacy keys och anon-pending
+// - spara pending per användare (sessionStorage)
+//
+// ✅ Kompat: speglar pending till localStorage (peerrate_pending_rating_v2)
+// så att ratingForm.js kan bygga “prefyllda formuläret” (locked card).
 
 import auth from "./auth.js";
 
@@ -15,11 +21,12 @@ const LEGACY_CONTEXT_KEYS = [
   "peerRateDraftRating",
   "peerRatePendingRating",
   "peerRatePendingDeal",
-  "peerrate_pending_rating_v2",
-
-  // OBS: den här är roten till läckan i din ratingForm (vi rensar den också)
-  "peerrate_pending_rating_v2",
+  "peerrate_pending_rating_v2", // ✅ viktigt: vår nya pending-nyckel i ratingForm.js
 ];
+
+// ✅ Den som ratingForm.js läser
+const LEGACY_PENDING_KEY = "peerrate_pending_rating_v2";
+const LEGACY_TTL_MS = 1000 * 60 * 60 * 24;
 
 function perUserKey(base, userKey) {
   return `${base}:${userKey}`;
@@ -31,6 +38,10 @@ function safeJsonParse(s) {
   } catch {
     return null;
   }
+}
+
+function nowMs() {
+  return Date.now();
 }
 
 // Försök hitta email även om auth.getUser() inte hunnit uppdateras ännu
@@ -55,8 +66,25 @@ function getUserKey() {
   return getBestEmailGuess() || "anon";
 }
 
+// ✅ Spegla pending till localStorage så ratingForm.js hittar den
+function writeLegacyPending(deal) {
+  try {
+    if (!deal) return;
+    localStorage.setItem(
+      LEGACY_PENDING_KEY,
+      JSON.stringify({ ...(deal || {}), _ts: nowMs() })
+    );
+  } catch {}
+}
+
+function clearLegacyPending() {
+  try {
+    localStorage.removeItem(LEGACY_PENDING_KEY);
+  } catch {}
+}
+
 function clearAllPendingEverywhere() {
-  // Rensa legacy
+  // Rensa legacy keys i både localStorage och sessionStorage
   for (const k of LEGACY_CONTEXT_KEYS) {
     try { localStorage.removeItem(k); } catch {}
     try { sessionStorage.removeItem(k); } catch {}
@@ -70,6 +98,9 @@ function clearAllPendingEverywhere() {
       if (key && key.startsWith(prefix)) sessionStorage.removeItem(key);
     }
   } catch {}
+
+  // ✅ även legacy pending
+  clearLegacyPending();
 }
 
 function readPendingDealFor(userKey) {
@@ -80,10 +111,23 @@ function readPendingDealFor(userKey) {
 
 function writePendingDealFor(userKey, deal) {
   sessionStorage.setItem(perUserKey("peerRatePendingDeal", userKey), JSON.stringify(deal || {}));
+
+  // ✅ spegla till localStorage så formuläret kan byggas
+  writeLegacyPending(deal);
+
+  // ✅ signalera till ratingForm.js att pending uppdaterats (utan reload)
+  try {
+    window.dispatchEvent(new CustomEvent("pr:pending-updated", { detail: deal || {} }));
+  } catch {}
 }
 
 function clearPendingDealFor(userKey) {
   sessionStorage.removeItem(perUserKey("peerRatePendingDeal", userKey));
+  clearLegacyPending();
+
+  try {
+    window.dispatchEvent(new CustomEvent("pr:pending-cleared"));
+  } catch {}
 }
 
 function readDealFromQuery() {
@@ -92,10 +136,7 @@ function readDealFromQuery() {
   const pageUrl = (params.get("pageUrl") || "").trim();
   const proofRef = (params.get("proofRef") || "").trim();
 
-  // ratingForm skickar ibland ?pr=... (base64-json). Vi sparar även den om den finns.
-  const pr = (params.get("pr") || "").trim();
-
-  if (!source && !pageUrl && !proofRef && !pr) return null;
+  if (!source && !pageUrl && !proofRef) return null;
 
   let decodedPageUrl = pageUrl;
   try {
@@ -108,7 +149,6 @@ function readDealFromQuery() {
     source,
     pageUrl: decodedPageUrl,
     proofRef,
-    pr, // kan vara tom
     receivedAt: new Date().toISOString(),
   };
 }
@@ -119,7 +159,6 @@ function removeQueryParams() {
     url.searchParams.delete("source");
     url.searchParams.delete("pageUrl");
     url.searchParams.delete("proofRef");
-    url.searchParams.delete("pr");
     window.history.replaceState({}, "", url.toString());
   } catch {}
 }
@@ -134,7 +173,6 @@ function escapeAttr(s) {
   return String(s || "").replaceAll('"', "%22");
 }
 
-// ✅ Blockerande overlay: kan inte klickas bort ("Inte nu" borttagen)
 function createOverlayIfNeeded(deal) {
   if (!deal) return;
   if (document.getElementById("pr-pending-overlay")) return;
@@ -143,16 +181,10 @@ function createOverlayIfNeeded(deal) {
   overlay.id = "pr-pending-overlay";
   overlay.style.cssText = `
     position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0,0,0,.55);
+    background: rgba(0,0,0,.45);
     display: flex; align-items: flex-start; justify-content: center;
     padding: 90px 16px 16px;
   `;
-
-  // stoppa klick-through
-  overlay.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
 
   const card = document.createElement("div");
   card.style.cssText = `
@@ -160,7 +192,7 @@ function createOverlayIfNeeded(deal) {
     background: rgba(255,255,255,.98);
     border: 1px solid rgba(15,15,18,.10);
     border-radius: 18px;
-    box-shadow: 0 30px 90px rgba(0,0,0,.22);
+    box-shadow: 0 30px 90px rgba(0,0,0,.20);
     padding: 16px;
   `;
 
@@ -171,14 +203,18 @@ function createOverlayIfNeeded(deal) {
       <div style="font-weight:850; letter-spacing:-.01em; font-size:16px;">
         Du har en affär att betygsätta
       </div>
+      <button id="pr-pending-close" type="button"
+        style="border:1px solid rgba(0,0,0,.12); background:#fff; border-radius:999px; padding:8px 12px; font-weight:750; cursor:pointer;">
+        Inte nu
+      </button>
     </div>
 
-    <div style="margin-top:10px; font-size:13px; opacity:.78; line-height:1.5;">
+    <div style="margin-top:10px; font-size:13px; opacity:.75; line-height:1.5;">
       <div><b>Plattform:</b> ${escapeHtml(prettySource)}</div>
       ${deal.proofRef ? `<div><b>Referens:</b> ${escapeHtml(deal.proofRef)}</div>` : ""}
       ${deal.pageUrl ? `<div style="margin-top:6px;"><a href="${escapeAttr(deal.pageUrl)}" target="_blank" rel="noreferrer"
          style="color:inherit; text-decoration:underline;">Öppna affären</a></div>` : ""}
-      <div style="margin-top:10px;">
+      <div style="margin-top:8px;">
         För att fortsätta behöver du antingen <b>skriva omdöme</b> eller <b>rensa affärsdata</b>.
       </div>
     </div>
@@ -202,46 +238,31 @@ function createOverlayIfNeeded(deal) {
 
   const hide = () => overlay.remove();
 
+  card.querySelector("#pr-pending-close")?.addEventListener("click", hide);
+
   card.querySelector("#pr-pending-clear")?.addEventListener("click", () => {
     clearAllPendingEverywhere();
     removeQueryParams();
     hide();
-    // Säkrast: refresh så UI blir ren direkt
-    try { window.location.reload(); } catch {}
   });
 
   card.querySelector("#pr-pending-go")?.addEventListener("click", () => {
     hide();
+
+    // Försök scrolla till formuläret – finns det så funkar det direkt.
     const form =
       document.getElementById("locked-rating-card") ||
       document.getElementById("rating-form") ||
       document.getElementById("rating-card") ||
+      document.getElementById("verified-deals-card") ||
       document.querySelector("form");
-    if (form) form.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    if (form) {
+      form.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   });
 }
 
-// Exporterade helpers (så ratingForm kan använda samma pending)
-export function getPendingDeal() {
-  const current = getUserKey();
-  return readPendingDealFor(current);
-}
-export function setPendingDeal(deal) {
-  const current = getUserKey();
-  writePendingDealFor(current, deal);
-}
-export function clearPendingDeal() {
-  const current = getUserKey();
-  clearPendingDealFor(current);
-}
-
-/**
- * Init guards:
- * - rensa pending vid user switch
- * - fånga query (source/pageUrl/proofRef/pr) och spara per user
- * - visa overlay på rate.html om pending finns
- * - poll user switch (logout/login utan reload)
- */
 export function initRatingContextGuards() {
   // 1) Kör direkt
   let last = (localStorage.getItem(LAST_USER_KEY) || "").trim().toLowerCase();
@@ -257,7 +278,7 @@ export function initRatingContextGuards() {
   const dealFromQuery = readDealFromQuery();
   if (dealFromQuery) {
     writePendingDealFor(current, dealFromQuery);
-    removeQueryParams();
+    removeQueryParams(); // viktigt så den inte återkommer efter refresh
   }
 
   // 4) Om pending ligger kvar under "anon" men vi nu är inloggade: flytta
@@ -273,26 +294,21 @@ export function initRatingContextGuards() {
   // 5) Visa overlay på rate.html om pending finns
   const path = (window.location.pathname || "").toLowerCase();
   const isRate =
-    path.endsWith("/rate.html") ||
-    path.includes("/rate") ||
-    !!document.getElementById("rating-card") ||
-    !!document.getElementById("rating-form") ||
-    !!document.getElementById("locked-rating-card");
+    path.endsWith("/rate.html") || path.includes("/rate") ||
+    !!document.getElementById("rating-card") || !!document.getElementById("rating-form");
 
   if (isRate) {
     const pending = readPendingDealFor(current);
-    if (pending) setTimeout(() => createOverlayIfNeeded(pending), 80);
+    if (pending) setTimeout(() => createOverlayIfNeeded(pending), 120);
   }
 
-  // 6) Poll: user switch
+  // 6) SUPERviktigt: poll var 500ms och känn av user switch (för logout/login utan reload)
   setInterval(() => {
     const now = getUserKey();
     const prev = (localStorage.getItem(LAST_USER_KEY) || "").trim().toLowerCase();
     if (prev && now !== prev) {
       clearAllPendingEverywhere();
       localStorage.setItem(LAST_USER_KEY, now);
-      // refresh för att inte råka visa gammal UI
-      try { window.location.reload(); } catch {}
     }
   }, 500);
 }

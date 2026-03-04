@@ -883,6 +883,18 @@ export function initRatingLogin() {
   const fromUrl = captureFromUrl();
   const pending = fromUrl || getPending();
 
+  // ✅ Om pending kommer in från ratingContext (utan reload), rendera om UI
+window.addEventListener('pr:pending-updated', () => {
+  const p = getPending();
+  if (p) {
+    applyPendingContextCard(p);
+    renderVerifiedDealUI(p);
+  }
+});
+window.addEventListener('pr:pending-cleared', () => {
+  renderVerifiedDealUI(null);
+});
+
   if (pending) {
     applyPendingContextCard(pending);
     renderVerifiedDealUI(pending);
