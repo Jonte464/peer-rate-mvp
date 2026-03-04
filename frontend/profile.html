@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/css/profile.css" />
 </head>
 
-<body>
+<body data-page="profile">
 
   <!-- ✅ Global TOP ROW injectas via pageBootstrap.js -->
   <div id="slot-top-row"></div>
@@ -93,7 +93,7 @@
           <div id="ratings-list" class="ratings-list"></div>
         </section>
 
-        <!-- ✅ Arbetsreferenser (ny modul i rätt stil) -->
+        <!-- ✅ Arbetsreferenser -->
         <section class="card" id="work-references-card">
           <h2 data-i18n="profile_workrefs_title">Arbetsreferenser</h2>
           <p class="tiny muted" data-i18n="profile_workrefs_lead">
@@ -115,14 +115,14 @@
           <!-- Profilbild -->
           <div class="profile-avatar-block">
             <div class="profile-avatar-preview" id="profile-avatar-preview" title="Klicka för att byta bild">PR</div>
+
             <div>
-              <label class="profile-avatar-upload-label" data-i18n="profile_avatar_upload">
-                Ladda upp profilbild
-                <input type="file" id="profile-avatar-input" accept="image/*" />
-              </label>
+              <button type="button" class="secondary" id="profile-avatar-btn">Ladda upp profilbild</button>
+              <input type="file" id="profile-avatar-input" accept="image/*" />
               <p class="profile-avatar-text" data-i18n="profile_avatar_note">
                 Bilden sparas bara lokalt i din webbläsare och kopplas till “Inloggad som”.
               </p>
+              <p class="tiny muted" id="profile-avatar-status" style="margin-top:6px;"></p>
             </div>
           </div>
 
@@ -158,7 +158,7 @@
         <!-- eBay-koppling (tillfälligt dold) -->
         <section class="card hidden" id="ebay-card" style="display:none;"></section>
 
-        <!-- ✅ Tradera-koppling: BORTTAGEN (gammal kvarleva) -->
+        <!-- ✅ Tradera-koppling: borttagen (gammal kvarleva) -->
 
         <!-- Logga ut -->
         <section class="card">
@@ -173,11 +173,7 @@
     </div>
   </main>
 
-  <!-- ✅ Single entrypoint: inject header → init language → load main.js -->
   <script type="module" src="/modules/pageBootstrap.js?v=2"></script>
-
-  <!-- ✅ Fixar profilbild (local storage) + tar bort gammal Tradera-text om den ändå renderas -->
   <script type="module" src="/modules/profileAvatar.js?v=1"></script>
-  <script type="module" src="/modules/profileCleanup.js?v=1"></script>
 </body>
 </html>

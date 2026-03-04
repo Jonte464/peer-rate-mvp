@@ -33,8 +33,10 @@ a:active, button:active { transform: translateY(1px); }
 
 /* =========================
    TOP ROW (matchar index)
-   ========================= */
-.top-row{
+   =========================
+   ✅ VIKTIGT: Inaktivera dessa regler på /profile.html så att top-row blir identisk med andra sidor
+*/
+body:not([data-page="profile"]) .top-row{
   position: sticky;
   top: 0;
   z-index: 100;
@@ -42,15 +44,15 @@ a:active, button:active { transform: translateY(1px); }
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--w-border);
 }
-.top-row .shell{
+body:not([data-page="profile"]) .top-row .shell{
   max-width: 100%;
   padding: 0 28px;
 }
 @media (max-width: 820px){
-  .top-row .shell{ padding: 0 16px; }
+  body:not([data-page="profile"]) .top-row .shell{ padding: 0 16px; }
 }
 
-.top-row-inner{
+body:not([data-page="profile"]) .top-row-inner{
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -58,7 +60,7 @@ a:active, button:active { transform: translateY(1px); }
   padding: 10px 0;
 }
 
-.brand{
+body:not([data-page="profile"]) .brand{
   display:flex;
   align-items:center;
   gap: 12px;
@@ -68,10 +70,10 @@ a:active, button:active { transform: translateY(1px); }
   min-width: 220px;
 }
 @media (max-width: 820px){
-  .brand{ min-width: unset; }
+  body:not([data-page="profile"]) .brand{ min-width: unset; }
 }
 
-.logo-badge{
+body:not([data-page="profile"]) .logo-badge{
   width: 38px; height: 38px;
   border-radius: 999px;
   border: 1px solid rgba(15,15,18,.10);
@@ -85,7 +87,7 @@ a:active, button:active { transform: translateY(1px); }
   position: relative;
   flex: 0 0 auto;
 }
-.logo-badge::after{
+body:not([data-page="profile"]) .logo-badge::after{
   content:"";
   position:absolute;
   inset:-1px;
@@ -95,7 +97,7 @@ a:active, button:active { transform: translateY(1px); }
   pointer-events:none;
   mix-blend-mode: multiply;
 }
-.logo-img{
+body:not([data-page="profile"]) .logo-img{
   width: 22px;
   height: 22px;
   display:block;
@@ -104,21 +106,21 @@ a:active, button:active { transform: translateY(1px); }
   z-index: 1;
   filter: drop-shadow(0 6px 10px rgba(0,0,0,.18));
 }
-.brand-name{
+body:not([data-page="profile"]) .brand-name{
   font-weight: 780;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
-.brand-sub{
+body:not([data-page="profile"]) .brand-sub{
   font-size: 12px;
   color: var(--w-muted);
   margin-top: 2px;
 }
 @media (max-width: 520px){
-  .brand-sub{ display:none; }
+  body:not([data-page="profile"]) .brand-sub{ display:none; }
 }
 
-.top-actions{
+body:not([data-page="profile"]) .top-actions{
   display:flex;
   align-items:center;
   gap: 10px;
@@ -127,11 +129,10 @@ a:active, button:active { transform: translateY(1px); }
   position: relative;
 }
 @media (max-width: 820px){
-  .top-actions{ min-width: unset; }
+  body:not([data-page="profile"]) .top-actions{ min-width: unset; }
 }
 
-/* ✅ viktigt: top-row knappar ska INTE bli width:100% */
-.lang-pill{
+body:not([data-page="profile"]) .lang-pill{
   width: auto;
   display:inline-flex;
   align-items:center;
@@ -144,9 +145,9 @@ a:active, button:active { transform: translateY(1px); }
   font-size: 13px;
   cursor: pointer;
 }
-.lang-pill:hover{ filter: brightness(0.98); }
+body:not([data-page="profile"]) .lang-pill:hover{ filter: brightness(0.98); }
 
-.top-user{
+body:not([data-page="profile"]) .top-user{
   display:none;
   align-items:center;
   justify-content:center;
@@ -166,7 +167,7 @@ a:active, button:active { transform: translateY(1px); }
   position: relative;
   cursor: pointer;
 }
-.top-user::after{
+body:not([data-page="profile"]) .top-user::after{
   content:"";
   position:absolute;
   width:10px; height:10px;
@@ -177,7 +178,7 @@ a:active, button:active { transform: translateY(1px); }
   border: 2px solid rgba(255,255,255,.9);
 }
 
-.user-menu{
+body:not([data-page="profile"]) .user-menu{
   position: absolute;
   right: 0;
   top: 52px;
@@ -190,7 +191,7 @@ a:active, button:active { transform: translateY(1px); }
   display:none;
   z-index: 220;
 }
-.user-menu button{
+body:not([data-page="profile"]) .user-menu button{
   width:100%;
   text-align:left;
   border: 0;
@@ -200,9 +201,9 @@ a:active, button:active { transform: translateY(1px); }
   cursor:pointer;
   font-weight: 750;
 }
-.user-menu button:hover{ background: rgba(15,15,18,.05); }
+body:not([data-page="profile"]) .user-menu button:hover{ background: rgba(15,15,18,.05); }
 
-.lang-menu{
+body:not([data-page="profile"]) .lang-menu{
   position: absolute;
   right: 28px;
   top: 52px;
@@ -215,7 +216,7 @@ a:active, button:active { transform: translateY(1px); }
   display:none;
   z-index: 200;
 }
-.lang-menu button{
+body:not([data-page="profile"]) .lang-menu button{
   width:100%;
   text-align:left;
   border: 0;
@@ -225,9 +226,9 @@ a:active, button:active { transform: translateY(1px); }
   cursor:pointer;
   font-weight: 650;
 }
-.lang-menu button:hover{ background: rgba(15,15,18,.05); }
+body:not([data-page="profile"]) .lang-menu button:hover{ background: rgba(15,15,18,.05); }
 
-.menu-btn{
+body:not([data-page="profile"]) .menu-btn{
   width: 40px; height: 40px;
   border-radius: 999px;
   border: 1px solid var(--w-border);
@@ -235,9 +236,9 @@ a:active, button:active { transform: translateY(1px); }
   cursor: pointer;
   display:flex; align-items:center; justify-content:center;
 }
-.menu-btn:hover{ filter: brightness(.98); }
+body:not([data-page="profile"]) .menu-btn:hover{ filter: brightness(.98); }
 
-.menu-panel{
+body:not([data-page="profile"]) .menu-panel{
   position: fixed;
   top: 60px;
   right: 16px;
@@ -252,13 +253,13 @@ a:active, button:active { transform: translateY(1px); }
   box-shadow: 0 20px 60px rgba(0,0,0,.15);
   z-index: 99;
 }
-.menu-panel-inner{
+body:not([data-page="profile"]) .menu-panel-inner{
   padding: 12px 0 18px;
   display:flex;
   flex-direction:column;
   gap: 10px;
 }
-.menu-link{
+body:not([data-page="profile"]) .menu-link{
   display:flex;
   justify-content:space-between;
   align-items:center;
@@ -270,7 +271,7 @@ a:active, button:active { transform: translateY(1px); }
   color: inherit;
   font-weight: 720;
 }
-.menu-link:hover{ background: rgba(15,15,18,.04); }
+body:not([data-page="profile"]) .menu-link:hover{ background: rgba(15,15,18,.04); }
 
 /* =========================
    Page layout
@@ -473,17 +474,9 @@ button.secondary{
   background-position:center;
 }
 .profile-avatar-text{ font-size:12px; color: var(--w-muted); }
-.profile-avatar-upload-label{
-  display:inline-block;
-  padding:6px 10px;
-  border-radius:999px;
-  border:1px solid var(--w-border);
-  background:#fff;
-  cursor:pointer;
-  font-size:12px;
-  font-weight:600;
-}
-.profile-avatar-upload-label input[type="file"]{
+
+/* input hidden fix (stabilt) */
+#profile-avatar-input{
   position: absolute;
   left: -9999px;
   width: 1px;
