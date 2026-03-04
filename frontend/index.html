@@ -7,9 +7,69 @@
 
   <link rel="stylesheet" href="/css/pr-theme.css" />
   <link rel="stylesheet" href="/css/index.css" />
+
+  <!-- Liten, säker CTA-stil (påverkar inte dina partials) -->
+  <style>
+    .pr-ext-banner {
+      max-width: 1180px;
+      margin: 14px auto 0;
+      padding: 0 16px;
+    }
+    .pr-ext-banner__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,0.22);
+      backdrop-filter: blur(6px);
+    }
+    .pr-ext-banner__text {
+      font-size: 14px;
+      line-height: 1.3;
+      opacity: 0.95;
+    }
+    .pr-ext-banner__text strong { font-weight: 800; }
+    .pr-ext-banner__btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      text-decoration: none;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .pr-ext-banner__btn:hover {
+      border-color: rgba(255,255,255,0.22);
+      transform: translateY(-1px);
+    }
+    .pr-ext-banner__btn:active {
+      transform: translateY(0px);
+    }
+    @media (max-width: 700px){
+      .pr-ext-banner__inner { flex-direction: column; align-items: stretch; }
+      .pr-ext-banner__btn { justify-content: center; }
+    }
+  </style>
 </head>
 
 <body>
+  <!-- ✅ Ny CTA överst (säkert, oberoende av dina partials) -->
+  <div class="pr-ext-banner">
+    <div class="pr-ext-banner__inner">
+      <div class="pr-ext-banner__text">
+        <strong>Nyhet:</strong> Installera PeerRate Extension och lämna verifierade omdömen (Tradera live).
+      </div>
+      <a class="pr-ext-banner__btn" href="/extension.html">
+        Installera extension <span aria-hidden="true">→</span>
+      </a>
+    </div>
+  </div>
+
   <!-- Slots (fylls av partials via JS) -->
   <div id="slot-top-row"></div>
   <div id="slot-hero"></div>
