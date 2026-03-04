@@ -1,4 +1,15 @@
 // frontend/modules/ratingPlatform.js
+// Backwards compatible module.
+//
+// Legacy pages may call initRatingPlatform().
+// Newer rate.html flow uses initPlatformPicker/initPlatformStarter.
+//
+// Strategy:
+// - If legacy "hub" elements exist (choosePlatformBtn/chooseEmailBtn), run legacy UI.
+// - Otherwise, fall back to new pickers (no-op if not present).
+
+import { initPlatformPicker, initPlatformStarter } from './platformPicker.js';
+
 export function initRatingPlatform() {
   const platformCard = document.getElementById('platform-card');
   const emailCard = document.getElementById('email-card');
@@ -10,8 +21,15 @@ export function initRatingPlatform() {
   const flow = document.getElementById('platformFlow');
   const btn = document.getElementById('platformGoBtn');
 
-  if (!choosePlatformBtn || !chooseEmailBtn) return; // inte rate-sidan/hubben
+  // ✅ If legacy hub buttons are NOT present, we're likely on the new rate page.
+  // Fall back to new modules (safe no-op if elements not present).
+  if (!choosePlatformBtn || !chooseEmailBtn) {
+    try { initPlatformPicker(); } catch (e) { console.warn('[PeerRate] initPlatformPicker failed', e); }
+    try { initPlatformStarter(); } catch (e) { console.warn('[PeerRate] initPlatformStarter failed', e); }
+    return;
+  }
 
+  // --- Legacy hub behavior below (your original logic) ---
   const urls = {
     tradera: 'https://www.tradera.com/',
     blocket: 'https://www.blocket.se/',
@@ -38,7 +56,7 @@ export function initRatingPlatform() {
   choosePlatformBtn.addEventListener('click', showPlatform);
   chooseEmailBtn.addEventListener('click', showEmail);
 
-  // Default: visa plattform om man kommer hit med ?source=... (från extension)
+  // Default: show platform if coming with ?source=... (from extension)
   const params = new URLSearchParams(window.location.search || '');
   if ((params.get('source') || '').trim()) showPlatform();
 
@@ -110,11 +128,12 @@ export function initRatingPlatform() {
     const key = select.value;
     const url = urls[key];
     if (!url) return;
-
-    // Öppna plattform i ny flik
     window.open(url, '_blank', 'noopener,noreferrer');
   });
 
   updateBtn();
   updateStepsText();
 }
+
+// ✅ Optional: export the new APIs too, so older imports can use them
+export { initPlatformPicker, initPlatformStarter };

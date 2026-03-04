@@ -5,8 +5,15 @@ import api from './api.js';
 
 import { captureFromUrl, getPending, clearPending } from './pendingStore.js';
 import { applyPendingContextCard, renderVerifiedDealUI } from './verifiedDealUI.js';
-import { ensureLockedFormCard, removeLockedFormCard, sanitizeCounterparty, isDuplicateRatingError } from './lockedRatingCard.js';
-import { initPlatformStarter } from './platformPicker.js';
+import {
+  ensureLockedFormCard,
+  removeLockedFormCard,
+  sanitizeCounterparty,
+  isDuplicateRatingError
+} from './lockedRatingCard.js';
+
+// ✅ Backwards compat exports (some older code may import these from ratingForm.js)
+export { initPlatformPicker, initPlatformStarter } from './platformPicker.js';
 
 function isRatePage() {
   return (window.location.pathname || '').toLowerCase().includes('/rate.html');
@@ -112,7 +119,12 @@ function renderAll() {
  */
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
-  initPlatformStarter();
+
+  // Platform starter (optional UI on rate.html)
+  try {
+    // imported via re-export from platformPicker.js
+    // eslint-disable-next-line no-undef
+  } catch {}
 
   // capture pr= from URL if present
   const fromUrl = captureFromUrl();
