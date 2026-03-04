@@ -1,129 +1,99 @@
 // frontend/modules/profileAvatar.js
-// Lokal profilbild (localStorage) + sync mellan preview och user-badge.
-// Öppnar file picker via en riktig knapp för maximal kompatibilitet.
+// Sparar avatar lokalt (localStorage) och sätter den i preview + user-badge/top-row om de finns.
 
-const STORAGE_KEY = "peerrate_profile_avatar_dataurl_v2";
+const STORAGE_KEY = "peerrate.avatar.dataUrl";
 
-const $ = (id) => document.getElementById(id);
-
-function setElAvatar(el, dataUrl) {
+function setBgImage(el, dataUrl) {
   if (!el) return;
-
-  el.innerHTML = "";
-  if (!dataUrl) {
-    el.textContent = "PR";
-    return;
-  }
-
-  const img = document.createElement("img");
-  img.alt = "Profilbild";
-  img.src = dataUrl;
-  img.style.width = "100%";
-  img.style.height = "100%";
-  img.style.objectFit = "cover";
-  img.style.display = "block";
-  el.appendChild(img);
+  el.style.backgroundImage = `url("${dataUrl}")`;
+  el.style.backgroundSize = "cover";
+  el.style.backgroundPosition = "center";
+  el.textContent = ""; // ta bort PR/initialer om bild finns
 }
 
-function loadAvatar() {
-  try { return localStorage.getItem(STORAGE_KEY) || ""; }
-  catch { return ""; }
+function setStatus(msg) {
+  const s = document.getElementById("profile-avatar-status");
+  if (s) s.textContent = msg || "";
 }
 
-function saveAvatar(dataUrl) {
-  try { localStorage.setItem(STORAGE_KEY, dataUrl); }
-  catch { /* ignore */ }
+function loadExisting() {
+  const dataUrl = localStorage.getItem(STORAGE_KEY);
+  if (!dataUrl) return;
+
+  setBgImage(document.getElementById("profile-avatar-preview"), dataUrl);
+  setBgImage(document.getElementById("user-badge-avatar"), dataUrl);
+
+  // top-row pill (om main.js använder initialer)
+  const topPill = document.getElementById("topUserPill");
+  if (topPill) setBgImage(topPill, dataUrl);
+
+  setStatus("Profilbild sparad lokalt.");
 }
 
-function readFileAsDataURL(file) {
+function readFileAsDataUrl(file) {
   return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result || ""));
-    r.onerror = reject;
-    r.readAsDataURL(file);
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Kunde inte läsa filen"));
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.readAsDataURL(file);
   });
 }
 
-function isImage(file) {
-  return !!file && typeof file.type === "string" && file.type.startsWith("image/");
-}
-
-function init() {
-  const input = $("profile-avatar-input");
-  const btn = $("profile-avatar-btn");
-  const status = $("profile-avatar-status");
-  const preview = $("profile-avatar-preview");
-  const badge = $("user-badge-avatar");
-
-  if (!input || !preview) {
-    console.warn("[profileAvatar] Missing DOM elements");
-    return;
-  }
-
-  // Gör input osynlig men klickbar via JS
-  input.style.position = "absolute";
-  input.style.left = "-9999px";
-  input.style.width = "1px";
-  input.style.height = "1px";
-  input.style.opacity = "0";
-
-  // Ladda sparad avatar
-  const existing = loadAvatar();
-  if (existing) {
-    setElAvatar(preview, existing);
-    setElAvatar(badge, existing);
-  }
-
-  const openPicker = () => {
-    try {
-      input.click();
-      if (status) status.textContent = "";
-    } catch (e) {
-      console.error(e);
-      if (status) status.textContent = "Kunde inte öppna filväljaren i denna browser.";
-    }
-  };
-
-  if (btn) btn.addEventListener("click", openPicker);
-  preview.addEventListener("click", openPicker);
-  if (badge) badge.addEventListener("click", openPicker);
-
-  input.addEventListener("change", async () => {
-    const file = input.files && input.files[0];
+async function onFileChange(e) {
+  try {
+    const input = e.target;
+    const file = input?.files?.[0];
     if (!file) return;
 
-    if (!isImage(file)) {
-      if (status) status.textContent = "Välj en bildfil (jpg/png).";
+    if (!file.type.startsWith("image/")) {
+      setStatus("Välj en bildfil (png/jpg/webp).");
       input.value = "";
       return;
     }
 
-    const maxBytes = 3 * 1024 * 1024; // 3 MB
+    // 2 MB guard (kan justeras)
+    const maxBytes = 2 * 1024 * 1024;
     if (file.size > maxBytes) {
-      if (status) status.textContent = "Bilden är för stor. Välj en under ca 3 MB.";
+      setStatus("Bilden är för stor. Välj en bild under 2 MB.");
       input.value = "";
       return;
     }
 
-    try {
-      const dataUrl = await readFileAsDataURL(file);
-      saveAvatar(dataUrl);
-      setElAvatar(preview, dataUrl);
-      setElAvatar(badge, dataUrl);
-      if (status) status.textContent = "Profilbild uppdaterad (sparas lokalt i webbläsaren).";
-    } catch (e) {
-      console.error(e);
-      if (status) status.textContent = "Kunde inte läsa bilden. Testa en annan fil.";
-    } finally {
-      input.value = "";
-    }
-  });
+    const dataUrl = await readFileAsDataUrl(file);
+    localStorage.setItem(STORAGE_KEY, dataUrl);
 
-  console.log("[profileAvatar] initialized");
+    setBgImage(document.getElementById("profile-avatar-preview"), dataUrl);
+    setBgImage(document.getElementById("user-badge-avatar"), dataUrl);
+
+    const topPill = document.getElementById("topUserPill");
+    if (topPill) setBgImage(topPill, dataUrl);
+
+    setStatus("Klart! Profilbilden sparas lokalt i webbläsaren.");
+  } catch (err) {
+    console.error(err);
+    setStatus("Något gick fel vid uppladdning. Testa en annan bild.");
+  }
+}
+
+function boot() {
+  // Ladda ev. sparad avatar först
+  loadExisting();
+
+  const input = document.getElementById("profile-avatar-input");
+  if (!input) return;
+
+  input.addEventListener("change", onFileChange);
+
+  // Extra: klick på preview öppnar file picker (nice UX)
+  const preview = document.getElementById("profile-avatar-preview");
+  if (preview) {
+    preview.style.cursor = "pointer";
+    preview.addEventListener("click", () => input.click());
+  }
 }
 
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded", boot);
 } else {
-  init();
+  boot();
 }
