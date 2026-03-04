@@ -275,7 +275,7 @@ export function initPlatformPicker() {
 }
 
 function normalizeIncoming(inObj) {
-  const obj = (inObj && typeof inObj === 'object') ? { ...inObj } : {};
+  const obj = (inObj && typeof obj === 'object') ? { ...inObj } : {};
   const out = { ...obj };
 
   out.source = out.source || obj.source || '';
@@ -435,6 +435,35 @@ function applyPendingContextCard(p) {
   } else if (ctxLink) {
     ctxLink.style.display = 'none';
   }
+}
+
+/** ✅ NYTT: visa tydlig bekräftelse INNE i kortet (så det inte bara “försvinner”) */
+function showLockedSuccessCard(message) {
+  const card = document.getElementById('locked-rating-card');
+  if (!card) return;
+
+  const form = document.getElementById('locked-rating-form');
+  if (!form) return;
+
+  // Ersätt själva formuläret med en success-box
+  form.innerHTML = `
+    <div style="
+      border:1px solid rgba(22,163,74,.35);
+      background:rgba(22,163,74,.10);
+      border-radius:14px;
+      padding:12px;
+    ">
+      <div style="font-weight:800; margin-bottom:6px;">Tack för ditt omdöme! ✅</div>
+      <div style="color:var(--pr-text,#111); font-weight:600;">${escapeHtml(message || 'Ditt omdöme är registrerat.')}</div>
+      <div style="margin-top:10px; font-size:13px; color:var(--pr-muted);">
+        Du kan nu stänga sidan eller gå till din profil.
+      </div>
+      <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="pr-btn" href="/profile.html" style="text-decoration:none;">Gå till profil</a>
+        <a class="pr-btn pr-btn-primary" href="/" style="text-decoration:none;">Till startsidan</a>
+      </div>
+    </div>
+  `;
 }
 
 function renderVerifiedDealUI(p) {
@@ -771,11 +800,22 @@ async function handleLockedSubmit(e) {
       return;
     }
 
-    clearPending();
-    removeLockedFormCard();
-    renderVerifiedDealUI(getPending());
+    // ✅ NYTT: visa tydlig bekräftelse i kortet (så man ser att det gick iväg)
+    showLockedSuccessCard('Ditt omdöme är sparat.');
 
+    // Behåll toast också (snabb feedback)
     showToast('success', 'Tack! Ditt omdöme är sparat.');
+
+    // ✅ Rensa pending EFTER att vi visat bekräftelsen
+    clearPending();
+
+    // Vi tar INTE bort kortet direkt längre, så UI känns tryggt.
+    // Om du ändå vill städa upp efter en stund, avkommentera detta:
+    // window.setTimeout(() => {
+    //   try { removeLockedFormCard(); } catch {}
+    //   try { renderVerifiedDealUI(getPending()); } catch {}
+    // }, 2000);
+
   } catch (err) {
     console.error('locked submit error', err);
     showNotification('error', 'Tekniskt fel. Försök igen om en stund.', 'locked-notice');
