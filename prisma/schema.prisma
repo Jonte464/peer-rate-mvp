@@ -1,4 +1,4 @@
-// prisma/schema.prisma 
+// prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -111,8 +111,12 @@ model Rating {
   // En rating kan ha 0..n rapporter kopplade
   reports Report[]
 
-  // ✅ hindra dubbla omdömen för samma affär (per rater)
-  @@unique([customerId, ratingSource, proofRef, raterName])
+  /**
+   * ✅ NYTT: Hårdlås så man max kan lämna 1 omdöme per affär per inloggad kund.
+   * Detta är den viktigaste regeln för att stoppa dubletter.
+   */
+  @@unique([customerId, dealId])
+
   @@index([customerId])
   @@index([transactionId])
   @@index([dealId])
@@ -453,8 +457,7 @@ model AgentMessage {
   promptTokens     Int?
   completionTokens Int?
   totalTokens      Int?
-
-  createdAt DateTime @default(now())
+  createdAt        DateTime @default(now())
 
   @@index([conversationId])
   @@index([createdAt])
