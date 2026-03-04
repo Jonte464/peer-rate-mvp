@@ -114,7 +114,7 @@
 
           <!-- Profilbild -->
           <div class="profile-avatar-block">
-            <div class="profile-avatar-preview" id="profile-avatar-preview">PR</div>
+            <div class="profile-avatar-preview" id="profile-avatar-preview" title="Klicka för att byta bild">PR</div>
             <div>
               <label class="profile-avatar-upload-label" data-i18n="profile_avatar_upload">
                 Ladda upp profilbild
@@ -158,8 +158,7 @@
         <!-- eBay-koppling (tillfälligt dold) -->
         <section class="card hidden" id="ebay-card" style="display:none;"></section>
 
-        <!-- Tradera-koppling (tillfälligt dold) -->
-        <section class="card hidden" id="tradera-card" style="display:none;"></section>
+        <!-- ✅ Tradera-koppling: BORTTAGEN (gammal kvarleva) -->
 
         <!-- Logga ut -->
         <section class="card">
@@ -176,5 +175,9 @@
 
   <!-- ✅ Single entrypoint: inject header → init language → load main.js -->
   <script type="module" src="/modules/pageBootstrap.js?v=2"></script>
+
+  <!-- ✅ Fixar profilbild (local storage) + tar bort gammal Tradera-text om den ändå renderas -->
+  <script type="module" src="/modules/profileAvatar.js?v=1"></script>
+  <script type="module" src="/modules/profileCleanup.js?v=1"></script>
 </body>
 </html>

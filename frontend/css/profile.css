@@ -483,7 +483,13 @@ button.secondary{
   font-size:12px;
   font-weight:600;
 }
-.profile-avatar-upload-label input{ display:none; }
+.profile-avatar-upload-label input[type="file"]{
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
 
 /* Ratings visuals */
 .ratings-visuals{
