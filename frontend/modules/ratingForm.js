@@ -2,48 +2,64 @@
 import { showNotification } from './utils.js';
 import auth, { login } from './auth.js';
 import api from './api.js';
-import { getPendingDeal, setPendingDeal, clearPendingDeal } from './ratingContext.js';
 
-// Pending ska INTE ligga i localStorage (läcker mellan användare).
-// Vi använder ratingContext.js som lagrar pending per user i sessionStorage.
+const PENDING_KEY = 'peerrate_pending_rating_v2';
 const TTL_MS = 1000 * 60 * 60 * 24;
 
 function now() { return Date.now(); }
+function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
-// Wrapper: spara pending per användare
-function setPending(data) {
+function readB64Json(b64) {
+  if (!b64) return null;
   try {
-    setPendingDeal({ ...(data || {}), _ts: now() });
-  } catch {}
-}
+    const cleaned = decodeURIComponent(b64);
 
-function getPending() {
-  try {
-    const parsed = getPendingDeal();
-    if (!parsed) return null;
+    // 1) testa "vanlig" atob först
+    try {
+      const raw = atob(cleaned);
+      const j = safeParse(raw);
+      if (j && typeof j === 'object') return j;
+    } catch {}
 
-    // TTL
-    if (now() - (parsed._ts || 0) > TTL_MS) {
-      clearPendingDeal();
-      return null;
-    }
-    return parsed;
+    // 2) testa UTF-8-variant
+    try {
+      const raw = atob(cleaned);
+      const utf8 = decodeURIComponent(escape(raw));
+      const j2 = safeParse(utf8);
+      if (j2 && typeof j2 === 'object') return j2;
+    } catch {}
+
+    return null;
   } catch {
     return null;
   }
 }
 
+function setPending(data) {
+  try { localStorage.setItem(PENDING_KEY, JSON.stringify({ ...data, _ts: now() })); } catch {}
+}
+
+function getPending() {
+  try {
+    const raw = localStorage.getItem(PENDING_KEY);
+    const parsed = raw ? safeParse(raw) : null;
+    if (!parsed) return null;
+    if (now() - (parsed._ts || 0) > TTL_MS) {
+      localStorage.removeItem(PENDING_KEY);
+      return null;
+    }
+    return parsed;
+  } catch { return null; }
+}
+
 function clearPending() {
-  try { clearPendingDeal(); } catch {}
-  // extra säkerhet: rensa gammal legacy-key om den råkar ligga kvar från tidigare deploys
-  try { localStorage.removeItem('peerrate_pending_rating_v2'); } catch {}
+  try { localStorage.removeItem(PENDING_KEY); } catch {}
 }
 
 function isRatePage() {
   return (window.location.pathname || '').toLowerCase().includes('/rate.html');
 }
 
-/** Robust: hitta login-card även om id varierar */
 function getLoginCardEls() {
   return [
     document.getElementById('login-card'),
@@ -53,7 +69,6 @@ function getLoginCardEls() {
   ].filter(Boolean);
 }
 
-/** Robust: hitta alla tänkbara wrappers för rating-form */
 function getRatingWrapperEls() {
   return [
     document.getElementById('rating-form-wrapper'),
@@ -63,7 +78,6 @@ function getRatingWrapperEls() {
   ].filter(Boolean);
 }
 
-/** Hitta (och dölj) “Test utan inloggning” om den finns */
 function hideTestWithoutLoginButton() {
   const byId =
     document.getElementById('test-without-login') ||
@@ -86,14 +100,6 @@ function hideTestWithoutLoginButton() {
   }
 }
 
-/**
- * Bulletproof show/hide:
- * - Om element saknas: visa hellre mer än mindre (aldrig "vit" sida)
- * - Inloggad: göm login, visa rating (om rating targets finns)
- * - Utloggad: visa login, göm rating (om rating targets finns)
- *
- * OBS: På nya rate.html finns inget öppet formulär - då finns ofta inga rating targets.
- */
 function setVisibility(isLoggedIn) {
   const loginCards = getLoginCardEls();
   const ratingWrappers = getRatingWrapperEls();
@@ -134,7 +140,6 @@ function setVisibility(isLoggedIn) {
   }
 }
 
-/** ✅ Dropdown → länk ut (om du använder den på rate.html) */
 export function initPlatformPicker() {
   if (!isRatePage()) return;
 
@@ -269,9 +274,6 @@ export function initPlatformPicker() {
   mo.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
 }
 
-/**
- * Normalisera payload från extension/query till ett internt "pending"-format
- */
 function normalizeIncoming(inObj) {
   const obj = (inObj && typeof inObj === 'object') ? { ...inObj } : {};
   const out = { ...obj };
@@ -308,7 +310,6 @@ function normalizeIncoming(inObj) {
   return out;
 }
 
-/** Sanera counterparty så vi aldrig skickar okända keys till backend-Joi */
 function sanitizeCounterparty(cp, deal) {
   if (!cp || typeof cp !== 'object') return undefined;
 
@@ -342,7 +343,6 @@ function sanitizeCounterparty(cp, deal) {
   return clean;
 }
 
-/** Liten toast som matchar sitens look (via CSS-variabler) */
 function showToast(type, message) {
   try {
     const existing = document.getElementById('pr-toast');
@@ -353,7 +353,6 @@ function showToast(type, message) {
     t.setAttribute('role', 'status');
     t.setAttribute('aria-live', 'polite');
 
-    // inline-stil för att slippa ändra CSS-filer
     t.style.position = 'fixed';
     t.style.left = '50%';
     t.style.bottom = '22px';
@@ -374,7 +373,6 @@ function showToast(type, message) {
     bar.style.borderRadius = '999px';
     bar.style.marginBottom = '8px';
     bar.style.opacity = '.9';
-    // håll det enkelt: grön för success, röd för error
     bar.style.background = (type === 'success') ? '#16a34a' : '#dc2626';
 
     const txt = document.createElement('div');
@@ -421,9 +419,6 @@ function formatAddress(cp) {
   return parts.length ? escapeHtml(parts.join(', ')) : '–';
 }
 
-/**
- * Visa "Verifierad källa" kortet från pending, om det finns.
- */
 function applyPendingContextCard(p) {
   if (!p) return;
 
@@ -442,9 +437,6 @@ function applyPendingContextCard(p) {
   }
 }
 
-/**
- * Rendera en "Verifierad affär" i listan + skapa låst rating-form om inloggad.
- */
 function renderVerifiedDealUI(p) {
   if (!isRatePage()) return;
 
@@ -489,7 +481,7 @@ function renderVerifiedDealUI(p) {
   grid.style.gridTemplateColumns = 'repeat(2,minmax(0,1fr))';
   grid.style.gap = '10px';
 
-  const valStyle = 'font-weight:600;word-break:break-word;'; // ✅ ingen super-fetstil
+  const valStyle = 'font-weight:600;word-break:break-word;';
 
   grid.innerHTML = `
     <div>
@@ -714,7 +706,6 @@ function isDuplicateRatingError(result) {
   const msg = (result?.error || result?.message || '').toString().toLowerCase();
   const raw = (result?.raw || '').toString().toLowerCase();
 
-  // fånga typiska varianter
   if (result?.status === 409) return true;
   if (msg.includes('duplicate')) return true;
   if (msg.includes('already') && (msg.includes('rating') || msg.includes('betyg') || msg.includes('omdöme'))) return true;
@@ -780,10 +771,9 @@ async function handleLockedSubmit(e) {
       return;
     }
 
-    // ✅ direkt: ta bort formuläret, men visa toast kvar
     clearPending();
     removeLockedFormCard();
-    renderVerifiedDealUI(getPending()); // kommer rendera tomt-läge
+    renderVerifiedDealUI(getPending());
 
     showToast('success', 'Tack! Ditt omdöme är sparat.');
   } catch (err) {
@@ -793,9 +783,6 @@ async function handleLockedSubmit(e) {
   }
 }
 
-/**
- * Läs query och skriv pending.
- */
 function captureFromUrl() {
   const qs = new URLSearchParams(window.location.search || '');
   const pr = qs.get('pr');
@@ -805,6 +792,7 @@ function captureFromUrl() {
 
   if (!pr && !source && !pageUrl && !proofRef) return null;
 
+  // 1) pr=... (base64 json) -> decode här (denna är viktig för extension-flödet)
   if (pr) {
     const decoded = readB64Json(pr);
     if (decoded && typeof decoded === 'object') {
@@ -814,10 +802,22 @@ function captureFromUrl() {
 
       const normalized = normalizeIncoming(decoded);
       setPending(normalized);
+
+      // ta bort pr+params så den inte återkommer vid refresh
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('pr');
+        url.searchParams.delete('source');
+        url.searchParams.delete('pageUrl');
+        url.searchParams.delete('proofRef');
+        window.history.replaceState({}, '', url.toString());
+      } catch {}
+
       return normalized;
     }
   }
 
+  // 2) fallback: merge query in i befintlig pending
   const existing = getPending() || {};
   const merged = normalizeIncoming({
     ...existing,
@@ -827,6 +827,16 @@ function captureFromUrl() {
   });
 
   setPending(merged);
+
+  // ta bort params (men pr finns inte i detta case)
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('source');
+    url.searchParams.delete('pageUrl');
+    url.searchParams.delete('proofRef');
+    window.history.replaceState({}, '', url.toString());
+  } catch {}
+
   return merged;
 }
 
@@ -883,18 +893,6 @@ export function initRatingLogin() {
   const fromUrl = captureFromUrl();
   const pending = fromUrl || getPending();
 
-  // ✅ Om pending kommer in från ratingContext (utan reload), rendera om UI
-window.addEventListener('pr:pending-updated', () => {
-  const p = getPending();
-  if (p) {
-    applyPendingContextCard(p);
-    renderVerifiedDealUI(p);
-  }
-});
-window.addEventListener('pr:pending-cleared', () => {
-  renderVerifiedDealUI(null);
-});
-
   if (pending) {
     applyPendingContextCard(pending);
     renderVerifiedDealUI(pending);
@@ -907,6 +905,33 @@ window.addEventListener('pr:pending-cleared', () => {
 
   const user = auth.getUser?.() || null;
   setVisibility(!!user);
+
+  // ✅ bind events endast en gång
+  if (!window.__prPendingEventsBound) {
+    window.__prPendingEventsBound = true;
+
+    // När ratingContext speglar pending -> rendera om
+    window.addEventListener('pr:pending-updated', () => {
+      try {
+        const u = auth.getUser?.() || null;
+        setVisibility(!!u);
+
+        const p = getPending();
+        if (p) {
+          applyPendingContextCard(p);
+          renderVerifiedDealUI(p);
+        }
+      } catch {}
+    });
+
+    window.addEventListener('pr:pending-cleared', () => {
+      try {
+        const u = auth.getUser?.() || null;
+        setVisibility(!!u);
+        renderVerifiedDealUI(null);
+      } catch {}
+    });
+  }
 
   window.addEventListener('storage', () => {
     const u2 = auth.getUser?.() || null;
