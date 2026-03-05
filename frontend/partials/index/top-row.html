@@ -43,7 +43,7 @@
     }
 
     /* ===== GUBBEN: enhetlig storlek på ALLA sidor ===== */
-    #topUserPill{
+    #topUserBtn{
       display: inline-flex !important;
       align-items:center !important;
       justify-content:center !important;
@@ -60,18 +60,17 @@
       pointer-events: auto !important;
       box-sizing: border-box !important;
     }
-    /* SVG storlek fix (det är ofta här skillnaden syns) */
-    #topUserPill svg{
+    #topUserBtn svg{
       width: 20px !important;
       height: 20px !important;
       display:block !important;
     }
-    #topUserPill svg path{
+    #topUserBtn svg path{
       stroke: rgba(11,22,51,.92) !important;
     }
 
     /* Grön dot när inloggad */
-    #topUserPill.is-logged-in::after{
+    #topUserBtn.is-logged-in::after{
       content:"";
       position:absolute;
       width:10px; height:10px;
@@ -82,7 +81,6 @@
       border: 2px solid rgba(255,255,255,.92);
     }
 
-    /* Språk + hamburgare */
     .lang-pill{
       border: 1px solid rgba(15,15,18,.12) !important;
       background: rgba(255,255,255,.78) !important;
@@ -108,7 +106,6 @@
       box-sizing:border-box !important;
     }
 
-    /* Dropdowns */
     .user-menu, .lang-menu{
       position:absolute !important;
       right:0 !important;
@@ -124,7 +121,6 @@
     }
     .lang-menu{ right: 52px !important; }
 
-    /* Hamburgerpanel: mer luft */
     .menu-panel{
       position: fixed !important;
       top: 68px !important;
@@ -174,7 +170,7 @@
 
     <div class="top-actions">
       <!-- GUBBE -->
-      <button class="top-user" id="topUserPill" type="button" aria-label="Konto" aria-expanded="false">
+      <button class="top-user" id="topUserBtn" type="button" aria-label="Konto" aria-expanded="false">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M20 21a8 8 0 0 0-16 0" stroke-width="2" stroke-linecap="round"/>
           <path d="M12 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
