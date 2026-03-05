@@ -33,6 +33,21 @@ function setAriaExpanded(btn, expanded) {
 // -----------------------------
 // Auth helpers
 // -----------------------------
+function safeJsonParse(str) {
+  try { return JSON.parse(str); } catch { return null; }
+}
+
+function hasPeerRateUser() {
+  try {
+    const raw = localStorage.getItem("peerRateUser");
+    if (!raw) return false;
+    const parsed = safeJsonParse(raw);
+    return !!(parsed && (parsed.email || parsed.id));
+  } catch (_) {
+    return false;
+  }
+}
+
 function getCookie(name) {
   const m = document.cookie.match(
     new RegExp(
@@ -42,8 +57,8 @@ function getCookie(name) {
   return m ? decodeURIComponent(m[1]) : null;
 }
 
-function hasAuthToken() {
-  // Kolla många vanliga varianter (både localStorage + cookies)
+function hasAuthTokenFallback() {
+  // Fallback: kolla vanliga varianter (både localStorage + cookies)
   const keys = [
     "token",
     "jwt",
@@ -57,9 +72,10 @@ function hasAuthToken() {
     "session",
     "pr_session",
     "connect.sid",
+    "user",
+    "currentUser",
   ];
 
-  // localStorage / sessionStorage
   for (const k of keys) {
     try {
       const v1 = localStorage.getItem(k);
@@ -68,22 +84,26 @@ function hasAuthToken() {
     } catch (_) {}
   }
 
-  // cookies
   for (const k of keys) {
     const v = getCookie(k);
     if (v && v.length > 10) return true;
   }
 
-  // fallback: om du sparar user-objekt lokalt
-  try {
-    const user = localStorage.getItem("user") || localStorage.getItem("currentUser");
-    if (user && user.length > 5) return true;
-  } catch (_) {}
-
   return false;
 }
 
+function isLoggedIn() {
+  // ✅ Primärt: det ni faktiskt använder i auth.js
+  if (hasPeerRateUser()) return true;
+
+  // ✅ Fallback: tokens/cookies
+  return hasAuthTokenFallback();
+}
+
 function clearAuth() {
+  // Viktigt: den ni använder i auth.js
+  try { localStorage.removeItem("peerRateUser"); } catch (_) {}
+
   const keys = [
     "token",
     "jwt",
@@ -116,37 +136,21 @@ function clearAuth() {
 }
 
 // -----------------------------
-// UI builders
+// UI builders (dropdown content)
 // -----------------------------
 function setUserMenuLoggedOut(userMenu) {
   if (!userMenu) return;
   userMenu.innerHTML = `
-    <a class="menu-link" href="/profile.html" style="display:flex;justify-content:space-between;align-items:center;">
-      <div>Logga in</div><span>→</span>
-    </a>
-    <a class="menu-link" href="/customer.html" style="display:flex;justify-content:space-between;align-items:center;">
-      <div>Registrera dig</div><span>→</span>
-    </a>
+    <a class="user-menu-link" href="/profile.html">Logga in</a>
+    <a class="user-menu-link" href="/customer.html">Registrera dig</a>
   `;
 }
 
 function setUserMenuLoggedIn(userMenu) {
   if (!userMenu) return;
   userMenu.innerHTML = `
-    <a class="menu-link" href="/profile.html" style="display:flex;justify-content:space-between;align-items:center;">
-      <div>Min profil</div><span>→</span>
-    </a>
-
-    <button type="button" id="logoutBtn" style="
-      width:100%;
-      text-align:left;
-      border:0;
-      background:transparent;
-      padding: 10px 10px;
-      border-radius: 10px;
-      cursor:pointer;
-      font-weight: 750;
-    ">Logga ut</button>
+    <a class="user-menu-link" href="/profile.html">Min profil</a>
+    <button type="button" id="logoutBtn">Logga ut</button>
   `;
 }
 
@@ -181,11 +185,8 @@ function toggle(targetEl, btnEl, menuPanel, langMenu, userMenu, menuBtn, langBtn
 // Ensure userMenu exists (fixar startsidan)
 // -----------------------------
 function ensureUserMenu(userBtn) {
-  // 1) Om den redan finns, returnera den
   let userMenu = pickId("userMenu");
   if (userMenu) return userMenu;
-
-  // 2) Skapa den bredvid userBtn, i samma "top-actions" container
   if (!userBtn) return null;
 
   const parent = userBtn.parentElement; // top-actions
@@ -216,9 +217,8 @@ export function initTopRow() {
   const langBtn = pickId("langBtn");
   const langMenu = pickId("langMenu");
 
-  // Nya: topUserPill. Gamla: topUserBtn
   const userBtn = pickId("topUserPill", "topUserBtn");
-  let userMenu = ensureUserMenu(userBtn);
+  const userMenu = ensureUserMenu(userBtn);
 
   // Gör userBtn “klickbar” även om det är en div på någon sida
   if (userBtn) {
@@ -230,13 +230,12 @@ export function initTopRow() {
   }
 
   // 1) Bygg userMenu utifrån login-status (smart meny)
-  const loggedIn = hasAuthToken();
+  const loggedIn = isLoggedIn();
   applyLoggedInState(userBtn, loggedIn);
 
   if (userMenu) {
     if (loggedIn) setUserMenuLoggedIn(userMenu);
     else setUserMenuLoggedOut(userMenu);
-
     hide(userMenu);
   }
 
@@ -257,7 +256,6 @@ export function initTopRow() {
     });
   }
 
-  // userBtn click
   if (userBtn && userMenu) {
     userBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -265,7 +263,6 @@ export function initTopRow() {
       toggle(userMenu, userBtn, menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
     });
 
-    // Enter/Space för keyboard
     userBtn.addEventListener("keydown", (e) => {
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
