@@ -39,8 +39,8 @@
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap: 14px;
-  padding: 10px 0;
+  gap: 16px;
+  padding: 12px 0;
 }
 
 /* --- Brand --- */
@@ -109,7 +109,7 @@
 .top-actions{
   display:flex;
   align-items:center;
-  gap: 10px;
+  gap: 12px;
   justify-content: flex-end;
   position: relative;
 }
@@ -131,11 +131,25 @@
   align-items:center;
   justify-content:center;
   color: rgba(15,15,18,.85);
+  position: relative;
 }
 .icon-btn:hover{ filter: brightness(.98); }
-.icon-btn .icon{
-  width: 22px;
-  height: 22px;
+
+/* ✅ Se till att gubbe-ikonens stroke blir rätt */
+.icon-btn svg path{
+  stroke: rgba(15,15,18,.85);
+}
+
+/* ✅ Grön dot endast när inloggad */
+#topUserBtn.is-logged-in::after{
+  content:"";
+  position:absolute;
+  width:10px; height:10px;
+  border-radius:999px;
+  right:-1px; top:-1px;
+  background: rgba(34,197,94,1);
+  box-shadow: 0 0 0 6px rgba(34,197,94,.12);
+  border: 2px solid rgba(255,255,255,.92);
 }
 
 /* Language pill */
@@ -189,7 +203,7 @@
   z-index: 220;
 }
 
-.lang-menu{ width: 180px; right: 50px; } /* placera lite åt vänster om hamburgaren */
+.lang-menu{ width: 180px; right: 50px; }
 
 .user-menu-link{
   display:block;
