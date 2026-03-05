@@ -13,20 +13,20 @@
 
     .top-row .shell{
       max-width: 100% !important;
-      padding: 0 24px !important;
+      padding: 0 20px !important;
     }
     @media (max-width: 820px){
-      .top-row .shell{ padding: 0 14px !important; }
+      .top-row .shell{ padding: 0 12px !important; }
     }
 
-    /* ✅ Smalare top row igen */
+    /* ✅ ÄNNU SMALARE TOP ROW */
     .top-row-inner{
       display:flex !important;
       align-items:center !important;
       justify-content:space-between !important;
-      gap: 14px !important;
-      padding: 8px 0 !important;     /* ↓ mindre höjd */
-      min-height: 56px !important;   /* ↓ mindre höjd */
+      gap: 12px !important;
+      padding: 4px 0 !important;     /* ↓ ännu mindre vertikal padding */
+      min-height: 48px !important;   /* ↓ smalare rad */
       width: 100% !important;
     }
 
@@ -35,7 +35,7 @@
       text-decoration:none !important;
       display:flex !important;
       align-items:center !important;
-      gap:12px !important;
+      gap:10px !important;
       user-select:none !important;
       flex: 1 1 auto !important;
       min-width: 0 !important;
@@ -45,11 +45,12 @@
       font-weight:780 !important;
       letter-spacing:-0.02em !important;
       line-height:1.1 !important;
+      font-size: 16px !important;
     }
     .top-row .brand-sub{
       color: rgba(15,15,18,.64) !important;
       font-size:12px !important;
-      margin-top:2px !important;
+      margin-top:1px !important;
     }
     @media (max-width: 520px){
       .top-row .brand-sub{ display:none !important; }
@@ -58,7 +59,7 @@
     .top-actions{
       display:flex !important;
       align-items:center !important;
-      gap:12px !important;
+      gap:10px !important;
       justify-content:flex-end !important;
       position: relative !important;
       flex: 0 0 auto !important;
@@ -73,15 +74,15 @@
       max-width: none !important;
     }
 
-    /* ===== GUBBEN ===== */
+    /* ===== GUBBEN (lite mindre så raden blir tunnare) ===== */
     #topUserBtn{
       display: inline-flex !important;
       align-items:center !important;
       justify-content:center !important;
-      width: 40px !important;
-      height: 40px !important;
-      min-width: 40px !important;
-      min-height: 40px !important;
+      width: 36px !important;
+      height: 36px !important;
+      min-width: 36px !important;
+      min-height: 36px !important;
       border-radius: 999px !important;
       border: 1px solid rgba(11,22,51,.16) !important;
       background: rgba(255,255,255,.78) !important;
@@ -93,8 +94,8 @@
       flex: 0 0 auto !important;
     }
     #topUserBtn svg{
-      width: 20px !important;
-      height: 20px !important;
+      width: 18px !important;
+      height: 18px !important;
       display:block !important;
     }
     #topUserBtn svg path{
@@ -106,7 +107,7 @@
       content:"";
       display:none;
       position:absolute;
-      width:10px; height:10px;
+      width:9px; height:9px;
       border-radius:999px;
       right:-1px; top:-1px;
     }
@@ -114,34 +115,37 @@
     #topUserBtn.is-logged-in::after{
       display:block;
       background: rgba(34,197,94,1);
-      box-shadow: 0 0 0 6px rgba(34,197,94,.12);
+      box-shadow: 0 0 0 5px rgba(34,197,94,.12);
       border: 2px solid rgba(255,255,255,.92);
     }
 
-    /* ===== Språk ===== */
+    /* ===== Språk (lite mindre höjd) ===== */
     .lang-pill{
       border: 1px solid rgba(15,15,18,.12) !important;
       background: rgba(255,255,255,.78) !important;
       color: rgba(15,15,18,.92) !important;
-      padding: 7px 12px !important;
+      padding: 6px 10px !important;
       border-radius: 999px !important;
       font-weight:650 !important;
       font-size:13px !important;
       cursor:pointer !important;
-      height: 40px !important;
+      height: 36px !important;
       display:inline-flex !important;
       align-items:center !important;
       gap: 8px !important;
       flex: 0 0 auto !important;
     }
 
-    /* ===== Hamburgare-knappen (det du visar på bilden) =====
-       ✅ Smalare top row + luftigare icon (större avstånd mellan strecken)
+    /* ===== Hamburgare: gör den MER KVADRATISK (inte pill) =====
+       - låser width/height
+       - border-radius 14px => rounded square
     */
     .menu-btn{
-      width:40px !important;
-      height:40px !important;
-      border-radius:999px !important;
+      width: 38px !important;
+      height: 38px !important;
+      min-width: 38px !important;
+      min-height: 38px !important;
+      border-radius: 14px !important;      /* ✅ nästan kvadrat, inte rektangulär pill */
       border: 1px solid rgba(15,15,18,.12) !important;
       background: rgba(255,255,255,.78) !important;
       cursor:pointer !important;
@@ -162,7 +166,7 @@
     .user-menu, .lang-menu{
       position:absolute !important;
       right:0 !important;
-      top: 52px !important;
+      top: 46px !important;
       width: 240px !important;
       background:#fff !important;
       border: 1px solid rgba(15,15,18,.10) !important;
@@ -172,7 +176,7 @@
       display:none;
       z-index: 1200 !important;
     }
-    .lang-menu{ right: 52px !important; }
+    .lang-menu{ right: 48px !important; }
 
     .user-menu-link{
       display:block;
@@ -198,10 +202,10 @@
     }
     .user-menu button:hover, .lang-menu button:hover{ background: rgba(15,15,18,.05); }
 
-    /* Hamburgerpanel (behåll luft här) */
+    /* Hamburgerpanel */
     .menu-panel{
       position: fixed !important;
-      top: 72px !important;
+      top: 64px !important; /* matchar tunnare top row */
       right: 16px !important;
       width: 360px !important;
       max-width: calc(100vw - 32px) !important;
@@ -264,7 +268,7 @@
         <span style="opacity:.6;">▾</span>
       </button>
 
-      <!-- ✅ Hamburgare: luftigare streck (6/12/18) -->
+      <!-- Hamburgare: luftigare streck + mer kvadratisk knapp -->
       <button class="menu-btn soft-hover" id="menuBtn" type="button" aria-label="Öppna meny" aria-expanded="false">
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M4 6h16" stroke="rgba(15,15,18,.85)" stroke-width="2" stroke-linecap="round"/>
