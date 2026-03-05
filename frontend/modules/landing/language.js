@@ -397,7 +397,12 @@ export function initLandingLanguage() {
     langBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
 
-  langBtn.addEventListener('click', () => setMenuOpen(!open));
+  // ✅ ÄNDRING #1: stoppa eventet så det inte krockar med topRow.js
+  langBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setMenuOpen(!open);
+  });
+
   langMenu.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-lang]');
     if (!b) return;
@@ -415,5 +420,6 @@ export function initLandingLanguage() {
     if (e.key === 'Escape') setMenuOpen(false);
   });
 
-  applyLang(localStorage.getItem(LS_LANG) || 'en');
+  // ✅ ÄNDRING #2 (valfritt men rekommenderat): default SV istället för EN
+  applyLang(localStorage.getItem(LS_LANG) || 'sv');
 }
