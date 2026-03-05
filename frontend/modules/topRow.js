@@ -1,5 +1,6 @@
 // frontend/modules/topRow.js
 // Universell funktionalitet för Top Row (hamburgare + språk + user/gubbe + login/logout)
+// ✅ Idempotent: kan köras flera gånger (t.ex. om header injiceras efter att main.js laddat)
 
 function $(id) {
   return document.getElementById(id);
@@ -31,79 +32,43 @@ function setAriaExpanded(btn, expanded) {
 }
 
 // -----------------------------
-// Auth helpers
+// Auth helpers (STRICT)
 // -----------------------------
 function safeJsonParse(str) {
-  try { return JSON.parse(str); } catch { return null; }
+  try {
+    return JSON.parse(str);
+  } catch {
+    return null;
+  }
 }
 
-function hasPeerRateUser() {
+// ✅ Vi utgår från ert riktiga auth-lager (frontend/modules/auth.js):
+// localStorage key = "peerRateUser"
+function getPeerRateUser() {
   try {
     const raw = localStorage.getItem("peerRateUser");
-    if (!raw) return false;
+    if (!raw) return null;
     const parsed = safeJsonParse(raw);
-    return !!(parsed && (parsed.email || parsed.id));
-  } catch (_) {
-    return false;
+    if (!parsed) return null;
+    if (parsed.email || parsed.id) return parsed;
+    return null;
+  } catch {
+    return null;
   }
-}
-
-function getCookie(name) {
-  const m = document.cookie.match(
-    new RegExp(
-      "(?:^|; )" + name.replace(/([$?*|{}\[\]\\\/\+^])/g, "\\$1") + "=([^;]*)"
-    )
-  );
-  return m ? decodeURIComponent(m[1]) : null;
-}
-
-function hasAuthTokenFallback() {
-  // Fallback: kolla vanliga varianter (både localStorage + cookies)
-  const keys = [
-    "token",
-    "jwt",
-    "authToken",
-    "accessToken",
-    "refreshToken",
-    "pr_token",
-    "peerrate_token",
-    "peerRateToken",
-    "sessionToken",
-    "session",
-    "pr_session",
-    "connect.sid",
-    "user",
-    "currentUser",
-  ];
-
-  for (const k of keys) {
-    try {
-      const v1 = localStorage.getItem(k);
-      const v2 = sessionStorage.getItem(k);
-      if ((v1 && v1.length > 10) || (v2 && v2.length > 10)) return true;
-    } catch (_) {}
-  }
-
-  for (const k of keys) {
-    const v = getCookie(k);
-    if (v && v.length > 10) return true;
-  }
-
-  return false;
 }
 
 function isLoggedIn() {
-  // ✅ Primärt: det ni faktiskt använder i auth.js
-  if (hasPeerRateUser()) return true;
-
-  // ✅ Fallback: tokens/cookies
-  return hasAuthTokenFallback();
+  // ✅ Enda källan vi litar på för “inloggad” i UI:
+  return !!getPeerRateUser();
 }
 
 function clearAuth() {
-  // Viktigt: den ni använder i auth.js
-  try { localStorage.removeItem("peerRateUser"); } catch (_) {}
+  // Viktigast
+  try {
+    localStorage.removeItem("peerRateUser");
+  } catch (_) {}
 
+  // Extra: rensa ev gamla nycklar (ofarligt, men kan minska spök-inloggning)
   const keys = [
     "token",
     "jwt",
@@ -182,7 +147,7 @@ function toggle(targetEl, btnEl, menuPanel, langMenu, userMenu, menuBtn, langBtn
 }
 
 // -----------------------------
-// Ensure userMenu exists (fixar startsidan)
+// Ensure userMenu exists
 // -----------------------------
 function ensureUserMenu(userBtn) {
   let userMenu = pickId("userMenu");
@@ -204,13 +169,9 @@ function ensureUserMenu(userBtn) {
 }
 
 // -----------------------------
-// Public init (idempotent)
+// Public init (IDEMPOTENT)
 // -----------------------------
 export function initTopRow() {
-  // skydd mot dubbel-init (main.js + pageBootstrap.js)
-  if (window.__PR_TOPROW_INIT_DONE__) return;
-  window.__PR_TOPROW_INIT_DONE__ = true;
-
   const menuBtn = pickId("menuBtn");
   const menuPanel = pickId("menuPanel");
 
@@ -220,16 +181,19 @@ export function initTopRow() {
   const userBtn = pickId("topUserPill", "topUserBtn");
   const userMenu = ensureUserMenu(userBtn);
 
+  // Om Top Row inte är injicerad än: gör inget nu.
+  // (main.js kan kalla initTopRow tidigt; pageBootstrap kallar igen efter inject)
+  if (!menuBtn && !langBtn && !userBtn) return;
+
   // Gör userBtn “klickbar” även om det är en div på någon sida
   if (userBtn) {
     userBtn.style.pointerEvents = "auto";
     userBtn.style.cursor = "pointer";
-
     if (!userBtn.getAttribute("role")) userBtn.setAttribute("role", "button");
     if (!userBtn.getAttribute("tabindex")) userBtn.setAttribute("tabindex", "0");
   }
 
-  // 1) Bygg userMenu utifrån login-status (smart meny)
+  // 1) Rendera userMenu baserat på login-status (varje init)
   const loggedIn = isLoggedIn();
   applyLoggedInState(userBtn, loggedIn);
 
@@ -239,8 +203,9 @@ export function initTopRow() {
     hide(userMenu);
   }
 
-  // 2) Bind toggles
-  if (menuBtn && menuPanel) {
+  // 2) Bind toggles (bara en gång per element)
+  if (menuBtn && menuPanel && !menuBtn.dataset.prBound) {
+    menuBtn.dataset.prBound = "1";
     menuBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -248,7 +213,8 @@ export function initTopRow() {
     });
   }
 
-  if (langBtn && langMenu) {
+  if (langBtn && langMenu && !langBtn.dataset.prBound) {
+    langBtn.dataset.prBound = "1";
     langBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -256,7 +222,9 @@ export function initTopRow() {
     });
   }
 
-  if (userBtn && userMenu) {
+  if (userBtn && userMenu && !userBtn.dataset.prBound) {
+    userBtn.dataset.prBound = "1";
+
     userBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -272,8 +240,10 @@ export function initTopRow() {
     });
   }
 
-  // 3) Klick i userMenu: logout / links
-  if (userMenu) {
+  // 3) Klick i userMenu: logout / links (bind en gång på userMenu)
+  if (userMenu && !userMenu.dataset.prBound) {
+    userMenu.dataset.prBound = "1";
+
     userMenu.addEventListener("click", (e) => {
       const logoutBtn = e.target.closest("#logoutBtn");
       const link = e.target.closest("a");
@@ -294,28 +264,36 @@ export function initTopRow() {
     });
   }
 
-  // 4) Klick utanför → stäng allt
-  document.addEventListener("click", () => {
-    closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
-  });
-
-  // 5) ESC → stäng
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
+  // 4) Klick utanför → stäng (bind en gång globalt)
+  if (!document.documentElement.dataset.prTopRowDocClick) {
+    document.documentElement.dataset.prTopRowDocClick = "1";
+    document.addEventListener("click", () => {
       closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
-    }
-  });
+    });
+  }
 
-  // 6) Klick på meny-länk i hamburgarpanel → stäng panel
-  if (menuPanel) {
+  // 5) ESC → stäng (bind en gång globalt)
+  if (!document.documentElement.dataset.prTopRowEsc) {
+    document.documentElement.dataset.prTopRowEsc = "1";
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+      }
+    });
+  }
+
+  // 6) Klick på meny-länk i hamburgarpanel → stäng (bind en gång per panel)
+  if (menuPanel && !menuPanel.dataset.prBound) {
+    menuPanel.dataset.prBound = "1";
     menuPanel.addEventListener("click", (e) => {
       const a = e.target.closest("a");
       if (a) closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
     });
   }
 
-  // 7) Klick på språkval → stäng
-  if (langMenu) {
+  // 7) Klick på språkval → stäng (bind en gång per menu)
+  if (langMenu && !langMenu.dataset.prBound) {
+    langMenu.dataset.prBound = "1";
     langMenu.addEventListener("click", (e) => {
       const b = e.target.closest("button[data-lang]");
       if (b) closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
