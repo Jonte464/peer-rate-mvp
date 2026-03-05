@@ -1,12 +1,14 @@
 // frontend/modules/pageBootstrap.js
-import { initLandingLanguage } from '/modules/landing/language.js';
-import { initTopRowEnhance } from '/modules/topRowEnhance.js';
+import { initLandingLanguage } from "/modules/landing/language.js";
+import { initTopRow } from "/modules/topRow.js";
 
 async function injectPartial(slotId, url) {
   const slot = document.getElementById(slotId);
   if (!slot) return false;
-  const res = await fetch(url, { cache: 'no-cache' });
+
+  const res = await fetch(url, { cache: "no-cache" });
   if (!res.ok) throw new Error(`Could not load partial ${url} (${res.status})`);
+
   slot.innerHTML = await res.text();
   return true;
 }
@@ -14,29 +16,29 @@ async function injectPartial(slotId, url) {
 (async function boot() {
   // 1) Inject global header (top-row) if the page has a slot
   try {
-    await injectPartial('slot-top-row', '/partials/index/top-row.html');
+    await injectPartial("slot-top-row", "/partials/index/top-row.html");
   } catch (e) {
-    console.warn('Header inject failed:', e);
+    console.warn("Header inject failed:", e);
   }
 
   // 2) Init language (needs langBtn/langMenu present → after header injection)
   try {
     initLandingLanguage();
   } catch (e) {
-    console.warn('initLandingLanguage failed:', e);
+    console.warn("initLandingLanguage failed:", e);
   }
 
-  // 3) Load main.js AFTER header exists (so menu/user pill binds correctly)
+  // 3) Init top row interactions NOW (hamburgare + gubbe)
   try {
-    await import('/modules/main.js');
+    initTopRow();
   } catch (e) {
-    console.error('Could not load main.js', e);
+    console.warn("initTopRow failed:", e);
   }
 
-  // 4) Enhance top row (gubbe + login/logout-menu + "inloggad"-dot)
+  // 4) Load main.js AFTER top row exists (övrig site-logik)
   try {
-    initTopRowEnhance();
+    await import("/modules/main.js");
   } catch (e) {
-    console.warn('initTopRowEnhance failed:', e);
+    console.warn("Could not load main.js (non-fatal):", e);
   }
 })();
