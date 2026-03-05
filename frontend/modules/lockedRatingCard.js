@@ -3,6 +3,7 @@ import { showNotification } from './utils.js';
 import auth from './auth.js';
 import api from './api.js';
 import { getPending, clearPending } from './pendingStore.js';
+import { clearAllPendingEverywhere } from './ratingContext.js';
 import { escapeHtml, formatAmount, formatDateShort, formatAddress, showToast } from './verifiedDealUI.js';
 
 export function sanitizeCounterparty(cp, deal) {
@@ -272,6 +273,9 @@ async function handleLockedSubmit(e) {
     const result = await api.createRating(payload);
     if (!result || result.ok === false) {
       if (isDuplicateRatingError(result)) {
+        // ✅ Viktigt: rensa pending ÖVERALLT även vid duplicate, annars fastnar overlayn
+        clearAllPendingEverywhere();
+        clearPending();
         showNotification('error', 'Omdöme har redan lämnats för denna affär.', 'locked-notice');
       } else {
         showNotification('error', result?.error || 'Kunde inte spara betyget.', 'locked-notice');
@@ -280,12 +284,17 @@ async function handleLockedSubmit(e) {
       return;
     }
 
-    // tydlig bekräftelse i kortet + toast
+    // ✅ Success
     showLockedSuccessCard('Ditt omdöme är sparat.');
     showToast('success', 'Tack! Ditt omdöme är sparat.');
 
-    // rensa pending efter bekräftelse
+    // ✅ Rensa pending (både sessionStorage + localStorage + legacy)
+    clearAllPendingEverywhere();
     clearPending();
+
+    // ingen anledning att återställa loading när vi ersatt formens HTML,
+    // men vi gör det ändå för säkerhets skull.
+    setSubmitLoading(form, false);
 
   } catch (err) {
     console.error('locked submit error', err);
