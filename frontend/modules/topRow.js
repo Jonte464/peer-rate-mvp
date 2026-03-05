@@ -1,6 +1,8 @@
 // frontend/modules/topRow.js
 // Universell funktionalitet för Top Row (hamburgare + språk + user/gubbe + login/logout)
-// ✅ Idempotent: kan köras flera gånger (t.ex. om header injiceras efter att main.js laddat)
+// ✅ Idempotent: kan köras flera gånger (t.ex. om header injiceras efter att någon bootstrap redan körts)
+// ✅ Strict login-status för UI: baseras ENDAST på localStorage "peerRateUser"
+// ✅ Extra robust: om init körs innan top-row injiceras, sätter vi en engångs-observer som re-init:ar när DOM finns
 
 function $(id) {
   return document.getElementById(id);
@@ -50,6 +52,7 @@ function getPeerRateUser() {
     if (!raw) return null;
     const parsed = safeJsonParse(raw);
     if (!parsed) return null;
+    // minimikrav
     if (parsed.email || parsed.id) return parsed;
     return null;
   } catch {
@@ -68,7 +71,7 @@ function clearAuth() {
     localStorage.removeItem("peerRateUser");
   } catch (_) {}
 
-  // Extra: rensa ev gamla nycklar (ofarligt, men kan minska spök-inloggning)
+  // Extra: rensa ev gamla nycklar (ofarligt men minskar spök-inloggning)
   const keys = [
     "token",
     "jwt",
@@ -93,10 +96,12 @@ function clearAuth() {
     } catch (_) {}
   }
 
-  // Försök rensa cookies
+  // Försök rensa cookies (best-effort)
   for (const k of keys) {
-    document.cookie = `${k}=; Max-Age=0; path=/`;
-    document.cookie = `${k}=; Max-Age=0`;
+    try {
+      document.cookie = `${k}=; Max-Age=0; path=/`;
+      document.cookie = `${k}=; Max-Age=0`;
+    } catch (_) {}
   }
 }
 
@@ -121,6 +126,7 @@ function setUserMenuLoggedIn(userMenu) {
 
 function applyLoggedInState(userBtn, loggedIn) {
   if (!userBtn) return;
+  // ✅ Detta styr grön dot via CSS
   userBtn.classList.toggle("is-logged-in", !!loggedIn);
 }
 
@@ -169,6 +175,27 @@ function ensureUserMenu(userBtn) {
 }
 
 // -----------------------------
+// Engångs-observer: om init körs före injection
+// -----------------------------
+function ensureInitWhenReady() {
+  if (document.documentElement.dataset.prTopRowObserver) return;
+  document.documentElement.dataset.prTopRowObserver = "1";
+
+  const obs = new MutationObserver(() => {
+    // När top-row väl finns → init igen och stäng observern
+    if (pickId("menuBtn") || pickId("langBtn") || pickId("topUserBtn") || pickId("topUserPill")) {
+      try {
+        initTopRow();
+      } catch (_) {}
+      obs.disconnect();
+      delete document.documentElement.dataset.prTopRowObserver;
+    }
+  });
+
+  obs.observe(document.body, { childList: true, subtree: true });
+}
+
+// -----------------------------
 // Public init (IDEMPOTENT)
 // -----------------------------
 export function initTopRow() {
@@ -181,11 +208,13 @@ export function initTopRow() {
   const userBtn = pickId("topUserPill", "topUserBtn");
   const userMenu = ensureUserMenu(userBtn);
 
-  // Om Top Row inte är injicerad än: gör inget nu.
-  // (main.js kan kalla initTopRow tidigt; pageBootstrap kallar igen efter inject)
-  if (!menuBtn && !langBtn && !userBtn) return;
+  // Om Top Row inte är injicerad än: gör inget nu, men säkerställ att vi init:ar senare.
+  if (!menuBtn && !langBtn && !userBtn) {
+    ensureInitWhenReady();
+    return;
+  }
 
-  // Gör userBtn “klickbar” även om det är en div på någon sida
+  // Gör userBtn “klickbar” även om det blir div någon gång
   if (userBtn) {
     userBtn.style.pointerEvents = "auto";
     userBtn.style.cursor = "pointer";
@@ -195,6 +224,8 @@ export function initTopRow() {
 
   // 1) Rendera userMenu baserat på login-status (varje init)
   const loggedIn = isLoggedIn();
+
+  // ✅ Viktigt: vid init sätter vi ALLTID state (så dot inte kan “hänga kvar”)
   applyLoggedInState(userBtn, loggedIn);
 
   if (userMenu) {
@@ -256,8 +287,11 @@ export function initTopRow() {
       if (logoutBtn) {
         e.preventDefault();
         clearAuth();
+
+        // ✅ uppdatera UI direkt
         applyLoggedInState(userBtn, false);
         setUserMenuLoggedOut(userMenu);
+
         closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
         window.location.href = "/profile.html";
       }

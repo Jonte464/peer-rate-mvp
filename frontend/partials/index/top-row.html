@@ -23,9 +23,9 @@
       display:flex !important;
       align-items:center !important;
       justify-content:space-between !important;
-      gap: 16px !important;
-      padding: 10px 0 !important;
-      min-height: 60px !important;
+      gap: 18px !important;
+      padding: 12px 0 !important; /* lite mer luft vertikalt */
+      min-height: 64px !important;
       width: 100% !important;
     }
 
@@ -60,7 +60,7 @@
     .top-actions{
       display:flex !important;
       align-items:center !important;
-      gap:12px !important; /* ← mer luft mellan gubbe / språk / hamburgare */
+      gap:16px !important; /* ← mer luft mellan gubbe / språk / hamburgare */
       justify-content:flex-end !important;
       position: relative !important;
       flex: 0 0 auto !important;
@@ -68,8 +68,7 @@
       white-space: nowrap !important;
     }
 
-    /* Viktigt: vissa sidor har globala rules som "klämmer" knappar.
-       Vi låser dem här. */
+    /* Lås knappar mot globala rules som klämmer */
     .top-actions > button{
       flex: 0 0 auto !important;
       flex-shrink: 0 !important;
@@ -82,10 +81,10 @@
       display: inline-flex !important;
       align-items:center !important;
       justify-content:center !important;
-      width: 40px !important;
-      height: 40px !important;
-      min-width: 40px !important;
-      min-height: 40px !important;
+      width: 44px !important;
+      height: 44px !important;
+      min-width: 44px !important;
+      min-height: 44px !important;
       border-radius: 999px !important;
       border: 1px solid rgba(11,22,51,.16) !important;
       background: rgba(255,255,255,.78) !important;
@@ -105,13 +104,19 @@
       stroke: rgba(11,22,51,.92) !important;
     }
 
-    /* Grön dot när inloggad */
-    #topUserBtn.is-logged-in::after{
+    /* ✅ Bas: dot OFF (kan inte synas utan .is-logged-in) */
+    #topUserBtn::after{
       content:"";
+      display:none;
       position:absolute;
       width:10px; height:10px;
       border-radius:999px;
       right:-1px; top:-1px;
+    }
+
+    /* ✅ Dot ON endast när inloggad */
+    #topUserBtn.is-logged-in::after{
+      display:block;
       background: rgba(34,197,94,1);
       box-shadow: 0 0 0 6px rgba(34,197,94,.12);
       border: 2px solid rgba(255,255,255,.92);
@@ -121,12 +126,12 @@
       border: 1px solid rgba(15,15,18,.12) !important;
       background: rgba(255,255,255,.78) !important;
       color: rgba(15,15,18,.92) !important;
-      padding: 7px 12px !important; /* ← lite luftigare */
+      padding: 9px 14px !important; /* luftigare */
       border-radius: 999px !important;
       font-weight:650 !important;
       font-size:13px !important;
       cursor:pointer !important;
-      height: 40px !important;
+      height: 44px !important;
       display:inline-flex !important;
       align-items:center !important;
       gap: 8px !important;
@@ -134,8 +139,8 @@
     }
 
     .menu-btn{
-      width:40px !important;
-      height:40px !important;
+      width:44px !important;
+      height:44px !important;
       border-radius:999px !important;
       border: 1px solid rgba(15,15,18,.12) !important;
       background: rgba(255,255,255,.78) !important;
@@ -152,25 +157,24 @@
     .user-menu, .lang-menu{
       position:absolute !important;
       right:0 !important;
-      top: 56px !important;
-      width: 220px !important; /* ← lite bredare */
+      top: 60px !important;
+      width: 240px !important;
       background:#fff !important;
       border: 1px solid rgba(15,15,18,.10) !important;
-      border-radius: 14px !important;
+      border-radius: 16px !important;
       box-shadow: 0 18px 60px rgba(0,0,0,.12) !important;
-      padding: 10px !important; /* ← mer luft */
+      padding: 12px !important;
       display:none;
       z-index: 1200 !important;
     }
-    .lang-menu{ right: 52px !important; }
+    .lang-menu{ right: 60px !important; }
 
-    /* ✅ Dropdown-länkar (för gubben) */
     .user-menu-link{
       display:block;
       width:100%;
       text-decoration:none;
       color: rgba(15,15,18,.92);
-      padding: 12px 10px; /* ← mer luft */
+      padding: 13px 12px;
       border-radius: 12px;
       font-weight: 750;
     }
@@ -181,7 +185,7 @@
       text-align:left;
       border: 0;
       background: transparent;
-      padding: 12px 10px; /* ← mer luft */
+      padding: 13px 12px;
       border-radius: 12px;
       cursor:pointer;
       font-weight: 750;
@@ -192,33 +196,33 @@
     /* Hamburgerpanel: mer luft */
     .menu-panel{
       position: fixed !important;
-      top: 72px !important;
+      top: 78px !important;
       right: 16px !important;
-      width: 320px !important; /* ← luftigare panel */
+      width: 360px !important; /* luftigare panel */
       max-width: calc(100vw - 32px) !important;
       max-height: 80vh !important;
       overflow-y: auto !important;
       display:none;
       border: 1px solid rgba(15,15,18,.10) !important;
-      border-radius: 18px !important;
+      border-radius: 20px !important;
       background: rgba(255,255,255,.96) !important;
       backdrop-filter: blur(12px) !important;
       box-shadow: 0 24px 70px rgba(0,0,0,.16) !important;
-      padding: 12px !important; /* ← mer luft */
+      padding: 14px !important;
       z-index: 1100 !important;
     }
     .menu-panel-inner{
-      padding: 12px !important; /* ← mer luft */
+      padding: 14px !important;
       display:flex !important;
       flex-direction:column !important;
-      gap: 12px !important; /* ← mer luft mellan länkar */
+      gap: 14px !important; /* mer luft mellan länkar */
     }
     .menu-link{
       display:flex !important;
       justify-content:space-between !important;
       align-items:center !important;
-      padding: 14px 14px !important; /* ← luftigare */
-      border-radius: 14px !important;
+      padding: 16px 16px !important; /* luftigare */
+      border-radius: 16px !important;
       border: 1px solid rgba(0,0,0,.05) !important;
       background: rgba(255,255,255,.78) !important;
       text-decoration:none !important;

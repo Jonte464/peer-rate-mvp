@@ -1,64 +1,63 @@
 // frontend/modules/indexBootstrap.js
-// Laddar index-partials, startar hero-video,
-// laddar sedan /modules/main.js och triggar DOMContentLoaded manuellt
-// (för kompatibilitet om main.js väntar på DOMContentLoaded).
+import { initLandingLanguage } from "/modules/landing/language.js";
+import { initTopRow } from "/modules/topRow.js";
 
-async function loadPartialInto(slotId, url) {
+async function injectPartial(slotId, url) {
   const slot = document.getElementById(slotId);
-  if (!slot) throw new Error(`Slot saknas: ${slotId}`);
+  if (!slot) return false;
 
-  const resp = await fetch(url, { cache: 'no-cache' });
-  if (!resp.ok) throw new Error(`Kunde inte hämta ${url} (status ${resp.status})`);
+  const res = await fetch(url, { cache: "no-cache" });
+  if (!res.ok) throw new Error(`Could not load partial ${url} (${res.status})`);
 
-  slot.innerHTML = await resp.text();
+  slot.innerHTML = await res.text();
+  return true;
 }
 
-function setupHeroVideoAutoplay() {
-  const v = document.querySelector('.hero video');
-  if (!v) return;
-
-  v.addEventListener('loadeddata', () => {
-    const p = v.play();
-    if (p && typeof p.catch === 'function') p.catch(() => {});
-  });
-}
-
-function fireCompatEvents() {
-  // Viktigt: Om main.js använder DOMContentLoaded som "startsignal"
-  // och vi importerar main.js efter att eventen redan skett,
-  // så triggar vi den manuellt här.
+(async function bootIndex() {
+  // 1) Inject TOP ROW FIRST (så gubbe/hamburgare/language kan bindas säkert)
   try {
-    document.dispatchEvent(new Event('DOMContentLoaded', { bubbles: true }));
-  } catch (_) {
-    document.dispatchEvent(new Event('DOMContentLoaded'));
+    await injectPartial("slot-top-row", "/partials/index/top-row.html");
+  } catch (e) {
+    console.warn("Top row inject failed:", e);
   }
-}
 
-async function bootstrap() {
-  await loadPartialInto('slot-top-row', '/partials/index/top-row.html');
-  await loadPartialInto('slot-hero', '/partials/index/hero.html');
-  await loadPartialInto('slot-how', '/partials/index/how.html');
-  await loadPartialInto('slot-sim', '/partials/index/sim.html');
-  await loadPartialInto('slot-globe', '/partials/index/globe.html');
-  // ✅ rate-partial borttagen (Lämna betyg flyttat till /rate.html)
-  await loadPartialInto('slot-footer', '/partials/index/footer.html');
+  // 2) Init language (needs langBtn/langMenu)
+  try {
+    initLandingLanguage();
+  } catch (e) {
+    console.warn("initLandingLanguage failed:", e);
+  }
 
-  setupHeroVideoAutoplay();
+  // 3) Init top row interactions AFTER injection
+  try {
+    initTopRow();
+  } catch (e) {
+    console.warn("initTopRow failed:", e);
+  }
 
-  // Ladda din befintliga logik
-  await import('/modules/main.js');
+  // 4) Inject remaining landing partials
+  try { await injectPartial("slot-hero", "/partials/index/hero.html"); } catch (e) { console.warn("hero inject failed:", e); }
+  try { await injectPartial("slot-how", "/partials/index/how.html"); } catch (e) { console.warn("how inject failed:", e); }
+  try { await injectPartial("slot-sim", "/partials/index/sim.html"); } catch (e) { console.warn("sim inject failed:", e); }
+  try { await injectPartial("slot-globe", "/partials/index/globe.html"); } catch (e) { console.warn("globe inject failed:", e); }
+  try { await injectPartial("slot-footer", "/partials/index/footer.html"); } catch (e) { console.warn("footer inject failed:", e); }
 
-  // Kompatibilitet för äldre init-mönster i main.js
-  fireCompatEvents();
-}
+  // 5) Load site logic
+  try {
+    await import("/modules/main.js");
+  } catch (e) {
+    console.warn("Could not load main.js (non-fatal):", e);
+  }
 
-bootstrap().catch((err) => {
-  console.error('[indexBootstrap] Fel vid boot:', err);
-  document.body.insertAdjacentHTML(
-    'afterbegin',
-    `<div style="padding:16px;font-family:system-ui;color:#b00020">
-      <b>Index-laddning misslyckades.</b><br/>
-      Öppna DevTools Console för detaljer.
-    </div>`
-  );
-});
+  // 6) Load landing logic (if used)
+  try {
+    await import("/modules/landing/init.js");
+  } catch (e) {
+    // non-fatal
+  }
+
+  // 7) Safety: if något på index fortfarande init:ar för tidigt, re-run topRow (idempotent)
+  try {
+    initTopRow();
+  } catch (_) {}
+})();
