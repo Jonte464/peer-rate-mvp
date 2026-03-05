@@ -261,3 +261,7 @@
   font-weight: 720;
 }
 .menu-link:hover{ background: rgba(15,15,18,.04); }
+.menu-btn svg{
+  width: 24px;
+  height: 24px;
+}
