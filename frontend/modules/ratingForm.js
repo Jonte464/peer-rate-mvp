@@ -3,7 +3,14 @@ import { showNotification } from './utils.js';
 import auth, { login } from './auth.js';
 import api from './api.js';
 
-import { captureFromUrl, getPending, clearPending } from './pendingStore.js';
+import {
+  captureFromUrl,
+  getPending,
+  clearPending,
+  markDealRated,
+  isDealRated,
+} from './pendingStore.js';
+
 import { applyPendingContextCard, renderVerifiedDealUI } from './verifiedDealUI.js';
 import {
   ensureLockedFormCard,
@@ -101,6 +108,15 @@ function setVisibility(isLoggedIn) {
 
 function renderAll() {
   const p = getPending();
+
+  // ✅ Om pending redan är markerad som rated lokalt → rensa direkt så UI inte spökar
+  if (p && isDealRated(p)) {
+    clearPending();
+    renderVerifiedDealUI(null);
+    removeLockedFormCard();
+    return;
+  }
+
   if (p) applyPendingContextCard(p);
   renderVerifiedDealUI(p);
 
@@ -120,17 +136,15 @@ function renderAll() {
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
 
-  // Platform starter (optional UI on rate.html)
-  try {
-    // imported via re-export from platformPicker.js
-    // eslint-disable-next-line no-undef
-  } catch {}
-
   // capture pr= from URL if present
   const fromUrl = captureFromUrl();
   const pending = fromUrl || getPending();
 
-  if (pending) {
+  // ✅ Om den dealen redan är rated lokalt → rensa och visa inget pending
+  if (pending && isDealRated(pending)) {
+    clearPending();
+    renderVerifiedDealUI(null);
+  } else if (pending) {
     applyPendingContextCard(pending);
     renderVerifiedDealUI(pending);
   } else {
@@ -251,16 +265,24 @@ async function handleSubmit(e) {
   try {
     const result = await api.createRating(payload);
     if (!result || result.ok === false) {
+
+      // ✅ Duplicate: markera som rated + rensa pending så overlay inte hänger kvar
       if (isDuplicateRatingError(result)) {
+        try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
+        clearPending();
         showNotification('error', 'Omdöme har redan lämnats för denna affär.', 'notice');
       } else {
         showNotification('error', result?.error || 'Kunde inte spara betyget.', 'notice');
       }
+
       if (btn) btn.disabled = false;
       return;
     }
 
+    // ✅ Success: markera rated + rensa pending
+    try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
     clearPending();
+
     showNotification('success', 'Tack! Ditt omdöme är sparat.', 'notice');
     form.reset();
     if (btn) btn.disabled = false;

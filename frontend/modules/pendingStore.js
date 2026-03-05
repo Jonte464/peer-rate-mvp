@@ -2,6 +2,10 @@
 const PENDING_KEY = 'peerrate_pending_rating_v2';
 const TTL_MS = 1000 * 60 * 60 * 24;
 
+// ✅ Ny: lokal cache över redan betygsatta deals (för att kunna “stänga av” spök-pending)
+const RATED_CACHE_KEY = 'peerrate_rated_deals_v1';
+const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90 dagar
+
 function now() { return Date.now(); }
 function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
@@ -53,6 +57,96 @@ export function getPending() {
 
 export function clearPending() {
   try { localStorage.removeItem(PENDING_KEY); } catch {}
+  // signalera så UI kan uppdatera
+  try { window.dispatchEvent(new CustomEvent("pr:pending-cleared")); } catch {}
+}
+
+/* -----------------------------
+   ✅ RATED DEALS CACHE
+------------------------------ */
+
+function normalizeSource(s) {
+  return String(s || '').trim().toLowerCase();
+}
+
+function normalizeProofRef(s) {
+  return String(s || '').trim().toLowerCase();
+}
+
+export function dealKeyFromPending(p) {
+  const source = normalizeSource(p?.source || p?.deal?.source || p?.counterparty?.source || '');
+  // proofRef kan ligga på flera ställen
+  const proofRef =
+    normalizeProofRef(
+      p?.proofRef ||
+      p?.deal?.orderId ||
+      p?.deal?.proofRef ||
+      p?.counterparty?.orderId ||
+      p?.counterparty?.proofRef ||
+      ''
+    );
+
+  if (!source || !proofRef) return '';
+  return `${source}|${proofRef}`;
+}
+
+function readRatedCacheRaw() {
+  try {
+    const raw = localStorage.getItem(RATED_CACHE_KEY);
+    const obj = raw ? safeParse(raw) : null;
+    return obj && typeof obj === 'object' ? obj : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeRatedCacheRaw(obj) {
+  try {
+    localStorage.setItem(RATED_CACHE_KEY, JSON.stringify(obj || {}));
+  } catch {}
+}
+
+function cleanupRatedCache(obj) {
+  try {
+    const o = obj || {};
+    const t = now();
+    for (const k of Object.keys(o)) {
+      const ts = Number(o[k] || 0);
+      if (!ts || (t - ts) > RATED_TTL_MS) delete o[k];
+    }
+    return o;
+  } catch {
+    return obj || {};
+  }
+}
+
+export function markDealRated(pendingOrKey) {
+  try {
+    const key = typeof pendingOrKey === 'string' ? pendingOrKey : dealKeyFromPending(pendingOrKey);
+    if (!key) return;
+
+    let cache = readRatedCacheRaw();
+    cache = cleanupRatedCache(cache);
+    cache[key] = now();
+    writeRatedCacheRaw(cache);
+  } catch {}
+}
+
+export function isDealRated(pendingOrKey) {
+  try {
+    const key = typeof pendingOrKey === 'string' ? pendingOrKey : dealKeyFromPending(pendingOrKey);
+    if (!key) return false;
+
+    let cache = readRatedCacheRaw();
+    cache = cleanupRatedCache(cache);
+
+    // skriv tillbaka efter cleanup (optional)
+    writeRatedCacheRaw(cache);
+
+    return !!cache[key];
+  } catch {
+    return false;
+  }
 }
 
 export function normalizeIncoming(inObj) {
