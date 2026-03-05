@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lämna betyg – PeerRate</title>
 
+  <!-- Viktigt: index.css innehåller TOP ROW-styling -->
   <link rel="stylesheet" href="/css/pr-theme.css" />
   <link rel="stylesheet" href="/css/index.css" />
 </head>
@@ -12,6 +13,9 @@
 <body>
   <!-- ✅ Global TOP ROW injectas via pageBootstrap.js -->
   <div id="slot-top-row"></div>
+
+  <!-- ✅ Spacer: eftersom .top-row i index.css är position:fixed -->
+  <div style="height:64px;"></div>
 
   <main>
     <section id="rate" class="section white-block anchor">

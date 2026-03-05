@@ -1,7 +1,7 @@
-<!-- TOP ROW -->
+<!-- frontend/partials/index/top-row.html -->
 <header class="top-row">
   <div class="shell top-row-inner">
-    <a class="brand soft-hover" href="/#top">
+    <a class="brand soft-hover" href="/">
       <div class="logo-badge" aria-hidden="true">
         <img class="logo-img" src="/assets/Logo.PNG?v=1" alt="PeerRate logo" />
       </div>
@@ -12,50 +12,49 @@
     </a>
 
     <div class="top-actions">
-      <div class="top-user" id="topUserPill" aria-live="polite" title="Inloggad" aria-expanded="false">
-        <span id="topUserInitials">?</span>
-      </div>
-
-      <div class="user-menu" id="userMenu" role="menu" aria-label="Användarmeny">
-        <button type="button" id="logoutBtn" data-i18n="user_logout">Logga ut</button>
-      </div>
-
-      <button class="lang-pill soft-hover" id="langBtn" type="button" aria-haspopup="true" aria-expanded="false">
-        <span id="langLabel">SV</span>
-        <span style="opacity:.6;">▾</span>
+      <!-- 👤 User icon -->
+      <button class="icon-btn soft-hover" id="topUserBtn" type="button" aria-label="Användare" aria-expanded="false">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M20 21a8 8 0 0 0-16 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
       </button>
 
+      <div class="user-menu" id="userMenu" role="menu" aria-label="Användarmeny">
+        <a class="user-menu-link" href="/profile.html">Min profil</a>
+        <button type="button" id="logoutBtn">Logga ut</button>
+      </div>
+
+      <!-- 🌐 Language -->
+      <button class="lang-pill soft-hover" id="langBtn" type="button" aria-haspopup="true" aria-expanded="false">
+        <span id="langLabel">SV</span>
+        <span class="caret">▾</span>
+      </button>
+
+      <!-- 🍔 Menu -->
       <button class="menu-btn soft-hover" id="menuBtn" type="button" aria-label="Öppna meny" aria-expanded="false">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16" stroke="rgba(15,15,18,.85)" stroke-width="2" stroke-linecap="round"/>
+        <svg class="menu-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         </svg>
       </button>
     </div>
   </div>
 
+  <!-- Language menu -->
   <div class="lang-menu" id="langMenu" role="menu" aria-label="Välj språk">
     <button type="button" data-lang="sv">Svenska (SV)</button>
     <button type="button" data-lang="en">English (EN)</button>
   </div>
 
+  <!-- Main menu -->
   <nav class="menu-panel" id="menuPanel" aria-label="Meny">
     <div class="shell menu-panel-inner">
-      <a class="menu-link" href="/#how"><div data-i18n="menu_how">Hur det funkar</div><span>→</span></a>
-      <a class="menu-link" href="/#sim"><div data-i18n="menu_sim">Se värdet direkt</div><span>→</span></a>
-      <a class="menu-link" href="/#globe"><div data-i18n="menu_globe">Global trust</div><span>→</span></a>
-
-      <a class="menu-link" href="/rate.html"><div data-i18n="menu_rate">Lämna betyg</div><span>→</span></a>
-
-      <!-- ✅ NY: Installera Extension (matchar övriga menylänkar) -->
-      <a class="menu-link" href="/extension.html"><div data-i18n="menu_extension">Installera extension</div><span>→</span></a>
-
-      <!-- ✅ NY: Arbetsreferenser -->
-      <a class="menu-link" href="/references.html"><div data-i18n="menu_workrefs">Arbetsreferenser</div><span>→</span></a>
-
-      <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Registrera dig</div><span>→</span></a>
-      <a class="menu-link" href="/profile.html"><div data-i18n="menu_profile">Min profil</div><span>→</span></a>
-
-      <a class="menu-link" href="/#sim"><div data-i18n="menu_ask">Se 5P-modellen</div><span>→</span></a>
+      <a class="menu-link" href="/"><div>Hem</div><span>→</span></a>
+      <a class="menu-link" href="/customer.html"><div>Registrera dig</div><span>→</span></a>
+      <a class="menu-link" href="/profile.html"><div>Min profil</div><span>→</span></a>
+      <a class="menu-link" href="/rate.html"><div>Lämna betyg</div><span>→</span></a>
+      <a class="menu-link" href="/extension.html"><div>Installera extension</div><span>→</span></a>
+      <a class="menu-link" href="/references.html"><div>Arbetsreferenser</div><span>→</span></a>
     </div>
   </nav>
 </header>
