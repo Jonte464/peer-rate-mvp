@@ -8,19 +8,25 @@ export function initLandingLanguage() {
   const dict = {
     sv: {
       top_sub: 'Förtroende du kan bevisa',
+
+      // ✅ Top menu (universal)
+      menu_home: 'Hem',
       menu_how: 'Hur det funkar',
       menu_sim: 'Se värdet direkt',
       menu_globe: 'Global trust',
       menu_rate: 'Lämna betyg',
       menu_signup: 'Registrera dig',
       menu_profile: 'Min profil',
-      menu_ask: 'Fråga om trust',
+      menu_extension: 'Installera extension',
+      menu_workrefs: 'Arbetsreferenser',
+      menu_ask: 'Se 5P-modellen',
       user_logout: 'Logga ut',
+
       profile_workrefs_title: 'Arbetsreferenser',
       profile_workrefs_lead: 'Samla och dela verifierbara referenser från uppdrag och arbetsgivare.',
       profile_workrefs_btn: 'Öppna arbetsreferenser',
 
-      // ✅ NYTT: arbetsreferenser
+      // ✅ Work references page (om du använder dessa nycklar)
       menu_refs: 'Arbetsreferenser',
       work_refs_title: 'Arbetsreferenser',
       work_refs_lead: 'Samla och visa verifierade arbetsreferenser från chefer, kollegor och uppdragsgivare.',
@@ -92,125 +98,87 @@ export function initLandingLanguage() {
       k4: 'Plattformar kopplade',
       k4n: 'Mer kommer',
 
-      rate_login_title: 'Logga in',
-      rate_login_lead: 'Logga in med den e-post och det lösenord du registrerade dig med innan du lämnar betyg.',
-      rate_signup: 'Registrera dig',
-      rate_title: 'Lämna ett betyg',
+      // ✅ RATE HUB (DINA NYA NYCKLAR i rate.html)
+      rate_hub_h1: 'Lämna betyg – via verifierad affär',
+      rate_hub_lead:
+        'För att undvika spam och manipulation kan du bara lämna betyg när vi kan koppla det till en avslutad affär. Välj hur du vill verifiera.',
+      rate_method_title: 'Steg 1: Välj verifieringsmetod',
+      rate_method_platform_title: 'Plattform (snabbast)',
+      rate_method_platform_lead: 'Öppna plattformen → hitta avslutad affär → klicka på extensionen → kom tillbaka hit.',
+      rate_method_choose_platform: 'Välj',
+      rate_method_email_title: 'E-post/kvitton (automatiskt framöver)',
+      rate_method_email_lead: 'Koppla din inkorg så kan vi hitta avslutade affärer och ge dig färdiga betygsförslag.',
+      rate_method_choose_email: 'Visa',
 
-      rate_login_hint_pre: 'Du behöver logga in för att kunna lämna betyg. Logga in ovan eller ',
-      rate_login_hint_link: 'registrera dig här',
-      rate_login_hint_post: '.',
-
-      // ✅ NYTT: Plattform-flöde + Kontextkort
-      rate_platform_title: 'Starta från en plattform',
-      rate_platform_lead: 'Välj var affären skedde så guidar vi dig till rätt plats. När du kommer tillbaka kan vi förifylla betyget med länk/källa.',
-      rate_platform_label: 'Välj plattform',
-      rate_platform_pick: 'Välj plattform…',
-      rate_platform_go: 'Gå till plattform',
-      rate_platform_skip: 'Jag är redan här – lämna betyg',
-      rate_platform_tip: 'Tips: öppna den sida/profil/annons där affären syns. Vår extension kan sedan skicka dig tillbaka hit med länk + källa.',
-      rate_context_title: 'Upptäckt kontext',
-      rate_context_from: 'Källa:',
-      rate_context_link: 'Öppna sidan',
-
-      rate_platform_title: 'Starta från en plattform',
-      rate_platform_lead: 'Välj var affären skedde. Vi öppnar plattformen så att din extension kan plocka upp annons/profil och skicka tillbaka rätt info till PeerRate.',
+      rate_platform_title: 'Steg 2: Starta från en plattform',
+      rate_platform_lead:
+        'Välj plattform och typ av affär. Vi öppnar plattformen – du letar upp den avslutade affären och klickar på extensionen.',
       rate_platform_label: 'Plattform',
       rate_platform_pick: 'Välj plattform…',
+      rate_platform_flow_label: 'Typ av affär',
+      rate_platform_flow_pick: 'Välj…',
+      rate_platform_flow_buy: 'Köp',
+      rate_platform_flow_sell: 'Sälj',
+      rate_platform_flow_booking: 'Bokning/hyra',
+      rate_platform_flow_other: 'Annat',
       rate_platform_go: 'Öppna plattform',
-      rate_platform_note: 'Tips: När du är inne på annonsen/profilen – klicka på extensionen. Du skickas tillbaka hit med “Verifierad källa” ifyllt.',
+      rate_platform_note:
+        'Tips: När du skickat från extensionen kommer du tillbaka hit med “Verifierad källa” ifyllt.',
 
+      rate_email_title: 'Steg 2: Verifiera via e-post/kvitton',
+      rate_email_lead:
+        'Kommer snart: Koppla Gmail/Outlook så kan vi automatiskt identifiera avslutade affärer och skapa betygsförslag.',
+      rate_email_connect: 'Koppla inkorg',
+      rate_email_note: 'Under tiden: använd plattformsflödet (snabbast).',
+
+      rate_verified_title: 'Verifierade affärer',
+      rate_verified_lead:
+        'Här kommer dina identifierade avslutade affärer att synas. Därifrån kan du lämna betyg.',
+
+      rate_login_title: 'Logga in',
+      rate_login_lead: 'Logga in med den e-post och det lösenord du registrerade dig med.',
       rate_login_email_label: 'E-post',
       rate_login_password_label: 'Lösenord',
       rate_login_password_ph: 'Ditt lösenord',
       rate_login_btn: 'Logga in',
-
-      rate_form_subject_label: 'Vem betygsätter du?',
-      rate_form_subject_note: '(användarnamn eller mejl)',
-      rate_form_rater_label: 'Ditt namn/mejl',
-      rate_form_rater_note: '(valfritt – om du är inloggad fylls din e-post i automatiskt)',
-      rate_form_score_label: 'Betyg (1–5)',
-      rate_form_score_pick: 'Välj betyg',
-      rate_form_source_label: 'Varifrån kommer betyget?',
-      rate_form_optional: '(valfritt)',
-      rate_form_source_pick: 'Välj källa (valfritt)',
+      rate_signup: 'Registrera dig',
 
       footer_profile: 'Profil',
       footer_ask: 'Fråga om trust',
-
-      profile_badge_label: 'Inloggad som',
-      profile_h1: 'Min profil',
-      profile_lead: 'Här kan du se dina uppgifter och ditt samlade omdöme.',
-      profile_login_title: 'Logga in',
-      profile_login_lead: 'Logga in med den e-post och det lösenord du registrerade dig med.',
-      profile_login_email: 'E-post',
-      profile_login_password: 'Lösenord',
-      profile_login_btn: 'Logga in',
-
-      profile_my_rating_title: 'Mitt omdöme',
-      profile_my_rating_lead: 'Sammanfattning av betyg som är kopplade till din e-postadress.',
-      profile_rating_sources_title: 'Varifrån kommer dina omdömen?',
-      profile_no_ratings: 'Inga omdömen',
-      profile_pr_rating_title: 'Din PeerRate-rating',
-      profile_avg_label: 'Snittbetyg:',
-      profile_based_on: 'baserat på',
-      profile_reviews: 'omdömen',
-
-      profile_my_details_title: 'Mina uppgifter',
-      profile_my_details_lead: 'Uppgifter kopplade till din profil.',
-      profile_avatar_upload: 'Ladda upp profilbild',
-      profile_avatar_note: 'Bilden sparas bara lokalt i din webbläsare och kopplas till “Inloggad som”.',
-
-      profile_logout_btn: 'Logga ut',
-
-      rate_page_h1: 'Lämna ett betyg – snabbt, enkelt och verifierbart',
-      rate_page_lead:
-        'PeerRate hjälper dig att samla omdömen som du kan visa upp – oavsett plattform. När fler omdömen kopplas till verifierade affärer blir din PeerRate-rating starkare.',
-
-      rate_page_b1_title: '1) Logga in',
-      rate_page_b1_text: 'Så kan vi koppla betyget till dig och minska spam.',
-      rate_page_b2_title: '2) Sätt betyg',
-      rate_page_b2_text: 'Ge 1–5 och lämna en kort kommentar (valfritt).',
-      rate_page_b3_title: '3) Lägg verifiering',
-      rate_page_b3_text: 'Om du vill kan du ange order-ID/annonslänk för starkare trovärdighet.',
-
-      rate_faq_title: 'FAQ',
-      rate_faq_q1: 'Måste jag logga in?',
-      rate_faq_a1: 'Ja, för att minska spam och kunna koppla betyg till en riktig användare.',
-      rate_faq_q2: 'Är kommentaren obligatorisk?',
-      rate_faq_a2: 'Nej. Du kan lämna bara ett betyg. Kommentar gör oftast omdömet mer användbart.',
-      rate_faq_q3: 'Vad är “Verifierings-ID”?',
-      rate_faq_a3: 'Det är ett valfritt referensnummer som kan stärka trovärdigheten, t.ex. ordernummer eller annons-ID.',
-      rate_faq_q4: 'Vad händer om jag rapporterar misstänkt bedrägeri?',
-      rate_faq_a4: 'Då flaggas betyget för granskning. Vi kan kontakta dig om vi behöver mer info.'
     },
 
     en: {
       top_sub: 'Reputation you can prove',
+
+      // ✅ Top menu (universal)
+      menu_home: 'Home',
       menu_how: 'How it works',
       menu_sim: 'See the value',
       menu_globe: 'Global trust',
       menu_rate: 'Leave a rating',
       menu_signup: 'Sign up',
       menu_profile: 'My profile',
+      menu_extension: 'Install extension',
+      menu_workrefs: 'Work references',
       menu_ask: 'See the 5P model',
       user_logout: 'Log out',
+
       profile_workrefs_title: 'Work References',
       profile_workrefs_lead: 'Collect and share verifiable references from employers and assignments.',
       profile_workrefs_btn: 'Open work references',
 
-      // ✅ NEW: work references
       menu_refs: 'Work References',
       work_refs_title: 'Work References',
       work_refs_lead: 'Collect and showcase verified work references from managers, colleagues, and clients.',
       work_refs_open: 'Open work references',
       work_refs_invite: 'Invite a reference',
       work_refs_status_title: 'Status',
-      work_refs_status_body: '(Demo) Your references will be listed here. Next step is connecting this to LinkedIn sign-in and a simple “request a reference” flow.',
+      work_refs_status_body:
+        '(Demo) Your references will be listed here. Next step is connecting this to LinkedIn sign-in and a simple “request a reference” flow.',
 
       hero_kicker: 'Peer-to-peer reputation',
       hero_h1: 'Reputation you can prove.',
-      hero_p: 'PeerRate helps you carry verified reputation between assignments. Not vibes. Not claims. Transactions — portable and hard to fake.',
+      hero_p: 'PeerRate helps you carry verified reputation between marketplaces. Not vibes. Not claims. Transactions — portable and hard to fake.',
       hero_cta_primary: 'Get started',
       hero_cta_secondary: 'Log in',
       hero_card_title: 'A reputation card you can share',
@@ -218,16 +186,16 @@ export function initLandingLanguage() {
       hero_metric_score: 'Trust (1–5)',
       hero_metric_tx: 'Verified transactions',
 
-      how_title: 'For consultants who want to show real trust, not just a CV.',
-      how_lead: 'PeerRate standardizes reviews and links them to assignments — making trust measurable, portable and fair.',
+      how_title: 'For people online who want real trust.',
+      how_lead: 'PeerRate standardizes reviews and links them to real transactions — making trust measurable, portable and fair.',
       f1_title: 'Verified',
-      f1_p: 'Connect reputation to transactions. Less fraud, fewer bad surprises.',
+      f1_p: 'Connect reputation to real transactions. Less fraud, fewer bad surprises.',
       f2_title: 'Portable',
-      f2_p: 'Bring your trust score across assignments instead of starting from zero.',
+      f2_p: 'Bring your trust score across marketplaces instead of starting from zero.',
       f3_title: 'Explainable',
       f3_p: 'A clear breakdown of what affects your score — not a black box.',
 
-      sim_title: 'But it is not only about reviews, we look at the big picture.',
+      sim_title: 'See the value instantly.',
       rep_trust: 'Trust (1–5)',
       rep_tx: 'Verified transactions',
       rep_plat: 'Platforms connected',
@@ -271,97 +239,53 @@ export function initLandingLanguage() {
       k4: 'Platforms connected',
       k4n: 'More coming',
 
-      rate_login_title: 'Log in',
-      rate_login_lead: 'Log in with the email and password you used when signing up before leaving a rating.',
-      rate_signup: 'Sign up',
-      rate_title: 'Leave a rating',
+      // ✅ RATE HUB (DINA NYA NYCKLAR i rate.html)
+      rate_hub_h1: 'Leave a rating — via a verified transaction',
+      rate_hub_lead:
+        'To avoid spam and manipulation, you can only leave ratings when we can link them to a completed deal. Choose how you want to verify.',
+      rate_method_title: 'Step 1: Choose verification method',
+      rate_method_platform_title: 'Platform (fastest)',
+      rate_method_platform_lead: 'Open the platform → find the completed deal → click the extension → come back here.',
+      rate_method_choose_platform: 'Choose',
+      rate_method_email_title: 'Email/receipts (automatic later)',
+      rate_method_email_lead: 'Connect your inbox and we can detect completed deals and suggest ratings.',
+      rate_method_choose_email: 'Show',
 
-      rate_login_hint_pre: 'You need to log in to leave a rating. Log in above or ',
-      rate_login_hint_link: 'sign up here',
-      rate_login_hint_post: '.',
-
-      // ✅ NEW: Platform flow + Context card
-      rate_platform_title: 'Start from a platform',
-      rate_platform_lead: 'Choose where the transaction happened and we will guide you. When you come back, we can prefill the rating with link/source.',
-      rate_platform_label: 'Choose platform',
-      rate_platform_pick: 'Choose platform…',
-      rate_platform_go: 'Go to platform',
-      rate_platform_skip: 'I am already here — leave a rating',
-      rate_platform_tip: 'Tip: open the listing/profile/thread where the transaction is visible. Our extension can then send you back here with link + source.',
-      rate_context_title: 'Detected context',
-      rate_context_from: 'Source:',
-      rate_context_link: 'Open page',
-
-      rate_platform_title: 'Start from a platform',
-      rate_platform_lead: 'Choose where the transaction happened. We open the platform so your browser extension can capture the listing/profile and send the right context back to PeerRate.',
+      rate_platform_title: 'Step 2: Start from a platform',
+      rate_platform_lead:
+        'Choose platform and deal type. We open the platform — you find the completed deal and click the extension.',
       rate_platform_label: 'Platform',
       rate_platform_pick: 'Choose platform…',
+      rate_platform_flow_label: 'Deal type',
+      rate_platform_flow_pick: 'Choose…',
+      rate_platform_flow_buy: 'Buy',
+      rate_platform_flow_sell: 'Sell',
+      rate_platform_flow_booking: 'Booking/rent',
+      rate_platform_flow_other: 'Other',
       rate_platform_go: 'Open platform',
-      rate_platform_note: 'Tip: When you are on the listing/profile — click the extension. You will be sent back here with “Verified source” filled in.',
+      rate_platform_note:
+        'Tip: After sending from the extension, you will return here with “Verified source” filled in.',
 
+      rate_email_title: 'Step 2: Verify via email/receipts',
+      rate_email_lead:
+        'Coming soon: Connect Gmail/Outlook and we will automatically identify completed deals and create rating suggestions.',
+      rate_email_connect: 'Connect inbox',
+      rate_email_note: 'Meanwhile: use the platform flow (fastest).',
+
+      rate_verified_title: 'Verified deals',
+      rate_verified_lead:
+        'Your identified completed deals will appear here. From there you can leave a rating.',
+
+      rate_login_title: 'Log in',
+      rate_login_lead: 'Log in with the email and password you used when signing up.',
       rate_login_email_label: 'Email',
       rate_login_password_label: 'Password',
       rate_login_password_ph: 'Your password',
       rate_login_btn: 'Log in',
-
-      rate_form_subject_label: 'Who are you rating?',
-      rate_form_subject_note: '(username or email)',
-      rate_form_rater_label: 'Your name/email',
-      rate_form_rater_note: '(optional — if you are logged in, your email is filled in automatically)',
-      rate_form_score_label: 'Rating (1–5)',
-      rate_form_score_pick: 'Choose rating',
-      rate_form_source_label: 'Where is the rating from?',
-      rate_form_optional: '(optional)',
-      rate_form_source_pick: 'Choose source (optional)',
+      rate_signup: 'Sign up',
 
       footer_profile: 'Profile',
       footer_ask: 'Ask about trust',
-
-      profile_badge_label: 'Signed in as',
-      profile_h1: 'My profile',
-      profile_lead: 'Here you can see your details and your combined reputation.',
-      profile_login_title: 'Log in',
-      profile_login_lead: 'Log in with the email and password you used when signing up.',
-      profile_login_email: 'Email',
-      profile_login_password: 'Password',
-      profile_login_btn: 'Log in',
-
-      profile_my_rating_title: 'My rating',
-      profile_my_rating_lead: 'A summary of ratings linked to your email address.',
-      profile_rating_sources_title: 'Where do your ratings come from?',
-      profile_no_ratings: 'No ratings',
-      profile_pr_rating_title: 'Your PeerRate rating',
-      profile_avg_label: 'Average score:',
-      profile_based_on: 'based on',
-      profile_reviews: 'reviews',
-
-      profile_my_details_title: 'My details',
-      profile_my_details_lead: 'Details linked to your profile.',
-      profile_avatar_upload: 'Upload profile picture',
-      profile_avatar_note: 'The image is stored locally in your browser and used for “Signed in as”.',
-
-      profile_logout_btn: 'Log out',
-
-      rate_page_h1: 'Leave a review — quick, simple, and verifiable',
-      rate_page_lead:
-        'PeerRate helps you collect reviews you can show anywhere — regardless of platform. As more reviews get linked to verified transactions, your PeerRate rating becomes stronger.',
-
-      rate_page_b1_title: '1) Log in',
-      rate_page_b1_text: 'So we can link the review to a real user and reduce spam.',
-      rate_page_b2_title: '2) Set a rating',
-      rate_page_b2_text: 'Choose 1–5 and optionally add a short comment.',
-      rate_page_b3_title: '3) Add verification',
-      rate_page_b3_text: 'Optionally add an order ID/listing link to strengthen credibility.',
-
-      rate_faq_title: 'FAQ',
-      rate_faq_q1: 'Do I have to log in?',
-      rate_faq_a1: 'Yes — to reduce spam and link reviews to a real account.',
-      rate_faq_q2: 'Is the comment required?',
-      rate_faq_a2: 'No. You can submit a rating only. A comment usually makes the review more helpful.',
-      rate_faq_q3: 'What is “Verification ID”?',
-      rate_faq_a3: 'An optional reference that can strengthen credibility, e.g. an order number or listing ID.',
-      rate_faq_q4: 'What happens if I report suspected fraud?',
-      rate_faq_a4: 'The review is flagged for review. We may contact you if we need more information.'
     }
   };
 
@@ -397,12 +321,7 @@ export function initLandingLanguage() {
     langBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
   };
 
-  // ✅ ÄNDRING #1: stoppa eventet så det inte krockar med topRow.js
-  langBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    setMenuOpen(!open);
-  });
-
+  langBtn.addEventListener('click', () => setMenuOpen(!open));
   langMenu.addEventListener('click', (e) => {
     const b = e.target.closest('button[data-lang]');
     if (!b) return;
@@ -420,6 +339,5 @@ export function initLandingLanguage() {
     if (e.key === 'Escape') setMenuOpen(false);
   });
 
-  // ✅ ÄNDRING #2 (valfritt men rekommenderat): default SV istället för EN
-  applyLang(localStorage.getItem(LS_LANG) || 'sv');
+  applyLang(localStorage.getItem(LS_LANG) || 'en');
 }
