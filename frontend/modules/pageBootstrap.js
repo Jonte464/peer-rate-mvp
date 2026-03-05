@@ -1,6 +1,6 @@
 // frontend/modules/pageBootstrap.js
 import { initLandingLanguage } from '/modules/landing/language.js';
-import { initTopRow } from '/modules/topRow.js';
+import { initTopRowEnhance } from '/modules/topRowEnhance.js';
 
 async function injectPartial(slotId, url) {
   const slot = document.getElementById(slotId);
@@ -19,24 +19,24 @@ async function injectPartial(slotId, url) {
     console.warn('Header inject failed:', e);
   }
 
-  // 2) Init top row functionality (menu + user menu)
-  try {
-    initTopRow();
-  } catch (e) {
-    console.warn('initTopRow failed:', e);
-  }
-
-  // 3) Init language (needs langBtn/langMenu present → after header injection)
+  // 2) Init language (needs langBtn/langMenu present → after header injection)
   try {
     initLandingLanguage();
   } catch (e) {
     console.warn('initLandingLanguage failed:', e);
   }
 
-  // 4) Load main.js AFTER header exists (so logoutBtn etc can bind)
+  // 3) Load main.js AFTER header exists (so menu/user pill binds correctly)
   try {
     await import('/modules/main.js');
   } catch (e) {
     console.error('Could not load main.js', e);
+  }
+
+  // 4) Enhance top row (gubbe + login/logout-menu + "inloggad"-dot)
+  try {
+    initTopRowEnhance();
+  } catch (e) {
+    console.warn('initTopRowEnhance failed:', e);
   }
 })();
