@@ -1,198 +1,327 @@
-<!-- TOP ROW (universal, alltid synlig) -->
-<header class="top-row">
-  <style>
-    /* Gör top row konsekvent på ALLA sidor (vinner över index.css etc) */
-    .top-row{
-      position: sticky !important;
-      top: 0 !important;
-      z-index: 1000 !important;
-      background: rgba(255,255,255,.78) !important;
-      backdrop-filter: blur(12px) !important;
-      border-bottom: 1px solid rgba(15,15,18,.10) !important;
-    }
-    .top-row .shell{
-      max-width: 100% !important;
-      padding: 0 28px !important;
-    }
-    @media (max-width: 820px){
-      .top-row .shell{ padding: 0 16px !important; }
-    }
+// frontend/modules/topRow.js
+// Universell funktionalitet för Top Row (hamburgare + språk + user/gubbe + login/logout)
 
-    .top-row .brand{
-      color: rgba(15,15,18,.92) !important;
-      text-decoration:none;
-      display:flex;
-      align-items:center;
-      gap:12px;
-      user-select:none;
-      min-width:220px;
-    }
-    @media (max-width: 820px){
-      .top-row .brand{ min-width: unset; }
-    }
-    .top-row .brand-sub{
-      color: rgba(15,15,18,.64) !important;
-    }
+function $(id) {
+  return document.getElementById(id);
+}
 
-    .top-actions{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      justify-content:flex-end;
-      position: relative;
-    }
+function pickId(...ids) {
+  for (const id of ids) {
+    const el = $(id);
+    if (el) return el;
+  }
+  return null;
+}
 
-    /* GUBBEN ska alltid synas + klickbar */
-    .top-row .top-user{
-      display: inline-flex !important;
-      align-items:center !important;
-      justify-content:center !important;
-      width: 40px !important;
-      height: 40px !important;
-      border-radius: 999px !important;
-      border: 1px solid rgba(11,22,51,.16) !important;
-      background: rgba(255,255,255,.78) !important;
-      cursor: pointer !important;
-      position: relative !important;
-      pointer-events: auto !important;
-    }
-    .top-row .top-user svg path{
-      stroke: rgba(11,22,51,.92) !important;
-    }
-    .top-row .top-user.is-logged-in::after{
-      content:"";
-      position:absolute;
-      width:10px; height:10px;
-      border-radius:999px;
-      right:-1px; top:-1px;
-      background: rgba(34,197,94,1);
-      box-shadow: 0 0 0 6px rgba(34,197,94,.12);
-      border: 2px solid rgba(255,255,255,.92);
-    }
+function show(el) {
+  if (el) el.style.display = "block";
+}
 
-    /* Meny-knappar */
-    .lang-pill{
-      border: 1px solid rgba(15,15,18,.12) !important;
-      background: rgba(255,255,255,.78) !important;
-      color: rgba(15,15,18,.92) !important;
-      padding: 7px 10px;
-      border-radius: 999px;
-      font-weight:650;
-      font-size:13px;
-      cursor:pointer;
-    }
+function hide(el) {
+  if (el) el.style.display = "none";
+}
 
-    .menu-btn{
-      width:40px; height:40px;
-      border-radius:999px;
-      border: 1px solid rgba(15,15,18,.12) !important;
-      background: rgba(255,255,255,.78) !important;
-      cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-    }
+function isVisible(el) {
+  return !!el && getComputedStyle(el).display !== "none";
+}
 
-    /* Dropdowns */
-    .user-menu, .lang-menu{
-      position:absolute;
-      right:0;
-      top: 52px;
-      width: 200px;
-      background:#fff;
-      border: 1px solid rgba(15,15,18,.10);
-      border-radius: 14px;
-      box-shadow: 0 18px 60px rgba(0,0,0,.12);
-      padding: 8px;
-      display:none;
-      z-index: 1200;
-    }
-    .lang-menu{ right: 52px; } /* så den hamnar vid språkpill */
+function setAriaExpanded(btn, expanded) {
+  if (!btn) return;
+  btn.setAttribute("aria-expanded", expanded ? "true" : "false");
+}
 
-    /* Hamburgerpanel: mer luft */
-    .menu-panel{
-      position: fixed;
-      top: 68px;
-      right: 16px;
-      width: 280px;
-      max-height: 80vh;
-      overflow-y: auto;
-      display:none;
-      border: 1px solid rgba(15,15,18,.10);
-      border-radius: 18px;
-      background: rgba(255,255,255,.96);
-      backdrop-filter: blur(12px);
-      box-shadow: 0 24px 70px rgba(0,0,0,.16);
-      padding: 10px;              /* luft runt */
-      z-index: 1100;
-    }
-    .menu-panel-inner{
-      padding: 10px;
-      display:flex;
-      flex-direction:column;
-      gap: 10px;
-    }
-    .menu-link{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      padding: 12px 12px;
-      border-radius: 14px;
-      border: 1px solid rgba(0,0,0,.05);
-      background: rgba(255,255,255,.78);
-      text-decoration:none;
-      color: rgba(15,15,18,.92);
-      font-weight:720;
-    }
-  </style>
+// -----------------------------
+// Auth helpers
+// -----------------------------
+function getCookie(name) {
+  const m = document.cookie.match(
+    new RegExp(
+      "(?:^|; )" + name.replace(/([$?*|{}\[\]\\\/\+^])/g, "\\$1") + "=([^;]*)"
+    )
+  );
+  return m ? decodeURIComponent(m[1]) : null;
+}
 
-  <div class="shell top-row-inner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0;">
-    <a class="brand soft-hover" href="/">
-      <div class="logo-badge" aria-hidden="true">
-        <img class="logo-img" src="/assets/Logo.PNG?v=1" alt="PeerRate logo" />
-      </div>
-      <div>
-        <div class="brand-name" style="font-weight:780;letter-spacing:-0.02em;line-height:1.1;">PeerRate</div>
-        <div class="brand-sub" data-i18n="top_sub" style="font-size:12px;margin-top:2px;">Förtroende du kan bevisa</div>
-      </div>
+function hasAuthToken() {
+  // Kolla många vanliga varianter (både localStorage + cookies)
+  const keys = [
+    "token",
+    "jwt",
+    "authToken",
+    "accessToken",
+    "refreshToken",
+    "pr_token",
+    "peerrate_token",
+    "peerRateToken",
+    "sessionToken",
+    "session",
+    "pr_session",
+    "connect.sid",
+  ];
+
+  // localStorage / sessionStorage
+  for (const k of keys) {
+    try {
+      const v1 = localStorage.getItem(k);
+      const v2 = sessionStorage.getItem(k);
+      if ((v1 && v1.length > 10) || (v2 && v2.length > 10)) return true;
+    } catch (_) {}
+  }
+
+  // cookies
+  for (const k of keys) {
+    const v = getCookie(k);
+    if (v && v.length > 10) return true;
+  }
+
+  // fallback: om du sparar user-objekt lokalt
+  try {
+    const user = localStorage.getItem("user") || localStorage.getItem("currentUser");
+    if (user && user.length > 5) return true;
+  } catch (_) {}
+
+  return false;
+}
+
+function clearAuth() {
+  const keys = [
+    "token",
+    "jwt",
+    "authToken",
+    "accessToken",
+    "refreshToken",
+    "pr_token",
+    "peerrate_token",
+    "peerRateToken",
+    "sessionToken",
+    "session",
+    "pr_session",
+    "connect.sid",
+    "user",
+    "currentUser",
+  ];
+
+  for (const k of keys) {
+    try {
+      localStorage.removeItem(k);
+      sessionStorage.removeItem(k);
+    } catch (_) {}
+  }
+
+  // Försök rensa cookies
+  for (const k of keys) {
+    document.cookie = `${k}=; Max-Age=0; path=/`;
+    document.cookie = `${k}=; Max-Age=0`;
+  }
+}
+
+// -----------------------------
+// UI builders
+// -----------------------------
+function setUserMenuLoggedOut(userMenu) {
+  if (!userMenu) return;
+  userMenu.innerHTML = `
+    <a class="menu-link" href="/profile.html" style="display:flex;justify-content:space-between;align-items:center;">
+      <div>Logga in</div><span>→</span>
+    </a>
+    <a class="menu-link" href="/customer.html" style="display:flex;justify-content:space-between;align-items:center;">
+      <div>Registrera dig</div><span>→</span>
+    </a>
+  `;
+}
+
+function setUserMenuLoggedIn(userMenu) {
+  if (!userMenu) return;
+  userMenu.innerHTML = `
+    <a class="menu-link" href="/profile.html" style="display:flex;justify-content:space-between;align-items:center;">
+      <div>Min profil</div><span>→</span>
     </a>
 
-    <div class="top-actions">
-      <!-- GUBBE -->
-      <button class="top-user" id="topUserPill" type="button" aria-label="Konto" aria-expanded="false">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M20 21a8 8 0 0 0-16 0" stroke="rgba(11,22,51,.92)" stroke-width="2" stroke-linecap="round"/>
-          <path d="M12 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke="rgba(11,22,51,.92)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
+    <button type="button" id="logoutBtn" style="
+      width:100%;
+      text-align:left;
+      border:0;
+      background:transparent;
+      padding: 10px 10px;
+      border-radius: 10px;
+      cursor:pointer;
+      font-weight: 750;
+    ">Logga ut</button>
+  `;
+}
 
-      <!-- User menu (fylls av topRow.js) -->
-      <div class="user-menu" id="userMenu" role="menu" aria-label="Användarmeny"></div>
+function applyLoggedInState(userBtn, loggedIn) {
+  if (!userBtn) return;
+  userBtn.classList.toggle("is-logged-in", !!loggedIn);
+}
 
-      <button class="lang-pill soft-hover" id="langBtn" type="button" aria-haspopup="true" aria-expanded="false">
-        <span id="langLabel">SV</span>
-        <span style="opacity:.6;">▾</span>
-      </button>
+// -----------------------------
+// Core toggling
+// -----------------------------
+function closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn) {
+  hide(menuPanel);
+  hide(langMenu);
+  hide(userMenu);
 
-      <button class="menu-btn soft-hover" id="menuBtn" type="button" aria-label="Öppna meny" aria-expanded="false">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M4 7h16M4 12h16M4 17h16" stroke="rgba(15,15,18,.85)" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </button>
-    </div>
-  </div>
+  setAriaExpanded(menuBtn, false);
+  setAriaExpanded(langBtn, false);
+  setAriaExpanded(userBtn, false);
+}
 
-  <div class="lang-menu" id="langMenu" role="menu" aria-label="Välj språk">
-    <button type="button" data-lang="sv">Svenska (SV)</button>
-    <button type="button" data-lang="en">English (EN)</button>
-  </div>
+function toggle(targetEl, btnEl, menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn) {
+  const open = !isVisible(targetEl);
+  closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+  if (open) {
+    show(targetEl);
+    setAriaExpanded(btnEl, true);
+  }
+}
 
-  <nav class="menu-panel" id="menuPanel" aria-label="Meny">
-    <div class="shell menu-panel-inner">
-      <a class="menu-link" href="/"><div>Hem</div><span>→</span></a>
-      <a class="menu-link" href="/customer.html"><div>Registrera dig</div><span>→</span></a>
-      <a class="menu-link" href="/profile.html"><div>Min profil</div><span>→</span></a>
-      <a class="menu-link" href="/rate.html"><div>Lämna betyg</div><span>→</span></a>
-      <a class="menu-link" href="/extension.html"><div>Installera extension</div><span>→</span></a>
-      <a class="menu-link" href="/references.html"><div>Arbetsreferenser</div><span>→</span></a>
-    </div>
-  </nav>
-</header>
+// -----------------------------
+// Ensure userMenu exists (fixar startsidan)
+// -----------------------------
+function ensureUserMenu(userBtn) {
+  // 1) Om den redan finns, returnera den
+  let userMenu = pickId("userMenu");
+  if (userMenu) return userMenu;
+
+  // 2) Skapa den bredvid userBtn, i samma "top-actions" container
+  if (!userBtn) return null;
+
+  const parent = userBtn.parentElement; // top-actions
+  if (!parent) return null;
+
+  userMenu = document.createElement("div");
+  userMenu.id = "userMenu";
+  userMenu.className = "user-menu";
+  userMenu.setAttribute("role", "menu");
+  userMenu.setAttribute("aria-label", "Användarmeny");
+  userMenu.style.display = "none";
+
+  parent.appendChild(userMenu);
+  return userMenu;
+}
+
+// -----------------------------
+// Public init (idempotent)
+// -----------------------------
+export function initTopRow() {
+  // skydd mot dubbel-init (main.js + pageBootstrap.js)
+  if (window.__PR_TOPROW_INIT_DONE__) return;
+  window.__PR_TOPROW_INIT_DONE__ = true;
+
+  const menuBtn = pickId("menuBtn");
+  const menuPanel = pickId("menuPanel");
+
+  const langBtn = pickId("langBtn");
+  const langMenu = pickId("langMenu");
+
+  // Nya: topUserPill. Gamla: topUserBtn
+  const userBtn = pickId("topUserPill", "topUserBtn");
+  let userMenu = ensureUserMenu(userBtn);
+
+  // Gör userBtn “klickbar” även om det är en div på någon sida
+  if (userBtn) {
+    userBtn.style.pointerEvents = "auto";
+    userBtn.style.cursor = "pointer";
+
+    if (!userBtn.getAttribute("role")) userBtn.setAttribute("role", "button");
+    if (!userBtn.getAttribute("tabindex")) userBtn.setAttribute("tabindex", "0");
+  }
+
+  // 1) Bygg userMenu utifrån login-status (smart meny)
+  const loggedIn = hasAuthToken();
+  applyLoggedInState(userBtn, loggedIn);
+
+  if (userMenu) {
+    if (loggedIn) setUserMenuLoggedIn(userMenu);
+    else setUserMenuLoggedOut(userMenu);
+
+    hide(userMenu);
+  }
+
+  // 2) Bind toggles
+  if (menuBtn && menuPanel) {
+    menuBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggle(menuPanel, menuBtn, menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+    });
+  }
+
+  if (langBtn && langMenu) {
+    langBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggle(langMenu, langBtn, menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+    });
+  }
+
+  // userBtn click
+  if (userBtn && userMenu) {
+    userBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggle(userMenu, userBtn, menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+    });
+
+    // Enter/Space för keyboard
+    userBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        toggle(userMenu, userBtn, menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+      }
+    });
+  }
+
+  // 3) Klick i userMenu: logout / links
+  if (userMenu) {
+    userMenu.addEventListener("click", (e) => {
+      const logoutBtn = e.target.closest("#logoutBtn");
+      const link = e.target.closest("a");
+
+      if (link) {
+        closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+        return;
+      }
+
+      if (logoutBtn) {
+        e.preventDefault();
+        clearAuth();
+        applyLoggedInState(userBtn, false);
+        setUserMenuLoggedOut(userMenu);
+        closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+        window.location.href = "/profile.html";
+      }
+    });
+  }
+
+  // 4) Klick utanför → stäng allt
+  document.addEventListener("click", () => {
+    closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+  });
+
+  // 5) ESC → stäng
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+    }
+  });
+
+  // 6) Klick på meny-länk i hamburgarpanel → stäng panel
+  if (menuPanel) {
+    menuPanel.addEventListener("click", (e) => {
+      const a = e.target.closest("a");
+      if (a) closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+    });
+  }
+
+  // 7) Klick på språkval → stäng
+  if (langMenu) {
+    langMenu.addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-lang]");
+      if (b) closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+    });
+  }
+}

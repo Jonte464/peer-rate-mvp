@@ -30,8 +30,9 @@ function setAriaExpanded(btn, expanded) {
   btn.setAttribute("aria-expanded", expanded ? "true" : "false");
 }
 
-// --- Auth helpers ---------------------------------------------------------
-
+// -----------------------------
+// Auth helpers
+// -----------------------------
 function getCookie(name) {
   const m = document.cookie.match(
     new RegExp(
@@ -42,24 +43,28 @@ function getCookie(name) {
 }
 
 function hasAuthToken() {
-  // Leta brett – vi vill inte låsa oss vid exakt nyckel
+  // Kolla många vanliga varianter (både localStorage + cookies)
   const keys = [
     "token",
     "jwt",
     "authToken",
     "accessToken",
+    "refreshToken",
     "pr_token",
     "peerrate_token",
     "peerRateToken",
     "sessionToken",
     "session",
+    "pr_session",
+    "connect.sid",
   ];
 
-  // localStorage
+  // localStorage / sessionStorage
   for (const k of keys) {
     try {
-      const v = localStorage.getItem(k);
-      if (v && v.length > 10) return true;
+      const v1 = localStorage.getItem(k);
+      const v2 = sessionStorage.getItem(k);
+      if ((v1 && v1.length > 10) || (v2 && v2.length > 10)) return true;
     } catch (_) {}
   }
 
@@ -68,6 +73,12 @@ function hasAuthToken() {
     const v = getCookie(k);
     if (v && v.length > 10) return true;
   }
+
+  // fallback: om du sparar user-objekt lokalt
+  try {
+    const user = localStorage.getItem("user") || localStorage.getItem("currentUser");
+    if (user && user.length > 5) return true;
+  } catch (_) {}
 
   return false;
 }
@@ -78,11 +89,16 @@ function clearAuth() {
     "jwt",
     "authToken",
     "accessToken",
+    "refreshToken",
     "pr_token",
     "peerrate_token",
     "peerRateToken",
     "sessionToken",
     "session",
+    "pr_session",
+    "connect.sid",
+    "user",
+    "currentUser",
   ];
 
   for (const k of keys) {
@@ -92,15 +108,16 @@ function clearAuth() {
     } catch (_) {}
   }
 
-  // Försök rensa cookies (både path=/ och default)
+  // Försök rensa cookies
   for (const k of keys) {
     document.cookie = `${k}=; Max-Age=0; path=/`;
     document.cookie = `${k}=; Max-Age=0`;
   }
 }
 
-// --- UI builders ----------------------------------------------------------
-
+// -----------------------------
+// UI builders
+// -----------------------------
 function setUserMenuLoggedOut(userMenu) {
   if (!userMenu) return;
   userMenu.innerHTML = `
@@ -135,12 +152,12 @@ function setUserMenuLoggedIn(userMenu) {
 
 function applyLoggedInState(userBtn, loggedIn) {
   if (!userBtn) return;
-  // CSS kan visa grön dot när denna klass finns
   userBtn.classList.toggle("is-logged-in", !!loggedIn);
 }
 
-// --- Core toggling logic --------------------------------------------------
-
+// -----------------------------
+// Core toggling
+// -----------------------------
 function closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn) {
   hide(menuPanel);
   hide(langMenu);
@@ -160,10 +177,39 @@ function toggle(targetEl, btnEl, menuPanel, langMenu, userMenu, menuBtn, langBtn
   }
 }
 
-// --- Public init ----------------------------------------------------------
+// -----------------------------
+// Ensure userMenu exists (fixar startsidan)
+// -----------------------------
+function ensureUserMenu(userBtn) {
+  // 1) Om den redan finns, returnera den
+  let userMenu = pickId("userMenu");
+  if (userMenu) return userMenu;
 
+  // 2) Skapa den bredvid userBtn, i samma "top-actions" container
+  if (!userBtn) return null;
+
+  const parent = userBtn.parentElement; // top-actions
+  if (!parent) return null;
+
+  userMenu = document.createElement("div");
+  userMenu.id = "userMenu";
+  userMenu.className = "user-menu";
+  userMenu.setAttribute("role", "menu");
+  userMenu.setAttribute("aria-label", "Användarmeny");
+  userMenu.style.display = "none";
+
+  parent.appendChild(userMenu);
+  return userMenu;
+}
+
+// -----------------------------
+// Public init (idempotent)
+// -----------------------------
 export function initTopRow() {
-  // Stöd både nya och gamla id:n (för att inte råka bryta någon sida)
+  // skydd mot dubbel-init (main.js + pageBootstrap.js)
+  if (window.__PR_TOPROW_INIT_DONE__) return;
+  window.__PR_TOPROW_INIT_DONE__ = true;
+
   const menuBtn = pickId("menuBtn");
   const menuPanel = pickId("menuPanel");
 
@@ -172,9 +218,18 @@ export function initTopRow() {
 
   // Nya: topUserPill. Gamla: topUserBtn
   const userBtn = pickId("topUserPill", "topUserBtn");
-  const userMenu = pickId("userMenu");
+  let userMenu = ensureUserMenu(userBtn);
 
-  // 1) Bygg userMenu utifrån login-status
+  // Gör userBtn “klickbar” även om det är en div på någon sida
+  if (userBtn) {
+    userBtn.style.pointerEvents = "auto";
+    userBtn.style.cursor = "pointer";
+
+    if (!userBtn.getAttribute("role")) userBtn.setAttribute("role", "button");
+    if (!userBtn.getAttribute("tabindex")) userBtn.setAttribute("tabindex", "0");
+  }
+
+  // 1) Bygg userMenu utifrån login-status (smart meny)
   const loggedIn = hasAuthToken();
   applyLoggedInState(userBtn, loggedIn);
 
@@ -182,7 +237,6 @@ export function initTopRow() {
     if (loggedIn) setUserMenuLoggedIn(userMenu);
     else setUserMenuLoggedOut(userMenu);
 
-    // default: stängd
     hide(userMenu);
   }
 
@@ -203,35 +257,41 @@ export function initTopRow() {
     });
   }
 
+  // userBtn click
   if (userBtn && userMenu) {
     userBtn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       toggle(userMenu, userBtn, menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
     });
+
+    // Enter/Space för keyboard
+    userBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        e.stopPropagation();
+        toggle(userMenu, userBtn, menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
+      }
+    });
   }
 
-  // 3) Klick i userMenu: hantera logout om knappen finns
+  // 3) Klick i userMenu: logout / links
   if (userMenu) {
     userMenu.addEventListener("click", (e) => {
       const logoutBtn = e.target.closest("#logoutBtn");
       const link = e.target.closest("a");
 
-      // Klick på länk → stäng menyer (navigering sker ändå)
       if (link) {
         closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
         return;
       }
 
-      // Klick på logout
       if (logoutBtn) {
         e.preventDefault();
         clearAuth();
         applyLoggedInState(userBtn, false);
         setUserMenuLoggedOut(userMenu);
         closeAll(menuPanel, langMenu, userMenu, menuBtn, langBtn, userBtn);
-
-        // Skicka användaren till profile/login (enkel och tydlig UX)
         window.location.href = "/profile.html";
       }
     });
