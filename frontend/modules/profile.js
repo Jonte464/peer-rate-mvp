@@ -1,10 +1,8 @@
-// frontend/modules/profile.js – Hanterar profilvisning, avatarer, profil-UI och Tradera-/eBay-koppling
+// frontend/modules/profile.js – Hanterar profilvisning, avatarer och profil-UI
 
 import { el, showNotification } from './utils.js';
 import auth, { login, logout } from './auth.js';
 import api from './api.js';
-import { initTraderaSection } from './profileTradera.js';
-import { initEbaySection } from './profileEbay.js';
 import { renderPRating, loadMyRating } from './profileRatings.js';
 import { initRatingForm } from './ratingForm.js';
 import { t, applyLang } from './landing/language.js';
@@ -130,23 +128,38 @@ async function handleLoginSubmit(event) {
   const password = form.querySelector('input[name="password"]')?.value || '';
 
   if (!email || !password) {
-    showNotification('error', t('profile_login_error_missing_fields', 'Fyll i både e-post och lösenord.'), 'login-status');
+    showNotification(
+      'error',
+      t('profile_login_error_missing_fields', 'Fyll i både e-post och lösenord.'),
+      'login-status'
+    );
     return;
   }
 
   try {
     const res = await login(email, password);
     if (!res || res.ok === false) {
-      const message = res?.error || t('profile_login_error_failed', 'Inloggningen misslyckades. Kontrollera uppgifterna.');
+      const message =
+        res?.error ||
+        t('profile_login_error_failed', 'Inloggningen misslyckades. Kontrollera uppgifterna.');
       showNotification('error', message, 'login-status');
       return;
     }
 
-    showNotification('success', t('profile_login_success', 'Du är nu inloggad.'), 'login-status');
+    showNotification(
+      'success',
+      t('profile_login_success', 'Du är nu inloggad.'),
+      'login-status'
+    );
+
     window.setTimeout(() => window.location.reload(), 500);
   } catch (err) {
     console.error('handleLoginSubmit error', err);
-    showNotification('error', t('profile_login_error_technical', 'Tekniskt fel vid inloggning. Försök igen om en stund.'), 'login-status');
+    showNotification(
+      'error',
+      t('profile_login_error_technical', 'Tekniskt fel vid inloggning. Försök igen om en stund.'),
+      'login-status'
+    );
   }
 }
 
@@ -158,11 +171,19 @@ export function initLogoutButton() {
   btn.addEventListener('click', async () => {
     try {
       await logout();
-      showNotification('success', t('profile_logout_success', 'Du är nu utloggad.'), 'notice');
+      showNotification(
+        'success',
+        t('profile_logout_success', 'Du är nu utloggad.'),
+        'notice'
+      );
       window.setTimeout(() => window.location.reload(), 500);
     } catch (err) {
       console.error('Logout error', err);
-      showNotification('error', t('profile_logout_error', 'Kunde inte logga ut. Försök igen.'), 'notice');
+      showNotification(
+        'error',
+        t('profile_logout_error', 'Kunde inte logga ut. Försök igen.'),
+        'notice'
+      );
     }
   });
 }
@@ -353,8 +374,6 @@ export async function initProfilePage() {
           loadProfileData(),
           loadExternalData(),
           loadMyRating(),
-          initTraderaSection(),
-          initEbaySection(),
         ]);
       } catch (err) {
         console.error('profile data loaders error', err);
