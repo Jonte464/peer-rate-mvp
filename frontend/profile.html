@@ -12,13 +12,11 @@
 
 <body>
 
-  <!-- ✅ Global TOP ROW injectas via pageBootstrap.js -->
   <div id="slot-top-row"></div>
 
   <main class="page">
     <div class="wrap">
 
-      <!-- Inloggningsbadge -->
       <div id="user-badge" class="user-badge hidden">
         <div class="user-avatar" id="user-badge-avatar" title="Klicka för att byta bild">PR</div>
         <div>
@@ -32,7 +30,6 @@
         Här kan du se dina uppgifter och ditt samlade omdöme.
       </p>
 
-      <!-- LOGIN-KORT (visas bara om man inte är inloggad) -->
       <section class="card" id="login-card">
         <h2 data-i18n="profile_login_title">Logga in</h2>
         <p class="muted" data-i18n="profile_login_lead">
@@ -41,10 +38,22 @@
 
         <form id="login-form" autocomplete="off">
           <label for="login-email" data-i18n="profile_login_email">E-post</label>
-          <input id="login-email" name="email" type="email" placeholder="erik@example.com" />
+          <input
+            id="login-email"
+            name="email"
+            type="email"
+            placeholder="erik@example.com"
+            data-i18n-placeholder="profile_login_email_ph"
+          />
 
           <label for="login-password" data-i18n="profile_login_password">Lösenord</label>
-          <input id="login-password" name="password" type="password" placeholder="Ditt lösenord" />
+          <input
+            id="login-password"
+            name="password"
+            type="password"
+            placeholder="Ditt lösenord"
+            data-i18n-placeholder="profile_login_password_ph"
+          />
 
           <div class="row" style="margin-top:12px">
             <button class="primary" type="submit" id="login-btn" data-i18n="profile_login_btn">Logga in</button>
@@ -54,10 +63,8 @@
         </form>
       </section>
 
-      <!-- Allt här visas bara när man är inloggad -->
       <div id="profile-root" class="hidden">
 
-        <!-- ✅ Mitt omdöme -->
         <section class="card">
           <h2 data-i18n="profile_my_rating_title">Mitt omdöme</h2>
           <p class="tiny muted" data-i18n="profile_my_rating_lead">
@@ -94,7 +101,6 @@
           <div id="ratings-list" class="ratings-list"></div>
         </section>
 
-        <!-- ✅ Arbetsreferenser -->
         <section class="card" id="work-references-card">
           <h2 data-i18n="profile_workrefs_title">Arbetsreferenser</h2>
           <p class="tiny muted" data-i18n="profile_workrefs_lead">
@@ -102,18 +108,19 @@
           </p>
 
           <div class="row" style="margin-top:12px">
-            <a class="primary" href="/references.html"
-               style="display:inline-block;text-decoration:none;padding:10px 14px;border-radius:10px;"
-               data-i18n="profile_workrefs_btn">Öppna arbetsreferenser</a>
+            <a
+              class="primary"
+              href="/references.html"
+              style="display:inline-block;text-decoration:none;padding:10px 14px;border-radius:10px;"
+              data-i18n="profile_workrefs_btn"
+            >Öppna arbetsreferenser</a>
           </div>
         </section>
 
-        <!-- Mina uppgifter -->
         <section class="card">
           <h2 data-i18n="profile_my_details_title">Mina uppgifter</h2>
           <p class="tiny muted" data-i18n="profile_my_details_lead">Uppgifter kopplade till din profil.</p>
 
-          <!-- Profilbild -->
           <div class="profile-avatar-block">
             <div class="profile-avatar-preview" id="profile-avatar-preview">PR</div>
             <div>
@@ -129,41 +136,33 @@
           </div>
 
           <ul class="profile-list">
-            <li><span class="profile-label">Namn</span><span class="profile-value" id="profile-name">–</span></li>
-            <li><span class="profile-label">E-post</span><span class="profile-value" id="profile-email">–</span></li>
-            <li><span class="profile-label">Personnummer</span><span class="profile-value" id="profile-personalNumber">–</span></li>
-            <li><span class="profile-label">Telefon</span><span class="profile-value" id="profile-phone">–</span></li>
-            <li><span class="profile-label">Gatuadress</span><span class="profile-value" id="profile-addressStreet">–</span></li>
-            <li><span class="profile-label">Postnummer</span><span class="profile-value" id="profile-addressZip">–</span></li>
-            <li><span class="profile-label">Ort</span><span class="profile-value" id="profile-addressCity">–</span></li>
-            <li><span class="profile-label">Land</span><span class="profile-value" id="profile-country">–</span></li>
+            <li><span class="profile-label" data-i18n="profile_label_name">Namn</span><span class="profile-value" id="profile-name">–</span></li>
+            <li><span class="profile-label" data-i18n="profile_label_email">E-post</span><span class="profile-value" id="profile-email">–</span></li>
+            <li><span class="profile-label" data-i18n="profile_label_personalNumber">Personnummer</span><span class="profile-value" id="profile-personalNumber">–</span></li>
+            <li><span class="profile-label" data-i18n="profile_label_phone">Telefon</span><span class="profile-value" id="profile-phone">–</span></li>
+            <li><span class="profile-label" data-i18n="profile_label_addressStreet">Gatuadress</span><span class="profile-value" id="profile-addressStreet">–</span></li>
+            <li><span class="profile-label" data-i18n="profile_label_addressZip">Postnummer</span><span class="profile-value" id="profile-addressZip">–</span></li>
+            <li><span class="profile-label" data-i18n="profile_label_addressCity">Ort</span><span class="profile-value" id="profile-addressCity">–</span></li>
+            <li><span class="profile-label" data-i18n="profile_label_country">Land</span><span class="profile-value" id="profile-country">–</span></li>
           </ul>
         </section>
 
-        <!-- Externa data -->
         <section class="card" id="external-data-section">
-          <h2>Externa data</h2>
-          <p class="tiny muted">
+          <h2 data-i18n="profile_external_title">Externa data</h2>
+          <p class="tiny muted" data-i18n="profile_external_lead">
             Här visas viss information som hämtats från externa, offentliga källor kopplat till din profil.
             Uppgifterna uppdateras automatiskt med jämna mellanrum.
           </p>
 
           <ul class="profile-list">
-            <li><span class="profile-label">Fordon (antal)</span><span class="profile-value" id="ext-vehicles-count"></span></li>
-            <li><span class="profile-label">Fastigheter (antal)</span><span class="profile-value" id="ext-properties-count"></span></li>
-            <li><span class="profile-label">Senast uppdaterad</span><span class="profile-value" id="ext-last-updated"></span></li>
-            <li><span class="profile-label">Validerad adress</span><span class="profile-value"><span data-field="externalAddressLine">–</span></span></li>
-            <li><span class="profile-label">Adressstatus</span><span class="profile-value"><span data-field="externalAddressStatus">–</span></span></li>
+            <li><span class="profile-label" data-i18n="profile_external_vehicles">Fordon (antal)</span><span class="profile-value" id="ext-vehicles-count"></span></li>
+            <li><span class="profile-label" data-i18n="profile_external_properties">Fastigheter (antal)</span><span class="profile-value" id="ext-properties-count"></span></li>
+            <li><span class="profile-label" data-i18n="profile_external_last_updated">Senast uppdaterad</span><span class="profile-value" id="ext-last-updated"></span></li>
+            <li><span class="profile-label" data-i18n="profile_external_validated_address">Validerad adress</span><span class="profile-value"><span data-field="externalAddressLine">–</span></span></li>
+            <li><span class="profile-label" data-i18n="profile_external_address_status">Adressstatus</span><span class="profile-value"><span data-field="externalAddressStatus">–</span></span></li>
           </ul>
         </section>
 
-        <!-- eBay-koppling (tillfälligt dold) -->
-        <section class="card hidden" id="ebay-card" style="display:none;"></section>
-
-        <!-- Tradera-koppling (tillfälligt dold) -->
-        <section class="card hidden" id="tradera-card" style="display:none;"></section>
-
-        <!-- Logga ut -->
         <section class="card">
           <button id="logout-btn" type="button" class="secondary" data-i18n="profile_logout_btn">Logga ut</button>
         </section>
@@ -176,9 +175,7 @@
     </div>
   </main>
 
-  <!-- ✅ Single entrypoint: inject header → init language → load main.js -->
   <script type="module" src="/modules/pageBootstrap.js?v=2"></script>
-  <!-- ✅ Fixar avatar upload robust -->
   <script type="module" src="/modules/profileAvatar.js?v=1"></script>
 </body>
 </html>
