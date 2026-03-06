@@ -1,10 +1,11 @@
 // profileRatings.js – Hanterar visning av "Mitt omdöme" på profilsidan
 
 import api from './api.js';
+import { t, getCurrentLanguage, applyLang } from './landing/language.js';
 
-// Hjälpare: översätt RatingSource -> svensk etikett
 function mapRatingSourceLabel(source) {
-  if (!source) return 'Annat/okänt';
+  if (!source) return t('profile_rating_source_other', 'Annat/okänt');
+
   const s = String(source).toUpperCase();
   switch (s) {
     case 'BLOCKET':
@@ -19,17 +20,34 @@ function mapRatingSourceLabel(source) {
       return 'Tiptap';
     case 'OTHER':
     default:
-      return 'Annat/okänt';
+      return t('profile_rating_source_other', 'Annat/okänt');
   }
 }
 
-// 5 st P-symboler, med stöd för halvor
+function formatDate(value) {
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return '';
+
+  const locale = getCurrentLanguage() === 'en' ? 'en-GB' : 'sv-SE';
+  return d.toLocaleString(locale);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
 export function renderPRating(avg) {
   const row = document.getElementById('rating-p-symbols');
   const text = document.getElementById('rating-p-symbols-text');
   if (!row) return;
 
   row.innerHTML = '';
+
   const valRaw = Number(avg);
   const val = Math.max(0, Math.min(5, isNaN(valRaw) ? 0 : valRaw));
 
@@ -40,6 +58,7 @@ export function renderPRating(avg) {
     } else if (val >= i - 0.5) {
       cls += ' half';
     }
+
     const span = document.createElement('span');
     span.className = cls;
     span.textContent = 'P';
@@ -48,14 +67,15 @@ export function renderPRating(avg) {
 
   if (text) {
     if (!avg || isNaN(valRaw)) {
-      text.textContent = 'Inga omdömen ännu.';
+      text.textContent = t('profile_no_ratings_yet', 'Inga omdömen ännu.');
     } else {
-      text.textContent = `Din nuvarande rating är ${val.toFixed(1)} / 5.`;
+      text.textContent = t('profile_current_rating', 'Din nuvarande rating är {value} / 5.', {
+        value: val.toFixed(1),
+      });
     }
   }
 }
 
-// Tårtliknande illustration för varifrån omdömena kommer
 export function renderRatingSources(ratings) {
   const pie = document.getElementById('rating-source-pie');
   const pieLabel = document.getElementById('rating-source-pie-label');
@@ -64,16 +84,14 @@ export function renderRatingSources(ratings) {
 
   if (!Array.isArray(ratings) || ratings.length === 0) {
     pie.style.background = '#f1e4d5';
-    if (pieLabel) pieLabel.textContent = 'Inga omdömen';
-    legend.innerHTML = '<div class="tiny muted">Inga omdömen ännu.</div>';
+    if (pieLabel) pieLabel.textContent = t('profile_no_ratings', 'Inga omdömen');
+    legend.innerHTML = `<div class="tiny muted">${escapeHtml(t('profile_no_ratings_yet', 'Inga omdömen ännu.'))}</div>`;
     return;
   }
 
   const counts = new Map();
   for (const r of ratings) {
-    const label = mapRatingSourceLabel(
-      r.source || r.ratingSource || r.sourceLabel
-    );
+    const label = mapRatingSourceLabel(r.source || r.ratingSource || r.sourceLabel);
     counts.set(label, (counts.get(label) || 0) + 1);
   }
 
@@ -85,11 +103,13 @@ export function renderRatingSources(ratings) {
   const parts = [];
 
   legend.innerHTML = '';
+
   entries.forEach(([name, count], idx) => {
     const share = (count / total) * 100;
     const start = current;
     const end = start + share;
     current = end;
+
     const color = colors[idx % colors.length];
     parts.push(`${color} ${start}% ${end}%`);
 
@@ -97,20 +117,22 @@ export function renderRatingSources(ratings) {
     item.className = 'rating-legend-item';
     item.innerHTML = `
       <span class="rating-legend-color" style="background:${color}"></span>
-      <span class="rating-legend-label">${name}</span>
+      <span class="rating-legend-label">${escapeHtml(name)}</span>
       <span class="rating-legend-value">${Math.round(share)}% (${count})</span>
     `;
     legend.appendChild(item);
   });
 
   pie.style.background = `conic-gradient(${parts.join(', ')})`;
-  if (pieLabel) pieLabel.textContent = `${total} omdömen`;
+  if (pieLabel) {
+    pieLabel.textContent = t('profile_total_ratings', '{count} omdömen', { count: total });
+  }
 }
 
-// Hämta och rendera "Mitt omdöme"
 export async function loadMyRating() {
   try {
     const info = await api.getMyRating();
+
     if (!info) {
       renderPRating(null);
       renderRatingSources([]);
@@ -120,80 +142,76 @@ export async function loadMyRating() {
     const set = (id, value) => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.textContent =
-        value === undefined || value === null || value === '' ? '-' : String(value);
+      el.textContent = value === undefined || value === null || value === '' ? '-' : String(value);
     };
 
     if (typeof info.average === 'number') {
       set('profile-score', String(info.average));
       set('profile-score-count', String(info.count || 0));
+
       const fill = document.getElementById('profile-score-bar');
       if (fill) {
-        const pct = Math.max(
-          0,
-          Math.min(100, (info.average / 5) * 100)
-        );
+        const pct = Math.max(0, Math.min(100, (info.average / 5) * 100));
         fill.style.width = `${pct}%`;
       }
     }
 
-    // Övergripande illustrationer
     renderPRating(info.average);
     renderRatingSources(info.ratings || []);
 
-    // Lista med individuella omdömen
     const listEl = document.getElementById('ratings-list');
     if (listEl) {
       if (!Array.isArray(info.ratings) || info.ratings.length === 0) {
-        listEl.innerHTML =
-          '<div class="tiny muted">Inga omdömen än.</div>';
+        listEl.innerHTML = `<div class="tiny muted">${escapeHtml(t('profile_no_ratings_short', 'Inga omdömen än.'))}</div>`;
       } else {
         let html = '';
-        info.ratings.forEach((r) => {
-          const d = new Date(r.createdAt);
-          const dateStr = isNaN(d.getTime())
-            ? ''
-            : d.toLocaleString('sv-SE');
 
+        info.ratings.forEach((r) => {
+          const dateStr = formatDate(r.createdAt);
           const score = r.rating || r.score || '';
 
-          // 👇 Försök först med riktiga fält från databasen
           const rawRaterName =
             (r.raterName || r.raterEmail || r.rater || '').toString().trim();
 
-          // Om backend skickar med någon "etikett", t.ex. "Tip-tap användare"
           const channelLabel = (r.raterLabel || '').toString().trim();
-
-          // Riktig visning: "Anna J" om vi har det, annars ev. "Tip-tap användare", annars "Okänd"
-          const raterDisplay = rawRaterName || channelLabel || 'Okänd';
+          const unknownText = t('profile_rater_unknown', 'Okänd');
+          const raterDisplay = rawRaterName || channelLabel || unknownText;
 
           const sourceLabel = mapRatingSourceLabel(
             r.source || r.ratingSource || r.sourceLabel
           );
 
           const metaParts = [];
-          if (raterDisplay && raterDisplay !== 'Okänd') {
-            metaParts.push(`av ${raterDisplay}`);
+
+          if (raterDisplay && raterDisplay !== unknownText) {
+            metaParts.push(t('profile_rating_by', 'av {name}', { name: raterDisplay }));
           }
+
           if (sourceLabel) {
-            metaParts.push(`betyg via ${sourceLabel}`);
+            metaParts.push(t('profile_rating_via', 'betyg via {source}', { source: sourceLabel }));
           }
+
           if (dateStr) {
             metaParts.push(dateStr);
           }
+
           const metaText = metaParts.join(' · ');
+          const comment = (r.comment || r.text || '').slice(0, 400);
 
           html += `<div class="rating-row">
             <div class="rating-main">
-              <div class="rating-stars">${score} / 5</div>
-              <div class="rating-meta">${metaText}</div>
-              <div class="rating-comment-inline">${(r.comment || r.text || '').slice(0,400)}</div>
+              <div class="rating-stars">${escapeHtml(String(score))} / 5</div>
+              <div class="rating-meta">${escapeHtml(metaText)}</div>
+              <div class="rating-comment-inline">${escapeHtml(comment)}</div>
             </div>
           </div>`;
         });
+
         listEl.innerHTML = html;
       }
     }
+
+    applyLang(document);
   } catch (err) {
     console.error('Kunde inte ladda Mitt omdöme', err);
     renderPRating(null);

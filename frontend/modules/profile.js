@@ -1,4 +1,4 @@
-// profile.js – Hanterar profilvisning, avatarer, profil-UI och Tradera-/eBay-koppling
+// frontend/modules/profile.js – Hanterar profilvisning, avatarer, profil-UI och Tradera-/eBay-koppling
 
 import { el, showNotification } from './utils.js';
 import auth, { login, logout } from './auth.js';
@@ -7,19 +7,21 @@ import { initTraderaSection } from './profileTradera.js';
 import { initEbaySection } from './profileEbay.js';
 import { renderPRating, loadMyRating } from './profileRatings.js';
 import { initRatingForm } from './ratingForm.js';
+import { t, applyLang } from './landing/language.js';
+
 export { initRatingLogin } from './ratingForm.js'; // vidareexport för /rate.html
 
-// Hjälpare: nyckel i localStorage per användare
 function getAvatarKey(user) {
   if (!user || typeof user !== 'object') return 'peerRateAvatar:default';
+
   const id =
     (user.email && String(user.email).toLowerCase()) ||
     (user.subjectRef && String(user.subjectRef).toLowerCase()) ||
     'default';
+
   return `peerRateAvatar:${id}`;
 }
 
-// Visar / gömmer “Hej Jonathan”-badgen
 export function updateUserBadge(user) {
   const userBadge = el('user-badge');
   const userBadgeName = el('user-badge-name');
@@ -36,12 +38,10 @@ export function updateUserBadge(user) {
     fullName.split(/\s+/)[0] ||
     (user.email ? user.email.split('@')[0] : '');
 
-  userBadgeName.textContent = firstName || 'Profil';
+  userBadgeName.textContent = firstName || t('profile_default_name', 'Profil');
   userBadge.classList.remove('hidden');
 }
 
-// Uppdaterar avatarerna (badge + profilbild)
-// Funkar även när user är null
 export function updateAvatars(user) {
   const key = getAvatarKey(user);
   const avatarUrl = localStorage.getItem(key);
@@ -62,6 +62,7 @@ export function updateAvatars(user) {
 
   const applyAvatar = (target) => {
     if (!target) return;
+
     if (avatarUrl) {
       target.style.backgroundImage = `url(${avatarUrl})`;
       target.textContent = '';
@@ -75,139 +76,132 @@ export function updateAvatars(user) {
   applyAvatar(el('profile-avatar-preview'));
 }
 
-// ----------------------
-// Profilbild – uppladdning
-// ----------------------
 function initAvatarUpload() {
   const input = document.getElementById('profile-avatar-input');
   if (!input) return;
 
   const openPicker = () => {
-    try { input.click(); } catch {}
+    try {
+      input.click();
+    } catch {}
   };
 
-  // ✅ Klick på “JS”-cirkeln uppe i badge -> öppna file picker
   const badgeAvatar = document.getElementById('user-badge-avatar');
-  if (badgeAvatar) {
+  if (badgeAvatar && !badgeAvatar.dataset.avatarBound) {
+    badgeAvatar.dataset.avatarBound = 'true';
     badgeAvatar.style.cursor = 'pointer';
     badgeAvatar.addEventListener('click', openPicker);
   }
 
-  // ✅ Klick på preview-cirkeln i “Mina uppgifter” -> öppna file picker
   const previewAvatar = document.getElementById('profile-avatar-preview');
-  if (previewAvatar) {
+  if (previewAvatar && !previewAvatar.dataset.avatarBound) {
+    previewAvatar.dataset.avatarBound = 'true';
     previewAvatar.style.cursor = 'pointer';
     previewAvatar.addEventListener('click', openPicker);
   }
 
-  input.addEventListener('change', (event) => {
-    const file = event.target.files && event.target.files[0];
-    if (!file) return;
+  if (!input.dataset.avatarInputBound) {
+    input.dataset.avatarInputBound = 'true';
+    input.addEventListener('change', (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      try {
-        const user = auth.getUser();
-        const key = getAvatarKey(user);
-        // Spara bara lokalt i webbläsaren, per användare
-        localStorage.setItem(key, reader.result);
-        updateAvatars(user);
-      } catch (err) {
-        console.error('Kunde inte spara/uppdatera avatar', err);
-      }
-    };
-    reader.readAsDataURL(file);
-  });
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const user = auth.getUser();
+          const key = getAvatarKey(user);
+          localStorage.setItem(key, reader.result);
+          updateAvatars(user);
+        } catch (err) {
+          console.error('Kunde inte spara/uppdatera avatar', err);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 }
 
-// ----------------------
-// Login på Min profil
-// ----------------------
 async function handleLoginSubmit(event) {
   event.preventDefault();
+
   const form = event.currentTarget;
   const email = form.querySelector('input[name="email"]')?.value?.trim() || '';
   const password = form.querySelector('input[name="password"]')?.value || '';
 
   if (!email || !password) {
-    showNotification('error', 'Fyll i både e-post och lösenord.', 'login-status');
+    showNotification('error', t('profile_login_error_missing_fields', 'Fyll i både e-post och lösenord.'), 'login-status');
     return;
   }
 
   try {
     const res = await login(email, password);
     if (!res || res.ok === false) {
-      const message = res?.error || 'Inloggningen misslyckades. Kontrollera uppgifterna.';
+      const message = res?.error || t('profile_login_error_failed', 'Inloggningen misslyckades. Kontrollera uppgifterna.');
       showNotification('error', message, 'login-status');
       return;
     }
 
-    showNotification('success', 'Du är nu inloggad.', 'login-status');
+    showNotification('success', t('profile_login_success', 'Du är nu inloggad.'), 'login-status');
     window.setTimeout(() => window.location.reload(), 500);
   } catch (err) {
     console.error('handleLoginSubmit error', err);
-    showNotification('error', 'Tekniskt fel vid inloggning. Försök igen om en stund.', 'login-status');
+    showNotification('error', t('profile_login_error_technical', 'Tekniskt fel vid inloggning. Försök igen om en stund.'), 'login-status');
   }
 }
 
-// ----------------------
-// Logout-knapp
-// ----------------------
 export function initLogoutButton() {
   const btn = document.getElementById('logout-btn') || document.getElementById('logout-button');
-  if (!btn) return;
+  if (!btn || btn.dataset.logoutBound) return;
+
+  btn.dataset.logoutBound = 'true';
   btn.addEventListener('click', async () => {
     try {
       await logout();
-      showNotification('success', 'Du är nu utloggad.', 'notice');
+      showNotification('success', t('profile_logout_success', 'Du är nu utloggad.'), 'notice');
       window.setTimeout(() => window.location.reload(), 500);
     } catch (err) {
       console.error('Logout error', err);
-      showNotification('error', 'Kunde inte logga ut. Försök igen.', 'notice');
+      showNotification('error', t('profile_logout_error', 'Kunde inte logga ut. Försök igen.'), 'notice');
     }
   });
 }
 
-// ----------------------
-// Hjälpare: översätt adressstatus till svenska
-// ----------------------
 function translateAddressStatus(rawStatus) {
   if (!rawStatus) return '-';
+
   const s = String(rawStatus).toUpperCase();
 
   switch (s) {
     case 'VERIFIED':
-      return 'Bekräftad (adress hittad i adressregister)';
+      return t('profile_address_status_verified', 'Bekräftad (adress hittad i adressregister)');
     case 'FROM_PROFILE':
-      return 'Från din profil (ej verifierad externt)';
+      return t('profile_address_status_from_profile', 'Från din profil (ej verifierad externt)');
     case 'NO_EXTERNAL_DATA':
-      return 'Ingen extern data';
+      return t('profile_address_status_no_external_data', 'Ingen extern data');
     case 'NO_ADDRESS_INPUT':
-      return 'Ingen adress angiven';
+      return t('profile_address_status_no_address_input', 'Ingen adress angiven');
     case 'NO_ADDRESS_IN_RESPONSE':
-      return 'Ingen adress i svaret från tjänsten';
+      return t('profile_address_status_no_address_in_response', 'Ingen adress i svaret från tjänsten');
     case 'NO_ADDRESS':
-      return 'Ingen adress';
+      return t('profile_address_status_no_address', 'Ingen adress');
     case 'LOOKUP_FAILED':
-      return 'Tekniskt fel vid adresskontroll';
+      return t('profile_address_status_lookup_failed', 'Tekniskt fel vid adresskontroll');
     default:
-      return `Okänd status (${s})`;
+      return t('profile_address_status_unknown', 'Okänd status ({status})', { status: s });
   }
 }
 
-// ----------------------
-// Hämta och rendera profil-data i DOM
-// ----------------------
 async function loadProfileData() {
   try {
     let customer = null;
+
     try {
       customer = await api.getCurrentCustomer();
     } catch {
       customer = null;
     }
 
-    // fallback: local auth user
     if (!customer) {
       const local = auth.getUser && auth.getUser();
       if (!local) return;
@@ -224,7 +218,7 @@ async function loadProfileData() {
     const set = (id, value) => {
       const node = document.getElementById(id);
       if (!node) return;
-      node.textContent = (value === undefined || value === null || value === '' ? '-' : String(value));
+      node.textContent = value === undefined || value === null || value === '' ? '-' : String(value);
     };
 
     set(
@@ -256,9 +250,6 @@ async function loadProfileData() {
   }
 }
 
-// ----------------------
-// Hämta och rendera EXTERN data
-// ----------------------
 async function loadExternalData() {
   try {
     const section = document.getElementById('external-data-section');
@@ -274,6 +265,7 @@ async function loadExternalData() {
     const setAndToggle = (id, value) => {
       const node = document.getElementById(id);
       if (!node) return;
+
       const li = node.closest && node.closest('li');
 
       if (value === undefined || value === null || value === '') {
@@ -295,7 +287,9 @@ async function loadExternalData() {
 
     const setSpecial = (node, value) => {
       if (!node) return;
+
       const li = node.closest && node.closest('li');
+
       if (value === undefined || value === null || value === '') {
         node.textContent = '';
         if (li) li.classList.add('hidden');
@@ -320,9 +314,6 @@ async function loadExternalData() {
   }
 }
 
-// ----------------------
-// Initiera profilsidan
-// ----------------------
 export async function initProfilePage() {
   console.log('initProfilePage');
 
@@ -331,12 +322,16 @@ export async function initProfilePage() {
     console.warn('Login form not found');
     return;
   }
-  form.addEventListener('submit', handleLoginSubmit);
+
+  if (!form.dataset.loginBound) {
+    form.dataset.loginBound = 'true';
+    form.addEventListener('submit', handleLoginSubmit);
+  }
 
   try {
     initLogoutButton();
     initRatingForm();
-    initAvatarUpload(); // ✅ binder både input + klick på “JS”-cirkeln
+    initAvatarUpload();
   } catch (err) {
     console.error('initProfilePage auxiliary inits error', err);
   }
@@ -364,9 +359,12 @@ export async function initProfilePage() {
       } catch (err) {
         console.error('profile data loaders error', err);
       }
+
+      applyLang(document);
     } else {
       if (loginCard) loginCard.classList.remove('hidden');
       if (profileRoot) profileRoot.classList.add('hidden');
+      applyLang(document);
     }
   } catch (err) {
     console.error('initProfilePage check user error', err);
