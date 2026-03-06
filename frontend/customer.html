@@ -448,10 +448,10 @@
     <section class="bg-hero" style="width:100%;">
       <div class="shell">
         <div>
-          <h1 class="h1">Registrera dig</h1>
-          <p class="lead">
-            Skapa ett konto och börja samla verifierad trust som du kan bära mellan marknadsplatser.
-          </p>
+          <h1 class="h1" data-i18n="customer_h1">Registrera dig</h1>
+          <p class="lead" data-i18n="customer_lead">
+  Skapa ett konto och börja samla verifierad trust som du kan bära mellan marknadsplatser.
+</p>
         </div>
 
         <div class="signup-grid">
@@ -463,29 +463,29 @@
 
               <form id="customer-form" autocomplete="off">
                 <div class="field">
-                  <label class="label" for="email">E-post</label>
+                  <label class="label" for="email" data-i18n="customer_email_label">E-post</label>
                   <input class="input" id="email" name="email" type="email" placeholder="du@example.com" required autocomplete="email" />
                 </div>
 
                 <div class="field">
-                  <label class="label" for="password">Lösenord</label>
+                  <label class="label" for="password" data-i18n="customer_password_label">Lösenord</label>
                   <input class="input" id="password" name="password" type="password" placeholder="Minst 8 tecken" required autocomplete="new-password" />
                 </div>
 
                 <div class="field">
-                  <label class="label" for="password2">Upprepa lösenord</label>
+                  <la<label class="label" for="password2" data-i18n="customer_password2_label">Upprepa lösenord</label>
                   <input class="input" id="password2" name="password2" type="password" placeholder="Upprepa lösenord" required autocomplete="new-password" />
                 </div>
 
                 <label class="checkrow">
                   <input type="checkbox" id="termsAccepted" />
-                  <span>
+                  <span data-i18n="customer_terms_text">
                     Jag godkänner villkoren och integritetspolicyn och att trust kan baseras på verifierade transaktioner.
                   </span>
                 </label>
 
                 <div class="actions">
-                  <button class="btn btn-primary soft-hover" type="submit">Registrera</button>
+                  <button class="btn btn-primary soft-hover" type="submit" data-i18n="customer_register_btn">Registrera</button>
                 </div>
 
                 <p class="note" id="customer-status"></p>
@@ -494,7 +494,7 @@
 
             <!-- STEG 2 -->
             <div id="step2-block" class="hidden">
-              <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;">Steg 2: Komplettera profil</h2>
+              <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;"data-i18n="customer_step2_title">Steg 2: Komplettera profil</h2>
               <p class="note" style="margin-top:0;">
                 Detta krävs för att din profil ska bli “complete”.
               </p>
@@ -554,8 +554,8 @@
           </div>
 
           <aside class="side-card">
-            <h3>Vad får du?</h3>
-            <p>
+            <h3 data-i18n="customer_side_title">Vad får du?</h3>
+            <p data-i18n="customer_side_body">
               • En portabel trust-signal <br/>
               • Verifierad historik kopplad till affärer <br/>
               • En profil du kan använda mellan marknadsplatser <br/><br/>
@@ -563,8 +563,8 @@
             </p>
 
             <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
-              <a class="btn btn-primary soft-hover" href="/extension.html">Installera extension</a>
-              <a class="btn soft-hover" href="/profile.html">Min profil</a>
+              <a class="btn btn-primary soft-hover" href="/extension.html" data-i18n="customer_install_ext">Installera extension</a>
+              <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;" data-i18n="customer_step1_title">Steg 1: Skapa konto</h2>
             </div>
           </aside>
         </div>
