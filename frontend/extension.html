@@ -4,247 +4,379 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PeerRate – Installera Extension</title>
-  <meta name="description" content="Installera PeerRate Extension och lämna verifierade omdömen på Tradera (snart Blocket m.fl.)." />
+  <meta
+    name="description"
+    content="Installera PeerRate Extension och lämna verifierade omdömen på Tradera (snart Blocket m.fl.)."
+  />
+
+  <link rel="stylesheet" href="/css/pr-theme.css" />
+  <link rel="stylesheet" href="/css/index.css" />
+  <link rel="stylesheet" href="/css/top-row.css?v=2" />
 
   <style>
-    :root{
-      --bg:#0b1020;
-      --card:#111a33;
-      --card2:#0f1730;
-      --text:#e9ecf7;
-      --muted:#b8c0dd;
-      --line:rgba(255,255,255,0.10);
-      --accent:#7c5cff;
-      --accent2:#34d399;
-      --warn:#fbbf24;
-      --danger:#fb7185;
-      --shadow: 0 18px 60px rgba(0,0,0,.35);
-      --radius: 18px;
-      --radius2: 14px;
-      --max: 1100px;
-      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-    }
-    *{ box-sizing: border-box; }
-    body{
-      margin:0;
-      font-family: var(--sans);
-      color: var(--text);
+    .ext-page {
       background:
-        radial-gradient(900px 600px at 20% -10%, rgba(124,92,255,.35), transparent 60%),
-        radial-gradient(900px 600px at 80% 0%, rgba(52,211,153,.18), transparent 55%),
-        radial-gradient(900px 600px at 50% 110%, rgba(124,92,255,.18), transparent 55%),
-        var(--bg);
-      line-height: 1.5;
+        radial-gradient(900px 500px at 8% 0%, rgba(46,197,182,.12), transparent 60%),
+        radial-gradient(900px 520px at 92% 6%, rgba(126,213,255,.14), transparent 60%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      min-height: 100vh;
     }
-    a{ color: inherit; text-decoration: none; }
 
-    /* Din wrapper (samma som innan) */
-    .wrap{ max-width: var(--max); margin: 0 auto; padding: 28px 18px 70px; }
+    .ext-hero {
+      padding: 110px 0 30px;
+    }
 
-    .hero{
-      display:grid;
+    .ext-hero-grid {
+      display: grid;
       grid-template-columns: 1.2fr .8fr;
       gap: 18px;
       align-items: stretch;
-      margin-top: 8px;
     }
-    @media (max-width: 920px){
-      .hero{ grid-template-columns: 1fr; }
+
+    @media (max-width: 980px) {
+      .ext-hero-grid {
+        grid-template-columns: 1fr;
+      }
     }
-    .card{
-      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
+
+    .ext-card {
+      background: rgba(255,255,255,.88);
+      border: 1px solid rgba(15,15,18,.08);
+      border-radius: 22px;
+      box-shadow: 0 20px 70px rgba(0,0,0,.08);
       padding: 22px;
+      backdrop-filter: blur(8px);
     }
-    .hero h1{
-      margin: 0 0 10px;
-      font-size: clamp(28px, 3.6vw, 44px);
-      line-height: 1.08;
-      letter-spacing: -0.6px;
-    }
-    .hero p{
-      margin: 0 0 16px;
-      color: var(--muted);
-      font-size: 16px;
-      max-width: 66ch;
-    }
-    .badges{ display:flex; gap:10px; flex-wrap: wrap; margin: 10px 0 18px; }
-    .badge{
-      display:inline-flex; align-items:center; gap:8px;
-      padding: 8px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(0,0,0,.18);
-      color: var(--muted);
-      font-weight: 700;
-      font-size: 13px;
-    }
-    .dot{ width: 9px; height: 9px; border-radius: 99px; background: var(--accent2); box-shadow: 0 0 0 3px rgba(52,211,153,.12); }
-    .dot.warn{ background: var(--warn); box-shadow: 0 0 0 3px rgba(251,191,36,.14); }
-    .dot.danger{ background: var(--danger); box-shadow: 0 0 0 3px rgba(251,113,133,.14); }
 
-    .ctaRow{ display:flex; gap:12px; flex-wrap: wrap; align-items:center; margin-top: 14px; }
-    .btn{
-      border: 1px solid transparent;
-      border-radius: 14px;
-      padding: 12px 14px;
+    .ext-kicker {
+      color: rgba(15,15,18,.62);
       font-weight: 800;
-      display:inline-flex; align-items:center; justify-content:center;
-      gap: 10px;
-      cursor:pointer;
-      transition: transform .06s ease, opacity .2s ease, border-color .2s ease, background .2s ease;
-      user-select:none;
-      min-height: 46px;
-    }
-    .btn:active{ transform: translateY(1px); }
-    .btnPrimary{
-      background: linear-gradient(135deg, rgba(124,92,255,1), rgba(52,211,153,1));
-      color: #071018;
-      box-shadow: 0 16px 40px rgba(124,92,255,.22);
-    }
-    .btnPrimary:hover{ opacity: .96; }
-    .btnGhost{
-      background: rgba(0,0,0,.18);
-      border-color: var(--line);
-      color: var(--text);
-    }
-    .btnGhost:hover{ border-color: rgba(255,255,255,.18); }
-
-    .side{
-      display:flex; flex-direction: column; gap: 12px;
-    }
-    .mini{
-      background: rgba(0,0,0,.18);
-      border: 1px solid var(--line);
-      border-radius: var(--radius2);
-      padding: 14px;
-    }
-    .mini h3{ margin: 0 0 8px; font-size: 14px; letter-spacing: .2px; }
-    .mini p{ margin: 0; color: var(--muted); font-size: 13px; }
-
-    .grid{
-      display:grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 14px;
-      margin-top: 16px;
-    }
-    .col6{ grid-column: span 6; }
-    .col12{ grid-column: span 12; }
-    @media (max-width: 920px){
-      .col6{ grid-column: span 12; }
-    }
-
-    .sectionTitle{
-      display:flex; align-items:flex-end; justify-content: space-between;
-      gap: 10px;
-      margin: 18px 0 10px;
-    }
-    .sectionTitle h2{ margin:0; font-size: 18px; letter-spacing: -.2px; }
-    .sectionTitle span{ color: var(--muted); font-size: 13px; font-weight: 700; }
-
-    .steps{
-      display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-top: 8px;
-    }
-    @media (max-width: 920px){
-      .steps{ grid-template-columns: 1fr; }
-    }
-    .step{
-      border: 1px solid var(--line);
-      border-radius: var(--radius2);
-      padding: 14px;
-      background: rgba(0,0,0,.14);
-    }
-    .step .n{
-      width: 28px; height: 28px; border-radius: 10px;
-      display:flex; align-items:center; justify-content:center;
-      font-weight: 900;
-      background: rgba(124,92,255,.20);
-      border: 1px solid rgba(124,92,255,.25);
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
       margin-bottom: 10px;
     }
-    .step h3{ margin: 0 0 8px; font-size: 14px; }
-    .step p{ margin: 0; color: var(--muted); font-size: 13px; }
 
-    .platforms{
-      display:grid;
+    .ext-hero h1 {
+      margin: 0 0 12px;
+      font-size: clamp(34px, 5vw, 58px);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+      color: var(--pr-purple);
+      max-width: 12ch;
+    }
+
+    .ext-lead {
+      margin: 0;
+      color: var(--pr-muted);
+      font-size: 16px;
+      line-height: 1.65;
+      max-width: 68ch;
+    }
+
+    .ext-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 18px 0 0;
+    }
+
+    .ext-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: #fff;
+      border: 1px solid rgba(15,15,18,.10);
+      color: rgba(15,15,18,.78);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .ext-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34,197,94,.12);
+      flex: 0 0 auto;
+    }
+
+    .ext-dot.warn {
+      background: #f59e0b;
+      box-shadow: 0 0 0 4px rgba(245,158,11,.14);
+    }
+
+    .ext-dot.planned {
+      background: #fb7185;
+      box-shadow: 0 0 0 4px rgba(251,113,133,.14);
+    }
+
+    .ext-cta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+      align-items: center;
+    }
+
+    .ext-side {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .ext-mini-title {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: var(--pr-purple);
+    }
+
+    .ext-mini-body {
+      margin: 0;
+      color: var(--pr-muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .ext-grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 16px;
+      margin-top: 18px;
+      margin-bottom: 28px;
+    }
+
+    .ext-col-12 { grid-column: span 12; }
+    .ext-col-6 { grid-column: span 6; }
+
+    @media (max-width: 980px) {
+      .ext-col-6 { grid-column: span 12; }
+    }
+
+    .ext-section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .ext-section-head h2 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+      color: var(--pr-purple);
+    }
+
+    .ext-section-head span {
+      color: var(--pr-muted);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .ext-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 980px) {
+      .ext-steps {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .ext-step {
+      border: 1px solid rgba(15,15,18,.08);
+      border-radius: 18px;
+      background: rgba(255,255,255,.92);
+      padding: 16px;
+    }
+
+    .ext-step-num {
+      width: 30px;
+      height: 30px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      background: rgba(46,197,182,.16);
+      color: var(--pr-purple);
+      margin-bottom: 10px;
+    }
+
+    .ext-step h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: var(--pr-purple);
+    }
+
+    .ext-step p {
+      margin: 0;
+      color: var(--pr-muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .ext-platforms {
+      display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
     }
-    @media (max-width: 920px){
-      .platforms{ grid-template-columns: 1fr; }
+
+    @media (max-width: 980px) {
+      .ext-platforms {
+        grid-template-columns: 1fr;
+      }
     }
-    .platform{
-      border: 1px solid var(--line);
-      border-radius: var(--radius2);
-      padding: 14px;
-      background: rgba(0,0,0,.14);
-      display:flex; gap: 12px; align-items:flex-start; justify-content: space-between;
+
+    .ext-platform {
+      border: 1px solid rgba(15,15,18,.08);
+      border-radius: 18px;
+      background: rgba(255,255,255,.92);
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
     }
-    .platform strong{ display:block; font-size: 14px; }
-    .platform small{ display:block; color: var(--muted); font-weight: 700; margin-top: 4px; }
-    .pill{
+
+    .ext-platform strong {
+      display: block;
+      font-size: 15px;
+      color: var(--pr-purple);
+    }
+
+    .ext-platform small {
+      display: block;
+      margin-top: 4px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--pr-muted);
+      font-weight: 700;
+    }
+
+    .ext-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       padding: 6px 10px;
       border-radius: 999px;
-      border: 1px solid var(--line);
+      border: 1px solid rgba(15,15,18,.10);
+      font-size: 12px;
       font-weight: 900;
-      font-size: 12px;
       white-space: nowrap;
-      background: rgba(0,0,0,.18);
-      color: var(--muted);
+      background: #fff;
     }
-    .pill.live{ color: rgba(52,211,153,1); border-color: rgba(52,211,153,.25); background: rgba(52,211,153,.08); }
-    .pill.soon{ color: rgba(251,191,36,1); border-color: rgba(251,191,36,.25); background: rgba(251,191,36,.08); }
-    .pill.planned{ color: rgba(251,113,133,1); border-color: rgba(251,113,133,.22); background: rgba(251,113,133,.07); }
 
-    .codebox{
-      margin-top: 10px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius2);
-      background: rgba(0,0,0,.26);
-      padding: 12px;
-      font-family: var(--mono);
-      font-size: 12px;
-      color: rgba(233,236,247,.92);
-      overflow:auto;
+    .ext-pill.live {
+      color: #15803d;
+      background: rgba(34,197,94,.08);
+      border-color: rgba(34,197,94,.18);
     }
-    .row{
-      display:flex; align-items:center; justify-content: space-between; gap: 10px;
+
+    .ext-pill.soon {
+      color: #b45309;
+      background: rgba(245,158,11,.10);
+      border-color: rgba(245,158,11,.20);
+    }
+
+    .ext-pill.planned {
+      color: #be123c;
+      background: rgba(251,113,133,.10);
+      border-color: rgba(251,113,133,.20);
+    }
+
+    .ext-list {
+      margin: 8px 0 0;
+      padding-left: 18px;
+      color: var(--pr-muted);
+    }
+
+    .ext-list li {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .ext-fineprint {
+      margin-top: 12px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--pr-muted);
+    }
+
+    .ext-codebox {
+      margin-top: 12px;
+      border: 1px solid rgba(15,15,18,.10);
+      border-radius: 18px;
+      background: #fff;
+      padding: 14px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      color: rgba(15,15,18,.84);
+      white-space: pre-line;
+    }
+
+    .ext-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .ext-copy-info {
+      min-width: 260px;
+    }
+
+    .ext-copy-info-title {
+      font-weight: 900;
+      margin-bottom: 6px;
+      color: var(--pr-purple);
+    }
+
+    .ext-copy-info-sub {
+      color: var(--pr-muted);
+      font-size: 13px;
+    }
+
+    .ext-footer {
       margin-top: 10px;
+      padding: 18px 0 40px;
+      border-top: 1px solid rgba(15,15,18,.08);
+      color: var(--pr-muted);
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
       flex-wrap: wrap;
     }
-    .copyBtn{
-      background: rgba(124,92,255,.18);
-      border: 1px solid rgba(124,92,255,.25);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 10px 12px;
-      font-weight: 900;
-      cursor:pointer;
+
+    .ext-footer a {
+      color: inherit;
+      text-decoration: none;
+      font-weight: 700;
     }
-    .copyBtn:hover{ border-color: rgba(124,92,255,.35); }
-    .muted{ color: var(--muted); }
-    .fineprint{ font-size: 12px; color: var(--muted); margin-top: 10px; }
-    .footer{
-      margin-top: 24px;
-      color: var(--muted);
-      font-size: 12px;
-      display:flex; justify-content: space-between; gap: 10px; flex-wrap: wrap;
-      padding-top: 16px;
-      border-top: 1px solid var(--line);
+
+    .ext-footer a:hover {
+      text-decoration: underline;
     }
-    .toast{
+
+    .toast {
       position: fixed;
       left: 50%;
       bottom: 22px;
       transform: translateX(-50%);
-      background: rgba(0,0,0,.65);
-      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(15,15,18,.92);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.14);
       border-radius: 999px;
       padding: 10px 14px;
       font-weight: 800;
@@ -252,284 +384,387 @@
       opacity: 0;
       pointer-events: none;
       transition: opacity .18s ease, transform .18s ease;
-      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+      box-shadow: 0 20px 60px rgba(0,0,0,.25);
+      z-index: 1300;
     }
-    .toast.show{
+
+    .toast.show {
       opacity: 1;
       transform: translateX(-50%) translateY(-4px);
     }
   </style>
 </head>
 
-<body>
-  <!-- ✅ Global TOP ROW injectas via pageBootstrap.js -->
+<body data-page="extension" class="ext-page">
   <div id="slot-top-row"></div>
 
-  <div class="wrap" id="top">
-    <div class="hero">
-      <div class="card">
-        <h1>Installera PeerRate Extension</h1>
-        <p>
-          PeerRate gör det möjligt att lämna <strong>verifierade omdömen</strong> om verkliga affärer från plattformar som Tradera
-          (snart Blocket m.fl.). Extensionen identifierar din affär, skickar verifierad affärsdata till PeerRate, och du kan lämna ett omdöme på några sekunder.
-        </p>
+  <main>
+    <section class="ext-hero">
+      <div class="shell">
+        <div class="ext-hero-grid">
+          <section class="ext-card">
+            <div class="ext-kicker" data-i18n="ext_kicker">Verified deal capture</div>
+            <h1 data-i18n="ext_h1">Install PeerRate Extension</h1>
+            <p class="ext-lead" data-i18n="ext_lead">
+              PeerRate makes it possible to leave verified ratings based on real deals from platforms like Tradera, and soon Blocket and more. The extension identifies the deal, sends verified deal data to PeerRate, and lets you rate in seconds.
+            </p>
 
-        <div class="badges">
-          <div class="badge"><span class="dot"></span> Tradera: Live</div>
-          <div class="badge"><span class="dot warn"></span> Blocket: Näst på tur</div>
-          <div class="badge"><span class="dot danger"></span> eBay/Airbnb: Planerat</div>
-        </div>
-
-        <div class="ctaRow" id="install">
-          <!-- När ni är publicerade på Chrome Web Store: byt href till riktiga store-länken. -->
-          <a class="btn btnPrimary" id="storeCta" href="#" target="_blank" rel="noreferrer">
-            Install Chrome Extension
-            <span aria-hidden="true">→</span>
-          </a>
-
-          <a class="btn btnGhost" href="#manual">
-            Installera manuellt (beta)
-          </a>
-
-          <a class="btn btnGhost" href="#how">
-            Se hur det funkar
-          </a>
-        </div>
-
-        <div class="fineprint">
-          <strong>Obs:</strong> Om knappen ovan inte leder till Chrome Web Store ännu, använd “Installera manuellt (beta)” längre ner.
-        </div>
-      </div>
-
-      <div class="side">
-        <div class="mini">
-          <h3>✅ Resultatet</h3>
-          <p>Du lämnar ett omdöme som är kopplat till en verklig affär (proofRef) och blir mer trovärdigt än anonyma reviews.</p>
-        </div>
-        <div class="mini">
-          <h3>🔒 Privacy</h3>
-          <p>PeerRate sparar bara nödvändiga affärsfält för verifiering + ditt omdöme. Inga lösenord eller betaluppgifter sparas.</p>
-        </div>
-        <div class="mini">
-          <h3>⚡ Snabbt</h3>
-          <p>Öppna en affär → klicka “Betygsätt med PeerRate” → rate.html fylls med verifierad data och formuläret låses.</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid">
-      <div class="card col12" id="how">
-        <div class="sectionTitle">
-          <h2>Hur det fungerar</h2>
-          <span>4 steg</span>
-        </div>
-
-        <div class="steps">
-          <div class="step">
-            <div class="n">1</div>
-            <h3>Installera extension</h3>
-            <p>Installera via Chrome Web Store (rekommenderas) eller manuellt i developer mode.</p>
-          </div>
-          <div class="step">
-            <div class="n">2</div>
-            <h3>Öppna din affär</h3>
-            <p>Gå till en sida med en genomförd affär på Tradera (snart Blocket m.fl.).</p>
-          </div>
-          <div class="step">
-            <div class="n">3</div>
-            <h3>Klicka “Betygsätt”</h3>
-            <p>Extensionen identifierar affären och skapar en verifierad payload till PeerRate.</p>
-          </div>
-          <div class="step">
-            <div class="n">4</div>
-            <h3>Lämna omdöme</h3>
-            <p>Du kommer till rate.html med verifierad affär. Formuläret låses och du skickar in ditt omdöme.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="card col6" id="platforms">
-        <div class="sectionTitle">
-          <h2>Supported platforms</h2>
-          <span>Status</span>
-        </div>
-
-        <div class="platforms">
-          <div class="platform">
-            <div>
-              <strong>Tradera</strong>
-              <small>Verifiering via proofRef + deal-data</small>
+            <div class="ext-badges">
+              <div class="ext-badge">
+                <span class="ext-dot"></span>
+                <span data-i18n="ext_badge_tradera">Tradera: Live</span>
+              </div>
+              <div class="ext-badge">
+                <span class="ext-dot warn"></span>
+                <span data-i18n="ext_badge_blocket">Blocket: Next up</span>
+              </div>
+              <div class="ext-badge">
+                <span class="ext-dot planned"></span>
+                <span data-i18n="ext_badge_others">eBay / Airbnb: Planned</span>
+              </div>
             </div>
-            <div class="pill live">LIVE</div>
-          </div>
 
-          <div class="platform">
-            <div>
-              <strong>Blocket</strong>
-              <small>MVP: proofRef = pageUrl (om orderId saknas)</small>
+            <div class="ext-cta" id="install">
+              <a
+                class="pr-btn pr-btn-primary"
+                id="storeCta"
+                href="#"
+                target="_blank"
+                rel="noreferrer"
+                data-i18n="ext_cta_store"
+              >
+                Install Chrome Extension
+              </a>
+
+              <a class="pr-btn pr-btn-ghost" href="#manual" data-i18n="ext_cta_manual">
+                Install manually (beta)
+              </a>
+
+              <a class="pr-btn pr-btn-ghost" href="#how" data-i18n="ext_cta_how">
+                See how it works
+              </a>
             </div>
-            <div class="pill soon">NEXT</div>
-          </div>
 
-          <div class="platform">
-            <div>
-              <strong>eBay / Airbnb</strong>
-              <small>Parser-baserad roadmap</small>
+            <div class="ext-fineprint">
+              <strong data-i18n="ext_note_label">Note:</strong>
+              <span data-i18n="ext_note_body">
+                If the button above does not yet lead to Chrome Web Store, use the manual beta installation further down.
+              </span>
             </div>
-            <div class="pill planned">PLANNED</div>
-          </div>
+          </section>
+
+          <aside class="ext-side">
+            <section class="ext-card">
+              <h3 class="ext-mini-title" data-i18n="ext_result_title">✅ The result</h3>
+              <p class="ext-mini-body" data-i18n="ext_result_body">
+                You leave a rating linked to a real deal via proofRef, which makes it more credible than anonymous reviews.
+              </p>
+            </section>
+
+            <section class="ext-card">
+              <h3 class="ext-mini-title" data-i18n="ext_privacy_title">🔒 Privacy</h3>
+              <p class="ext-mini-body" data-i18n="ext_privacy_body">
+                PeerRate stores only the deal fields needed for verification plus your rating. No passwords or payment details are stored.
+              </p>
+            </section>
+
+            <section class="ext-card">
+              <h3 class="ext-mini-title" data-i18n="ext_fast_title">⚡ Fast</h3>
+              <p class="ext-mini-body" data-i18n="ext_fast_body">
+                Open a completed deal, click “Rate with PeerRate”, and rate.html is prefilled with verified data while the form is locked.
+              </p>
+            </section>
+          </aside>
         </div>
 
-        <div class="fineprint">
-          <strong>Tips:</strong> För att skala snabbt bygger vi parser-arkitektur: <span class="muted">extension/parsers/{platform}.js</span>
+        <div class="ext-grid">
+          <section class="ext-card ext-col-12" id="how">
+            <div class="ext-section-head">
+              <h2 data-i18n="ext_how_title">How it works</h2>
+              <span data-i18n="ext_how_sub">4 steps</span>
+            </div>
+
+            <div class="ext-steps">
+              <div class="ext-step">
+                <div class="ext-step-num">1</div>
+                <h3 data-i18n="ext_step1_title">Install the extension</h3>
+                <p data-i18n="ext_step1_body">
+                  Install via Chrome Web Store when available, or manually in developer mode during beta.
+                </p>
+              </div>
+
+              <div class="ext-step">
+                <div class="ext-step-num">2</div>
+                <h3 data-i18n="ext_step2_title">Open your completed deal</h3>
+                <p data-i18n="ext_step2_body">
+                  Go to a page showing a completed transaction on Tradera, and later Blocket and other platforms.
+                </p>
+              </div>
+
+              <div class="ext-step">
+                <div class="ext-step-num">3</div>
+                <h3 data-i18n="ext_step3_title">Click “Rate”</h3>
+                <p data-i18n="ext_step3_body">
+                  The extension identifies the deal and creates a verified payload for PeerRate.
+                </p>
+              </div>
+
+              <div class="ext-step">
+                <div class="ext-step-num">4</div>
+                <h3 data-i18n="ext_step4_title">Leave your rating</h3>
+                <p data-i18n="ext_step4_body">
+                  You land on rate.html with a verified deal, and the locked form lets you submit safely.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section class="ext-card ext-col-6" id="platforms">
+            <div class="ext-section-head">
+              <h2 data-i18n="ext_platforms_title">Supported platforms</h2>
+              <span data-i18n="ext_platforms_sub">Status</span>
+            </div>
+
+            <div class="ext-platforms">
+              <div class="ext-platform">
+                <div>
+                  <strong>Tradera</strong>
+                  <small data-i18n="ext_platform_tradera_body">Verification via proofRef + deal data</small>
+                </div>
+                <div class="ext-pill live" data-i18n="ext_live">LIVE</div>
+              </div>
+
+              <div class="ext-platform">
+                <div>
+                  <strong>Blocket</strong>
+                  <small data-i18n="ext_platform_blocket_body">MVP: proofRef = pageUrl when orderId is missing</small>
+                </div>
+                <div class="ext-pill soon" data-i18n="ext_next">NEXT</div>
+              </div>
+
+              <div class="ext-platform">
+                <div>
+                  <strong>eBay / Airbnb</strong>
+                  <small data-i18n="ext_platform_others_body">Parser-based roadmap</small>
+                </div>
+                <div class="ext-pill planned" data-i18n="ext_planned">PLANNED</div>
+              </div>
+            </div>
+
+            <div class="ext-fineprint">
+              <strong data-i18n="ext_tip_label">Tip:</strong>
+              <span data-i18n="ext_tip_body">
+                To scale fast we are building a parser architecture where each platform can get its own parser.
+              </span>
+            </div>
+          </section>
+
+          <section class="ext-card ext-col-6" id="privacy">
+            <div class="ext-section-head">
+              <h2 data-i18n="ext_privacy_section_title">Privacy & security</h2>
+              <span data-i18n="ext_privacy_section_sub">Trust by design</span>
+            </div>
+
+            <ul class="ext-list">
+              <li data-i18n="ext_privacy_li1">
+                <strong>No login inside the extension:</strong> you log in on PeerRate if you are not already signed in.
+              </li>
+              <li data-i18n="ext_privacy_li2">
+                <strong>No passwords:</strong> the extension does not read or store credentials.
+              </li>
+              <li data-i18n="ext_privacy_li3">
+                <strong>Minimal data:</strong> only the fields needed for verification are sent, such as title, date, amount, proofRef and pageUrl.
+              </li>
+              <li data-i18n="ext_privacy_li4">
+                <strong>Duplicate protection:</strong> the backend has a unique constraint on platform + externalProofRef.
+              </li>
+            </ul>
+
+            <div class="ext-fineprint" data-i18n="ext_privacy_footer">
+              This text can later be split into a shorter product version and a more formal legal version.
+            </div>
+          </section>
+
+          <section class="ext-card ext-col-12" id="manual">
+            <div class="ext-section-head">
+              <h2 data-i18n="ext_manual_title">Install manually (beta)</h2>
+              <span data-i18n="ext_manual_sub">For when the Chrome Web Store link is not yet published</span>
+            </div>
+
+            <p class="ext-lead" style="max-width:none;" data-i18n="ext_manual_lead">
+              This is the standard flow for testing a Chrome extension locally. When the Web Store listing is published this becomes a one-click install instead.
+            </p>
+
+            <div class="ext-steps" style="grid-template-columns: repeat(3,1fr); margin-top:14px;">
+              <div class="ext-step">
+                <div class="ext-step-num">1</div>
+                <h3 data-i18n="ext_manual_step1_title">Download the extension code</h3>
+                <p data-i18n="ext_manual_step1_body">
+                  Download it from your GitHub repository or as a hosted zip file.
+                </p>
+              </div>
+
+              <div class="ext-step">
+                <div class="ext-step-num">2</div>
+                <h3 data-i18n="ext_manual_step2_title">Open Chrome Extensions</h3>
+                <p data-i18n="ext_manual_step2_body">
+                  Go to chrome://extensions and turn on Developer mode.
+                </p>
+              </div>
+
+              <div class="ext-step">
+                <div class="ext-step-num">3</div>
+                <h3 data-i18n="ext_manual_step3_title">Load unpacked</h3>
+                <p data-i18n="ext_manual_step3_body">
+                  Click Load unpacked and choose the extension/ folder.
+                </p>
+              </div>
+            </div>
+
+            <div class="ext-row">
+              <div class="ext-copy-info">
+                <div class="ext-copy-info-title" data-i18n="ext_copy_title">Copy-paste for the Chrome address bar</div>
+                <div class="ext-copy-info-sub" data-i18n="ext_copy_sub">This opens the extensions page directly.</div>
+              </div>
+
+              <button
+                class="pr-btn pr-btn-primary"
+                id="copyExtensions"
+                type="button"
+                data-i18n="ext_copy_btn"
+              >
+                Copy: chrome://extensions
+              </button>
+            </div>
+
+            <div class="ext-codebox" id="codebox" data-i18n-multiline="ext_codebox">
+1) Open chrome://extensions
+2) Enable "Developer mode" in the top right
+3) Click "Load unpacked"
+4) Select the folder: extension/
+            </div>
+
+            <div class="ext-fineprint">
+              <strong data-i18n="ext_protip_label">Pro tip:</strong>
+              <span data-i18n="ext_protip_body">
+                When you have a zip, host it under /downloads/peerrate-extension.zip and link to it from this page.
+              </span>
+            </div>
+          </section>
+
+          <section class="ext-card ext-col-12">
+            <div class="ext-section-head">
+              <h2 data-i18n="ext_test_title">Test the extension</h2>
+              <span data-i18n="ext_test_sub">Quick check</span>
+            </div>
+
+            <ol class="ext-list">
+              <li data-i18n="ext_test_li1">Install the extension from Web Store or manually.</li>
+              <li data-i18n="ext_test_li2">Open a completed deal on Tradera.</li>
+              <li data-i18n="ext_test_li3">Click “Rate with PeerRate”.</li>
+              <li data-i18n="ext_test_li4">You land on /rate.html?pr=... and see a verified deal with a locked form.</li>
+              <li data-i18n="ext_test_li5">Submit and verify that the success toast appears.</li>
+            </ol>
+
+            <div class="ext-cta">
+              <a class="pr-btn pr-btn-ghost" href="/rate.html" data-i18n="ext_test_cta_rate">Open rate.html</a>
+              <a class="pr-btn pr-btn-ghost" href="#top" data-i18n="ext_test_cta_top">Back to top</a>
+            </div>
+          </section>
         </div>
+
+        <footer class="ext-footer">
+          <div>
+            © <span id="year"></span> PeerRate
+            <span style="margin:0 8px; opacity:.35;">•</span>
+            <a href="/profile.html" data-i18n="footer_profile">Profile</a>
+            <span style="margin:0 8px; opacity:.35;">•</span>
+            <a href="/#sim" data-i18n="footer_ask">See the 5P model</a>
+          </div>
+
+          <div data-i18n="ext_footer_tagline">Verified ratings — built for trust</div>
+        </footer>
       </div>
+    </section>
+  </main>
 
-      <div class="card col6" id="privacy">
-        <div class="sectionTitle">
-          <h2>Privacy & säkerhet</h2>
-          <span>Trust-by-design</span>
-        </div>
+  <div class="toast" id="toast">Copied!</div>
 
-        <ul style="margin:10px 0 0; padding-left: 18px; color: var(--muted);">
-          <li><strong>Ingen inloggning i extension:</strong> du loggar in på PeerRate (rate.html) om du inte redan är inloggad.</li>
-          <li><strong>Inga lösenord:</strong> extensionen läser inte och sparar inte inloggningsuppgifter.</li>
-          <li><strong>Minimerad data:</strong> vi skickar bara affärsdata som behövs för verifiering (t.ex. title/date/amount/proofRef/pageUrl).</li>
-          <li><strong>Duplicate-skydd:</strong> backend har unik constraint på <span class="muted">platform + externalProofRef</span>.</li>
-        </ul>
-
-        <div class="fineprint">
-          Vill du hjälpa oss förbättra privacy-texten? Säg till – vi kan skriva en “short” och en “legal-ish” variant.
-        </div>
-      </div>
-
-      <div class="card col12" id="manual">
-        <div class="sectionTitle">
-          <h2>Installera manuellt (beta)</h2>
-          <span>För när Chrome Web Store-länken inte är publicerad</span>
-        </div>
-
-        <p class="muted" style="margin:0 0 10px;">
-          Detta är standardflödet för att testa en Chrome extension lokalt. När ni publicerar i Web Store ersätts detta av 1-klick-install.
-        </p>
-
-        <div class="steps" style="grid-template-columns: repeat(3,1fr);">
-          <div class="step">
-            <div class="n">1</div>
-            <h3>Ladda ner extension-koden</h3>
-            <p>Antingen från ert GitHub-repo eller som en zip ni hostar på peerrate.ai.</p>
-          </div>
-          <div class="step">
-            <div class="n">2</div>
-            <h3>Öppna Chrome Extensions</h3>
-            <p>Gå till <strong>chrome://extensions</strong> och slå på <strong>Developer mode</strong>.</p>
-          </div>
-          <div class="step">
-            <div class="n">3</div>
-            <h3>Load unpacked</h3>
-            <p>Klicka <strong>Load unpacked</strong> och välj mappen <span class="muted">extension/</span>.</p>
-          </div>
-        </div>
-
-        <div class="row">
-          <div style="min-width: 260px;">
-            <div style="font-weight: 900; margin-bottom: 6px;">Copy-paste (Chrome adressfält)</div>
-            <div class="muted" style="font-size: 13px;">Öppnar extensions-sidan direkt:</div>
-          </div>
-          <button class="copyBtn" id="copyExtensions">Kopiera: chrome://extensions</button>
-        </div>
-
-        <div class="codebox" id="codebox">
-1) Öppna chrome://extensions
-2) Aktivera "Developer mode" (uppe till höger)
-3) Klicka "Load unpacked"
-4) Välj mappen: extension/
-        </div>
-
-        <div class="fineprint">
-          <strong>Protip:</strong> När ni har en zip: lägg den som <span class="muted">/downloads/peerrate-extension.zip</span> och länka här.
-        </div>
-      </div>
-
-      <div class="card col12">
-        <div class="sectionTitle">
-          <h2>Testa extension</h2>
-          <span>Snabb check</span>
-        </div>
-
-        <ol style="margin: 10px 0 0; padding-left: 18px; color: var(--muted);">
-          <li>Installera extension (Web Store eller manuellt).</li>
-          <li>Öppna en genomförd affär på Tradera.</li>
-          <li>Clicka “Betygsätt med PeerRate”.</li>
-          <li>Du hamnar på <span class="muted">/rate.html?pr=...</span> och ser verifierad affär + låst formulär.</li>
-          <li>Skicka in – du ska få toast: <strong>“Tack! Ditt omdöme är sparat.”</strong></li>
-        </ol>
-
-        <div class="ctaRow" style="margin-top: 12px;">
-          <a class="btn btnGhost" href="/rate.html">Öppna rate.html</a>
-          <a class="btn btnGhost" href="#top">Till toppen</a>
-        </div>
-      </div>
-    </div>
-
-    <div class="footer">
-      <div>© <span id="year"></span> PeerRate</div>
-      <div class="muted">Verifierade omdömen – byggda för tillit</div>
-    </div>
-  </div>
-
-  <div class="toast" id="toast">Kopierat!</div>
-
-  <!-- ✅ Inject header → init language → init topRow → main.js -->
-   <link rel="stylesheet" href="/css/top-row.css?v=2" />
   <script type="module" src="/modules/pageBootstrap.js?v=2"></script>
 
-  <script>
-    (function(){
-      // Year
-      var y = document.getElementById('year');
-      if (y) y.textContent = String(new Date().getFullYear());
+  <script type="module">
+    import { t, applyLang } from '/modules/landing/language.js';
 
-      // CTA link placeholder: uppdatera när ni har Chrome Web Store-länken.
-      // Tills dess: låt den scrolla till manual-install.
-      var storeCta = document.getElementById('storeCta');
-      if (storeCta) {
-        // Sätt denna när ni har den:
-        // storeCta.href = "https://chromewebstore.google.com/detail/....";
-        // storeCta.textContent = "Installera från Chrome Web Store →";
+    const yearEl = document.getElementById('year');
+    if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
-        storeCta.addEventListener('click', function(e){
-          if (storeCta.getAttribute('href') === '#') {
-            e.preventDefault();
-            location.hash = '#manual';
-          }
-        });
+    const metaDescription = document.querySelector('meta[name="description"]');
+
+    function applyMetaTexts() {
+      document.title = t('ext_meta_title', 'PeerRate – Install Extension');
+      if (metaDescription) {
+        metaDescription.setAttribute(
+          'content',
+          t(
+            'ext_meta_description',
+            'Install PeerRate Extension and leave verified ratings on Tradera, with more platforms coming.'
+          )
+        );
       }
+    }
 
-      // Copy button
-      var btn = document.getElementById('copyExtensions');
-      if (btn) {
-        btn.addEventListener('click', async function(){
-          try {
-            await navigator.clipboard.writeText('chrome://extensions');
-            showToast('Kopierat: chrome://extensions');
-          } catch (err) {
-            showToast('Kunde inte kopiera (din browser blockerar clipboard)');
-          }
-        });
-      }
+    function initStoreCta() {
+      const storeCta = document.getElementById('storeCta');
+      if (!storeCta) return;
 
-      // Toast
-      var toast = document.getElementById('toast');
-      var t;
-      function showToast(msg){
+      storeCta.addEventListener('click', (e) => {
+        if (storeCta.getAttribute('href') === '#') {
+          e.preventDefault();
+          location.hash = '#manual';
+        }
+      });
+    }
+
+    function initCopyButton() {
+      const btn = document.getElementById('copyExtensions');
+      const toast = document.getElementById('toast');
+      let timer = null;
+
+      function showToast(message) {
         if (!toast) return;
-        toast.textContent = msg || 'Kopierat!';
+        toast.textContent = message || t('ext_toast_default', 'Copied!');
         toast.classList.add('show');
-        clearTimeout(t);
-        t = setTimeout(function(){ toast.classList.remove('show'); }, 1500);
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          toast.classList.remove('show');
+        }, 1600);
       }
-    })();
+
+      if (!btn) return;
+
+      btn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText('chrome://extensions');
+          showToast(t('ext_toast_copy_success', 'Copied: chrome://extensions'));
+        } catch (err) {
+          showToast(t('ext_toast_copy_fail', 'Could not copy. Your browser may block clipboard access.'));
+        }
+      });
+    }
+
+    function initExtensionPage() {
+      applyMetaTexts();
+      initStoreCta();
+      initCopyButton();
+      applyLang(document);
+    }
+
+    window.addEventListener('peerrate:language-changed', () => {
+      applyMetaTexts();
+      applyLang(document);
+    });
+
+    initExtensionPage();
   </script>
 </body>
 </html>

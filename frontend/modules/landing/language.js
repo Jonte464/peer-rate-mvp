@@ -37,6 +37,7 @@ const dict = {
     work_refs_status_body:
       '(Demo) Här kommer dina referenser att listas. Nästa steg är att koppla detta till LinkedIn-inloggning och ett enkelt “be om referens”-flöde.',
 
+    // Landing
     hero_kicker: 'Peer-to-peer reputation',
     hero_h1: 'Förtroende du kan bevisa.',
     hero_p:
@@ -108,6 +109,107 @@ const dict = {
     k3n: 'Kopplade till identiteter',
     k4: 'Plattformar kopplade',
     k4n: 'Mer kommer',
+
+    // Extension
+    ext_meta_title: 'PeerRate – Installera Extension',
+    ext_meta_description:
+      'Installera PeerRate Extension och lämna verifierade omdömen på Tradera, med fler plattformar på väg.',
+    ext_kicker: 'Verifierad affärsdata',
+    ext_h1: 'Installera PeerRate Extension',
+    ext_lead:
+      'PeerRate gör det möjligt att lämna verifierade omdömen baserat på verkliga affärer från plattformar som Tradera, och snart Blocket och fler. Extensionen identifierar affären, skickar verifierad affärsdata till PeerRate och låter dig lämna ett omdöme på några sekunder.',
+    ext_badge_tradera: 'Tradera: Live',
+    ext_badge_blocket: 'Blocket: Näst på tur',
+    ext_badge_others: 'eBay / Airbnb: Planerat',
+    ext_cta_store: 'Installera Chrome Extension',
+    ext_cta_manual: 'Installera manuellt (beta)',
+    ext_cta_how: 'Se hur det fungerar',
+    ext_note_label: 'Obs:',
+    ext_note_body:
+      'Om knappen ovan ännu inte leder till Chrome Web Store kan du använda den manuella beta-installationen längre ned.',
+    ext_result_title: '✅ Resultatet',
+    ext_result_body:
+      'Du lämnar ett omdöme som är kopplat till en verklig affär via proofRef, vilket gör det mer trovärdigt än anonyma reviews.',
+    ext_privacy_title: '🔒 Privacy',
+    ext_privacy_body:
+      'PeerRate sparar bara de affärsfält som behövs för verifiering plus ditt omdöme. Inga lösenord eller betaluppgifter sparas.',
+    ext_fast_title: '⚡ Snabbt',
+    ext_fast_body:
+      'Öppna en genomförd affär, klicka “Betygsätt med PeerRate”, och rate.html fylls med verifierad data medan formuläret låses.',
+    ext_how_title: 'Hur det fungerar',
+    ext_how_sub: '4 steg',
+    ext_step1_title: 'Installera extensionen',
+    ext_step1_body:
+      'Installera via Chrome Web Store när den finns publicerad, eller manuellt i developer mode under beta.',
+    ext_step2_title: 'Öppna din genomförda affär',
+    ext_step2_body:
+      'Gå till en sida som visar en avslutad transaktion på Tradera, och senare Blocket och andra plattformar.',
+    ext_step3_title: 'Klicka “Betygsätt”',
+    ext_step3_body:
+      'Extensionen identifierar affären och skapar en verifierad payload till PeerRate.',
+    ext_step4_title: 'Lämna ditt omdöme',
+    ext_step4_body:
+      'Du landar på rate.html med en verifierad affär, och det låsta formuläret gör att du kan skicka in tryggt.',
+    ext_platforms_title: 'Stödda plattformar',
+    ext_platforms_sub: 'Status',
+    ext_platform_tradera_body: 'Verifiering via proofRef + affärsdata',
+    ext_platform_blocket_body: 'MVP: proofRef = pageUrl när orderId saknas',
+    ext_platform_others_body: 'Parser-baserad roadmap',
+    ext_live: 'LIVE',
+    ext_next: 'NÄST',
+    ext_planned: 'PLANERAT',
+    ext_tip_label: 'Tips:',
+    ext_tip_body:
+      'För att kunna skala snabbt bygger vi en parser-arkitektur där varje plattform kan få sin egen parser.',
+    ext_privacy_section_title: 'Privacy & säkerhet',
+    ext_privacy_section_sub: 'Trust by design',
+    ext_privacy_li1:
+      'Ingen inloggning i extensionen: du loggar in på PeerRate om du inte redan är inloggad.',
+    ext_privacy_li2:
+      'Inga lösenord: extensionen läser inte och sparar inte inloggningsuppgifter.',
+    ext_privacy_li3:
+      'Minimerad data: bara de fält som behövs för verifiering skickas, till exempel title, date, amount, proofRef och pageUrl.',
+    ext_privacy_li4:
+      'Duplicate-skydd: backend har en unik constraint på platform + externalProofRef.',
+    ext_privacy_footer:
+      'Den här texten kan senare delas upp i en kortare produktversion och en mer formell legal version.',
+    ext_manual_title: 'Installera manuellt (beta)',
+    ext_manual_sub: 'För när Chrome Web Store-länken ännu inte är publicerad',
+    ext_manual_lead:
+      'Detta är standardflödet för att testa en Chrome extension lokalt. När Web Store-listningen är publicerad blir detta istället en 1-klicksinstallation.',
+    ext_manual_step1_title: 'Ladda ner extension-koden',
+    ext_manual_step1_body:
+      'Ladda ner den från ert GitHub-repo eller som en hostad zip-fil.',
+    ext_manual_step2_title: 'Öppna Chrome Extensions',
+    ext_manual_step2_body:
+      'Gå till chrome://extensions och slå på Developer mode.',
+    ext_manual_step3_title: 'Load unpacked',
+    ext_manual_step3_body:
+      'Klicka Load unpacked och välj mappen extension/.',
+    ext_copy_title: 'Copy-paste för Chrome-adressfältet',
+    ext_copy_sub: 'Detta öppnar extensions-sidan direkt.',
+    ext_copy_btn: 'Kopiera: chrome://extensions',
+    ext_codebox:
+      '1) Öppna chrome://extensions\n2) Aktivera "Developer mode" uppe till höger\n3) Klicka "Load unpacked"\n4) Välj mappen: extension/',
+    ext_protip_label: 'Protip:',
+    ext_protip_body:
+      'När ni har en zip kan ni hosta den under /downloads/peerrate-extension.zip och länka hit från sidan.',
+    ext_test_title: 'Testa extensionen',
+    ext_test_sub: 'Snabb check',
+    ext_test_li1: 'Installera extensionen via Web Store eller manuellt.',
+    ext_test_li2: 'Öppna en genomförd affär på Tradera.',
+    ext_test_li3: 'Klicka “Betygsätt med PeerRate”.',
+    ext_test_li4:
+      'Du landar på /rate.html?pr=... och ser en verifierad affär med ett låst formulär.',
+    ext_test_li5:
+      'Skicka in och verifiera att framgångstoasten visas.',
+    ext_test_cta_rate: 'Öppna rate.html',
+    ext_test_cta_top: 'Till toppen',
+    ext_footer_tagline: 'Verifierade omdömen – byggda för tillit',
+    ext_toast_default: 'Kopierat!',
+    ext_toast_copy_success: 'Kopierat: chrome://extensions',
+    ext_toast_copy_fail:
+      'Kunde inte kopiera. Din webbläsare kanske blockerar clipboard-åtkomst.',
 
     // profile
     profile_badge_label: 'Inloggad som',
@@ -352,6 +454,107 @@ const dict = {
     k3n: 'Linked to identities',
     k4: 'Platforms connected',
     k4n: 'More coming',
+
+    // Extension
+    ext_meta_title: 'PeerRate – Install Extension',
+    ext_meta_description:
+      'Install PeerRate Extension and leave verified ratings on Tradera, with more platforms coming.',
+    ext_kicker: 'Verified deal capture',
+    ext_h1: 'Install PeerRate Extension',
+    ext_lead:
+      'PeerRate makes it possible to leave verified ratings based on real deals from platforms like Tradera, and soon Blocket and more. The extension identifies the deal, sends verified deal data to PeerRate, and lets you rate in seconds.',
+    ext_badge_tradera: 'Tradera: Live',
+    ext_badge_blocket: 'Blocket: Next up',
+    ext_badge_others: 'eBay / Airbnb: Planned',
+    ext_cta_store: 'Install Chrome Extension',
+    ext_cta_manual: 'Install manually (beta)',
+    ext_cta_how: 'See how it works',
+    ext_note_label: 'Note:',
+    ext_note_body:
+      'If the button above does not yet lead to Chrome Web Store, use the manual beta installation further down.',
+    ext_result_title: '✅ The result',
+    ext_result_body:
+      'You leave a rating linked to a real deal via proofRef, which makes it more credible than anonymous reviews.',
+    ext_privacy_title: '🔒 Privacy',
+    ext_privacy_body:
+      'PeerRate stores only the deal fields needed for verification plus your rating. No passwords or payment details are stored.',
+    ext_fast_title: '⚡ Fast',
+    ext_fast_body:
+      'Open a completed deal, click “Rate with PeerRate”, and rate.html is prefilled with verified data while the form is locked.',
+    ext_how_title: 'How it works',
+    ext_how_sub: '4 steps',
+    ext_step1_title: 'Install the extension',
+    ext_step1_body:
+      'Install via Chrome Web Store when available, or manually in developer mode during beta.',
+    ext_step2_title: 'Open your completed deal',
+    ext_step2_body:
+      'Go to a page showing a completed transaction on Tradera, and later Blocket and other platforms.',
+    ext_step3_title: 'Click “Rate”',
+    ext_step3_body:
+      'The extension identifies the deal and creates a verified payload for PeerRate.',
+    ext_step4_title: 'Leave your rating',
+    ext_step4_body:
+      'You land on rate.html with a verified deal, and the locked form lets you submit safely.',
+    ext_platforms_title: 'Supported platforms',
+    ext_platforms_sub: 'Status',
+    ext_platform_tradera_body: 'Verification via proofRef + deal data',
+    ext_platform_blocket_body: 'MVP: proofRef = pageUrl when orderId is missing',
+    ext_platform_others_body: 'Parser-based roadmap',
+    ext_live: 'LIVE',
+    ext_next: 'NEXT',
+    ext_planned: 'PLANNED',
+    ext_tip_label: 'Tip:',
+    ext_tip_body:
+      'To scale fast we are building a parser architecture where each platform can get its own parser.',
+    ext_privacy_section_title: 'Privacy & security',
+    ext_privacy_section_sub: 'Trust by design',
+    ext_privacy_li1:
+      'No login inside the extension: you log in on PeerRate if you are not already signed in.',
+    ext_privacy_li2:
+      'No passwords: the extension does not read or store credentials.',
+    ext_privacy_li3:
+      'Minimal data: only the fields needed for verification are sent, such as title, date, amount, proofRef and pageUrl.',
+    ext_privacy_li4:
+      'Duplicate protection: the backend has a unique constraint on platform + externalProofRef.',
+    ext_privacy_footer:
+      'This text can later be split into a shorter product version and a more formal legal version.',
+    ext_manual_title: 'Install manually (beta)',
+    ext_manual_sub: 'For when the Chrome Web Store link is not yet published',
+    ext_manual_lead:
+      'This is the standard flow for testing a Chrome extension locally. When the Web Store listing is published this becomes a one-click install instead.',
+    ext_manual_step1_title: 'Download the extension code',
+    ext_manual_step1_body:
+      'Download it from your GitHub repository or as a hosted zip file.',
+    ext_manual_step2_title: 'Open Chrome Extensions',
+    ext_manual_step2_body:
+      'Go to chrome://extensions and turn on Developer mode.',
+    ext_manual_step3_title: 'Load unpacked',
+    ext_manual_step3_body:
+      'Click Load unpacked and choose the extension/ folder.',
+    ext_copy_title: 'Copy-paste for the Chrome address bar',
+    ext_copy_sub: 'This opens the extensions page directly.',
+    ext_copy_btn: 'Copy: chrome://extensions',
+    ext_codebox:
+      '1) Open chrome://extensions\n2) Enable "Developer mode" in the top right\n3) Click "Load unpacked"\n4) Select the folder: extension/',
+    ext_protip_label: 'Pro tip:',
+    ext_protip_body:
+      'When you have a zip, host it under /downloads/peerrate-extension.zip and link to it from this page.',
+    ext_test_title: 'Test the extension',
+    ext_test_sub: 'Quick check',
+    ext_test_li1: 'Install the extension from Web Store or manually.',
+    ext_test_li2: 'Open a completed deal on Tradera.',
+    ext_test_li3: 'Click “Rate with PeerRate”.',
+    ext_test_li4:
+      'You land on /rate.html?pr=... and see a verified deal with a locked form.',
+    ext_test_li5:
+      'Submit and verify that the success toast appears.',
+    ext_test_cta_rate: 'Open rate.html',
+    ext_test_cta_top: 'Back to top',
+    ext_footer_tagline: 'Verified ratings — built for trust',
+    ext_toast_default: 'Copied!',
+    ext_toast_copy_success: 'Copied: chrome://extensions',
+    ext_toast_copy_fail:
+      'Could not copy. Your browser may block clipboard access.',
 
     profile_badge_label: 'Signed in as',
     profile_h1: 'My profile',

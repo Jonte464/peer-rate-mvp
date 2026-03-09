@@ -13,7 +13,7 @@ import { updateUserBadge, updateAvatars, initProfilePage } from './profile.js';
 
 import { adminLoginForm, adminLogoutBtn } from './admin.js';
 import { initCustomerForm } from './customer.js';
-import { initRatingContextGuards } from "./ratingContext.js";
+import { initRatingContextGuards } from './ratingContext.js';
 
 import { initLanding } from './landing/init.js';
 import { updateTopUserPill, initUserDropdown } from './landing/topUser.js';
@@ -176,17 +176,14 @@ function ensureHamburgerFallbackOnlyOnCustomer() {
   const topActions = document.getElementById('top-actions') || topRow.querySelector('.top-actions');
   if (!topActions) return;
 
-  // Om det redan finns en menyknapp (från landing/menu.js eller annan), gör inget.
-  // Vi checkar efter vanliga "hamburger-ikoner" och även vår egen id.
   const alreadyHasMenuButton =
     !!document.getElementById('pr-menu-btn') ||
     !!topActions.querySelector('button[aria-label*="meny" i]') ||
     !!topActions.querySelector('button[title*="meny" i]') ||
-    !!topActions.querySelector('button, a') && topActions.textContent.includes('☰');
+    (!!topActions.querySelector('button, a') && topActions.textContent.includes('☰'));
 
   if (alreadyHasMenuButton) return;
 
-  // Skapa knapp
   const btn = document.createElement('button');
   btn.id = 'pr-menu-btn';
   btn.type = 'button';
@@ -200,7 +197,6 @@ function ensureHamburgerFallbackOnlyOnCustomer() {
 
   topActions.appendChild(btn);
 
-  // Overlay
   let overlay = document.getElementById('pr-menu-overlay');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -213,7 +209,6 @@ function ensureHamburgerFallbackOnlyOnCustomer() {
     document.body.appendChild(overlay);
   }
 
-  // Drawer
   let drawer = document.getElementById('pr-menu-drawer');
   if (!drawer) {
     drawer = document.createElement('nav');
@@ -277,7 +272,6 @@ function initApp() {
   console.log('DOM ready');
   initRatingContextGuards();
 
-  // ✅ Viktigt: fixa hooks innan vi initierar menyer
   ensureMenuHooks();
 
   const user = auth.getUser?.() || null;
@@ -286,14 +280,12 @@ function initApp() {
   updateAvatars(user);
   updateTopUserPill(user);
 
-  // Meny (om den kastar fel ska appen ändå fortsätta)
   try {
     initLandingMenu();
   } catch (e) {
     console.warn('initLandingMenu failed (non-blocking)', e);
   }
 
-  // ✅ Fallback bara på customer-sidan (för att undvika dubbla hamburgare på andra sidor)
   ensureHamburgerFallbackOnlyOnCustomer();
 
   try {
@@ -314,6 +306,7 @@ function initApp() {
   if (adminLoginForm && adminLogoutBtn) console.log('Admin functionality loaded');
 
   const path = window.location.pathname || '';
+  const dataPage = (document.body?.dataset?.page || '').toLowerCase();
 
   // --- Customer / registrering ---
   if (document.getElementById('customer-form')) {
@@ -346,10 +339,10 @@ function initApp() {
 
   // --- Landing (index) ---
   const isIndex =
+    dataPage === 'index' ||
     path === '/' ||
     path.endsWith('/index.html') ||
-    !!document.getElementById('slot-hero') ||
-    !!document.querySelector('.hero');
+    !!document.getElementById('slot-hero');
 
   if (isIndex) {
     initLanding();
@@ -374,6 +367,12 @@ function boot() {
 
 if (document.readyState === 'loading') {
   window.addEventListener('DOMContentLoaded', boot);
+  try {
+    initRatingContextGuards();
+    window.__peerRateRatingContextLoaded = true;
+  } catch (e) {
+    console.warn('[PeerRate] ratingContext init failed', e);
+  }
 } else {
   boot();
 }
