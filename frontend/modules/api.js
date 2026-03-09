@@ -171,20 +171,30 @@ const api = {
   },
 
   getCurrentCustomer: async () => {
-    const endpoints = ['/api/customers/me', '/api/auth/me', '/api/profile/me'];
+    // Börja med den primära /me-endpointen
+    try {
+      const json = await api._clientGet('/api/customers/me');
 
-    for (const ep of endpoints) {
+      if (json?.ok && json.customer) return json.customer;
+      if (json?.customer) return json.customer;
+      if (json?.id && (json.email || json.subjectRef)) return json;
+    } catch {}
+
+    // Alias som fallback om den primära inte ger data
+    const fallbackEndpoints = ['/api/auth/me', '/api/profile/me'];
+
+    for (const ep of fallbackEndpoints) {
       try {
         const json = await api._clientGet(ep);
         if (!json) continue;
 
         if (json.ok && json.customer) return json.customer;
         if (json.customer) return json.customer;
-
         if (json.id && (json.email || json.subjectRef)) return json;
       } catch {}
     }
 
+    // Sista fallback: localStorage + sökning
     try {
       const cached = getStoredUser();
       if (!cached) return null;

@@ -1,9 +1,7 @@
 // backend/routes/meRoutes.js
 const express = require("express");
-const { PrismaClient } = require("@prisma/client");
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 /**
  * MVP "who am I" endpoints:
@@ -19,6 +17,10 @@ const prisma = new PrismaClient();
  * Byt senare till riktig auth (session/JWT) och ta bort query fallback.
  */
 
+function getPrisma() {
+  return global.prisma || null;
+}
+
 function getEmailFromReq(req) {
   const h = String(req.headers["x-user-email"] || "").trim().toLowerCase();
   if (h) return h;
@@ -29,8 +31,45 @@ function getEmailFromReq(req) {
   return "";
 }
 
+function buildCustomerResponse(customer, fallbackEmail = "") {
+  if (!customer) return null;
+
+  const firstName = customer.firstName || null;
+  const lastName = customer.lastName || null;
+  const computedFullName =
+    customer.fullName ||
+    `${firstName || ""} ${lastName || ""}`.trim() ||
+    null;
+
+  return {
+    id: customer.id,
+    email: customer.email || fallbackEmail || null,
+    subjectRef: customer.subjectRef || customer.email || fallbackEmail || null,
+    fullName: computedFullName,
+    firstName,
+    lastName,
+    personalNumber: customer.personalNumber || null,
+    phone: customer.phone || null,
+    addressStreet: customer.addressStreet || null,
+    addressZip: customer.addressZip || null,
+    addressCity: customer.addressCity || null,
+    country: customer.country || null,
+    profileComplete: Boolean(customer.profileComplete),
+    createdAt: customer.createdAt || null,
+    updatedAt: customer.updatedAt || null,
+  };
+}
+
 async function fetchCustomerByEmail(req, res) {
   try {
+    const prisma = getPrisma();
+    if (!prisma) {
+      return res.status(500).json({
+        ok: false,
+        error: "Prisma not available",
+      });
+    }
+
     const email = getEmailFromReq(req);
 
     if (!email) {
@@ -40,11 +79,20 @@ async function fetchCustomerByEmail(req, res) {
       });
     }
 
-    const customer = await prisma.customer.findUnique({
-      where: { email },
+    // Viktigt:
+    // Använd findFirst istället för findUnique för att undvika runtime-500
+    // om email inte är definierat som unique i Prisma-schemat.
+    const customer = await prisma.customer.findFirst({
+      where: {
+        OR: [
+          { email },
+          { subjectRef: email },
+        ],
+      },
       select: {
         id: true,
         email: true,
+        subjectRef: true,
         fullName: true,
         firstName: true,
         lastName: true,
@@ -61,34 +109,22 @@ async function fetchCustomerByEmail(req, res) {
     });
 
     if (!customer) {
-      return res.status(404).json({ ok: false, error: "Customer not found" });
+      return res.status(404).json({
+        ok: false,
+        error: "Customer not found",
+      });
     }
 
-    const normalized = {
-      id: customer.id,
-      email: customer.email,
-      subjectRef: customer.email,
-      fullName:
-        customer.fullName ||
-        `${customer.firstName || ""} ${customer.lastName || ""}`.trim() ||
-        null,
-      firstName: customer.firstName || null,
-      lastName: customer.lastName || null,
-      personalNumber: customer.personalNumber || null,
-      phone: customer.phone || null,
-      addressStreet: customer.addressStreet || null,
-      addressZip: customer.addressZip || null,
-      addressCity: customer.addressCity || null,
-      country: customer.country || null,
-      profileComplete: Boolean(customer.profileComplete),
-      createdAt: customer.createdAt,
-      updatedAt: customer.updatedAt,
-    };
-
-    return res.json({ ok: true, customer: normalized });
+    return res.json({
+      ok: true,
+      customer: buildCustomerResponse(customer, email),
+    });
   } catch (err) {
-    console.error("meRoutes error:", err);
-    return res.status(500).json({ ok: false, error: err?.message || "Server error" });
+    console.error("meRoutes error:", err && err.stack ? err.stack : err);
+    return res.status(500).json({
+      ok: false,
+      error: err?.message || "Server error",
+    });
   }
 }
 
