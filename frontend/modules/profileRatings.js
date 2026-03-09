@@ -3,8 +3,10 @@
 import api from './api.js';
 import { t, getCurrentLanguage, applyLang } from './landing/language.js';
 
+let latestRatingPayload = null;
+
 function mapRatingSourceLabel(source) {
-  if (!source) return t('profile_rating_source_other', 'Annat/okänt');
+  if (!source) return t('profile_rating_source_other', 'Other/unknown');
 
   const s = String(source).toUpperCase();
   switch (s) {
@@ -20,7 +22,7 @@ function mapRatingSourceLabel(source) {
       return 'Tiptap';
     case 'OTHER':
     default:
-      return t('profile_rating_source_other', 'Annat/okänt');
+      return t('profile_rating_source_other', 'Other/unknown');
   }
 }
 
@@ -28,7 +30,7 @@ function formatDate(value) {
   const d = new Date(value);
   if (isNaN(d.getTime())) return '';
 
-  const locale = getCurrentLanguage() === 'en' ? 'en-GB' : 'sv-SE';
+  const locale = getCurrentLanguage() === 'sv' ? 'sv-SE' : 'en-GB';
   return d.toLocaleString(locale);
 }
 
@@ -67,9 +69,9 @@ export function renderPRating(avg) {
 
   if (text) {
     if (!avg || isNaN(valRaw)) {
-      text.textContent = t('profile_no_ratings_yet', 'Inga omdömen ännu.');
+      text.textContent = t('profile_no_ratings_yet', 'No ratings yet.');
     } else {
-      text.textContent = t('profile_current_rating', 'Din nuvarande rating är {value} / 5.', {
+      text.textContent = t('profile_current_rating', 'Your current rating is {value} / 5.', {
         value: val.toFixed(1),
       });
     }
@@ -84,8 +86,8 @@ export function renderRatingSources(ratings) {
 
   if (!Array.isArray(ratings) || ratings.length === 0) {
     pie.style.background = '#f1e4d5';
-    if (pieLabel) pieLabel.textContent = t('profile_no_ratings', 'Inga omdömen');
-    legend.innerHTML = `<div class="tiny muted">${escapeHtml(t('profile_no_ratings_yet', 'Inga omdömen ännu.'))}</div>`;
+    if (pieLabel) pieLabel.textContent = t('profile_no_ratings', 'No ratings');
+    legend.innerHTML = `<div class="tiny muted">${escapeHtml(t('profile_no_ratings_yet', 'No ratings yet.'))}</div>`;
     return;
   }
 
@@ -125,17 +127,88 @@ export function renderRatingSources(ratings) {
 
   pie.style.background = `conic-gradient(${parts.join(', ')})`;
   if (pieLabel) {
-    pieLabel.textContent = t('profile_total_ratings', '{count} omdömen', { count: total });
+    pieLabel.textContent = t('profile_total_ratings', '{count} ratings', { count: total });
   }
+}
+
+function renderRatingsList(ratings) {
+  const listEl = document.getElementById('ratings-list');
+  if (!listEl) return;
+
+  if (!Array.isArray(ratings) || ratings.length === 0) {
+    listEl.innerHTML = `<div class="tiny muted">${escapeHtml(t('profile_no_ratings_short', 'No ratings yet.'))}</div>`;
+    return;
+  }
+
+  let html = '';
+
+  ratings.forEach((r) => {
+    const dateStr = formatDate(r.createdAt);
+    const score = r.rating || r.score || '';
+
+    const rawRaterName =
+      (r.raterName || r.raterEmail || r.rater || '').toString().trim();
+
+    const channelLabel = (r.raterLabel || '').toString().trim();
+    const unknownText = t('profile_rater_unknown', 'Unknown');
+    const raterDisplay = rawRaterName || channelLabel || unknownText;
+
+    const sourceLabel = mapRatingSourceLabel(
+      r.source || r.ratingSource || r.sourceLabel
+    );
+
+    const metaParts = [];
+
+    if (raterDisplay && raterDisplay !== unknownText) {
+      metaParts.push(t('profile_rating_by', 'by {name}', { name: raterDisplay }));
+    }
+
+    if (sourceLabel) {
+      metaParts.push(t('profile_rating_via', 'rated via {source}', { source: sourceLabel }));
+    }
+
+    if (dateStr) {
+      metaParts.push(dateStr);
+    }
+
+    const metaText = metaParts.join(' · ');
+    const comment = (r.comment || r.text || '').slice(0, 400);
+
+    html += `<div class="rating-row">
+      <div class="rating-main">
+        <div class="rating-stars">${escapeHtml(String(score))} / 5</div>
+        <div class="rating-meta">${escapeHtml(metaText)}</div>
+        <div class="rating-comment-inline">${escapeHtml(comment)}</div>
+      </div>
+    </div>`;
+  });
+
+  listEl.innerHTML = html;
+}
+
+export function rerenderRatingWidgetsFromCache() {
+  if (!latestRatingPayload) return;
+
+  renderPRating(latestRatingPayload.average);
+  renderRatingSources(latestRatingPayload.ratings || []);
+  renderRatingsList(latestRatingPayload.ratings || []);
+  applyLang(document);
 }
 
 export async function loadMyRating() {
   try {
     const info = await api.getMyRating();
 
+    latestRatingPayload = info || {
+      average: null,
+      count: 0,
+      ratings: [],
+    };
+
     if (!info) {
       renderPRating(null);
       renderRatingSources([]);
+      renderRatingsList([]);
       return;
     }
 
@@ -154,67 +227,25 @@ export async function loadMyRating() {
         const pct = Math.max(0, Math.min(100, (info.average / 5) * 100));
         fill.style.width = `${pct}%`;
       }
+    } else {
+      set('profile-score', '-');
+      set('profile-score-count', String(info.count || 0));
     }
 
     renderPRating(info.average);
     renderRatingSources(info.ratings || []);
-
-    const listEl = document.getElementById('ratings-list');
-    if (listEl) {
-      if (!Array.isArray(info.ratings) || info.ratings.length === 0) {
-        listEl.innerHTML = `<div class="tiny muted">${escapeHtml(t('profile_no_ratings_short', 'Inga omdömen än.'))}</div>`;
-      } else {
-        let html = '';
-
-        info.ratings.forEach((r) => {
-          const dateStr = formatDate(r.createdAt);
-          const score = r.rating || r.score || '';
-
-          const rawRaterName =
-            (r.raterName || r.raterEmail || r.rater || '').toString().trim();
-
-          const channelLabel = (r.raterLabel || '').toString().trim();
-          const unknownText = t('profile_rater_unknown', 'Okänd');
-          const raterDisplay = rawRaterName || channelLabel || unknownText;
-
-          const sourceLabel = mapRatingSourceLabel(
-            r.source || r.ratingSource || r.sourceLabel
-          );
-
-          const metaParts = [];
-
-          if (raterDisplay && raterDisplay !== unknownText) {
-            metaParts.push(t('profile_rating_by', 'av {name}', { name: raterDisplay }));
-          }
-
-          if (sourceLabel) {
-            metaParts.push(t('profile_rating_via', 'betyg via {source}', { source: sourceLabel }));
-          }
-
-          if (dateStr) {
-            metaParts.push(dateStr);
-          }
-
-          const metaText = metaParts.join(' · ');
-          const comment = (r.comment || r.text || '').slice(0, 400);
-
-          html += `<div class="rating-row">
-            <div class="rating-main">
-              <div class="rating-stars">${escapeHtml(String(score))} / 5</div>
-              <div class="rating-meta">${escapeHtml(metaText)}</div>
-              <div class="rating-comment-inline">${escapeHtml(comment)}</div>
-            </div>
-          </div>`;
-        });
-
-        listEl.innerHTML = html;
-      }
-    }
+    renderRatingsList(info.ratings || []);
 
     applyLang(document);
   } catch (err) {
     console.error('Kunde inte ladda Mitt omdöme', err);
+    latestRatingPayload = {
+      average: null,
+      count: 0,
+      ratings: [],
+    };
     renderPRating(null);
     renderRatingSources([]);
+    renderRatingsList([]);
   }
 }

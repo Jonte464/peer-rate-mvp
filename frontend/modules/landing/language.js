@@ -1,6 +1,7 @@
 // frontend/modules/landing/language.js
 
 const LS_LANG = 'peerRateLang_v1';
+const DEFAULT_LANG = 'en';
 
 const dict = {
   sv: {
@@ -124,6 +125,7 @@ const dict = {
     profile_my_details_lead: 'Uppgifter kopplade till din profil.',
     profile_avatar_upload: 'Ladda upp profilbild',
     profile_avatar_note: 'Bilden sparas bara lokalt i din webbläsare och kopplas till “Inloggad som”.',
+    profile_avatar_title: 'Klicka för att byta bild',
     profile_logout_btn: 'Logga ut',
     profile_default_name: 'Profil',
 
@@ -328,6 +330,7 @@ const dict = {
     profile_my_details_lead: 'Details linked to your profile.',
     profile_avatar_upload: 'Upload profile picture',
     profile_avatar_note: 'The image is stored locally in your browser and used for “Signed in as”.',
+    profile_avatar_title: 'Click to change image',
     profile_logout_btn: 'Log out',
     profile_default_name: 'Profile',
 
@@ -413,17 +416,31 @@ const dict = {
   },
 };
 
+function getBrowserPreferredLanguage() {
+  try {
+    const browserLang =
+      (navigator.language || navigator.userLanguage || '').toLowerCase();
+
+    if (browserLang.startsWith('sv')) return 'sv';
+    return DEFAULT_LANG;
+  } catch {
+    return DEFAULT_LANG;
+  }
+}
+
 function safeGetStoredLanguage() {
   try {
-    return localStorage.getItem(LS_LANG) || 'sv';
+    const stored = localStorage.getItem(LS_LANG);
+    if (stored === 'sv' || stored === 'en') return stored;
+    return getBrowserPreferredLanguage();
   } catch {
-    return 'sv';
+    return getBrowserPreferredLanguage();
   }
 }
 
 export function getCurrentLanguage() {
   const lang = safeGetStoredLanguage();
-  return lang === 'en' ? 'en' : 'sv';
+  return lang === 'sv' ? 'sv' : 'en';
 }
 
 function interpolate(template, params = {}) {
@@ -434,8 +451,8 @@ function interpolate(template, params = {}) {
 
 export function t(key, fallback = '', params = {}) {
   const lang = getCurrentLanguage();
-  const langDict = dict[lang] || dict.sv;
-  const baseDict = dict.sv || {};
+  const langDict = dict[lang] || dict.en;
+  const baseDict = dict.en || {};
 
   const value =
     langDict[key] != null
@@ -448,47 +465,90 @@ export function t(key, fallback = '', params = {}) {
   return interpolate(value, params);
 }
 
-export function applyLang(root = document) {
-  const lang = getCurrentLanguage();
+function applyTextTranslations(root) {
+  root.querySelectorAll('[data-i18n]').forEach((node) => {
+    const key = node.getAttribute('data-i18n');
+    if (!key) return;
+    node.textContent = t(key, node.textContent || '');
+  });
+}
 
-  document.documentElement.lang = lang === 'en' ? 'en' : 'sv';
+function applyPlaceholderTranslations(root) {
+  root.querySelectorAll('[data-i18n-placeholder]').forEach((node) => {
+    const key = node.getAttribute('data-i18n-placeholder');
+    if (!key) return;
+    node.setAttribute('placeholder', t(key, node.getAttribute('placeholder') || ''));
+  });
+}
+
+function applyMultilineTranslations(root) {
+  root.querySelectorAll('[data-i18n-multiline]').forEach((node) => {
+    const key = node.getAttribute('data-i18n-multiline');
+    if (!key) return;
+    node.innerHTML = t(key, node.innerHTML || '').replace(/\n/g, '<br/>');
+  });
+}
+
+function applyTitleTranslations(root) {
+  root.querySelectorAll('[data-i18n-title]').forEach((node) => {
+    const key = node.getAttribute('data-i18n-title');
+    if (!key) return;
+    node.setAttribute('title', t(key, node.getAttribute('title') || ''));
+  });
+}
+
+function applyAriaLabelTranslations(root) {
+  root.querySelectorAll('[data-i18n-aria-label]').forEach((node) => {
+    const key = node.getAttribute('data-i18n-aria-label');
+    if (!key) return;
+    node.setAttribute('aria-label', t(key, node.getAttribute('aria-label') || ''));
+  });
+}
+
+function emitLanguageChanged(lang) {
+  try {
+    window.dispatchEvent(
+      new CustomEvent('peerrate:language-changed', {
+        detail: { lang },
+      })
+    );
+  } catch {}
+}
+
+export function applyLang(root = document, options = {}) {
+  const lang = getCurrentLanguage();
+  const shouldEmit = options.emit === true;
+
+  document.documentElement.lang = lang === 'sv' ? 'sv' : 'en';
 
   const langLabel = document.getElementById('langLabel');
   if (langLabel) {
     langLabel.textContent = lang === 'en' ? 'EN' : 'SV';
   }
 
-  root.querySelectorAll('[data-i18n]').forEach((node) => {
-    const key = node.getAttribute('data-i18n');
-    if (!key) return;
-    node.textContent = t(key, node.textContent || '');
-  });
-
-  root.querySelectorAll('[data-i18n-placeholder]').forEach((node) => {
-    const key = node.getAttribute('data-i18n-placeholder');
-    if (!key) return;
-    node.setAttribute('placeholder', t(key, node.getAttribute('placeholder') || ''));
-  });
-
-  root.querySelectorAll('[data-i18n-multiline]').forEach((node) => {
-    const key = node.getAttribute('data-i18n-multiline');
-    if (!key) return;
-    node.innerHTML = t(key, node.innerHTML || '').replace(/\n/g, '<br/>');
-  });
+  applyTextTranslations(root);
+  applyPlaceholderTranslations(root);
+  applyMultilineTranslations(root);
+  applyTitleTranslations(root);
+  applyAriaLabelTranslations(root);
 
   try {
     window.__peerRateLang = lang;
   } catch {}
+
+  if (shouldEmit) {
+    emitLanguageChanged(lang);
+  }
 }
 
 export function setLanguage(lang) {
-  const safeLang = lang === 'en' ? 'en' : 'sv';
+  const safeLang = lang === 'sv' ? 'sv' : 'en';
 
   try {
     localStorage.setItem(LS_LANG, safeLang);
   } catch {}
 
-  applyLang(document);
+  applyLang(document, { emit: true });
 }
 
 let applyTimer = null;
@@ -527,7 +587,7 @@ export function initLandingLanguage() {
     langMenu.addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-lang]');
       if (!btn) return;
-      const lang = btn.getAttribute('data-lang') || 'sv';
+      const lang = btn.getAttribute('data-lang') || DEFAULT_LANG;
       setLanguage(lang);
       setMenuOpen(false);
     });

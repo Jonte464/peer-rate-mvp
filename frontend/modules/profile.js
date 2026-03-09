@@ -3,11 +3,14 @@
 import { el, showNotification } from './utils.js';
 import auth, { login, logout } from './auth.js';
 import api from './api.js';
-import { renderPRating, loadMyRating } from './profileRatings.js';
+import { renderPRating, loadMyRating, rerenderRatingWidgetsFromCache } from './profileRatings.js';
 import { initRatingForm } from './ratingForm.js';
 import { t, applyLang } from './landing/language.js';
 
 export { initRatingLogin } from './ratingForm.js'; // vidareexport för /rate.html
+
+let latestExternalData = null;
+let languageChangeBound = false;
 
 function getAvatarKey(user) {
   if (!user || typeof user !== 'object') return 'peerRateAvatar:default';
@@ -36,7 +39,7 @@ export function updateUserBadge(user) {
     fullName.split(/\s+/)[0] ||
     (user.email ? user.email.split('@')[0] : '');
 
-  userBadgeName.textContent = firstName || t('profile_default_name', 'Profil');
+  userBadgeName.textContent = firstName || t('profile_default_name', 'Profile');
   userBadge.classList.remove('hidden');
 }
 
@@ -72,6 +75,11 @@ export function updateAvatars(user) {
 
   applyAvatar(el('user-badge-avatar'));
   applyAvatar(el('profile-avatar-preview'));
+
+  const badgeAvatar = document.getElementById('user-badge-avatar');
+  if (badgeAvatar) {
+    badgeAvatar.setAttribute('title', t('profile_avatar_title', 'Click to change image'));
+  }
 }
 
 function initAvatarUpload() {
@@ -130,7 +138,7 @@ async function handleLoginSubmit(event) {
   if (!email || !password) {
     showNotification(
       'error',
-      t('profile_login_error_missing_fields', 'Fyll i både e-post och lösenord.'),
+      t('profile_login_error_missing_fields', 'Please enter both email and password.'),
       'login-status'
     );
     return;
@@ -141,14 +149,14 @@ async function handleLoginSubmit(event) {
     if (!res || res.ok === false) {
       const message =
         res?.error ||
-        t('profile_login_error_failed', 'Inloggningen misslyckades. Kontrollera uppgifterna.');
+        t('profile_login_error_failed', 'Login failed. Please check your details.');
       showNotification('error', message, 'login-status');
       return;
     }
 
     showNotification(
       'success',
-      t('profile_login_success', 'Du är nu inloggad.'),
+      t('profile_login_success', 'You are now logged in.'),
       'login-status'
     );
 
@@ -157,7 +165,7 @@ async function handleLoginSubmit(event) {
     console.error('handleLoginSubmit error', err);
     showNotification(
       'error',
-      t('profile_login_error_technical', 'Tekniskt fel vid inloggning. Försök igen om en stund.'),
+      t('profile_login_error_technical', 'Technical error during login. Please try again shortly.'),
       'login-status'
     );
   }
@@ -173,7 +181,7 @@ export function initLogoutButton() {
       await logout();
       showNotification(
         'success',
-        t('profile_logout_success', 'Du är nu utloggad.'),
+        t('profile_logout_success', 'You are now logged out.'),
         'notice'
       );
       window.setTimeout(() => window.location.reload(), 500);
@@ -181,7 +189,7 @@ export function initLogoutButton() {
       console.error('Logout error', err);
       showNotification(
         'error',
-        t('profile_logout_error', 'Kunde inte logga ut. Försök igen.'),
+        t('profile_logout_error', 'Could not log out. Please try again.'),
         'notice'
       );
     }
@@ -195,22 +203,89 @@ function translateAddressStatus(rawStatus) {
 
   switch (s) {
     case 'VERIFIED':
-      return t('profile_address_status_verified', 'Bekräftad (adress hittad i adressregister)');
+      return t('profile_address_status_verified', 'Verified (address found in address registry)');
     case 'FROM_PROFILE':
-      return t('profile_address_status_from_profile', 'Från din profil (ej verifierad externt)');
+      return t('profile_address_status_from_profile', 'From your profile (not externally verified)');
     case 'NO_EXTERNAL_DATA':
-      return t('profile_address_status_no_external_data', 'Ingen extern data');
+      return t('profile_address_status_no_external_data', 'No external data');
     case 'NO_ADDRESS_INPUT':
-      return t('profile_address_status_no_address_input', 'Ingen adress angiven');
+      return t('profile_address_status_no_address_input', 'No address entered');
     case 'NO_ADDRESS_IN_RESPONSE':
-      return t('profile_address_status_no_address_in_response', 'Ingen adress i svaret från tjänsten');
+      return t('profile_address_status_no_address_in_response', 'No address in service response');
     case 'NO_ADDRESS':
-      return t('profile_address_status_no_address', 'Ingen adress');
+      return t('profile_address_status_no_address', 'No address');
     case 'LOOKUP_FAILED':
-      return t('profile_address_status_lookup_failed', 'Tekniskt fel vid adresskontroll');
+      return t('profile_address_status_lookup_failed', 'Technical error during address validation');
     default:
-      return t('profile_address_status_unknown', 'Okänd status ({status})', { status: s });
+      return t('profile_address_status_unknown', 'Unknown status ({status})', { status: s });
   }
+}
+
+function rerenderExternalDataFromCache() {
+  const section = document.getElementById('external-data-section');
+  if (!section || !latestExternalData) return;
+
+  let anyVisible = false;
+
+  const setAndToggle = (id, value) => {
+    const node = document.getElementById(id);
+    if (!node) return;
+
+    const li = node.closest && node.closest('li');
+
+    if (value === undefined || value === null || value === '') {
+      node.textContent = '';
+      if (li) li.classList.add('hidden');
+    } else {
+      node.textContent = String(value);
+      if (li) li.classList.remove('hidden');
+      anyVisible = true;
+    }
+  };
+
+  const setSpecial = (node, value) => {
+    if (!node) return;
+
+    const li = node.closest && node.closest('li');
+
+    if (value === undefined || value === null || value === '') {
+      node.textContent = '';
+      if (li) li.classList.add('hidden');
+    } else {
+      node.textContent = String(value);
+      if (li) li.classList.remove('hidden');
+      anyVisible = true;
+    }
+  };
+
+  setAndToggle('ext-vehicles-count', latestExternalData.vehicles);
+  setAndToggle('ext-properties-count', latestExternalData.properties);
+  setAndToggle('ext-last-updated', latestExternalData.lastUpdated);
+
+  const addrEl = document.querySelector('[data-field="externalAddressLine"]');
+  const statusEl = document.querySelector('[data-field="externalAddressStatus"]');
+
+  setSpecial(addrEl, latestExternalData.validatedAddress);
+  setSpecial(statusEl, translateAddressStatus(latestExternalData.addressStatus));
+
+  if (!anyVisible) section.classList.add('hidden');
+  else section.classList.remove('hidden');
+
+  applyLang(document);
+}
+
+function bindLanguageChangeHandler() {
+  if (languageChangeBound) return;
+  languageChangeBound = true;
+
+  window.addEventListener('peerrate:language-changed', () => {
+    const user = auth.getUser();
+    updateUserBadge(user);
+    updateAvatars(user);
+    rerenderExternalDataFromCache();
+    rerenderRatingWidgetsFromCache();
+    applyLang(document);
+  });
 }
 
 async function loadProfileData() {
@@ -276,60 +351,17 @@ async function loadExternalData() {
     const section = document.getElementById('external-data-section');
     const data = await api.getExternalDataForCurrentCustomer();
 
+    latestExternalData = data || null;
+
     if (!data || data.ok === false) {
       if (section) section.classList.add('hidden');
       return;
     }
 
-    let anyVisible = false;
-
-    const setAndToggle = (id, value) => {
-      const node = document.getElementById(id);
-      if (!node) return;
-
-      const li = node.closest && node.closest('li');
-
-      if (value === undefined || value === null || value === '') {
-        node.textContent = '';
-        if (li) li.classList.add('hidden');
-      } else {
-        node.textContent = String(value);
-        if (li) li.classList.remove('hidden');
-        anyVisible = true;
-      }
-    };
-
-    setAndToggle('ext-vehicles-count', data.vehicles);
-    setAndToggle('ext-properties-count', data.properties);
-    setAndToggle('ext-last-updated', data.lastUpdated);
-
-    const addrEl = document.querySelector('[data-field="externalAddressLine"]');
-    const statusEl = document.querySelector('[data-field="externalAddressStatus"]');
-
-    const setSpecial = (node, value) => {
-      if (!node) return;
-
-      const li = node.closest && node.closest('li');
-
-      if (value === undefined || value === null || value === '') {
-        node.textContent = '';
-        if (li) li.classList.add('hidden');
-      } else {
-        node.textContent = String(value);
-        if (li) li.classList.remove('hidden');
-        anyVisible = true;
-      }
-    };
-
-    setSpecial(addrEl, data.validatedAddress);
-    setSpecial(statusEl, translateAddressStatus(data.addressStatus));
-
-    if (section) {
-      if (!anyVisible) section.classList.add('hidden');
-      else section.classList.remove('hidden');
-    }
+    rerenderExternalDataFromCache();
   } catch (err) {
     console.error('Kunde inte ladda externa data', err);
+    latestExternalData = null;
     const section = document.getElementById('external-data-section');
     if (section) section.classList.add('hidden');
   }
@@ -343,6 +375,8 @@ export async function initProfilePage() {
     console.warn('Login form not found');
     return;
   }
+
+  bindLanguageChangeHandler();
 
   if (!form.dataset.loginBound) {
     form.dataset.loginBound = 'true';
