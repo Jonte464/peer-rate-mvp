@@ -1,6 +1,9 @@
 // backend/routes/meRoutes.js
 const express = require("express");
+const { PrismaClient } = require("@prisma/client");
+
 const router = express.Router();
+const prisma = new PrismaClient();
 
 /**
  * MVP "who am I" endpoints:
@@ -28,10 +31,8 @@ function getEmailFromReq(req) {
 
 async function fetchCustomerByEmail(req, res) {
   try {
-    const prisma = req.prisma || global.prisma;
-    if (!prisma) return res.status(500).json({ ok: false, error: "Prisma not available" });
-
     const email = getEmailFromReq(req);
+
     if (!email) {
       return res.status(401).json({
         ok: false,
@@ -44,6 +45,7 @@ async function fetchCustomerByEmail(req, res) {
       select: {
         id: true,
         email: true,
+        fullName: true,
         firstName: true,
         lastName: true,
         personalNumber: true,
@@ -58,9 +60,32 @@ async function fetchCustomerByEmail(req, res) {
       },
     });
 
-    if (!customer) return res.status(404).json({ ok: false, error: "Customer not found" });
+    if (!customer) {
+      return res.status(404).json({ ok: false, error: "Customer not found" });
+    }
 
-    return res.json({ ok: true, customer });
+    const normalized = {
+      id: customer.id,
+      email: customer.email,
+      subjectRef: customer.email,
+      fullName:
+        customer.fullName ||
+        `${customer.firstName || ""} ${customer.lastName || ""}`.trim() ||
+        null,
+      firstName: customer.firstName || null,
+      lastName: customer.lastName || null,
+      personalNumber: customer.personalNumber || null,
+      phone: customer.phone || null,
+      addressStreet: customer.addressStreet || null,
+      addressZip: customer.addressZip || null,
+      addressCity: customer.addressCity || null,
+      country: customer.country || null,
+      profileComplete: Boolean(customer.profileComplete),
+      createdAt: customer.createdAt,
+      updatedAt: customer.updatedAt,
+    };
+
+    return res.json({ ok: true, customer: normalized });
   } catch (err) {
     console.error("meRoutes error:", err);
     return res.status(500).json({ ok: false, error: err?.message || "Server error" });
@@ -73,7 +98,7 @@ router.get("/customers/me", fetchCustomerByEmail);
 // profile "me" (alias)
 router.get("/profile/me", fetchCustomerByEmail);
 
-// auth "me" (alias) – frontend verkar kalla denna också
+// auth "me" (alias)
 router.get("/auth/me", fetchCustomerByEmail);
 
 module.exports = router;

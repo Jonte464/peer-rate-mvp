@@ -17,10 +17,38 @@ function getAuthToken() {
   }
 }
 
+function getStoredUser() {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    const raw = localStorage.getItem('peerRateUser');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function getUserEmail() {
+  try {
+    const user = getStoredUser();
+    return (
+      (user?.email && String(user.email).trim().toLowerCase()) ||
+      (user?.subjectRef && String(user.subjectRef).trim().toLowerCase()) ||
+      null
+    );
+  } catch {
+    return null;
+  }
+}
+
 function buildAuthHeaders(baseHeaders = {}) {
   const headers = { ...baseHeaders };
+
   const token = getAuthToken();
   if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const email = getUserEmail();
+  if (email) headers['x-user-email'] = email;
+
   return headers;
 }
 
@@ -28,7 +56,7 @@ function buildAuthHeaders(baseHeaders = {}) {
 function formatDate(dateStr) {
   if (!dateStr) return null;
   try {
-    return dateStr.split('T')[0]; // "2025-11-20T11:58:41Z" → "2025-11-20"
+    return dateStr.split('T')[0];
   } catch {
     return dateStr;
   }
@@ -53,8 +81,9 @@ const api = {
   createCustomer: (payload) => {
     return fetch('/api/customers', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
+      credentials: 'include',
     }).then(async (r) => {
       const raw = await r.text();
       try { return JSON.parse(raw); }
@@ -157,16 +186,16 @@ const api = {
     }
 
     try {
-      const raw = localStorage.getItem('peerRateUser');
-      if (!raw) return null;
-      const cached = JSON.parse(raw);
+      const cached = getStoredUser();
+      if (!cached) return null;
 
       const q = cached.email || cached.subjectRef || cached.id || null;
       if (!q) return cached;
 
       const found = await api.searchCustomers(q);
-      if (found?.ok && Array.isArray(found.customers) && found.customers.length)
+      if (found?.ok && Array.isArray(found.customers) && found.customers.length) {
         return found.customers[0];
+      }
 
       return cached;
     } catch {
@@ -174,7 +203,7 @@ const api = {
     }
   },
 
-    // ---------------------- EXTERN DATA ---------------------------
+  // ---------------------- EXTERN DATA ---------------------------
   getExternalDataForCurrentCustomer: async () => {
     try {
       const current = await api.getCurrentCustomer();
@@ -183,7 +212,7 @@ const api = {
 
       const path = `/api/customers/external-data?email=${encodeURIComponent(email)}`;
       const json = await api._clientGet(path);
-      if (!json || json.ok === false) return json; // kan vara null eller { ok:false, error:... }
+      if (!json || json.ok === false) return json;
 
       return {
         ok: true,
@@ -199,7 +228,6 @@ const api = {
     }
   },
 
-  // Hämta extern data för en specifik profil (t.ex. när du tittar på din frus profil)
   getExternalDataForEmail: async (emailOrSubject) => {
     try {
       if (!emailOrSubject) return null;
@@ -229,11 +257,15 @@ const api = {
       const subject = current?.subjectRef || current?.email;
       if (!subject) return null;
 
-      const avgP = fetch(`/api/ratings/average?subject=${encodeURIComponent(subject)}`)
-        .then(r => r.json().catch(() => null));
+      const avgP = fetch(`/api/ratings/average?subject=${encodeURIComponent(subject)}`, {
+        headers: buildAuthHeaders(),
+        credentials: 'include',
+      }).then(r => r.json().catch(() => null));
 
-      const listP = fetch(`/api/ratings?subject=${encodeURIComponent(subject)}`)
-        .then(r => r.json().catch(() => null));
+      const listP = fetch(`/api/ratings?subject=${encodeURIComponent(subject)}`, {
+        headers: buildAuthHeaders(),
+        credentials: 'include',
+      }).then(r => r.json().catch(() => null));
 
       const [avg, list] = await Promise.all([avgP, listP]);
 
