@@ -34,27 +34,17 @@ function getEmailFromReq(req) {
 function buildCustomerResponse(customer, fallbackEmail = "") {
   if (!customer) return null;
 
-  const firstName = customer.firstName || null;
-  const lastName = customer.lastName || null;
-  const computedFullName =
-    customer.fullName ||
-    `${firstName || ""} ${lastName || ""}`.trim() ||
-    null;
-
   return {
     id: customer.id,
     email: customer.email || fallbackEmail || null,
     subjectRef: customer.subjectRef || customer.email || fallbackEmail || null,
-    fullName: computedFullName,
-    firstName,
-    lastName,
+    fullName: customer.fullName || null,
     personalNumber: customer.personalNumber || null,
     phone: customer.phone || null,
     addressStreet: customer.addressStreet || null,
     addressZip: customer.addressZip || null,
     addressCity: customer.addressCity || null,
     country: customer.country || null,
-    profileComplete: Boolean(customer.profileComplete),
     createdAt: customer.createdAt || null,
     updatedAt: customer.updatedAt || null,
   };
@@ -79,9 +69,6 @@ async function fetchCustomerByEmail(req, res) {
       });
     }
 
-    // Viktigt:
-    // Använd findFirst istället för findUnique för att undvika runtime-500
-    // om email inte är definierat som unique i Prisma-schemat.
     const customer = await prisma.customer.findFirst({
       where: {
         OR: [
@@ -94,15 +81,12 @@ async function fetchCustomerByEmail(req, res) {
         email: true,
         subjectRef: true,
         fullName: true,
-        firstName: true,
-        lastName: true,
         personalNumber: true,
         phone: true,
         addressStreet: true,
         addressZip: true,
         addressCity: true,
         country: true,
-        profileComplete: true,
         createdAt: true,
         updatedAt: true,
       },
