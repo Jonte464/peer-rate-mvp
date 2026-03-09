@@ -7,8 +7,20 @@ const path = require("path");
 const helmet = require("helmet");
 const compression = require("compression");
 const cookieParser = require("cookie-parser");
+const { PrismaClient } = require("@prisma/client");
 
 const { createCorsMiddleware } = require("./config/cors");
+
+// -----------------------------
+// Prisma (gör tillgänglig för äldre routes som använder global.prisma)
+// -----------------------------
+const dbConfigured = Boolean(process.env.DATABASE_URL);
+if (dbConfigured) {
+  global.prisma = new PrismaClient();
+  console.log("✅ Prisma initialized on global.prisma");
+} else {
+  console.warn("⚠️ DATABASE_URL not set — Prisma not initialized.");
+}
 
 // -----------------------------
 // Router-diagnostik (för Render)
@@ -40,11 +52,8 @@ function assertRouter(name, mod) {
 const authRoutes = assertRouter("authRoutes", require("./routes/authRoutes"));
 const linkedinAuth = assertRouter("linkedinAuth", require("./routes/linkedinAuth"));
 
-// DB-backed routes are optional in local dev — only load when DATABASE_URL set
-const dbConfigured = Boolean(process.env.DATABASE_URL);
-
 let ratingsRoutes,
-  ratingChecksRoutes, // ✅ NEW: "har redan betygsatt?"-endpoint för extension
+  ratingChecksRoutes,
   customersRoutes,
   adminRoutes,
   integrationsRoutes,
@@ -60,7 +69,7 @@ if (dbConfigured) {
   const load = (name, p) => assertRouter(name, require(p));
 
   ratingsRoutes = load("ratingsRoutes", "./routes/ratingsRoutes");
-  ratingChecksRoutes = load("ratingChecksRoutes", "./routes/ratingChecksRoutes"); // ✅ NEW
+  ratingChecksRoutes = load("ratingChecksRoutes", "./routes/ratingChecksRoutes");
   customersRoutes = load("customersRoutes", "./routes/customersRoutes");
   adminRoutes = load("adminRoutes", "./routes/adminRoutes");
   integrationsRoutes = load("integrationsRoutes", "./routes/integrationsRoutes");
@@ -69,11 +78,7 @@ if (dbConfigured) {
   traderaRoutes = load("traderaRoutes", "./routes/traderaRoutes");
   ebayRoutes = load("ebayRoutes", "./routes/ebayRoutes");
   agentRoutes = load("agentRoutes", "./routes/agentRoutes");
-
-  // ✅ Onboarding routes
   onboardingRoutes = load("onboardingRoutes", "./routes/onboardingRoutes");
-
-  // ✅ "me" compatibility routes (för profile.html etc)
   meRoutes = load("meRoutes", "./routes/meRoutes");
 } else {
   console.warn("⚠️ DATABASE_URL not set — skipping DB-backed routes (development fallback).");
@@ -82,17 +87,11 @@ if (dbConfigured) {
 const app = express();
 
 // --- Config ---
-// ✅ Render kräver att du lyssnar på process.env.PORT.
-// Defaulta till 10000 lokalt om PORT saknas.
 const PORT = Number(process.env.PORT || 10000);
-
-// ✅ Viktigt: Bind till 0.0.0.0 på Render (inte 127.0.0.1 / localhost)
 const HOST = "0.0.0.0";
-
 const REQUESTS_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 60);
 const corsOriginRaw = process.env.CORS_ORIGIN || "*";
 
-// Lita på proxy (Render)
 app.set("trust proxy", 1);
 
 // --- Middleware ---
@@ -106,7 +105,6 @@ app.use(
 );
 app.use(compression());
 
-// Tillåt inbäddning i Wix (iframe)
 app.use((req, res, next) => {
   res.setHeader(
     "Content-Security-Policy",
@@ -116,17 +114,14 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ CORS (robust, returnerar EN origin)
 app.use(createCorsMiddleware());
 
 // -----------------------------
 // Statik (frontend + assets)
-// Viktigt: assets måste ligga FÖRE SPA fallback
 // -----------------------------
 const FRONTEND_DIR = path.join(__dirname, "..", "frontend");
 const ASSETS_DIR = path.join(FRONTEND_DIR, "assets");
 
-// 1) Servera assets: /assets/hero.mp4, /assets/Jorden.png, /assets/Logo.PNG
 app.use(
   "/assets",
   express.static(ASSETS_DIR, {
@@ -135,7 +130,6 @@ app.use(
   })
 );
 
-// 2) Servera resten av frontend (html/css/js)
 app.use(express.static(FRONTEND_DIR));
 
 // -----------------------------
@@ -155,18 +149,15 @@ app.use(
 // Routes
 // -----------------------------
 if (ratingsRoutes) app.use("/api", ratingsRoutes);
-if (ratingChecksRoutes) app.use("/api", ratingChecksRoutes); // ✅ NEW
+if (ratingChecksRoutes) app.use("/api", ratingChecksRoutes);
 if (customersRoutes) app.use("/api", customersRoutes);
 if (onboardingRoutes) app.use("/api", onboardingRoutes);
 if (meRoutes) app.use("/api", meRoutes);
 
-// Auth routes (läggs alltid in)
 app.use("/api", authRoutes);
 
-// Admin
 if (adminRoutes) app.use("/api/admin", adminRoutes);
 
-// Övrigt
 if (externalDataRoutes) app.use("/api", externalDataRoutes);
 if (blocketRoutes) app.use("/api", blocketRoutes);
 if (integrationsRoutes) app.use("/api", integrationsRoutes);
@@ -174,7 +165,6 @@ if (traderaRoutes) app.use("/api", traderaRoutes);
 if (ebayRoutes) app.use("/api", ebayRoutes);
 if (agentRoutes) app.use("/api", agentRoutes);
 
-// OAuth / auth helpers
 app.use("/auth", linkedinAuth);
 
 // -----------------------------
@@ -191,11 +181,13 @@ app.get("/health", (_req, res) => {
     host: HOST,
     corsOrigin: corsOriginRaw,
     uptimeSec: Math.round(process.uptime()),
+    dbConfigured,
+    prismaReady: Boolean(global.prisma),
   });
 });
 
 // -----------------------------
-// Error handler (viktigt: före SPA fallback)
+// Error handler
 // -----------------------------
 app.use((err, _req, res, _next) => {
   console.error("❌ Unhandled server error:", err);
@@ -203,8 +195,7 @@ app.use((err, _req, res, _next) => {
 });
 
 // -----------------------------
-// SPA fallback (lägg ALLRA SIST)
-// MEN: INTE för /api och INTE för /assets och INTE för filer med "."
+// SPA fallback
 // -----------------------------
 app.get("*", (req, res, next) => {
   if (req.path.startsWith("/api")) return next();
@@ -215,7 +206,6 @@ app.get("*", (req, res, next) => {
 });
 
 // --- Start ---
-// ✅ Render måste se en öppen port. Därför lyssnar vi på PORT och 0.0.0.0
 const server = app.listen(PORT, HOST, () => {
   console.log(`PeerRate server listening on http://${HOST}:${PORT}`);
   console.log(`[env] NODE_ENV=${process.env.NODE_ENV || "development"}  dbConfigured=${dbConfigured}`);
