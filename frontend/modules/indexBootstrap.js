@@ -1,5 +1,5 @@
 // frontend/modules/indexBootstrap.js
-import { initLandingLanguage } from "/modules/landing/language.js";
+import { initLandingLanguage, applyLang } from "/modules/landing/language.js";
 import { initTopRow } from "/modules/topRow.js";
 
 async function injectPartial(slotId, url) {
@@ -42,22 +42,36 @@ async function injectPartial(slotId, url) {
   try { await injectPartial("slot-globe", "/partials/index/globe.html"); } catch (e) { console.warn("globe inject failed:", e); }
   try { await injectPartial("slot-footer", "/partials/index/footer.html"); } catch (e) { console.warn("footer inject failed:", e); }
 
-  // 5) Load site logic
+  // 5) Re-apply translations explicitly after all partials are injected
+  try {
+    applyLang(document);
+  } catch (e) {
+    console.warn("applyLang after partial injection failed:", e);
+  }
+
+  // 6) Load site logic
   try {
     await import("/modules/main.js");
   } catch (e) {
     console.warn("Could not load main.js (non-fatal):", e);
   }
 
-  // 6) Load landing logic (if used)
+  // 7) Load landing logic (if used)
   try {
-    await import("/modules/landing/init.js");
+    const landing = await import("/modules/landing/init.js");
+    if (landing && typeof landing.initLanding === "function") {
+      landing.initLanding();
+    }
   } catch (e) {
-    // non-fatal
+    console.warn("landing init failed (non-fatal):", e);
   }
 
-  // 7) Safety: if något på index fortfarande init:ar för tidigt, re-run topRow (idempotent)
+  // 8) Safety: re-run topRow + final translations
   try {
     initTopRow();
+  } catch (_) {}
+
+  try {
+    applyLang(document);
   } catch (_) {}
 })();

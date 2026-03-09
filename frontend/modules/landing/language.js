@@ -6,6 +6,8 @@ const DEFAULT_LANG = 'en';
 const dict = {
   sv: {
     top_sub: 'Förtroende du kan bevisa',
+
+    menu_home: 'Hem',
     menu_how: 'Hur det funkar',
     menu_sim: 'Se värdet direkt',
     menu_globe: 'Global trust',
@@ -13,7 +15,14 @@ const dict = {
     menu_signup: 'Registrera dig',
     menu_profile: 'Min profil',
     menu_ask: 'Fråga om trust',
+    menu_extension: 'Installera extension',
+    menu_workrefs: 'Arbetsreferenser',
     user_logout: 'Logga ut',
+
+    top_user_aria: 'Konto',
+    lang_menu_aria: 'Välj språk',
+    menu_open_aria: 'Öppna meny',
+    menu_panel_aria: 'Meny',
 
     // Arbetsreferenser
     menu_refs: 'Arbetsreferenser',
@@ -34,6 +43,9 @@ const dict = {
       'PeerRate gör att du kan bära med dig verifierad trovärdighet mellan marknadsplatser. Inte känsla. Inte påståenden. Riktiga transaktioner — portabelt och svårt att fejka.',
     hero_cta_primary: 'Kom igång',
     hero_cta_secondary: 'Logga in',
+    hero_cta_signup: 'Registrera dig',
+    hero_cta_rate: 'Lämna betyg',
+    hero_cta_refs: 'Arbetsreferenser',
     hero_card_title: 'Ett reputation card du kan dela',
     hero_card_p: 'Ett kompakt kvitto på hur du agerar i P2P — över plattformar.',
     hero_metric_score: 'Förtroende (1–5)',
@@ -234,10 +246,13 @@ const dict = {
 
     footer_privacy: 'Privacy',
     footer_profile: 'Profil',
+    footer_ask: 'Se 5P-modellen',
   },
 
   en: {
     top_sub: 'Reputation you can prove',
+
+    menu_home: 'Home',
     menu_how: 'How it works',
     menu_sim: 'See the value',
     menu_globe: 'Global trust',
@@ -245,7 +260,14 @@ const dict = {
     menu_signup: 'Sign up',
     menu_profile: 'My profile',
     menu_ask: 'See the 5P model',
+    menu_extension: 'Install extension',
+    menu_workrefs: 'Work references',
     user_logout: 'Log out',
+
+    top_user_aria: 'Account',
+    lang_menu_aria: 'Choose language',
+    menu_open_aria: 'Open menu',
+    menu_panel_aria: 'Menu',
 
     menu_refs: 'Work References',
     profile_workrefs_title: 'Work References',
@@ -265,6 +287,9 @@ const dict = {
       'PeerRate helps you carry verified reputation between marketplaces. Not vibes. Not claims. Transactions — portable and hard to fake.',
     hero_cta_primary: 'Get started',
     hero_cta_secondary: 'Log in',
+    hero_cta_signup: 'Sign up',
+    hero_cta_rate: 'Leave a rating',
+    hero_cta_refs: 'Work references',
     hero_card_title: 'A reputation card you can share',
     hero_card_p: 'A compact proof of how you behave in P2P — across platforms.',
     hero_metric_score: 'Trust (1–5)',
@@ -463,6 +488,7 @@ const dict = {
 
     footer_privacy: 'Privacy',
     footer_profile: 'Profile',
+    footer_ask: 'See the 5P model',
   },
 };
 

@@ -25,8 +25,8 @@
       align-items:center !important;
       justify-content:space-between !important;
       gap: 12px !important;
-      padding: 4px 0 !important;     /* ↓ ännu mindre vertikal padding */
-      min-height: 48px !important;   /* ↓ smalare rad */
+      padding: 4px 0 !important;
+      min-height: 48px !important;
       width: 100% !important;
     }
 
@@ -74,7 +74,7 @@
       max-width: none !important;
     }
 
-    /* ===== GUBBEN (lite mindre så raden blir tunnare) ===== */
+    /* ===== GUBBEN ===== */
     #topUserBtn{
       display: inline-flex !important;
       align-items:center !important;
@@ -102,7 +102,6 @@
       stroke: rgba(11,22,51,.92) !important;
     }
 
-    /* Dot OFF by default */
     #topUserBtn::after{
       content:"";
       display:none;
@@ -111,7 +110,7 @@
       border-radius:999px;
       right:-1px; top:-1px;
     }
-    /* Dot ON only when logged in */
+
     #topUserBtn.is-logged-in::after{
       display:block;
       background: rgba(34,197,94,1);
@@ -119,7 +118,7 @@
       border: 2px solid rgba(255,255,255,.92);
     }
 
-    /* ===== Språk (lite mindre höjd) ===== */
+    /* ===== Språk ===== */
     .lang-pill{
       border: 1px solid rgba(15,15,18,.12) !important;
       background: rgba(255,255,255,.78) !important;
@@ -136,16 +135,13 @@
       flex: 0 0 auto !important;
     }
 
-    /* ===== Hamburgare: gör den MER KVADRATISK (inte pill) =====
-       - låser width/height
-       - border-radius 14px => rounded square
-    */
+    /* ===== Hamburgare ===== */
     .menu-btn{
       width: 38px !important;
       height: 38px !important;
       min-width: 38px !important;
       min-height: 38px !important;
-      border-radius: 14px !important;      /* ✅ nästan kvadrat, inte rektangulär pill */
+      border-radius: 14px !important;
       border: 1px solid rgba(15,15,18,.12) !important;
       background: rgba(255,255,255,.78) !important;
       cursor:pointer !important;
@@ -162,7 +158,6 @@
       display:block !important;
     }
 
-    /* Dropdowns */
     .user-menu, .lang-menu{
       position:absolute !important;
       right:0 !important;
@@ -202,10 +197,9 @@
     }
     .user-menu button:hover, .lang-menu button:hover{ background: rgba(15,15,18,.05); }
 
-    /* Hamburgerpanel */
     .menu-panel{
       position: fixed !important;
-      top: 64px !important; /* matchar tunnare top row */
+      top: 64px !important;
       right: 16px !important;
       width: 360px !important;
       max-width: calc(100vw - 32px) !important;
@@ -253,23 +247,35 @@
     </a>
 
     <div class="top-actions">
-      <!-- GUBBE -->
-      <button class="top-user" id="topUserBtn" type="button" aria-label="Konto" aria-expanded="false">
+      <button
+        class="top-user"
+        id="topUserBtn"
+        type="button"
+        data-i18n-aria-label="top_user_aria"
+        aria-label="Konto"
+        aria-expanded="false"
+      >
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M20 21a8 8 0 0 0-16 0" stroke-width="2" stroke-linecap="round"/>
           <path d="M12 11a4 4 0 1 0-4-4 4 4 0 0 0 4 4Z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
 
-      <div class="user-menu" id="userMenu" role="menu" aria-label="Användarmeny"></div>
+      <div class="user-menu" id="userMenu" role="menu" aria-label="User menu"></div>
 
       <button class="lang-pill soft-hover" id="langBtn" type="button" aria-haspopup="true" aria-expanded="false">
         <span id="langLabel">SV</span>
         <span style="opacity:.6;">▾</span>
       </button>
 
-      <!-- Hamburgare: luftigare streck + mer kvadratisk knapp -->
-      <button class="menu-btn soft-hover" id="menuBtn" type="button" aria-label="Öppna meny" aria-expanded="false">
+      <button
+        class="menu-btn soft-hover"
+        id="menuBtn"
+        type="button"
+        data-i18n-aria-label="menu_open_aria"
+        aria-label="Öppna meny"
+        aria-expanded="false"
+      >
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <path d="M4 6h16" stroke="rgba(15,15,18,.85)" stroke-width="2" stroke-linecap="round"/>
           <path d="M4 12h16" stroke="rgba(15,15,18,.85)" stroke-width="2" stroke-linecap="round"/>
@@ -279,12 +285,23 @@
     </div>
   </div>
 
-  <div class="lang-menu" id="langMenu" role="menu" aria-label="Välj språk">
+  <div
+    class="lang-menu"
+    id="langMenu"
+    role="menu"
+    data-i18n-aria-label="lang_menu_aria"
+    aria-label="Välj språk"
+  >
     <button type="button" data-lang="sv">Svenska (SV)</button>
     <button type="button" data-lang="en">English (EN)</button>
   </div>
 
-  <nav class="menu-panel" id="menuPanel" aria-label="Meny">
+  <nav
+    class="menu-panel"
+    id="menuPanel"
+    data-i18n-aria-label="menu_panel_aria"
+    aria-label="Meny"
+  >
     <div class="shell menu-panel-inner">
       <a class="menu-link" href="/"><div data-i18n="menu_home">Hem</div><span>→</span></a>
       <a class="menu-link" href="/customer.html"><div data-i18n="menu_signup">Registrera dig</div><span>→</span></a>
