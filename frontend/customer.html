@@ -441,7 +441,6 @@
 </head>
 
 <body data-page="customer">
-  <!-- ✅ Global TOP ROW injectas via pageBootstrap.js -->
   <div id="slot-top-row"></div>
 
   <main class="page">
@@ -450,8 +449,8 @@
         <div>
           <h1 class="h1" data-i18n="customer_h1">Registrera dig</h1>
           <p class="lead" data-i18n="customer_lead">
-  Skapa ett konto och börja samla verifierad trust som du kan bära mellan marknadsplatser.
-</p>
+            Skapa ett konto och börja samla verifierad trust som du kan bära mellan marknadsplatser.
+          </p>
         </div>
 
         <div class="signup-grid">
@@ -459,22 +458,49 @@
 
             <!-- STEG 1 -->
             <div id="step1-block">
-              <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;">Steg 1: Skapa konto</h2>
+              <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;" data-i18n="customer_step1_title">Steg 1: Skapa konto</h2>
 
               <form id="customer-form" autocomplete="off">
                 <div class="field">
                   <label class="label" for="email" data-i18n="customer_email_label">E-post</label>
-                  <input class="input" id="email" name="email" type="email" placeholder="du@example.com" required autocomplete="email" />
+                  <input
+                    class="input"
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="du@example.com"
+                    data-i18n-placeholder="customer_email_ph"
+                    required
+                    autocomplete="email"
+                  />
                 </div>
 
                 <div class="field">
                   <label class="label" for="password" data-i18n="customer_password_label">Lösenord</label>
-                  <input class="input" id="password" name="password" type="password" placeholder="Minst 8 tecken" required autocomplete="new-password" />
+                  <input
+                    class="input"
+                    id="password"
+                    name="password"
+                    type="password"
+                    placeholder="Minst 8 tecken"
+                    data-i18n-placeholder="customer_password_ph"
+                    required
+                    autocomplete="new-password"
+                  />
                 </div>
 
                 <div class="field">
-                  <la<label class="label" for="password2" data-i18n="customer_password2_label">Upprepa lösenord</label>
-                  <input class="input" id="password2" name="password2" type="password" placeholder="Upprepa lösenord" required autocomplete="new-password" />
+                  <label class="label" for="password2" data-i18n="customer_password2_label">Upprepa lösenord</label>
+                  <input
+                    class="input"
+                    id="password2"
+                    name="password2"
+                    type="password"
+                    placeholder="Upprepa lösenord"
+                    data-i18n-placeholder="customer_password2_ph"
+                    required
+                    autocomplete="new-password"
+                  />
                 </div>
 
                 <label class="checkrow">
@@ -494,60 +520,91 @@
 
             <!-- STEG 2 -->
             <div id="step2-block" class="hidden">
-              <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;"data-i18n="customer_step2_title">Steg 2: Komplettera profil</h2>
-              <p class="note" style="margin-top:0;">
+              <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;" data-i18n="customer_step2_title">Steg 2: Komplettera profil</h2>
+              <p class="note" style="margin-top:0;" data-i18n="customer_step2_note">
                 Detta krävs för att din profil ska bli “complete”.
               </p>
 
               <form id="complete-profile-form" autocomplete="off">
                 <div class="field">
-                  <label class="label" for="cp-email">E-post (låst)</label>
+                  <label class="label" for="cp-email" data-i18n="customer_cp_email_label">E-post (låst)</label>
                   <input class="input" id="cp-email" name="cp-email" type="email" readonly />
                 </div>
 
                 <div class="grid-2">
                   <div class="field">
-                    <label class="label" for="firstName">Förnamn</label>
+                    <label class="label" for="firstName" data-i18n="customer_first_name">Förnamn</label>
                     <input class="input" id="firstName" name="firstName" type="text" required />
                   </div>
                   <div class="field">
-                    <label class="label" for="lastName">Efternamn</label>
+                    <label class="label" for="lastName" data-i18n="customer_last_name">Efternamn</label>
                     <input class="input" id="lastName" name="lastName" type="text" required />
                   </div>
                 </div>
 
                 <div class="field">
-                  <label class="label" for="personalNumber">Personnummer</label>
-                  <input class="input" id="personalNumber" name="personalNumber" type="text" placeholder="YYYYMMDD-XXXX" required />
+                  <label class="label" for="personalNumber" data-i18n="customer_personal_number">Personnummer</label>
+                  <input
+                    class="input"
+                    id="personalNumber"
+                    name="personalNumber"
+                    type="text"
+                    placeholder="YYYYMMDD-XXXX"
+                    data-i18n-placeholder="customer_personal_number_ph"
+                    required
+                  />
                 </div>
 
                 <div class="field">
-                  <label class="label" for="address1">Adress</label>
-                  <input class="input" id="address1" name="address1" type="text" placeholder="Gata och nummer" required />
+                  <label class="label" for="address1" data-i18n="customer_address">Adress</label>
+                  <input
+                    class="input"
+                    id="address1"
+                    name="address1"
+                    type="text"
+                    placeholder="Gata och nummer"
+                    data-i18n-placeholder="customer_address_ph"
+                    required
+                  />
                 </div>
 
                 <div class="grid-2">
                   <div class="field">
-                    <label class="label" for="postalCode">Postnummer</label>
-                    <input class="input" id="postalCode" name="postalCode" type="text" placeholder="123 45" required />
+                    <label class="label" for="postalCode" data-i18n="customer_postal_code">Postnummer</label>
+                    <input
+                      class="input"
+                      id="postalCode"
+                      name="postalCode"
+                      type="text"
+                      placeholder="123 45"
+                      data-i18n-placeholder="customer_postal_code_ph"
+                      required
+                    />
                   </div>
                   <div class="field">
-                    <label class="label" for="city">Ort</label>
+                    <label class="label" for="city" data-i18n="customer_city">Ort</label>
                     <input class="input" id="city" name="city" type="text" required />
                   </div>
                 </div>
 
                 <div class="field">
-                  <label class="label" for="phone">Telefon (valfritt)</label>
-                  <input class="input" id="phone" name="phone" type="tel" placeholder="+46..." />
+                  <label class="label" for="phone" data-i18n="customer_phone">Telefon (valfritt)</label>
+                  <input
+                    class="input"
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="+46..."
+                    data-i18n-placeholder="customer_phone_ph"
+                  />
                 </div>
 
                 <div class="actions">
-                  <button class="btn btn-primary soft-hover" type="submit">Spara & fortsätt</button>
-                  <a class="btn soft-hover" href="/profile.html">Hoppa över (ej rekommenderat)</a>
+                  <button class="btn btn-primary soft-hover" type="submit" data-i18n="customer_save_continue">Spara & fortsätt</button>
+                  <a class="btn soft-hover" href="/profile.html" data-i18n="customer_skip">Hoppa över (ej rekommenderat)</a>
                 </div>
 
-                <p class="note" id="customer-status"></p>
+                <p class="note" id="customer-status-step2"></p>
               </form>
             </div>
 
@@ -555,16 +612,17 @@
 
           <aside class="side-card">
             <h3 data-i18n="customer_side_title">Vad får du?</h3>
-            <p data-i18n="customer_side_body">
-              • En portabel trust-signal <br/>
-              • Verifierad historik kopplad till affärer <br/>
-              • En profil du kan använda mellan marknadsplatser <br/><br/>
+            <p data-i18n-multiline="customer_side_body">
+              • En portabel trust-signal
+              • Verifierad historik kopplad till affärer
+              • En profil du kan använda mellan marknadsplatser
+
               Nästa steg: Installera extensionen och börja verifiera affärer.
             </p>
 
             <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
               <a class="btn btn-primary soft-hover" href="/extension.html" data-i18n="customer_install_ext">Installera extension</a>
-              <h2 style="margin:0 0 10px; font-size:18px; letter-spacing:-.01em;" data-i18n="customer_step1_title">Steg 1: Skapa konto</h2>
+              <a class="btn soft-hover" href="/profile.html" data-i18n="customer_my_profile">Min profil</a>
             </div>
           </aside>
         </div>
@@ -576,13 +634,12 @@
     <div class="shell">
       © 2025 PeerRate.
       <span style="margin:0 8px; opacity:.35;">•</span>
-      <a href="/privacy.html" style="color:inherit; text-decoration:none;">Privacy</a>
+      <a href="/privacy.html" style="color:inherit; text-decoration:none;" data-i18n="footer_privacy">Privacy</a>
       <span style="margin:0 8px; opacity:.35;">•</span>
-      <a href="/profile.html" style="color:inherit; text-decoration:none;">Profil</a>
+      <a href="/profile.html" style="color:inherit; text-decoration:none;" data-i18n="footer_profile">Profil</a>
     </div>
   </footer>
 
-  <!-- ✅ Single entrypoint: inject header → init language → load main.js -->
   <script type="module" src="/modules/pageBootstrap.js?v=2"></script>
 </body>
 </html>
