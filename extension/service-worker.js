@@ -1,18 +1,18 @@
 // extension/service-worker.js
 // PeerRate background/service-worker
-// Ansvar:
-// 1) fråga backend om en deal redan är rated
-// 2) cachea rated deals lokalt i extensionen
-// 3) öppna rate.html endast om dealen fortfarande kan betygsättas
+// Konservativ strategi:
+// - backend måste uttryckligen svara canRate === true för att vi ska öppna rate.html
+// - vid alreadyRated cachear vi lokalt
+// - vid fel/timeout/oklart svar => öppna INTE
 
-const API_BASE = 'https://api.peerrate.ai';
-const RATE_PAGE_BASE = 'https://peerrate.ai/rate.html';
+const API_BASE = "https://api.peerrate.ai";
+const RATE_PAGE_BASE = "https://peerrate.ai/rate.html";
 
-const RATED_CACHE_KEY = 'peerrate_extension_rated_cache_v1';
+const RATED_CACHE_KEY = "peerrate_extension_rated_cache_v1";
 const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90 dagar
 
 function normalizeText(v) {
-  return String(v || '').trim();
+  return String(v || "").trim();
 }
 
 function normalizeLower(v) {
@@ -22,16 +22,16 @@ function normalizeLower(v) {
 function normalizeSource(input) {
   const v = normalizeLower(input);
 
-  if (v.includes('tradera')) return 'tradera';
-  if (v.includes('blocket')) return 'blocket';
-  if (v.includes('airbnb')) return 'airbnb';
-  if (v.includes('ebay')) return 'ebay';
-  if (v.includes('tiptap')) return 'tiptap';
-  if (v.includes('hygglo')) return 'hygglo';
-  if (v.includes('husknuten')) return 'husknuten';
-  if (v.includes('facebook')) return 'facebook';
+  if (v.includes("tradera")) return "tradera";
+  if (v.includes("blocket")) return "blocket";
+  if (v.includes("airbnb")) return "airbnb";
+  if (v.includes("ebay")) return "ebay";
+  if (v.includes("tiptap")) return "tiptap";
+  if (v.includes("hygglo")) return "hygglo";
+  if (v.includes("husknuten")) return "husknuten";
+  if (v.includes("facebook")) return "facebook";
 
-  return 'other';
+  return "other";
 }
 
 function extractProofRef(payload) {
@@ -43,14 +43,14 @@ function extractProofRef(payload) {
     normalizeText(payload?.deal?.externalProofRef) ||
     normalizeText(payload?.counterparty?.orderId) ||
     normalizeText(payload?.pageUrl) ||
-    ''
+    ""
   );
 }
 
 function buildDealKey(payload) {
-  const source = normalizeSource(payload?.source || payload?.deal?.platform || '');
+  const source = normalizeSource(payload?.source || payload?.deal?.platform || "");
   const proofRef = normalizeLower(extractProofRef(payload));
-  if (!source || !proofRef) return '';
+  if (!source || !proofRef) return "";
   return `${source}|${proofRef}`;
 }
 
@@ -60,9 +60,9 @@ function encodePayload(payload) {
 }
 
 function buildRateUrl(payload) {
-  const pageUrl = payload?.pageUrl || '';
+  const pageUrl = payload?.pageUrl || "";
   const proofRef = extractProofRef(payload);
-  const source = normalizeSource(payload?.source || payload?.deal?.platform || '');
+  const source = normalizeSource(payload?.source || payload?.deal?.platform || "");
 
   const pr = encodePayload(payload);
   return `${RATE_PAGE_BASE}?source=${encodeURIComponent(source)}&pageUrl=${encodeURIComponent(pageUrl)}&proofRef=${encodeURIComponent(proofRef)}&pr=${pr}`;
@@ -83,7 +83,7 @@ function storageSetLocal(obj) {
 async function readRatedCache() {
   try {
     const obj = (await storageGetLocal(RATED_CACHE_KEY)) || {};
-    return obj && typeof obj === 'object' ? obj : {};
+    return obj && typeof obj === "object" ? obj : {};
   } catch {
     return {};
   }
@@ -116,7 +116,7 @@ async function cleanupRatedCache() {
 }
 
 async function markDealRated(payloadOrKey) {
-  const key = typeof payloadOrKey === 'string' ? payloadOrKey : buildDealKey(payloadOrKey);
+  const key = typeof payloadOrKey === "string" ? payloadOrKey : buildDealKey(payloadOrKey);
   if (!key) return false;
 
   const cache = await cleanupRatedCache();
@@ -126,15 +126,31 @@ async function markDealRated(payloadOrKey) {
 }
 
 async function isDealRatedLocally(payloadOrKey) {
-  const key = typeof payloadOrKey === 'string' ? payloadOrKey : buildDealKey(payloadOrKey);
+  const key = typeof payloadOrKey === "string" ? payloadOrKey : buildDealKey(payloadOrKey);
   if (!key) return false;
 
   const cache = await cleanupRatedCache();
   return !!cache[key];
 }
 
+function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
+
+    fetch(url, options)
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 async function checkDealStatusWithBackend(payload) {
-  const source = normalizeSource(payload?.source || payload?.deal?.platform || '');
+  const source = normalizeSource(payload?.source || payload?.deal?.platform || "");
   const proofRef = extractProofRef(payload);
 
   if (!proofRef) {
@@ -142,7 +158,7 @@ async function checkDealStatusWithBackend(payload) {
       ok: false,
       alreadyRated: false,
       canRate: false,
-      error: 'Missing proofRef',
+      error: "Missing proofRef",
     };
   }
 
@@ -160,39 +176,72 @@ async function checkDealStatusWithBackend(payload) {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/api/ratings/check-deal-status`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    const res = await fetchWithTimeout(`${API_BASE}/api/ratings/check-deal-status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         source,
         proofRef,
-        pageUrl: payload?.pageUrl || '',
+        pageUrl: payload?.pageUrl || "",
         counterparty: payload?.counterparty || null,
         deal: payload?.deal || null,
       }),
-    });
+    }, 6000);
 
     const raw = await res.text();
-    let json = null;
 
+    let json = null;
     try {
       json = JSON.parse(raw);
     } catch {
-      json = { ok: res.ok, status: res.status, raw };
+      json = { ok: false, status: res.status, raw };
     }
 
-    if (json?.ok && json?.alreadyRated) {
+    if (!json || json.ok !== true) {
+      return {
+        ok: false,
+        alreadyRated: false,
+        canRate: false,
+        status: res.status,
+        error: json?.error || "Backend check failed",
+        raw: json?.raw || raw || null,
+      };
+    }
+
+    if (json.alreadyRated === true || json.canRate === false) {
       await markDealRated({ source, proofRef });
+      return {
+        ...json,
+        ok: true,
+        alreadyRated: true,
+        canRate: false,
+      };
     }
 
-    return json || { ok: false, alreadyRated: false };
-  } catch (err) {
-    console.warn('[PeerRate extension] checkDealStatusWithBackend failed:', err);
+    if (json.canRate === true) {
+      return {
+        ...json,
+        ok: true,
+        alreadyRated: false,
+        canRate: true,
+      };
+    }
+
+    // otydligt svar => fail closed
     return {
       ok: false,
       alreadyRated: false,
-      canRate: true,
-      error: String(err?.message || err || 'Unknown error'),
+      canRate: false,
+      error: "Ambiguous backend response",
+      raw: json,
+    };
+  } catch (err) {
+    console.warn("[PeerRate extension] checkDealStatusWithBackend failed:", err);
+    return {
+      ok: false,
+      alreadyRated: false,
+      canRate: false,
+      error: String(err?.message || err || "Unknown error"),
     };
   }
 }
@@ -200,7 +249,7 @@ async function checkDealStatusWithBackend(payload) {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.type) return;
 
-  if (msg.type === 'checkDealStatus') {
+  if (msg.type === "checkDealStatus") {
     (async () => {
       const result = await checkDealStatusWithBackend(msg.payload || {});
       sendResponse(result);
@@ -208,12 +257,26 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  if (msg.type === 'openRatingForPayload') {
+  if (msg.type === "openRatingForPayload") {
     (async () => {
       const payload = msg.payload || {};
       const result = await checkDealStatusWithBackend(payload);
 
-      if (result?.ok && result?.alreadyRated) {
+      // Öppna bara om backend explicit säger ja
+      if (result?.ok === true && result?.canRate === true && result?.alreadyRated !== true) {
+        const url = buildRateUrl(payload);
+        await chrome.tabs.create({ url });
+
+        sendResponse({
+          ok: true,
+          opened: true,
+          alreadyRated: false,
+          canRate: true,
+        });
+        return;
+      }
+
+      if (result?.alreadyRated === true) {
         sendResponse({
           ok: true,
           opened: false,
@@ -223,14 +286,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return;
       }
 
-      const url = buildRateUrl(payload);
-      await chrome.tabs.create({ url });
-
       sendResponse({
-        ok: true,
-        opened: true,
+        ok: false,
+        opened: false,
         alreadyRated: false,
-        canRate: true,
+        canRate: false,
+        error: result?.error || "Rating flow blocked because backend did not explicitly allow it.",
       });
     })();
     return true;
