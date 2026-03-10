@@ -63,7 +63,8 @@ let ratingsRoutes,
   ebayRoutes,
   agentRoutes,
   onboardingRoutes,
-  meRoutes;
+  meRoutes,
+  statsRoutes;
 
 if (dbConfigured) {
   const load = (name, p) => assertRouter(name, require(p));
@@ -80,6 +81,7 @@ if (dbConfigured) {
   agentRoutes = load("agentRoutes", "./routes/agentRoutes");
   onboardingRoutes = load("onboardingRoutes", "./routes/onboardingRoutes");
   meRoutes = load("meRoutes", "./routes/meRoutes");
+  statsRoutes = load("statsRoutes", "./routes/statsRoutes");
 } else {
   console.warn("⚠️ DATABASE_URL not set — skipping DB-backed routes (development fallback).");
 }
@@ -153,6 +155,7 @@ if (ratingChecksRoutes) app.use("/api", ratingChecksRoutes);
 if (customersRoutes) app.use("/api", customersRoutes);
 if (onboardingRoutes) app.use("/api", onboardingRoutes);
 if (meRoutes) app.use("/api", meRoutes);
+if (statsRoutes) app.use("/api", statsRoutes);
 
 app.use("/api", authRoutes);
 
