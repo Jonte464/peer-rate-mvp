@@ -2,6 +2,7 @@
 import { showNotification } from './utils.js';
 import auth, { login } from './auth.js';
 import api from './api.js';
+import { t } from './landing/language.js';
 
 import {
   captureFromUrl,
@@ -58,8 +59,9 @@ function hideTestWithoutLoginButton() {
     return;
   }
 
+  const localizedNeedle = t('rate_test_without_login', 'test utan inloggning').toLowerCase();
   const btns = Array.from(document.querySelectorAll('button, a'));
-  const hit = btns.find(el => (el.textContent || '').toLowerCase().includes('test utan inloggning'));
+  const hit = btns.find(el => (el.textContent || '').toLowerCase().includes(localizedNeedle));
   if (hit) {
     hit.style.display = 'none';
     hit.setAttribute('aria-hidden', 'true');
@@ -182,18 +184,18 @@ async function handleLoginSubmit(e) {
   const password = form.querySelector('input[name="password"]')?.value || '';
 
   if (!email || !password) {
-    showNotification('error', 'Fyll i både e-post och lösenord.', 'login-status');
+    showNotification('error', t('profile_login_error_missing_fields', 'Fyll i både e-post och lösenord.'), 'login-status');
     return;
   }
 
   try {
     const res = await login(email, password);
     if (!res || res.ok === false) {
-      showNotification('error', res?.error || 'Login failed.', 'login-status');
+      showNotification('error', res?.error || t('profile_login_error_failed', 'Login failed.'), 'login-status');
       return;
     }
 
-    showNotification('success', 'Du är nu inloggad.', 'login-status');
+    showNotification('success', t('profile_login_success', 'Du är nu inloggad.'), 'login-status');
 
     if (isRatePage()) {
       renderAll();
@@ -206,7 +208,7 @@ async function handleLoginSubmit(e) {
 
   } catch (err) {
     console.error('login error', err);
-    showNotification('error', 'Tekniskt fel vid inloggning.', 'login-status');
+    showNotification('error', t('profile_login_error_technical', 'Tekniskt fel vid inloggning.'), 'login-status');
   }
 }
 
@@ -237,7 +239,7 @@ async function handleSubmit(e) {
   const sourceRaw = form.querySelector('select[name="source"]')?.value || '';
 
   if (!subjectEmail || !score) {
-    showNotification('error', 'Fyll i alla obligatoriska fält innan du skickar.', 'notice');
+    showNotification('error', t('rate_error_required_fields', 'Fyll i alla obligatoriska fält innan du skickar.'), 'notice');
     return;
   }
 
@@ -265,14 +267,13 @@ async function handleSubmit(e) {
   try {
     const result = await api.createRating(payload);
     if (!result || result.ok === false) {
-
       // ✅ Duplicate: markera som rated + rensa pending så overlay inte hänger kvar
       if (isDuplicateRatingError(result)) {
         try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
         clearPending();
-        showNotification('error', 'Omdöme har redan lämnats för denna affär.', 'notice');
+        showNotification('error', t('rate_error_duplicate', 'Omdöme har redan lämnats för denna affär.'), 'notice');
       } else {
-        showNotification('error', result?.error || 'Kunde inte spara betyget.', 'notice');
+        showNotification('error', result?.error || t('rate_error_save', 'Kunde inte spara betyget.'), 'notice');
       }
 
       if (btn) btn.disabled = false;
@@ -283,12 +284,12 @@ async function handleSubmit(e) {
     try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
     clearPending();
 
-    showNotification('success', 'Tack! Ditt omdöme är sparat.', 'notice');
+    showNotification('success', t('rate_success_saved_toast', 'Tack! Ditt omdöme är sparat.'), 'notice');
     form.reset();
     if (btn) btn.disabled = false;
   } catch (err) {
     console.error('submit error', err);
-    showNotification('error', 'Tekniskt fel. Försök igen om en stund.', 'notice');
+    showNotification('error', t('rate_error_technical', 'Tekniskt fel. Försök igen om en stund.'), 'notice');
     if (btn) btn.disabled = false;
   }
 }

@@ -9,6 +9,8 @@
 // - Otherwise, fall back to new pickers (no-op if not present).
 
 import { initPlatformPicker, initPlatformStarter } from './platformPicker.js';
+import { t } from './landing/language.js';
+import { escapeHtml } from './verifiedDealUI.js';
 
 export function initRatingPlatform() {
   const platformCard = document.getElementById('platform-card');
@@ -29,7 +31,6 @@ export function initRatingPlatform() {
     return;
   }
 
-  // --- Legacy hub behavior below (your original logic) ---
   const urls = {
     tradera: 'https://www.tradera.com/',
     blocket: 'https://www.blocket.se/',
@@ -70,10 +71,10 @@ export function initRatingPlatform() {
   function flowLabel(v) {
     return (
       {
-        buy: 'Köp',
-        sell: 'Sälj',
-        booking: 'Bokning/hyra',
-        other: 'Annat',
+        buy: t('rate_platform_flow_buy', 'Köp'),
+        sell: t('rate_platform_flow_sell', 'Sälj'),
+        booking: t('rate_platform_flow_booking', 'Bokning/hyra'),
+        other: t('rate_platform_flow_other', 'Annat'),
       }[v] || ''
     );
   }
@@ -104,12 +105,12 @@ export function initRatingPlatform() {
     const fName = flowLabel(f);
 
     steps.innerHTML = `
-      <b>Så gör du (${pName} · ${fName}):</b>
+      <b>${escapeHtml(t('rate_platform_how_dynamic', 'Så gör du'))} (${escapeHtml(pName)} · ${escapeHtml(fName)}):</b>
       <ol style="margin:6px 0 0 18px;padding:0;">
-        <li>Öppna ${pName}.</li>
-        <li>Logga in och hitta den <b>avslutade</b> affären (gärna “completed”, “orders”, “receipt/kvitto”).</li>
-        <li>Öppna gärna <b>order/receipt/kvitto</b>-vyn om den finns.</li>
-        <li>Klicka på PeerRate-extensionen för att skicka verifierad info.</li>
+        <li>${escapeHtml(t('rate_platform_dynamic_open', 'Öppna'))} ${escapeHtml(pName)}.</li>
+        <li>${escapeHtml(t('rate_platform_dynamic_find_deal', 'Logga in och hitta den avslutade affären, gärna completed, orders eller receipt/kvitto.'))}</li>
+        <li>${escapeHtml(t('rate_platform_dynamic_open_receipt', 'Öppna gärna order-, receipt- eller kvittovyn om den finns.'))}</li>
+        <li>${escapeHtml(t('rate_platform_dynamic_click_extension', 'Klicka på PeerRate-extensionen för att skicka verifierad info.'))}</li>
       </ol>
     `;
   }

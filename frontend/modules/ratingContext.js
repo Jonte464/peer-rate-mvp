@@ -6,6 +6,7 @@
 // - Overlay visas bara på rate.html
 
 import auth from "./auth.js";
+import { t } from "./landing/language.js";
 
 const LAST_USER_KEY = "peerRateLastUserKey";
 
@@ -245,26 +246,26 @@ function createOverlayIfNeeded(deal) {
       padding: 16px;
     `;
 
-    const prettySource = deal.source ? deal.source : "Okänd plattform";
+    const prettySource = deal.source ? deal.source : t("rate_overlay_unknown_platform", "Okänd plattform");
 
     card.innerHTML = `
       <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
         <div style="font-weight:850; letter-spacing:-.01em; font-size:16px;">
-          Du har en affär att betygsätta
+          ${escapeHtml(t("rate_overlay_title", "Du har en affär att betygsätta"))}
         </div>
         <button id="pr-pending-close" type="button"
           style="border:1px solid rgba(0,0,0,.12); background:#fff; border-radius:999px; padding:8px 12px; font-weight:750; cursor:pointer;">
-          Inte nu
+          ${escapeHtml(t("rate_overlay_close", "Inte nu"))}
         </button>
       </div>
 
       <div style="margin-top:10px; font-size:13px; opacity:.75; line-height:1.5;">
-        <div><b>Plattform:</b> ${escapeHtml(prettySource)}</div>
-        ${deal.proofRef ? `<div><b>Referens:</b> ${escapeHtml(deal.proofRef)}</div>` : ""}
+        <div><b>${escapeHtml(t("rate_overlay_platform_label", "Plattform:"))}</b> ${escapeHtml(prettySource)}</div>
+        ${deal.proofRef ? `<div><b>${escapeHtml(t("rate_overlay_reference_label", "Referens:"))}</b> ${escapeHtml(deal.proofRef)}</div>` : ""}
         ${deal.pageUrl ? `<div style="margin-top:6px;"><a href="${escapeAttr(deal.pageUrl)}" target="_blank" rel="noreferrer"
-           style="color:inherit; text-decoration:underline;">Öppna affären</a></div>` : ""}
+           style="color:inherit; text-decoration:underline;">${escapeHtml(t("rate_overlay_open_deal", "Öppna affären"))}</a></div>` : ""}
         <div style="margin-top:8px;">
-          För att fortsätta behöver du antingen <b>skriva omdöme</b> eller <b>rensa affärsdata</b>.
+          ${escapeHtml(t("rate_overlay_body", "För att fortsätta behöver du antingen skriva omdöme eller rensa affärsdata."))}
         </div>
       </div>
 
@@ -272,12 +273,12 @@ function createOverlayIfNeeded(deal) {
         <button id="pr-pending-go" type="button"
           style="border:1px solid rgba(0,0,0,.12); background: linear-gradient(135deg, #0b1633, #0f2a66);
                  color: rgba(255,255,255,.96); border-radius:999px; padding:10px 14px; font-weight:850; cursor:pointer;">
-          Skriv omdöme →
+          ${escapeHtml(t("rate_overlay_go", "Skriv omdöme →"))}
         </button>
 
         <button id="pr-pending-clear" type="button"
           style="border:1px solid rgba(0,0,0,.12); background:#fff; border-radius:999px; padding:10px 14px; font-weight:800; cursor:pointer;">
-          Rensa affärsdata
+          ${escapeHtml(t("rate_overlay_clear", "Rensa affärsdata"))}
         </button>
       </div>
     `;
