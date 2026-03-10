@@ -1,4 +1,5 @@
 // frontend/modules/verifiedDealUI.js
+import { t } from './landing/language.js';
 
 export function escapeHtml(s) {
   return String(s ?? '')
@@ -35,25 +36,25 @@ export function showToast(type, message) {
     const existing = document.getElementById('pr-toast');
     if (existing) existing.remove();
 
-    const t = document.createElement('div');
-    t.id = 'pr-toast';
-    t.setAttribute('role', 'status');
-    t.setAttribute('aria-live', 'polite');
+    const box = document.createElement('div');
+    box.id = 'pr-toast';
+    box.setAttribute('role', 'status');
+    box.setAttribute('aria-live', 'polite');
 
-    t.style.position = 'fixed';
-    t.style.left = '50%';
-    t.style.bottom = '22px';
-    t.style.transform = 'translateX(-50%)';
-    t.style.zIndex = '9999';
-    t.style.maxWidth = '92vw';
-    t.style.padding = '12px 14px';
-    t.style.borderRadius = '14px';
-    t.style.boxShadow = '0 10px 30px rgba(0,0,0,.18)';
-    t.style.border = '1px solid rgba(0,0,0,.10)';
-    t.style.background = '#fff';
-    t.style.color = 'var(--pr-text, #111)';
-    t.style.fontSize = '14px';
-    t.style.fontWeight = '600';
+    box.style.position = 'fixed';
+    box.style.left = '50%';
+    box.style.bottom = '22px';
+    box.style.transform = 'translateX(-50%)';
+    box.style.zIndex = '9999';
+    box.style.maxWidth = '92vw';
+    box.style.padding = '12px 14px';
+    box.style.borderRadius = '14px';
+    box.style.boxShadow = '0 10px 30px rgba(0,0,0,.18)';
+    box.style.border = '1px solid rgba(0,0,0,.10)';
+    box.style.background = '#fff';
+    box.style.color = 'var(--pr-text, #111)';
+    box.style.fontSize = '14px';
+    box.style.fontWeight = '600';
 
     const bar = document.createElement('div');
     bar.style.height = '3px';
@@ -65,13 +66,13 @@ export function showToast(type, message) {
     const txt = document.createElement('div');
     txt.textContent = message;
 
-    t.appendChild(bar);
-    t.appendChild(txt);
+    box.appendChild(bar);
+    box.appendChild(txt);
 
-    document.body.appendChild(t);
+    document.body.appendChild(box);
 
     setTimeout(() => {
-      try { t.remove(); } catch {}
+      try { box.remove(); } catch {}
     }, 3500);
   } catch {}
 }
@@ -130,8 +131,21 @@ export function renderVerifiedDealUI(p) {
   const card = document.createElement('div');
   card.style.border = '1px solid rgba(0,0,0,.08)';
   card.style.background = '#fff';
-  card.style.borderRadius = '14px';
-  card.style.padding = '12px';
+  card.style.borderRadius = '16px';
+  card.style.padding = '14px';
+  card.style.boxShadow = '0 12px 34px rgba(0,0,0,.04)';
+
+  const title = document.createElement('div');
+  title.style.display = 'flex';
+  title.style.justifyContent = 'space-between';
+  title.style.alignItems = 'center';
+  title.style.gap = '10px';
+  title.style.flexWrap = 'wrap';
+  title.style.marginBottom = '12px';
+  title.innerHTML = `
+    <div style="font-weight:900;color:var(--pr-purple);">${escapeHtml(t('rate_verified_card_title', 'Verifierad affär'))}</div>
+    <div style="font-size:12px;color:var(--pr-muted);font-weight:700;">${escapeHtml(p.source || '–')}</div>
+  `;
 
   const grid = document.createElement('div');
   grid.style.display = 'grid';
@@ -139,47 +153,48 @@ export function renderVerifiedDealUI(p) {
   grid.style.gap = '10px';
 
   const valStyle = 'font-weight:600;word-break:break-word;';
+  const labelStyle = 'font-size:12px;color:var(--pr-muted);';
 
   grid.innerHTML = `
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Källa</div>
+      <div style="${labelStyle}">${escapeHtml(t('rate_label_source', 'Källa'))}</div>
       <div style="${valStyle}">${escapeHtml(p.source || '–')}</div>
     </div>
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Order/Proof</div>
+      <div style="${labelStyle}">${escapeHtml(t('rate_label_order_proof', 'Order/Proof'))}</div>
       <div style="${valStyle}">${escapeHtml(orderId)}</div>
     </div>
 
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Motpart (e-post)</div>
+      <div style="${labelStyle}">${escapeHtml(t('rate_label_counterparty_email', 'Motpart (e-post)'))}</div>
       <div style="${valStyle}">${escapeHtml(cpEmail)}</div>
     </div>
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Namn</div>
+      <div style="${labelStyle}">${escapeHtml(t('rate_label_name', 'Namn'))}</div>
       <div style="${valStyle}">${escapeHtml(cpName)}</div>
     </div>
 
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Telefon</div>
+      <div style="${labelStyle}">${escapeHtml(t('rate_label_phone', 'Telefon'))}</div>
       <div style="${valStyle}">${escapeHtml(cpPhone)}</div>
     </div>
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Adress</div>
+      <div style="${labelStyle}">${escapeHtml(t('rate_label_address', 'Adress'))}</div>
       <div style="${valStyle}">${cpAddress}</div>
     </div>
 
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Belopp</div>
+      <div style="${labelStyle}">${escapeHtml(t('rate_label_amount', 'Belopp'))}</div>
       <div style="${valStyle}">${formatAmount(amount, currency)}</div>
     </div>
     <div>
-      <div style="font-size:12px;color:var(--pr-muted);">Datum</div>
+      <div style="${labelStyle}">${escapeHtml(t('rate_label_date', 'Datum'))}</div>
       <div style="${valStyle}">${formatDateShort(date)}</div>
     </div>
   `;
 
   const actions = document.createElement('div');
-  actions.style.marginTop = '10px';
+  actions.style.marginTop = '12px';
   actions.style.display = 'flex';
   actions.style.gap = '10px';
   actions.style.flexWrap = 'wrap';
@@ -189,13 +204,14 @@ export function renderVerifiedDealUI(p) {
   link.href = p.pageUrl || '#';
   link.target = '_blank';
   link.rel = 'noopener noreferrer';
-  link.textContent = 'Visa källan →';
+  link.textContent = t('rate_view_source', 'Visa källan →');
   link.style.fontWeight = '700';
   link.style.textDecoration = 'none';
   link.style.color = '#1d4ed8';
   link.style.display = p.pageUrl ? 'inline-block' : 'none';
 
   actions.appendChild(link);
+  card.appendChild(title);
   card.appendChild(grid);
   card.appendChild(actions);
 

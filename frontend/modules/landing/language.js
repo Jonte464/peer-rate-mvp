@@ -211,6 +211,120 @@ const dict = {
     ext_toast_copy_fail:
       'Kunde inte kopiera. Din webbläsare kanske blockerar clipboard-åtkomst.',
 
+    // Rate page
+    rate_kicker: 'Verifierat betygsflöde',
+    rate_hub_h1: 'Lämna betyg – via verifierad affär',
+    rate_hub_lead:
+      'För att undvika spam och manipulation kan du bara lämna betyg när vi kan koppla det till en avslutad affär. Välj hur du vill verifiera.',
+    rate_side_verified_title: 'Varför verifierad affär?',
+    rate_side_verified_body:
+      'PeerRate bygger på att omdömen kopplas till riktiga avslutade transaktioner, inte öppna formulär utan bevis.',
+    rate_side_flow_title: 'Hur flödet ser ut',
+    rate_side_flow_body:
+      'Välj plattform, öppna den avslutade affären, skicka verifierad data från extensionen och lämna sedan ditt omdöme här.',
+    rate_side_future_title: 'På väg framåt',
+    rate_side_future_body:
+      'Nästa steg är automatiska verifieringar via e-post, kvitton och fler plattformar.',
+
+    rate_method_title: 'Steg 1: Välj verifieringsmetod',
+    rate_method_platform_title: 'Plattform (snabbast)',
+    rate_method_platform_lead:
+      'Öppna plattformen → hitta avslutad affär → klicka på extensionen → kom tillbaka hit.',
+    rate_method_choose_platform: 'Välj',
+    rate_method_email_title: 'E-post/kvitton (automatiskt framöver)',
+    rate_method_email_lead:
+      'Koppla din inkorg så kan vi hitta avslutade affärer och ge dig färdiga betygsförslag.',
+    rate_method_choose_email: 'Visa',
+
+    rate_platform_title: 'Steg 2: Starta från en plattform',
+    rate_platform_lead:
+      'Välj plattform och typ av affär. Vi öppnar plattformen – du letar upp den avslutade affären och klickar på extensionen.',
+    rate_platform_label: 'Plattform',
+    rate_platform_pick: 'Välj plattform…',
+    rate_platform_flow_label: 'Typ av affär',
+    rate_platform_flow_pick: 'Välj…',
+    rate_platform_flow_buy: 'Köp',
+    rate_platform_flow_sell: 'Sälj',
+    rate_platform_flow_booking: 'Bokning/hyra',
+    rate_platform_flow_other: 'Annat',
+    rate_platform_go: 'Öppna plattform',
+    rate_platform_how_label: 'Så gör du:',
+    rate_platform_step1: 'Öppna plattformen.',
+    rate_platform_step2: 'Hitta den avslutade affären, gärna order, receipt eller kvitto.',
+    rate_platform_step3: 'Klicka på PeerRate-extensionen för att skicka verifierad info.',
+    rate_platform_note:
+      'Tips: När du skickat från extensionen kommer du tillbaka hit med “Verifierad källa” ifyllt.',
+
+    rate_email_title: 'Steg 2: Verifiera via e-post/kvitton',
+    rate_email_lead:
+      'Kommer snart: Koppla Gmail/Outlook så kan vi automatiskt identifiera avslutade affärer och skapa betygsförslag.',
+    rate_email_connect: 'Koppla inkorg',
+    rate_email_note: 'Under tiden: använd plattformsflödet (snabbast).',
+
+    rate_verified_title: 'Verifierade affärer',
+    rate_verified_lead:
+      'Här kommer dina identifierade avslutade affärer att synas. Därifrån kan du lämna betyg.',
+    rate_verified_empty: 'Inga verifierade affärer än.',
+    rate_verified_card_title: 'Verifierad affär',
+
+    rate_context_title: 'Verifierad källa',
+    rate_context_source_label: 'Källa:',
+    rate_context_view_source: 'Visa sidan som triggar betyget →',
+    rate_context_tip_title: 'Tips',
+    rate_context_tip_body:
+      'Nästa steg: När vi har hårda data som motpart, belopp och datum visar vi ett låst betygsformulär.',
+
+    rate_login_title: 'Logga in',
+    rate_login_lead:
+      'Logga in med den e-post och det lösenord du registrerade dig med.',
+    rate_login_email_label: 'E-post',
+    rate_login_email_ph: 'erik@example.com',
+    rate_login_password_label: 'Lösenord',
+    rate_login_password_ph: 'Ditt lösenord',
+    rate_login_forgot: 'Glömt ditt lösenord?',
+    rate_login_btn: 'Logga in',
+    rate_signup: 'Registrera dig',
+
+    rate_step3_title: 'Steg 3: Lämna omdöme',
+    rate_step3_lead:
+      'Formuläret är låst till verifierad affär. Du kan bara välja betyg och skriva kommentar.',
+    rate_score_label: 'Betyg',
+    rate_pick_score: 'Välj…',
+    rate_score_1: '1 – Mycket dåligt',
+    rate_score_2: '2 – Dåligt',
+    rate_score_3: '3 – Okej',
+    rate_score_4: '4 – Bra',
+    rate_score_5: '5 – Mycket bra',
+    rate_comment_label: 'Kommentar (valfritt)',
+    rate_comment_ph: 'Vad fungerade bra eller dåligt?',
+    rate_submit_rating: 'Skicka omdöme',
+    rate_submit_loading: 'Skickar…',
+
+    rate_label_source: 'Källa',
+    rate_label_order_proof: 'Order/Proof',
+    rate_label_counterparty_email: 'Motpart (e-post)',
+    rate_label_name: 'Namn',
+    rate_label_phone: 'Telefon',
+    rate_label_address: 'Adress',
+    rate_label_amount: 'Belopp',
+    rate_label_date: 'Datum',
+    rate_view_source: 'Visa källan →',
+
+    rate_error_login_required: 'Du måste logga in för att skicka omdöme.',
+    rate_error_missing_counterparty: 'Motpart saknas i verifierad affär.',
+    rate_error_pick_score: 'Välj ett betyg.',
+    rate_error_duplicate: 'Omdöme har redan lämnats för denna affär.',
+    rate_error_save: 'Kunde inte spara betyget.',
+    rate_error_technical: 'Tekniskt fel. Försök igen om en stund.',
+
+    rate_success_title: 'Tack för ditt omdöme! ✅',
+    rate_success_body: 'Ditt omdöme är registrerat.',
+    rate_success_next: 'Du kan nu stänga sidan eller gå till din profil.',
+    rate_success_saved: 'Ditt omdöme är sparat.',
+    rate_success_saved_toast: 'Tack! Ditt omdöme är sparat.',
+    rate_go_profile: 'Gå till profil',
+    rate_go_home: 'Till startsidan',
+
     // profile
     profile_badge_label: 'Inloggad som',
     profile_h1: 'Min profil',
@@ -455,7 +569,6 @@ const dict = {
     k4: 'Platforms connected',
     k4n: 'More coming',
 
-    // Extension
     ext_meta_title: 'PeerRate – Install Extension',
     ext_meta_description:
       'Install PeerRate Extension and leave verified ratings on Tradera, with more platforms coming.',
@@ -555,6 +668,120 @@ const dict = {
     ext_toast_copy_success: 'Copied: chrome://extensions',
     ext_toast_copy_fail:
       'Could not copy. Your browser may block clipboard access.',
+
+    // Rate page
+    rate_kicker: 'Verified rating flow',
+    rate_hub_h1: 'Leave a rating — via a verified deal',
+    rate_hub_lead:
+      'To reduce spam and manipulation, you can only leave a rating when we can connect it to a completed deal. Choose how you want to verify it.',
+    rate_side_verified_title: 'Why a verified deal?',
+    rate_side_verified_body:
+      'PeerRate is built on ratings tied to real completed transactions, not open forms without proof.',
+    rate_side_flow_title: 'How the flow works',
+    rate_side_flow_body:
+      'Choose a platform, open the completed deal, send verified data from the extension, and then leave your rating here.',
+    rate_side_future_title: 'What comes next',
+    rate_side_future_body:
+      'The next step is automatic verification via email, receipts and more platforms.',
+
+    rate_method_title: 'Step 1: Choose verification method',
+    rate_method_platform_title: 'Platform (fastest)',
+    rate_method_platform_lead:
+      'Open the platform, find the completed deal, click the extension, and come back here.',
+    rate_method_choose_platform: 'Choose',
+    rate_method_email_title: 'Email / receipts (coming automatically)',
+    rate_method_email_lead:
+      'Connect your inbox and we can identify completed deals automatically and suggest ready-made rating drafts.',
+    rate_method_choose_email: 'Show',
+
+    rate_platform_title: 'Step 2: Start from a platform',
+    rate_platform_lead:
+      'Choose a platform and deal type. We open the platform, then you find the completed deal and click the extension.',
+    rate_platform_label: 'Platform',
+    rate_platform_pick: 'Choose platform…',
+    rate_platform_flow_label: 'Deal type',
+    rate_platform_flow_pick: 'Choose…',
+    rate_platform_flow_buy: 'Buy',
+    rate_platform_flow_sell: 'Sell',
+    rate_platform_flow_booking: 'Booking / rental',
+    rate_platform_flow_other: 'Other',
+    rate_platform_go: 'Open platform',
+    rate_platform_how_label: 'How to do it:',
+    rate_platform_step1: 'Open the platform.',
+    rate_platform_step2: 'Find the completed deal, preferably an order, receipt or invoice view.',
+    rate_platform_step3: 'Click the PeerRate extension to send verified data.',
+    rate_platform_note:
+      'Tip: After sending from the extension, you will come back here with “Verified source” filled in.',
+
+    rate_email_title: 'Step 2: Verify via email / receipts',
+    rate_email_lead:
+      'Coming soon: Connect Gmail or Outlook so we can automatically identify completed deals and generate rating suggestions.',
+    rate_email_connect: 'Connect inbox',
+    rate_email_note: 'For now, use the platform flow for the fastest experience.',
+
+    rate_verified_title: 'Verified deals',
+    rate_verified_lead:
+      'Your identified completed deals will appear here. From there you can leave a rating.',
+    rate_verified_empty: 'No verified deals yet.',
+    rate_verified_card_title: 'Verified deal',
+
+    rate_context_title: 'Verified source',
+    rate_context_source_label: 'Source:',
+    rate_context_view_source: 'View the page that triggered the rating →',
+    rate_context_tip_title: 'Tip',
+    rate_context_tip_body:
+      'Next step: once we have hard data like counterparty, amount and date, we show a locked rating form.',
+
+    rate_login_title: 'Log in',
+    rate_login_lead:
+      'Log in with the email and password you used when signing up.',
+    rate_login_email_label: 'Email',
+    rate_login_email_ph: 'erik@example.com',
+    rate_login_password_label: 'Password',
+    rate_login_password_ph: 'Your password',
+    rate_login_forgot: 'Forgot your password?',
+    rate_login_btn: 'Log in',
+    rate_signup: 'Sign up',
+
+    rate_step3_title: 'Step 3: Leave a rating',
+    rate_step3_lead:
+      'The form is locked to the verified deal. You can only choose a score and write a comment.',
+    rate_score_label: 'Rating',
+    rate_pick_score: 'Choose…',
+    rate_score_1: '1 – Very bad',
+    rate_score_2: '2 – Bad',
+    rate_score_3: '3 – Okay',
+    rate_score_4: '4 – Good',
+    rate_score_5: '5 – Very good',
+    rate_comment_label: 'Comment (optional)',
+    rate_comment_ph: 'What worked well or poorly?',
+    rate_submit_rating: 'Submit rating',
+    rate_submit_loading: 'Submitting…',
+
+    rate_label_source: 'Source',
+    rate_label_order_proof: 'Order / Proof',
+    rate_label_counterparty_email: 'Counterparty (email)',
+    rate_label_name: 'Name',
+    rate_label_phone: 'Phone',
+    rate_label_address: 'Address',
+    rate_label_amount: 'Amount',
+    rate_label_date: 'Date',
+    rate_view_source: 'View source →',
+
+    rate_error_login_required: 'You need to log in to submit a rating.',
+    rate_error_missing_counterparty: 'Counterparty is missing from the verified deal.',
+    rate_error_pick_score: 'Please choose a rating.',
+    rate_error_duplicate: 'A rating has already been submitted for this deal.',
+    rate_error_save: 'Could not save the rating.',
+    rate_error_technical: 'Technical error. Please try again shortly.',
+
+    rate_success_title: 'Thanks for your rating! ✅',
+    rate_success_body: 'Your rating has been registered.',
+    rate_success_next: 'You can now close the page or go to your profile.',
+    rate_success_saved: 'Your rating has been saved.',
+    rate_success_saved_toast: 'Thanks! Your rating has been saved.',
+    rate_go_profile: 'Go to profile',
+    rate_go_home: 'Go to homepage',
 
     profile_badge_label: 'Signed in as',
     profile_h1: 'My profile',

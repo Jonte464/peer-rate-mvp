@@ -4,6 +4,7 @@ import auth from './auth.js';
 import api from './api.js';
 import { getPending, clearPending } from './pendingStore.js';
 import { clearAllPendingEverywhere } from './ratingContext.js';
+import { t } from './landing/language.js';
 import { escapeHtml, formatAmount, formatDateShort, formatAddress, showToast } from './verifiedDealUI.js';
 
 export function sanitizeCounterparty(cp, deal) {
@@ -56,14 +57,14 @@ function setSubmitLoading(form, isLoading) {
   if (!btn) return;
 
   if (isLoading) {
-    if (!btn.dataset.origText) btn.dataset.origText = btn.textContent || 'Skicka omdöme';
+    if (!btn.dataset.origText) btn.dataset.origText = btn.textContent || t('rate_submit_rating', 'Skicka omdöme');
     btn.disabled = true;
-    btn.textContent = 'Skickar…';
+    btn.textContent = t('rate_submit_loading', 'Skickar…');
     btn.style.opacity = '.75';
     btn.style.pointerEvents = 'none';
   } else {
     btn.disabled = false;
-    btn.textContent = btn.dataset.origText || 'Skicka omdöme';
+    btn.textContent = btn.dataset.origText || t('rate_submit_rating', 'Skicka omdöme');
     btn.style.opacity = '';
     btn.style.pointerEvents = '';
   }
@@ -80,14 +81,14 @@ function showLockedSuccessCard(message) {
       border-radius:14px;
       padding:12px;
     ">
-      <div style="font-weight:800; margin-bottom:6px;">Tack för ditt omdöme! ✅</div>
-      <div style="color:var(--pr-text,#111); font-weight:600;">${escapeHtml(message || 'Ditt omdöme är registrerat.')}</div>
+      <div style="font-weight:800; margin-bottom:6px;">${escapeHtml(t('rate_success_title', 'Tack för ditt omdöme! ✅'))}</div>
+      <div style="color:var(--pr-text,#111); font-weight:600;">${escapeHtml(message || t('rate_success_body', 'Ditt omdöme är registrerat.'))}</div>
       <div style="margin-top:10px; font-size:13px; color:var(--pr-muted);">
-        Du kan nu stänga sidan eller gå till din profil.
+        ${escapeHtml(t('rate_success_next', 'Du kan nu stänga sidan eller gå till din profil.'))}
       </div>
       <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
-        <a class="pr-btn" href="/profile.html" style="text-decoration:none;">Gå till profil</a>
-        <a class="pr-btn pr-btn-primary" href="/" style="text-decoration:none;">Till startsidan</a>
+        <a class="pr-btn" href="/profile.html" style="text-decoration:none;">${escapeHtml(t('rate_go_profile', 'Gå till profil'))}</a>
+        <a class="pr-btn pr-btn-primary" href="/" style="text-decoration:none;">${escapeHtml(t('rate_go_home', 'Till startsidan'))}</a>
       </div>
     </div>
   `;
@@ -113,9 +114,9 @@ export function ensureLockedFormCard(p, user) {
   card.style.marginBottom = '16px';
 
   card.innerHTML = `
-    <h2 style="margin:0 0 8px;">Steg 3: Lämna omdöme</h2>
+    <h2 style="margin:0 0 8px;">${escapeHtml(t('rate_step3_title', 'Steg 3: Lämna omdöme'))}</h2>
     <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.55;">
-      Formuläret är låst till verifierad affär. Du kan bara välja betyg och skriva kommentar.
+      ${escapeHtml(t('rate_step3_lead', 'Formuläret är låst till verifierad affär. Du kan bara välja betyg och skriva kommentar.'))}
     </p>
 
     <div id="locked-meta" style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:14px;padding:12px;margin-bottom:12px;"></div>
@@ -127,25 +128,30 @@ export function ensureLockedFormCard(p, user) {
       <input type="hidden" name="rater" />
 
       <div class="pr-field">
-        <label class="pr-label" for="locked-score">Betyg</label>
+        <label class="pr-label" for="locked-score">${escapeHtml(t('rate_score_label', 'Betyg'))}</label>
         <select class="pr-select" id="locked-score" name="score" required>
-          <option value="" selected>Välj…</option>
-          <option value="1">1 – Mycket dåligt</option>
-          <option value="2">2 – Dåligt</option>
-          <option value="3">3 – Okej</option>
-          <option value="4">4 – Bra</option>
-          <option value="5">5 – Mycket bra</option>
+          <option value="" selected>${escapeHtml(t('rate_pick_score', 'Välj…'))}</option>
+          <option value="1">${escapeHtml(t('rate_score_1', '1 – Mycket dåligt'))}</option>
+          <option value="2">${escapeHtml(t('rate_score_2', '2 – Dåligt'))}</option>
+          <option value="3">${escapeHtml(t('rate_score_3', '3 – Okej'))}</option>
+          <option value="4">${escapeHtml(t('rate_score_4', '4 – Bra'))}</option>
+          <option value="5">${escapeHtml(t('rate_score_5', '5 – Mycket bra'))}</option>
         </select>
       </div>
 
       <div class="pr-field">
-        <label class="pr-label" for="locked-comment">Kommentar (valfritt)</label>
-        <textarea class="pr-textarea" id="locked-comment" name="comment" rows="4"
-          placeholder="Vad fungerade bra/dåligt?"></textarea>
+        <label class="pr-label" for="locked-comment">${escapeHtml(t('rate_comment_label', 'Kommentar (valfritt)'))}</label>
+        <textarea
+          class="pr-textarea"
+          id="locked-comment"
+          name="comment"
+          rows="4"
+          placeholder="${escapeHtml(t('rate_comment_ph', 'Vad fungerade bra eller dåligt?'))}"
+        ></textarea>
       </div>
 
       <div class="pr-actions">
-        <button class="pr-btn pr-btn-primary" type="submit">Skicka omdöme</button>
+        <button class="pr-btn pr-btn-primary" type="submit">${escapeHtml(t('rate_submit_rating', 'Skicka omdöme'))}</button>
       </div>
 
       <div id="locked-notice" class="notice" style="margin-top:10px;"></div>
@@ -178,42 +184,43 @@ export function updateLockedFormWithPending(p, user) {
   const date = deal.date || deal.dateISO || '';
 
   const valStyle = 'font-weight:600;word-break:break-word;';
+  const labelStyle = 'font-size:12px;color:var(--pr-muted);';
 
   meta.innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Motpart (e-post)</div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_counterparty_email', 'Motpart (e-post)'))}</div>
         <div style="${valStyle}">${escapeHtml(cpEmail || '–')}</div>
       </div>
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Källa</div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_source', 'Källa'))}</div>
         <div style="${valStyle}">${escapeHtml(p?.source || '–')}</div>
       </div>
 
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Namn</div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_name', 'Namn'))}</div>
         <div style="${valStyle}">${escapeHtml(cpName)}</div>
       </div>
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Telefon</div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_phone', 'Telefon'))}</div>
         <div style="${valStyle}">${escapeHtml(cpPhone)}</div>
       </div>
 
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Adress</div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_address', 'Adress'))}</div>
         <div style="${valStyle}">${cpAddress}</div>
       </div>
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Order/Proof</div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_order_proof', 'Order/Proof'))}</div>
         <div style="${valStyle}">${escapeHtml(orderId)}</div>
       </div>
 
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Belopp</div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_amount', 'Belopp'))}</div>
         <div style="${valStyle}">${formatAmount(amount, currency)}</div>
       </div>
       <div>
-        <div style="font-size:12px;color:var(--pr-muted);">Datum</div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_date', 'Datum'))}</div>
         <div style="${valStyle}">${formatDateShort(date)}</div>
       </div>
     </div>
@@ -231,7 +238,7 @@ async function handleLockedSubmit(e) {
   const form = e.currentTarget;
   const user = auth.getUser?.() || null;
   if (!user) {
-    showNotification('error', 'Du måste logga in för att skicka omdöme.', 'locked-notice');
+    showNotification('error', t('rate_error_login_required', 'Du måste logga in för att skicka omdöme.'), 'locked-notice');
     return;
   }
 
@@ -243,11 +250,11 @@ async function handleLockedSubmit(e) {
   const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || user.email;
 
   if (!subjectEmail) {
-    showNotification('error', 'Motpart saknas i verifierad affär.', 'locked-notice');
+    showNotification('error', t('rate_error_missing_counterparty', 'Motpart saknas i verifierad affär.'), 'locked-notice');
     return;
   }
   if (!score) {
-    showNotification('error', 'Välj ett betyg.', 'locked-notice');
+    showNotification('error', t('rate_error_pick_score', 'Välj ett betyg.'), 'locked-notice');
     return;
   }
 
@@ -273,32 +280,27 @@ async function handleLockedSubmit(e) {
     const result = await api.createRating(payload);
     if (!result || result.ok === false) {
       if (isDuplicateRatingError(result)) {
-        // ✅ Viktigt: rensa pending ÖVERALLT även vid duplicate, annars fastnar overlayn
         clearAllPendingEverywhere();
         clearPending();
-        showNotification('error', 'Omdöme har redan lämnats för denna affär.', 'locked-notice');
+        showNotification('error', t('rate_error_duplicate', 'Omdöme har redan lämnats för denna affär.'), 'locked-notice');
       } else {
-        showNotification('error', result?.error || 'Kunde inte spara betyget.', 'locked-notice');
+        showNotification('error', result?.error || t('rate_error_save', 'Kunde inte spara betyget.'), 'locked-notice');
       }
       setSubmitLoading(form, false);
       return;
     }
 
-    // ✅ Success
-    showLockedSuccessCard('Ditt omdöme är sparat.');
-    showToast('success', 'Tack! Ditt omdöme är sparat.');
+    showLockedSuccessCard(t('rate_success_saved', 'Ditt omdöme är sparat.'));
+    showToast('success', t('rate_success_saved_toast', 'Tack! Ditt omdöme är sparat.'));
 
-    // ✅ Rensa pending (både sessionStorage + localStorage + legacy)
     clearAllPendingEverywhere();
     clearPending();
 
-    // ingen anledning att återställa loading när vi ersatt formens HTML,
-    // men vi gör det ändå för säkerhets skull.
     setSubmitLoading(form, false);
 
   } catch (err) {
     console.error('locked submit error', err);
-    showNotification('error', 'Tekniskt fel. Försök igen om en stund.', 'locked-notice');
+    showNotification('error', t('rate_error_technical', 'Tekniskt fel. Försök igen om en stund.'), 'locked-notice');
     setSubmitLoading(form, false);
   }
 }

@@ -5,45 +5,234 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Lämna betyg – PeerRate</title>
 
-  <!-- Viktigt: index.css innehåller TOP ROW-styling -->
   <link rel="stylesheet" href="/css/pr-theme.css" />
   <link rel="stylesheet" href="/css/index.css" />
+
+  <style>
+    .rate-page {
+      background:
+        radial-gradient(900px 520px at 10% 0%, rgba(46,197,182,.12), transparent 60%),
+        radial-gradient(900px 520px at 90% 8%, rgba(126,213,255,.14), transparent 60%),
+        linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      min-height: 100vh;
+    }
+
+    .rate-shell {
+      max-width: 1020px;
+      margin: 0 auto;
+    }
+
+    .rate-hero {
+      padding-top: 110px;
+      padding-bottom: 8px;
+    }
+
+    .rate-stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .rate-kicker {
+      color: rgba(15,15,18,.62);
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .rate-hero-grid {
+      display: grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 980px) {
+      .rate-hero-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .rate-side-card {
+      border: 1px solid rgba(0,0,0,.08);
+      background: rgba(255,255,255,.92);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 12px 34px rgba(0,0,0,.05);
+    }
+
+    .rate-side-card h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+      color: var(--pr-purple);
+    }
+
+    .rate-side-card p {
+      margin: 0;
+      color: var(--pr-muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .rate-method-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 820px) {
+      .rate-method-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .rate-method-card {
+      border: 1px solid rgba(0,0,0,.08);
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 12px 34px rgba(0,0,0,.04);
+    }
+
+    .rate-method-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .rate-method-title {
+      font-weight: 900;
+      color: var(--pr-purple);
+      margin-bottom: 4px;
+    }
+
+    .rate-method-lead {
+      color: var(--pr-muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .rate-steps-note {
+      margin-top: 10px;
+      color: var(--pr-muted);
+      font-size: 12px;
+      line-height: 1.6;
+      border: 1px dashed rgba(0,0,0,.14);
+      background: rgba(255,255,255,.76);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    .rate-steps-note ol {
+      margin: 6px 0 0 18px;
+      padding: 0;
+    }
+
+    .rate-empty {
+      border: 1px dashed rgba(0,0,0,.18);
+      background: #fff;
+      border-radius: 14px;
+      padding: 14px;
+      color: var(--pr-muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .rate-tip-box {
+      min-width: 240px;
+      border: 1px solid rgba(0,0,0,.08);
+      background: #fff;
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .rate-tip-box-title {
+      font-weight: 900;
+      color: var(--pr-purple);
+      margin-bottom: 4px;
+    }
+
+    .rate-tip-box-body {
+      color: var(--pr-muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .rate-login-link {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 12px;
+      color: #1d4ed8;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .rate-login-link:hover {
+      text-decoration: underline;
+    }
+  </style>
 </head>
 
-<body>
-  <!-- ✅ Global TOP ROW injectas via pageBootstrap.js -->
+<body data-page="rate" class="rate-page">
   <div id="slot-top-row"></div>
 
-  <!-- ✅ Spacer: eftersom .top-row i index.css är position:fixed -->
-  <div style="height:64px;"></div>
-
   <main>
-    <section id="rate" class="section white-block anchor">
-      <div class="shell">
-        <div class="pr-form-wrap" style="max-width: 980px; margin:0 auto;">
+    <section id="rate" class="section anchor">
+      <div class="shell rate-shell">
+        <div class="rate-stack">
 
-          <!-- ✅ HUB INTRO -->
-          <section class="pr-card" style="margin-bottom:16px;">
-            <h1 style="margin:0 0 6px;" data-i18n="rate_hub_h1">Lämna betyg – via verifierad affär</h1>
-            <p style="margin:0;color:var(--pr-muted);font-size:14px;line-height:1.55;" data-i18n="rate_hub_lead">
-              För att undvika spam och manipulation kan du bara lämna betyg när vi kan koppla det till en avslutad affär.
-              Välj hur du vill verifiera.
-            </p>
+          <section class="rate-hero">
+            <div class="rate-hero-grid">
+              <section class="pr-card">
+                <div class="rate-kicker" data-i18n="rate_kicker">Verified rating flow</div>
+                <h1 style="margin:0 0 8px;font-size:clamp(34px,5vw,56px);line-height:1.02;letter-spacing:-0.04em;color:var(--pr-purple);" data-i18n="rate_hub_h1">
+                  Lämna betyg – via verifierad affär
+                </h1>
+                <p style="margin:0;color:var(--pr-muted);font-size:15px;line-height:1.65;max-width:68ch;" data-i18n="rate_hub_lead">
+                  För att undvika spam och manipulation kan du bara lämna betyg när vi kan koppla det till en avslutad affär.
+                  Välj hur du vill verifiera.
+                </p>
+              </section>
+
+              <aside style="display:grid;gap:12px;">
+                <section class="rate-side-card">
+                  <h3 data-i18n="rate_side_verified_title">Varför verifierad affär?</h3>
+                  <p data-i18n="rate_side_verified_body">
+                    PeerRate bygger på att omdömen kopplas till riktiga avslutade transaktioner, inte öppna formulär utan bevis.
+                  </p>
+                </section>
+
+                <section class="rate-side-card">
+                  <h3 data-i18n="rate_side_flow_title">Hur flödet ser ut</h3>
+                  <p data-i18n="rate_side_flow_body">
+                    Välj plattform, öppna den avslutade affären, skicka verifierad data från extensionen och lämna sedan ditt omdöme här.
+                  </p>
+                </section>
+
+                <section class="rate-side-card">
+                  <h3 data-i18n="rate_side_future_title">På väg framåt</h3>
+                  <p data-i18n="rate_side_future_body">
+                    Nästa steg är automatiska verifieringar via e-post, kvitton och fler plattformar.
+                  </p>
+                </section>
+              </aside>
+            </div>
           </section>
 
-          <!-- ✅ Steg 1: Verifieringsmetod -->
-          <section class="pr-card" style="margin-bottom:16px;">
+          <section class="pr-card">
             <h2 style="margin:0 0 10px;" data-i18n="rate_method_title">Steg 1: Välj verifieringsmetod</h2>
 
-            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;">
-              <!-- Plattform -->
-              <div style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:14px;padding:14px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+            <div class="rate-method-grid">
+              <div class="rate-method-card">
+                <div class="rate-method-head">
                   <div>
-                    <div style="font-weight:900;color:var(--pr-purple);" data-i18n="rate_method_platform_title">
+                    <div class="rate-method-title" data-i18n="rate_method_platform_title">
                       Plattform (snabbast)
                     </div>
-                    <div style="color:var(--pr-muted);font-size:12px;line-height:1.45;" data-i18n="rate_method_platform_lead">
+                    <div class="rate-method-lead" data-i18n="rate_method_platform_lead">
                       Öppna plattformen → hitta avslutad affär → klicka på extensionen → kom tillbaka hit.
                     </div>
                   </div>
@@ -53,14 +242,13 @@
                 </div>
               </div>
 
-              <!-- E-post -->
-              <div style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:14px;padding:14px;">
-                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div class="rate-method-card">
+                <div class="rate-method-head">
                   <div>
-                    <div style="font-weight:900;color:var(--pr-purple);" data-i18n="rate_method_email_title">
+                    <div class="rate-method-title" data-i18n="rate_method_email_title">
                       E-post/kvitton (automatiskt framöver)
                     </div>
-                    <div style="color:var(--pr-muted);font-size:12px;line-height:1.45;" data-i18n="rate_method_email_lead">
+                    <div class="rate-method-lead" data-i18n="rate_method_email_lead">
                       Koppla din inkorg så kan vi hitta avslutade affärer och ge dig färdiga betygsförslag.
                     </div>
                   </div>
@@ -72,11 +260,10 @@
             </div>
           </section>
 
-          <!-- ✅ Plattform-flöde (visas när man valt Plattform) -->
-          <section class="pr-card" id="platform-card" style="margin-bottom:16px; display:none;">
+          <section class="pr-card" id="platform-card" style="display:none;">
             <h2 style="margin:0 0 8px;" data-i18n="rate_platform_title">Steg 2: Starta från en plattform</h2>
 
-            <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.45;"
+            <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.55;"
                data-i18n="rate_platform_lead">
               Välj plattform och typ av affär. Vi öppnar plattformen – du letar upp den avslutade affären och klickar på extensionen.
             </p>
@@ -113,13 +300,13 @@
               </button>
             </div>
 
-            <div id="platformNote" style="margin-top:10px;color:var(--pr-muted);font-size:12px;line-height:1.55;">
+            <div id="platformNote" class="rate-steps-note">
               <div id="platformSteps">
-                <b>Så gör du:</b>
-                <ol style="margin:6px 0 0 18px;padding:0;">
-                  <li>Öppna plattformen.</li>
-                  <li>Hitta den avslutade affären (gärna “order/receipt/kvitto” eller “completed”).</li>
-                  <li>Klicka på PeerRate-extensionen för att skicka verifierad info.</li>
+                <b data-i18n="rate_platform_how_label">Så gör du:</b>
+                <ol>
+                  <li data-i18n="rate_platform_step1">Öppna plattformen.</li>
+                  <li data-i18n="rate_platform_step2">Hitta den avslutade affären, gärna order, receipt eller kvitto.</li>
+                  <li data-i18n="rate_platform_step3">Klicka på PeerRate-extensionen för att skicka verifierad info.</li>
                 </ol>
               </div>
               <div style="margin-top:8px;">
@@ -130,8 +317,7 @@
             </div>
           </section>
 
-          <!-- ✅ E-post-flöde (visas när man valt E-post) -->
-          <section class="pr-card" id="email-card" style="margin-bottom:16px; display:none;">
+          <section class="pr-card" id="email-card" style="display:none;">
             <h2 style="margin:0 0 8px;" data-i18n="rate_email_title">Steg 2: Verifiera via e-post/kvitton</h2>
 
             <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.55;" data-i18n="rate_email_lead">
@@ -148,46 +334,50 @@
             </div>
           </section>
 
-          <!-- ✅ Verifierade affärer (tomt tills e-post / backend finns) -->
-          <section class="pr-card" id="verified-deals-card" style="margin-bottom:16px;">
+          <section class="pr-card" id="verified-deals-card">
             <h2 style="margin:0 0 8px;" data-i18n="rate_verified_title">Verifierade affärer</h2>
             <p style="margin:0 0 10px;color:var(--pr-muted);font-size:13px;line-height:1.55;" data-i18n="rate_verified_lead">
               Här kommer dina identifierade avslutade affärer att synas. Därifrån kan du lämna betyg.
             </p>
 
-            <div id="verified-empty" style="border:1px dashed rgba(0,0,0,.18);background:#fff;border-radius:14px;padding:12px;color:var(--pr-muted);font-size:13px;">
+            <div id="verified-empty" class="rate-empty" data-i18n="rate_verified_empty">
               Inga verifierade affärer än.
             </div>
 
             <div id="verified-list" style="display:none;"></div>
           </section>
 
-          <!-- ✅ KÄLLA (auto från extension: ?source=...&pageUrl=...) -->
-          <section class="pr-card" id="rate-context-card" style="display:none;margin-bottom:16px;">
+          <section class="pr-card" id="rate-context-card" style="display:none;">
             <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;">
               <div style="flex:1;min-width:240px;">
-                <div style="font-weight:900;color:var(--pr-purple);margin-bottom:4px;">
+                <div style="font-weight:900;color:var(--pr-purple);margin-bottom:4px;" data-i18n="rate_context_title">
                   Verifierad källa
                 </div>
                 <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;">
-                  Källa: <span id="rate-context-source" style="font-weight:800;color:var(--pr-ink);">–</span><br/>
-                  <a id="rate-context-link" href="#" target="_blank" rel="noopener noreferrer"
-                     style="display:inline-block;margin-top:6px;font-weight:800;">
+                  <span data-i18n="rate_context_source_label">Källa:</span>
+                  <span id="rate-context-source" style="font-weight:800;color:var(--pr-ink);">–</span><br/>
+                  <a
+                    id="rate-context-link"
+                    href="#"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style="display:inline-block;margin-top:6px;font-weight:800;"
+                    data-i18n="rate_context_view_source"
+                  >
                     Visa sidan som triggar betyget →
                   </a>
                 </div>
               </div>
 
-              <div style="min-width:240px;border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:12px;padding:12px;">
-                <div style="font-weight:900;color:var(--pr-purple);margin-bottom:4px;">Tips</div>
-                <div style="color:var(--pr-muted);font-size:13px;line-height:1.45;">
-                  Nästa steg: När vi har hårda data (motpart, belopp, datum) visar vi ett låst betygsformulär.
+              <div class="rate-tip-box">
+                <div class="rate-tip-box-title" data-i18n="rate_context_tip_title">Tips</div>
+                <div class="rate-tip-box-body" data-i18n="rate_context_tip_body">
+                  Nästa steg: När vi har hårda data som motpart, belopp och datum visar vi ett låst betygsformulär.
                 </div>
               </div>
             </div>
           </section>
 
-          <!-- ✅ LOGIN (kan behövas senare när man faktiskt betygsätter) -->
           <section class="pr-card" id="login-card">
             <h2 data-i18n="rate_login_title">Logga in</h2>
             <p style="margin:0 0 10px;color:var(--pr-muted);font-size:13px;" data-i18n="rate_login_lead">
@@ -197,14 +387,27 @@
             <form id="rating-login-form" autocomplete="off">
               <div class="pr-field">
                 <label class="pr-label" for="login-email" data-i18n="rate_login_email_label">E-post</label>
-                <input class="pr-input" id="login-email" name="email" type="email" placeholder="erik@example.com" />
+                <input
+                  class="pr-input"
+                  id="login-email"
+                  name="email"
+                  type="email"
+                  data-i18n-placeholder="rate_login_email_ph"
+                  placeholder="erik@example.com"
+                />
               </div>
 
               <div class="pr-field">
                 <label class="pr-label" for="login-password" data-i18n="rate_login_password_label">Lösenord</label>
-                <input class="pr-input" id="login-password" name="password" type="password"
-                       data-i18n-placeholder="rate_login_password_ph" placeholder="Ditt lösenord" />
-                <a href="/reset-password.html" style="display:inline-block;margin-top:6px;font-size:12px;color:#1d4ed8;text-decoration:none;font-weight:600;">
+                <input
+                  class="pr-input"
+                  id="login-password"
+                  name="password"
+                  type="password"
+                  data-i18n-placeholder="rate_login_password_ph"
+                  placeholder="Ditt lösenord"
+                />
+                <a href="/reset-password.html" class="rate-login-link" data-i18n="rate_login_forgot">
                   Forgot your password?
                 </a>
               </div>
@@ -218,13 +421,11 @@
             </form>
           </section>
 
-          <!-- ❌ OBS: Inget öppet betygsformulär på denna sida längre. -->
         </div>
       </div>
     </section>
   </main>
 
-  <!-- ✅ Single entrypoint: inject header → init language → load main.js -->
   <script type="module" src="/modules/pageBootstrap.js?v=2"></script>
 </body>
 </html>
