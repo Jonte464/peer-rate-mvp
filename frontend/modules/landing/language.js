@@ -110,6 +110,122 @@ const dict = {
     k4: 'Plattformar kopplade',
     k4n: 'Mer kommer',
 
+    // Privacy
+    privacy_kicker: 'Legal & trust',
+    privacy_title: 'Integritetspolicy för PeerRate',
+    privacy_lead:
+      'Här beskriver vi hur PeerRate behandlar personuppgifter inom ramen för vår tjänst och vårt browser extension-flöde.',
+    privacy_version: 'Version 1.1 – Gäller från och med 2025-01-01',
+
+    privacy_s1_title: '1. Inledning',
+    privacy_s1_p1:
+      'Denna integritetspolicy (“Policyn”) beskriver hur PeerRate / JRAS Intressenter AB (“vi”, “oss”, “vår”) behandlar personuppgifter inom ramen för tjänsten PeerRate, inklusive vår webbplattform och vårt webbläsartillägg (“Browser Extension”).',
+    privacy_s1_p2:
+      'Policyn följer EU:s dataskyddsförordning (GDPR) och syftar till att ge tydlig information om hur vi samlar in, använder och skyddar personuppgifter.',
+
+    privacy_s2_title: '2. Personuppgifter som behandlas',
+    privacy_s2_1_title: '2.1 Uppgifter du själv lämnar',
+    privacy_s2_1_li1: 'namn',
+    privacy_s2_1_li2: 'personnummer',
+    privacy_s2_1_li3: 'kontaktuppgifter (e-post, telefon, adress)',
+    privacy_s2_1_li4: 'kontouppgifter',
+    privacy_s2_1_li5: 'omdömen, kommentarer och inlägg du skapar',
+    privacy_s2_1_li6: 'information som lämnas i rapporteringsformulär',
+
+    privacy_s2_2_title: '2.2 Uppgifter som samlas in automatiskt',
+    privacy_s2_2_p1:
+      'När du använder vår webbplats eller browser extension kan vi samla in teknisk information såsom:',
+    privacy_s2_2_li1: 'IP-adress',
+    privacy_s2_2_li2: 'webbläsartyp',
+    privacy_s2_2_li3: 'enhetstyp',
+    privacy_s2_2_li4: 'loggar och tidsstämplar',
+    privacy_s2_2_li5: 'tekniska interaktioner med tjänsten',
+    privacy_s2_2_p2: 'Denna information används för säkerhet, felsökning och förbättring av tjänsten.',
+
+    privacy_s2_3_title: '2.3 Uppgifter från webbläsartillägg (Browser Extension)',
+    privacy_s2_3_p1:
+      'PeerRate kan tillhandahålla ett webbläsartillägg som hjälper användare att skapa verifierade omdömen baserade på faktiska affärer.',
+    privacy_s2_3_p2:
+      'När tillägget används kan det läsa offentligt synlig information på vissa handelsplattformar i syfte att identifiera att en affär har ägt rum, skapa ett verifierings-ID för affären och förenkla processen att lämna ett omdöme.',
+    privacy_s2_3_p3:
+      'Webbläsartillägget samlar inte in privata meddelanden, lösenord, betalningsinformation eller känsliga personuppgifter.',
+    privacy_s2_3_p4:
+      'Informationen används enbart för att möjliggöra PeerRates verifierade omdömessystem.',
+
+    privacy_s2_4_title: '2.4 Uppgifter från tredje part',
+    privacy_s2_4_p1:
+      'Vi kan i vissa fall hämta information från öppna och lagliga datakällor, exempelvis:',
+    privacy_s2_4_li1: 'post- och adressregister',
+    privacy_s2_4_li2: 'offentliga myndighetsregister',
+    privacy_s2_4_li3: 'statistiska databaser (t.ex. SCB)',
+    privacy_s2_4_li4: 'andra offentliga datakällor som används för verifiering',
+    privacy_s2_4_p2: 'Ingen känslig personuppgift inhämtas utan uttryckligt samtycke.',
+
+    privacy_s3_title: '3. Ändamål med behandlingen',
+    privacy_s3_p1: 'Personuppgifter behandlas för att:',
+    privacy_s3_li1: 'skapa och administrera användarkonton',
+    privacy_s3_li2: 'möjliggöra ett system för verifierade omdömen',
+    privacy_s3_li3: 'verifiera transaktioner',
+    privacy_s3_li4: 'motverka bedrägerier',
+    privacy_s3_li5: 'förbättra tjänstens funktionalitet',
+    privacy_s3_li6: 'säkerställa trygghet och transparens i P2P-handel',
+    privacy_s3_li7: 'uppfylla rättsliga skyldigheter',
+
+    privacy_s4_title: '4. Rättslig grund',
+    privacy_s4_p1: 'Behandling av personuppgifter sker med stöd av:',
+    privacy_s4_li1: 'samtycke',
+    privacy_s4_li2: 'avtal (när du använder tjänsten)',
+    privacy_s4_li3: 'berättigat intresse (bedrägeribekämpning och säkerhet)',
+    privacy_s4_li4: 'rättsliga skyldigheter',
+
+    privacy_s5_title: '5. Lagringstid',
+    privacy_s5_p1: 'Personuppgifter lagras endast så länge det är nödvändigt:',
+    privacy_s5_li1: 'konto: tills användaren avslutar kontot',
+    privacy_s5_li2: 'omdömen: tills radering begärs eller de inte längre är relevanta',
+    privacy_s5_li3: 'tekniska loggar: upp till 12 månader',
+    privacy_s5_li4:
+      'verifieringsdata: upp till 12 månader eller längre om det krävs för säkerhetsändamål',
+
+    privacy_s6_title: '6. Delning av uppgifter',
+    privacy_s6_p1: 'Vi säljer inte personuppgifter.',
+    privacy_s6_p2: 'Personuppgifter kan delas med:',
+    privacy_s6_li1: 'IT-leverantörer',
+    privacy_s6_li2: 'hostingleverantörer (t.ex. Render)',
+    privacy_s6_li3: 'tekniska partners som krävs för tjänstens funktion',
+    privacy_s6_li4: 'myndigheter när det krävs enligt lag',
+    privacy_s6_p3: 'Alla sådana parter är bundna av sekretess och dataskyddskrav.',
+
+    privacy_s7_title: '7. Säkerhet',
+    privacy_s7_p1: 'Vi använder moderna säkerhetsåtgärder för att skydda personuppgifter.',
+    privacy_s7_li1: 'krypterade anslutningar (HTTPS)',
+    privacy_s7_li2: 'strikt behörighetskontroll',
+    privacy_s7_li3: 'loggning och säkerhetsövervakning',
+    privacy_s7_li4: 'säker molninfrastruktur',
+
+    privacy_s8_title: '8. Automatiserad analys',
+    privacy_s8_p1:
+      'PeerRate kan använda algoritmer för att analysera data i syfte att förbättra omdömessystemets tillförlitlighet. Ingen automatiserad profilering används för beslut som har rättslig eller betydande negativ påverkan på användaren.',
+
+    privacy_s9_title: '9. Dina rättigheter',
+    privacy_s9_p1: 'Du har enligt GDPR rätt att:',
+    privacy_s9_li1: 'begära tillgång till dina personuppgifter',
+    privacy_s9_li2: 'begära rättelse',
+    privacy_s9_li3: 'begära radering',
+    privacy_s9_li4: 'invända mot behandling',
+    privacy_s9_li5: 'begära begränsning av behandling',
+    privacy_s9_li6: 'begära dataportabilitet',
+    privacy_s9_li7: 'återkalla samtycke',
+    privacy_s9_p2: 'Begäran skickas till:',
+    privacy_s9_p3: 'Du har också rätt att lämna klagomål till Integritetsskyddsmyndigheten (IMY).',
+
+    privacy_s10_title: '10. Överföring till tredje land',
+    privacy_s10_p1:
+      'Personuppgifter behandlas i huvudsak inom EU/EES. Om överföring till tredje land sker används lämpliga skyddsåtgärder såsom EU:s standardavtalsklausuler.',
+
+    privacy_s11_title: '11. Kontakt',
+    privacy_s11_p2:
+      'Denna policy gäller även för PeerRates browser extension som distribueras via Chrome Web Store.',
+
     // Extension
     ext_meta_title: 'PeerRate – Installera Extension',
     ext_meta_description:
@@ -460,7 +576,7 @@ const dict = {
     customer_error_conflict: 'Konflikt: e-post/personnummer finns redan.',
     customer_error_save_profile: 'Kunde inte spara profilen. Försök igen.',
 
-    footer_privacy: 'Privacy',
+    footer_privacy: 'Integritetspolicy',
     footer_profile: 'Profil',
     footer_ask: 'Se 5P-modellen',
   },
@@ -568,6 +684,122 @@ const dict = {
     k3n: 'Linked to identities',
     k4: 'Platforms connected',
     k4n: 'More coming',
+
+    // Privacy
+    privacy_kicker: 'Legal & trust',
+    privacy_title: 'Privacy Policy for PeerRate',
+    privacy_lead:
+      'Here we describe how PeerRate processes personal data within our service and our browser extension flow.',
+    privacy_version: 'Version 1.1 – Effective from 2025-01-01',
+
+    privacy_s1_title: '1. Introduction',
+    privacy_s1_p1:
+      'This Privacy Policy (“Policy”) describes how PeerRate / JRAS Intressenter AB (“we”, “us”, “our”) processes personal data within the PeerRate service, including our website and browser extension (“Browser Extension”).',
+    privacy_s1_p2:
+      'The Policy follows the EU General Data Protection Regulation (GDPR) and aims to provide clear information about how we collect, use and protect personal data.',
+
+    privacy_s2_title: '2. Personal data we process',
+    privacy_s2_1_title: '2.1 Data you provide directly',
+    privacy_s2_1_li1: 'name',
+    privacy_s2_1_li2: 'personal identity number',
+    privacy_s2_1_li3: 'contact details (email, phone, address)',
+    privacy_s2_1_li4: 'account details',
+    privacy_s2_1_li5: 'ratings, comments and posts you create',
+    privacy_s2_1_li6: 'information submitted in reporting forms',
+
+    privacy_s2_2_title: '2.2 Data collected automatically',
+    privacy_s2_2_p1:
+      'When you use our website or browser extension, we may collect technical information such as:',
+    privacy_s2_2_li1: 'IP address',
+    privacy_s2_2_li2: 'browser type',
+    privacy_s2_2_li3: 'device type',
+    privacy_s2_2_li4: 'logs and timestamps',
+    privacy_s2_2_li5: 'technical interactions with the service',
+    privacy_s2_2_p2: 'This information is used for security, troubleshooting and service improvement.',
+
+    privacy_s2_3_title: '2.3 Data from the browser extension',
+    privacy_s2_3_p1:
+      'PeerRate may provide a browser extension that helps users create verified ratings based on actual completed transactions.',
+    privacy_s2_3_p2:
+      'When used, the extension may read publicly visible information on certain marketplace pages in order to identify that a deal took place, create a verification ID for the deal, and simplify the process of leaving a rating.',
+    privacy_s2_3_p3:
+      'The browser extension does not collect private messages, passwords, payment details, or sensitive personal data.',
+    privacy_s2_3_p4:
+      'The information is used solely to enable PeerRate’s verified reputation system.',
+
+    privacy_s2_4_title: '2.4 Data from third parties',
+    privacy_s2_4_p1:
+      'In some cases, we may collect information from lawful and public sources, such as:',
+    privacy_s2_4_li1: 'postal and address registers',
+    privacy_s2_4_li2: 'public authority registers',
+    privacy_s2_4_li3: 'statistical databases (such as SCB)',
+    privacy_s2_4_li4: 'other public data sources used for verification',
+    privacy_s2_4_p2: 'No sensitive personal data is collected without explicit consent.',
+
+    privacy_s3_title: '3. Purpose of processing',
+    privacy_s3_p1: 'Personal data is processed in order to:',
+    privacy_s3_li1: 'create and manage user accounts',
+    privacy_s3_li2: 'enable a system for verified ratings',
+    privacy_s3_li3: 'verify transactions',
+    privacy_s3_li4: 'prevent fraud',
+    privacy_s3_li5: 'improve the functionality of the service',
+    privacy_s3_li6: 'promote safety and transparency in P2P commerce',
+    privacy_s3_li7: 'comply with legal obligations',
+
+    privacy_s4_title: '4. Legal basis',
+    privacy_s4_p1: 'Processing of personal data is based on:',
+    privacy_s4_li1: 'consent',
+    privacy_s4_li2: 'contract (when you use the service)',
+    privacy_s4_li3: 'legitimate interest (fraud prevention and security)',
+    privacy_s4_li4: 'legal obligations',
+
+    privacy_s5_title: '5. Retention period',
+    privacy_s5_p1: 'Personal data is stored only as long as necessary:',
+    privacy_s5_li1: 'account data: until the user closes the account',
+    privacy_s5_li2: 'ratings: until deletion is requested or they are no longer relevant',
+    privacy_s5_li3: 'technical logs: up to 12 months',
+    privacy_s5_li4:
+      'verification data: up to 12 months or longer when needed for security purposes',
+
+    privacy_s6_title: '6. Sharing of data',
+    privacy_s6_p1: 'We do not sell personal data.',
+    privacy_s6_p2: 'Personal data may be shared with:',
+    privacy_s6_li1: 'IT providers',
+    privacy_s6_li2: 'hosting providers (such as Render)',
+    privacy_s6_li3: 'technical partners required for the service to function',
+    privacy_s6_li4: 'authorities where required by law',
+    privacy_s6_p3: 'All such parties are bound by confidentiality and data protection obligations.',
+
+    privacy_s7_title: '7. Security',
+    privacy_s7_p1: 'We use modern security measures to protect personal data.',
+    privacy_s7_li1: 'encrypted connections (HTTPS)',
+    privacy_s7_li2: 'strict access control',
+    privacy_s7_li3: 'logging and security monitoring',
+    privacy_s7_li4: 'secure cloud infrastructure',
+
+    privacy_s8_title: '8. Automated analysis',
+    privacy_s8_p1:
+      'PeerRate may use algorithms to analyze data in order to improve the reliability of the reputation system. No automated profiling is used for decisions with legal or similarly significant effects on the user.',
+
+    privacy_s9_title: '9. Your rights',
+    privacy_s9_p1: 'Under GDPR, you have the right to:',
+    privacy_s9_li1: 'request access to your personal data',
+    privacy_s9_li2: 'request correction',
+    privacy_s9_li3: 'request deletion',
+    privacy_s9_li4: 'object to processing',
+    privacy_s9_li5: 'request restriction of processing',
+    privacy_s9_li6: 'request data portability',
+    privacy_s9_li7: 'withdraw consent',
+    privacy_s9_p2: 'Requests can be sent to:',
+    privacy_s9_p3: 'You also have the right to lodge a complaint with the relevant supervisory authority.',
+
+    privacy_s10_title: '10. Transfers outside the EU/EEA',
+    privacy_s10_p1:
+      'Personal data is mainly processed within the EU/EEA. If transfers to third countries occur, appropriate safeguards such as the EU Standard Contractual Clauses are used.',
+
+    privacy_s11_title: '11. Contact',
+    privacy_s11_p2:
+      'This policy also applies to the PeerRate browser extension distributed via the Chrome Web Store.',
 
     ext_meta_title: 'PeerRate – Install Extension',
     ext_meta_description:
@@ -916,7 +1148,7 @@ const dict = {
     customer_error_conflict: 'Conflict: email/personal number already exists.',
     customer_error_save_profile: 'Could not save the profile. Please try again.',
 
-    footer_privacy: 'Privacy',
+    footer_privacy: 'Privacy Policy',
     footer_profile: 'Profile',
     footer_ask: 'See the 5P model',
   },

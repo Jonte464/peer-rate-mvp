@@ -1,194 +1,367 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="sv">
 <head>
-<meta charset="UTF-8">
-<title>Integritetspolicy – PeerRate</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PeerRate – Integritetspolicy</title>
 
-<style>
-body {
-    font-family: Arial, sans-serif;
-    max-width: 900px;
-    margin: 40px auto;
-    padding: 0 20px;
-    line-height: 1.7;
-    color: #222;
-}
+  <link rel="stylesheet" href="/css/pr-theme.css" />
+  <link rel="stylesheet" href="/css/index.css" />
 
-h1 {
-    font-size: 34px;
-}
+  <style>
+    body {
+      margin: 0;
+      background:
+        radial-gradient(1200px 500px at 10% -10%, rgba(37, 99, 235, 0.10), transparent 60%),
+        radial-gradient(900px 420px at 100% 0%, rgba(34, 197, 94, 0.08), transparent 55%),
+        linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+      color: rgba(15, 23, 42, 0.96);
+    }
 
-h2 {
-    margin-top: 30px;
-    font-size: 22px;
-}
+    .privacy-page {
+      padding: 28px 0 72px;
+    }
 
-h3 {
-    margin-top: 20px;
-    font-size: 18px;
-}
+    .privacy-shell {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
 
-ul {
-    margin-left: 20px;
-}
+    .privacy-hero {
+      padding: 24px 0 18px;
+    }
 
-strong {
-    font-weight: bold;
-}
-</style>
+    .privacy-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(37, 99, 235, 0.92);
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 999px;
+      padding: 8px 12px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+    }
 
+    .privacy-title {
+      margin: 18px 0 10px;
+      font-size: clamp(34px, 5vw, 52px);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+      color: rgba(11, 22, 51, 0.98);
+    }
+
+    .privacy-lead {
+      max-width: 780px;
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.7;
+      color: rgba(15, 23, 42, 0.72);
+    }
+
+    .privacy-version {
+      margin-top: 16px;
+      font-size: 14px;
+      color: rgba(15, 23, 42, 0.58);
+      font-weight: 700;
+    }
+
+    .privacy-card {
+      margin-top: 28px;
+      background: rgba(255, 255, 255, 0.82);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 28px;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    .privacy-content {
+      padding: 34px 28px 38px;
+    }
+
+    .privacy-content h2 {
+      margin: 0 0 10px;
+      font-size: 28px;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      color: rgba(11, 22, 51, 0.98);
+    }
+
+    .privacy-content h3 {
+      margin: 24px 0 8px;
+      font-size: 18px;
+      line-height: 1.25;
+      color: rgba(15, 23, 42, 0.92);
+    }
+
+    .privacy-content p {
+      margin: 0 0 16px;
+      font-size: 16px;
+      line-height: 1.8;
+      color: rgba(15, 23, 42, 0.78);
+    }
+
+    .privacy-content ul {
+      margin: 0 0 16px 0;
+      padding-left: 20px;
+      color: rgba(15, 23, 42, 0.78);
+    }
+
+    .privacy-content li {
+      margin: 0 0 8px;
+      line-height: 1.75;
+    }
+
+    .privacy-section {
+      padding: 0 0 24px;
+      border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+      margin-bottom: 24px;
+    }
+
+    .privacy-section:last-child {
+      border-bottom: 0;
+      margin-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .privacy-contact {
+      display: inline-block;
+      color: rgba(37, 99, 235, 0.95);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .privacy-contact:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 820px) {
+      .privacy-page {
+        padding: 20px 0 56px;
+      }
+
+      .privacy-shell {
+        padding: 0 14px;
+      }
+
+      .privacy-content {
+        padding: 24px 18px 28px;
+      }
+
+      .privacy-content h2 {
+        font-size: 24px;
+      }
+    }
+  </style>
 </head>
 
 <body>
+  <div id="slot-top-row"></div>
 
-<h1>Integritetspolicy för PeerRate</h1>
+  <main class="privacy-page">
+    <div class="privacy-shell">
+      <section class="privacy-hero">
+        <div class="privacy-kicker" data-i18n="privacy_kicker">Legal & trust</div>
+        <h1 class="privacy-title" data-i18n="privacy_title">Integritetspolicy för PeerRate</h1>
+        <p class="privacy-lead" data-i18n="privacy_lead">
+          Här beskriver vi hur PeerRate behandlar personuppgifter inom ramen för vår tjänst och vårt browser extension-flöde.
+        </p>
+        <div class="privacy-version" data-i18n="privacy_version">
+          Version 1.1 – Gäller från och med 2025-01-01
+        </div>
+      </section>
 
-<p><strong>Version 1.0 – Gäller från och med 2025-01-01</strong></p>
+      <section class="privacy-card">
+        <div class="privacy-content">
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s1_title">1. Inledning</h2>
+            <p data-i18n="privacy_s1_p1">
+              Denna integritetspolicy (“Policyn”) beskriver hur PeerRate / JRAS Intressenter AB (“vi”, “oss”, “vår”) behandlar personuppgifter inom ramen för tjänsten PeerRate, inklusive vår webbplattform och vårt webbläsartillägg (“Browser Extension”).
+            </p>
+            <p data-i18n="privacy_s1_p2">
+              Policyn följer EU:s dataskyddsförordning (GDPR) och syftar till att ge tydlig information om hur vi samlar in, använder och skyddar personuppgifter.
+            </p>
+          </section>
 
-<h2>1. Inledning</h2>
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s2_title">2. Personuppgifter som behandlas</h2>
 
-<p>
-Denna integritetspolicy (“Policyn”) beskriver hur Peerrate AB (“vi”, “oss”, “vår”) behandlar personuppgifter inom ramen för Tjänsten PeerRate. Policyn följer dataskyddsförordningen (GDPR) och syftar till att ge tydlig och transparent information om hur vi samlar in, använder, lagrar och skyddar dina personuppgifter.
-</p>
+            <h3 data-i18n="privacy_s2_1_title">2.1 Uppgifter du själv lämnar</h3>
+            <ul>
+              <li data-i18n="privacy_s2_1_li1">namn</li>
+              <li data-i18n="privacy_s2_1_li2">personnummer</li>
+              <li data-i18n="privacy_s2_1_li3">kontaktuppgifter (e-post, telefon, adress)</li>
+              <li data-i18n="privacy_s2_1_li4">kontouppgifter</li>
+              <li data-i18n="privacy_s2_1_li5">omdömen, kommentarer och inlägg du skapar</li>
+              <li data-i18n="privacy_s2_1_li6">information som lämnas i rapporteringsformulär</li>
+            </ul>
 
-<h2>2. Personuppgifter som behandlas</h2>
+            <h3 data-i18n="privacy_s2_2_title">2.2 Uppgifter som samlas in automatiskt</h3>
+            <p data-i18n="privacy_s2_2_p1">
+              När du använder vår webbplats eller browser extension kan vi samla in teknisk information såsom:
+            </p>
+            <ul>
+              <li data-i18n="privacy_s2_2_li1">IP-adress</li>
+              <li data-i18n="privacy_s2_2_li2">webbläsartyp</li>
+              <li data-i18n="privacy_s2_2_li3">enhetstyp</li>
+              <li data-i18n="privacy_s2_2_li4">loggar och tidsstämplar</li>
+              <li data-i18n="privacy_s2_2_li5">tekniska interaktioner med tjänsten</li>
+            </ul>
+            <p data-i18n="privacy_s2_2_p2">
+              Denna information används för säkerhet, felsökning och förbättring av tjänsten.
+            </p>
 
-<h3>2.1 Uppgifter du själv lämnar</h3>
+            <h3 data-i18n="privacy_s2_3_title">2.3 Uppgifter från webbläsartillägg (Browser Extension)</h3>
+            <p data-i18n="privacy_s2_3_p1">
+              PeerRate kan tillhandahålla ett webbläsartillägg som hjälper användare att skapa verifierade omdömen baserade på faktiska affärer.
+            </p>
+            <p data-i18n="privacy_s2_3_p2">
+              När tillägget används kan det läsa offentligt synlig information på vissa handelsplattformar i syfte att identifiera att en affär har ägt rum, skapa ett verifierings-ID för affären och förenkla processen att lämna ett omdöme.
+            </p>
+            <p data-i18n="privacy_s2_3_p3">
+              Webbläsartillägget samlar inte in privata meddelanden, lösenord, betalningsinformation eller känsliga personuppgifter.
+            </p>
+            <p data-i18n="privacy_s2_3_p4">
+              Informationen används enbart för att möjliggöra PeerRates verifierade omdömessystem.
+            </p>
 
-<ul>
-<li>Namn</li>
-<li>Personnummer</li>
-<li>Kontaktuppgifter (e-post, telefon, adress)</li>
-<li>Kontouppgifter</li>
-<li>Omdömen, kommentarer och inlägg du skapar</li>
-<li>Information du lämnar i rapporteringsformulär</li>
-</ul>
+            <h3 data-i18n="privacy_s2_4_title">2.4 Uppgifter från tredje part</h3>
+            <p data-i18n="privacy_s2_4_p1">
+              Vi kan i vissa fall hämta information från öppna och lagliga datakällor, exempelvis:
+            </p>
+            <ul>
+              <li data-i18n="privacy_s2_4_li1">post- och adressregister</li>
+              <li data-i18n="privacy_s2_4_li2">offentliga myndighetsregister</li>
+              <li data-i18n="privacy_s2_4_li3">statistiska databaser (t.ex. SCB)</li>
+              <li data-i18n="privacy_s2_4_li4">andra offentliga datakällor som används för verifiering</li>
+            </ul>
+            <p data-i18n="privacy_s2_4_p2">
+              Ingen känslig personuppgift inhämtas utan uttryckligt samtycke.
+            </p>
+          </section>
 
-<h3>2.2 Uppgifter vi samlar in automatiskt</h3>
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s3_title">3. Ändamål med behandlingen</h2>
+            <p data-i18n="privacy_s3_p1">Personuppgifter behandlas för att:</p>
+            <ul>
+              <li data-i18n="privacy_s3_li1">skapa och administrera användarkonton</li>
+              <li data-i18n="privacy_s3_li2">möjliggöra ett system för verifierade omdömen</li>
+              <li data-i18n="privacy_s3_li3">verifiera transaktioner</li>
+              <li data-i18n="privacy_s3_li4">motverka bedrägerier</li>
+              <li data-i18n="privacy_s3_li5">förbättra tjänstens funktionalitet</li>
+              <li data-i18n="privacy_s3_li6">säkerställa trygghet och transparens i P2P-handel</li>
+              <li data-i18n="privacy_s3_li7">uppfylla rättsliga skyldigheter</li>
+            </ul>
+          </section>
 
-<ul>
-<li>IP-adress</li>
-<li>Webbläsare och enhetstyp</li>
-<li>Loggar, tidsstämplar och interaktioner i Tjänsten</li>
-</ul>
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s4_title">4. Rättslig grund</h2>
+            <p data-i18n="privacy_s4_p1">Behandling av personuppgifter sker med stöd av:</p>
+            <ul>
+              <li data-i18n="privacy_s4_li1">samtycke</li>
+              <li data-i18n="privacy_s4_li2">avtal (när du använder tjänsten)</li>
+              <li data-i18n="privacy_s4_li3">berättigat intresse (bedrägeribekämpning och säkerhet)</li>
+              <li data-i18n="privacy_s4_li4">rättsliga skyldigheter</li>
+            </ul>
+          </section>
 
-<h3>2.3 Uppgifter som inhämtas från tredje part</h3>
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s5_title">5. Lagringstid</h2>
+            <p data-i18n="privacy_s5_p1">Personuppgifter lagras endast så länge det är nödvändigt:</p>
+            <ul>
+              <li data-i18n="privacy_s5_li1">konto: tills användaren avslutar kontot</li>
+              <li data-i18n="privacy_s5_li2">omdömen: tills radering begärs eller de inte längre är relevanta</li>
+              <li data-i18n="privacy_s5_li3">tekniska loggar: upp till 12 månader</li>
+              <li data-i18n="privacy_s5_li4">verifieringsdata: upp till 12 månader eller längre om det krävs för säkerhetsändamål</li>
+            </ul>
+          </section>
 
-<p>
-Vi kan hämta information från öppna och lagliga datakällor, såsom:
-</p>
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s6_title">6. Delning av uppgifter</h2>
+            <p data-i18n="privacy_s6_p1">Vi säljer inte personuppgifter.</p>
+            <p data-i18n="privacy_s6_p2">Personuppgifter kan delas med:</p>
+            <ul>
+              <li data-i18n="privacy_s6_li1">IT-leverantörer</li>
+              <li data-i18n="privacy_s6_li2">hostingleverantörer (t.ex. Render)</li>
+              <li data-i18n="privacy_s6_li3">tekniska partners som krävs för tjänstens funktion</li>
+              <li data-i18n="privacy_s6_li4">myndigheter när det krävs enligt lag</li>
+            </ul>
+            <p data-i18n="privacy_s6_p3">
+              Alla sådana parter är bundna av sekretess och dataskyddskrav.
+            </p>
+          </section>
 
-<ul>
-<li>post- och adressregister</li>
-<li>statistikdatabaser (t.ex. SCB)</li>
-<li>fordonsinformation</li>
-<li>offentliga myndighetsregister</li>
-<li>andra öppna datakällor som erbjuder relevant verifieringsdata</li>
-</ul>
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s7_title">7. Säkerhet</h2>
+            <p data-i18n="privacy_s7_p1">
+              Vi använder moderna säkerhetsåtgärder för att skydda personuppgifter.
+            </p>
+            <ul>
+              <li data-i18n="privacy_s7_li1">krypterade anslutningar (HTTPS)</li>
+              <li data-i18n="privacy_s7_li2">strikt behörighetskontroll</li>
+              <li data-i18n="privacy_s7_li3">loggning och säkerhetsövervakning</li>
+              <li data-i18n="privacy_s7_li4">säker molninfrastruktur</li>
+            </ul>
+          </section>
 
-<p>
-Ingen känslig personuppgift inhämtas utan uttryckligt samtycke.
-</p>
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s8_title">8. Automatiserad analys</h2>
+            <p data-i18n="privacy_s8_p1">
+              PeerRate kan använda algoritmer för att analysera data i syfte att förbättra omdömessystemets tillförlitlighet. Ingen automatiserad profilering används för beslut som har rättslig eller betydande negativ påverkan på användaren.
+            </p>
+          </section>
 
-<h2>3. Ändamål med behandlingen</h2>
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s9_title">9. Dina rättigheter</h2>
+            <p data-i18n="privacy_s9_p1">Du har enligt GDPR rätt att:</p>
+            <ul>
+              <li data-i18n="privacy_s9_li1">begära tillgång till dina personuppgifter</li>
+              <li data-i18n="privacy_s9_li2">begära rättelse</li>
+              <li data-i18n="privacy_s9_li3">begära radering</li>
+              <li data-i18n="privacy_s9_li4">invända mot behandling</li>
+              <li data-i18n="privacy_s9_li5">begära begränsning av behandling</li>
+              <li data-i18n="privacy_s9_li6">begära dataportabilitet</li>
+              <li data-i18n="privacy_s9_li7">återkalla samtycke</li>
+            </ul>
+            <p>
+              <span data-i18n="privacy_s9_p2">Begäran skickas till:</span>
+              <a class="privacy-contact" href="mailto:privacy@peerrate.ai">privacy@peerrate.ai</a>
+            </p>
+            <p data-i18n="privacy_s9_p3">
+              Du har också rätt att lämna klagomål till Integritetsskyddsmyndigheten (IMY).
+            </p>
+          </section>
 
-<p>Vi behandlar personuppgifter för att:</p>
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s10_title">10. Överföring till tredje land</h2>
+            <p data-i18n="privacy_s10_p1">
+              Personuppgifter behandlas i huvudsak inom EU/EES. Om överföring till tredje land sker används lämpliga skyddsåtgärder såsom EU:s standardavtalsklausuler.
+            </p>
+          </section>
 
-<ul>
-<li>skapa och administrera användarkonton</li>
-<li>möjliggöra omdömesfunktioner</li>
-<li>verifiera identitet och motverka bedrägerier</li>
-<li>tillhandahålla och förbättra Tjänstens funktionalitet</li>
-<li>säkerställa trygghet och transparens</li>
-<li>uppfylla rättsliga skyldigheter</li>
-</ul>
+          <section class="privacy-section">
+            <h2 data-i18n="privacy_s11_title">11. Kontakt</h2>
+            <p>
+              JRAS Intressenter AB<br />
+              <a class="privacy-contact" href="mailto:hello@peerrate.ai">hello@peerrate.ai</a>
+            </p>
+            <p data-i18n="privacy_s11_p2">
+              Denna policy gäller även för PeerRates browser extension som distribueras via Chrome Web Store.
+            </p>
+          </section>
+        </div>
+      </section>
+    </div>
+  </main>
 
-<h2>4. Rättslig grund</h2>
+  <div id="slot-footer"></div>
 
-<p>Behandlingen sker med stöd av:</p>
-
-<ul>
-<li>samtycke (tredjepartsdata)</li>
-<li>avtal (när du använder Tjänsten)</li>
-<li>berättigat intresse (säkerhet, bedrägeribekämpning, systemutveckling)</li>
-<li>rättsliga skyldigheter</li>
-</ul>
-
-<h2>5. Lagringstid</h2>
-
-<ul>
-<li>Konto: tills användaren själv avslutar det.</li>
-<li>Omdömen: lagras tills användaren begär radering eller mottagaren inte längre använder tjänsten.</li>
-<li>Tekniska loggar: max 12 månader.</li>
-<li>Tredjepartsdata: max 12 månader, såvida inte fortsatt lagring är nödvändig.</li>
-</ul>
-
-<h2>6. Delning av uppgifter</h2>
-
-<p>
-Vi delar inte personuppgifter med tredje part för marknadsföringssyften.
-</p>
-
-<p>
-Vi kan dock dela uppgifter med:
-</p>
-
-<ul>
-<li>IT-leverantörer</li>
-<li>hostingpartner (Render)</li>
-<li>datakällor och registerhållare som användaren samtyckt till</li>
-<li>myndigheter när det krävs enligt lag</li>
-</ul>
-
-<h2>7. Säkerhet</h2>
-
-<p>
-Vi vidtar tekniska och organisatoriska åtgärder för att skydda personuppgifter mot förlust, missbruk, obehörig åtkomst eller skada.
-</p>
-
-<ul>
-<li>krypterade anslutningar (HTTPS)</li>
-<li>strikt behörighetsstyrning</li>
-<li>loggning och åtkomstspårning</li>
-<li>säker lagring via moderna molntjänster</li>
-</ul>
-
-<h2>8. Tredjepartsdata och automatiserat beslutsfattande</h2>
-
-<p>
-PeerRate kan använda algoritmer för att analysera offentliga data i syfte att förbättra omdömessystemets träffsäkerhet. Ingen profilering sker som har rättslig eller betydande negativ påverkan för användaren.
-</p>
-
-<h2>9. Dina rättigheter</h2>
-
-<p>Du har enligt GDPR rätt att:</p>
-
-<ul>
-<li>få tillgång till dina uppgifter</li>
-<li>rätta felaktiga uppgifter</li>
-<li>invända mot behandling</li>
-<li>begära radering (“rätten att bli bortglömd”)</li>
-<li>begränsa behandling</li>
-<li>få ut dina uppgifter (dataportabilitet)</li>
-<li>återkalla samtycke</li>
-</ul>
-
-<p>
-Begäran skickas till: <strong>privacy@peerrate.ai</strong>
-</p>
-
-<h2>10. Överföring till tredje land</h2>
-
-<p>
-Personuppgifter behandlas huvudsakligen inom EU/EES. Om överföring till tredje land sker vidtas nödvändiga skyddsåtgärder, såsom standardavtalsklausuler.
-</p>
-
-<h2>11. Kontakt</h2>
-
-<p>
-JRAS Intressenter AB<br>
-hello@peerrate.ai
-</p>
-
+  <script type="module" src="/modules/privacyBootstrap.js"></script>
 </body>
 </html>
