@@ -2,10 +2,60 @@
 // Robust 2-stegsregistrering med i18n-stöd och språkbyte utan reload.
 
 import { showNotification } from './utils.js';
-import { t, applyLang } from './landing/language.js';
+import { t, applyLang, getCurrentLanguage } from './landing/language.js';
 
 function $(id) {
   return document.getElementById(id);
+}
+
+const customerLegalCopy = {
+  sv: {
+    privacyConsentHtml:
+      'Jag har läst <a class="legal-link" href="/privacy" target="_blank" rel="noopener noreferrer">integritetspolicyn</a>.',
+    termsConsentHtml:
+      'Jag har läst <a class="legal-link" href="/terms" target="_blank" rel="noopener noreferrer">användarvillkoren</a>.',
+    privacyRequired:
+      'Du måste läsa och godkänna integritetspolicyn för att skapa konto.',
+    termsRequired:
+      'Du måste läsa och godkänna användarvillkoren för att skapa konto.',
+    footerTerms: 'Allmänna villkor',
+  },
+  en: {
+    privacyConsentHtml:
+      'I have read the <a class="legal-link" href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.',
+    termsConsentHtml:
+      'I have read the <a class="legal-link" href="/terms" target="_blank" rel="noopener noreferrer">Terms</a>.',
+    privacyRequired:
+      'You must read and accept the Privacy Policy to create an account.',
+    termsRequired:
+      'You must read and accept the Terms to create an account.',
+    footerTerms: 'Terms',
+  },
+};
+
+function getCustomerLegalCopy() {
+  const lang = getCurrentLanguage();
+  return customerLegalCopy[lang] || customerLegalCopy.en;
+}
+
+function applyCustomerLegalLanguage() {
+  const copy = getCustomerLegalCopy();
+
+  const privacyText = $('privacyConsentText');
+  const termsText = $('termsConsentText');
+  const footerTermsLink = document.querySelector('footer a[href="/terms"]');
+
+  if (privacyText) {
+    privacyText.innerHTML = copy.privacyConsentHtml;
+  }
+
+  if (termsText) {
+    termsText.innerHTML = copy.termsConsentHtml;
+  }
+
+  if (footerTermsLink) {
+    footerTermsLink.textContent = copy.footerTerms;
+  }
 }
 
 function setText(msg) {
@@ -97,6 +147,7 @@ function showStep2UI(email) {
     step2Card.classList.remove('hidden');
     step2Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyLang(document);
+    applyCustomerLegalLanguage();
     return;
   }
 
@@ -107,6 +158,7 @@ function showStep2UI(email) {
     step2Els.forEach((n) => n.classList.remove('hidden'));
     if (step2Els[0]) step2Els[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyLang(document);
+    applyCustomerLegalLanguage();
     return;
   }
 
@@ -120,12 +172,14 @@ function showStep2UI(email) {
       step2Block.scrollIntoView({ behavior: 'smooth', block: 'start' });
       notify('success', t('customer_step1_success_continue', 'Account created! Continue with step 2 below.'));
       applyLang(document);
+      applyCustomerLegalLanguage();
       return;
     }
 
     notify('success', t('customer_step1_success_continue', 'Account created! Continue with step 2 below.'));
     step2Form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyLang(document);
+    applyCustomerLegalLanguage();
     return;
   }
 
@@ -158,15 +212,19 @@ function bindStep1() {
     const passwordConfirm =
       $('step1-password-confirm')?.value || $('password2')?.value || '';
 
+    const privacyAccepted = $('privacyAccepted')?.checked === true;
     const termsAccepted =
       $('step1-terms')?.checked === true ||
       $('termsAccepted')?.checked === true;
+
+    const legalCopy = getCustomerLegalCopy();
 
     if (!email) return notify('error', t('customer_error_fill_email', 'Please enter an email address.'));
     if (email !== emailConfirm) return notify('error', t('customer_error_email_mismatch', 'Email addresses do not match.'));
     if (!password || password.length < 8) return notify('error', t('customer_error_password_length', 'Password must be at least 8 characters.'));
     if (password !== passwordConfirm) return notify('error', t('customer_error_password_mismatch', 'Passwords do not match.'));
-    if (!termsAccepted) return notify('error', t('customer_error_terms_required', 'You must accept the terms to create an account.'));
+    if (!privacyAccepted) return notify('error', legalCopy.privacyRequired);
+    if (!termsAccepted) return notify('error', legalCopy.termsRequired);
 
     const payload = {
       email,
@@ -272,6 +330,7 @@ function bindLanguageChangeHandler() {
 
   window.addEventListener('peerrate:language-changed', () => {
     applyLang(document);
+    applyCustomerLegalLanguage();
   });
 }
 
@@ -284,6 +343,7 @@ export function initCustomerPage() {
   bindStep1();
   bindStep2();
   applyLang(document);
+  applyCustomerLegalLanguage();
 }
 
 export function initCustomerForm() {
