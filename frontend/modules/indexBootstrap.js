@@ -1,6 +1,7 @@
 // frontend/modules/indexBootstrap.js
 import { initLandingLanguage, applyLang } from "/modules/landing/language.js";
 import { initTopRow } from "/modules/topRow.js";
+import { initLegalLinksLanguage, applyLegalLinksLanguage } from "/modules/legalLinks.js";
 
 async function injectPartial(slotId, url) {
   const slot = document.getElementById(slotId);
@@ -42,6 +43,14 @@ async function injectPartial(slotId, url) {
   try { await injectPartial("slot-globe", "/partials/index/globe.html"); } catch (e) { console.warn("globe inject failed:", e); }
   try { await injectPartial("slot-footer", "/partials/index/footer.html"); } catch (e) { console.warn("footer inject failed:", e); }
 
+  // 4b) legal links in footer
+  try {
+    initLegalLinksLanguage();
+    applyLegalLinksLanguage(document);
+  } catch (e) {
+    console.warn("legal links language init failed:", e);
+  }
+
   // 5) Re-apply translations explicitly after all partials are injected
   try {
     applyLang(document);
@@ -69,6 +78,10 @@ async function injectPartial(slotId, url) {
   // 8) Safety: re-run topRow + final translations
   try {
     initTopRow();
+  } catch (_) {}
+
+  try {
+    applyLegalLinksLanguage(document);
   } catch (_) {}
 
   try {

@@ -1,6 +1,7 @@
 // frontend/modules/privacyBootstrap.js
 import { initLandingLanguage, applyLang } from "/modules/landing/language.js";
 import { initTopRow } from "/modules/topRow.js";
+import { initLegalLinksLanguage, applyLegalLinksLanguage } from "/modules/legalLinks.js";
 
 async function injectPartial(slotId, url) {
   const slot = document.getElementById(slotId);
@@ -39,6 +40,13 @@ async function injectPartial(slotId, url) {
   }
 
   try {
+    initLegalLinksLanguage();
+    applyLegalLinksLanguage(document);
+  } catch (e) {
+    console.warn("legal links language init failed:", e);
+  }
+
+  try {
     applyLang(document);
   } catch (e) {
     console.warn("applyLang failed:", e);
@@ -52,6 +60,10 @@ async function injectPartial(slotId, url) {
 
   try {
     initTopRow();
+  } catch (_) {}
+
+  try {
+    applyLegalLinksLanguage(document);
   } catch (_) {}
 
   try {

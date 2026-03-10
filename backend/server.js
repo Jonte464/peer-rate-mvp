@@ -88,9 +88,13 @@ if (dbConfigured) {
 
 const app = express();
 
-// --- Privacy policy canonical URL for Chrome Web Store ---
+// --- Canonical legal URLs ---
 app.get("/privacy", (_req, res) => {
   res.sendFile(path.join(__dirname, "..", "frontend", "privacy.html"));
+});
+
+app.get("/terms", (_req, res) => {
+  res.sendFile(path.join(__dirname, "..", "frontend", "terms.html"));
 });
 
 // --- Config ---
