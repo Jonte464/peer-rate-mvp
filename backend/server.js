@@ -88,6 +88,11 @@ if (dbConfigured) {
 
 const app = express();
 
+// --- Privacy policy canonical URL for Chrome Web Store ---
+app.get("/privacy", (_req, res) => {
+  res.sendFile(path.join(__dirname, "..", "frontend", "privacy.html"));
+});
+
 // --- Config ---
 const PORT = Number(process.env.PORT || 10000);
 const HOST = "0.0.0.0";
