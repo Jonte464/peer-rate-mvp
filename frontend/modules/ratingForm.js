@@ -20,7 +20,7 @@ import {
   isDuplicateRatingError
 } from './lockedRatingCard.js';
 
-// ✅ Backwards compat exports (some older code may import these from ratingForm.js)
+// ✅ Backwards compat exports
 export { initPlatformPicker, initPlatformStarter } from './platformPicker.js';
 
 function isRatePage() {
@@ -68,6 +68,28 @@ function hideTestWithoutLoginButton() {
   }
 }
 
+function removeLoginCardCompletely() {
+  const els = getLoginCardEls();
+  els.forEach((el) => {
+    try {
+      el.remove();
+    } catch {
+      el.style.display = 'none';
+      el.classList.add('hidden');
+      el.setAttribute('aria-hidden', 'true');
+    }
+  });
+}
+
+function showLoginCardIfPresent() {
+  const els = getLoginCardEls();
+  els.forEach((el) => {
+    el.style.display = 'block';
+    el.classList.remove('hidden');
+    el.removeAttribute('aria-hidden');
+  });
+}
+
 function setVisibility(isLoggedIn) {
   const loginCards = getLoginCardEls();
   const ratingWrappers = getRatingWrapperEls();
@@ -88,11 +110,10 @@ function setVisibility(isLoggedIn) {
   const shouldShowLogin = !isLoggedIn || (!hasRatingTargets && isLoggedIn);
   const shouldShowRating = isLoggedIn && hasRatingTargets;
 
-  if (hasLoginTargets) {
-    loginCards.forEach((el) => {
-      el.style.display = shouldShowLogin ? 'block' : 'none';
-      el.classList.toggle('hidden', !shouldShowLogin);
-    });
+  if (isLoggedIn) {
+    removeLoginCardCompletely();
+  } else if (hasLoginTargets) {
+    showLoginCardIfPresent();
   }
 
   if (hint) {
@@ -140,10 +161,19 @@ async function syncPendingStatusWithBackend() {
   }
 }
 
-function renderAll() {
+async function resolveAuthUser() {
+  try {
+    const user = await auth.getResolvedUser();
+    return user || null;
+  } catch (err) {
+    console.warn('[PeerRate] resolveAuthUser failed:', err);
+    return null;
+  }
+}
+
+async function renderAll() {
   const p = getPending();
 
-  // ✅ Om pending redan är markerad som rated lokalt → rensa direkt så UI inte spökar
   if (p && isDealRated(p)) {
     clearPending();
     renderVerifiedDealUI(null);
@@ -154,7 +184,7 @@ function renderAll() {
   if (p) applyPendingContextCard(p);
   renderVerifiedDealUI(p);
 
-  const u = auth.getUser?.() || null;
+  const u = await resolveAuthUser();
   setVisibility(!!u);
 
   if (p && u) {
@@ -170,11 +200,9 @@ function renderAll() {
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
 
-  // capture pr= from URL if present
   const fromUrl = captureFromUrl();
   const pending = fromUrl || getPending();
 
-  // ✅ Om den dealen redan är rated lokalt → rensa och visa inget pending
   if (pending && isDealRated(pending)) {
     clearPending();
     renderVerifiedDealUI(null);
@@ -188,26 +216,24 @@ export function initRatingLogin() {
   const loginForm = document.getElementById('rating-login-form');
   if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
 
-  renderAll();
+  void renderAll();
 
-  // bind events only once
   if (!window.__prPendingEventsBound) {
     window.__prPendingEventsBound = true;
 
     window.addEventListener('pr:pending-updated', () => {
-      try { renderAll(); } catch {}
+      void renderAll();
     });
 
     window.addEventListener('pr:pending-cleared', () => {
-      try { renderAll(); } catch {}
+      void renderAll();
     });
   }
 
   window.addEventListener('storage', () => {
-    try { renderAll(); } catch {}
+    void renderAll();
   });
 
-  // ✅ Nytt: dubbelkolla backend så stale pending försvinner även om lokal cache saknas
   void (async () => {
     const status = await syncPendingStatusWithBackend();
     if (status?.ok && status.alreadyRated) {
@@ -219,7 +245,7 @@ export function initRatingLogin() {
         );
       } catch {}
     }
-    renderAll();
+    await renderAll();
   })();
 }
 
@@ -245,7 +271,7 @@ async function handleLoginSubmit(e) {
     showNotification('success', t('profile_login_success', 'Du är nu inloggad.'), 'login-status');
 
     if (isRatePage()) {
-      renderAll();
+      await renderAll();
       return;
     }
 
@@ -260,7 +286,7 @@ async function handleLoginSubmit(e) {
 }
 
 /**
- * Legacy open rating form (om andra sidor använder den)
+ * Legacy open rating form
  */
 export function initRatingForm() {
   const form = document.getElementById('rating-form');
@@ -313,8 +339,8 @@ async function handleSubmit(e) {
 
   try {
     const result = await api.createRating(payload);
+
     if (!result || result.ok === false) {
-      // ✅ Duplicate: markera som rated + rensa pending så overlay inte hänger kvar
       if (isDuplicateRatingError(result)) {
         try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
         clearPending();
@@ -324,16 +350,18 @@ async function handleSubmit(e) {
       }
 
       if (btn) btn.disabled = false;
+      await renderAll();
       return;
     }
 
-    // ✅ Success: markera rated + rensa pending
     try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
     clearPending();
 
     showNotification('success', t('rate_success_saved_toast', 'Tack! Ditt omdöme är sparat.'), 'notice');
     form.reset();
     if (btn) btn.disabled = false;
+
+    await renderAll();
   } catch (err) {
     console.error('submit error', err);
     showNotification('error', t('rate_error_technical', 'Tekniskt fel. Försök igen om en stund.'), 'notice');
