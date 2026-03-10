@@ -12,15 +12,115 @@ export { initRatingLogin } from './ratingForm.js'; // vidareexport för /rate.ht
 let latestExternalData = null;
 let languageChangeBound = false;
 
-function getAvatarKey(user) {
-  if (!user || typeof user !== 'object') return 'peerRateAvatar:default';
+const LEGACY_AVATAR_KEY = 'peerrate.avatar.dataUrl';
+
+function normalizeUserIdentity(user) {
+  if (!user || typeof user !== 'object') {
+    return {
+      storageId: 'default',
+      email: '',
+      fullName: '',
+    };
+  }
+
+  const email =
+    (user.email && String(user.email).trim().toLowerCase()) ||
+    (user.customer?.email && String(user.customer.email).trim().toLowerCase()) ||
+    '';
+
+  const subjectRef =
+    (user.subjectRef && String(user.subjectRef).trim().toLowerCase()) ||
+    (user.customer?.subjectRef && String(user.customer.subjectRef).trim().toLowerCase()) ||
+    '';
 
   const id =
-    (user.email && String(user.email).toLowerCase()) ||
-    (user.subjectRef && String(user.subjectRef).toLowerCase()) ||
-    'default';
+    (user.id && String(user.id).trim().toLowerCase()) ||
+    (user.customer?.id && String(user.customer.id).trim().toLowerCase()) ||
+    '';
 
-  return `peerRateAvatar:${id}`;
+  const fullName =
+    (user.fullName && String(user.fullName).trim()) ||
+    (user.customer?.fullName && String(user.customer.fullName).trim()) ||
+    `${user.firstName || user.customer?.firstName || ''} ${user.lastName || user.customer?.lastName || ''}`.trim();
+
+  const storageId = email || subjectRef || id || 'default';
+
+  return {
+    storageId,
+    email,
+    fullName,
+  };
+}
+
+function getAvatarKey(user) {
+  const identity = normalizeUserIdentity(user);
+  return `peerRateAvatar:${identity.storageId}`;
+}
+
+function getInitials(user) {
+  const identity = normalizeUserIdentity(user);
+
+  if (identity.fullName) {
+    return identity.fullName
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((n) => n[0]?.toUpperCase() || '')
+      .join('') || 'P';
+  }
+
+  if (identity.email) {
+    return identity.email[0]?.toUpperCase() || 'P';
+  }
+
+  return 'P';
+}
+
+function getStoredAvatar(user) {
+  try {
+    const key = getAvatarKey(user);
+    const direct = localStorage.getItem(key);
+    if (direct) return direct;
+
+    // Migrera gammal global nyckel till per-user nyckel om sådan finns
+    const legacy = localStorage.getItem(LEGACY_AVATAR_KEY);
+    if (legacy && user) {
+      localStorage.setItem(key, legacy);
+      return legacy;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function setStoredAvatar(user, dataUrl) {
+  try {
+    const key = getAvatarKey(user);
+    localStorage.setItem(key, dataUrl);
+  } catch (err) {
+    console.error('Could not store avatar', err);
+  }
+}
+
+function setAvatarOnTarget(target, avatarUrl, initials) {
+  if (!target) return;
+
+  if (avatarUrl) {
+    target.style.backgroundImage = `url("${avatarUrl}")`;
+    target.style.backgroundSize = 'cover';
+    target.style.backgroundPosition = 'center';
+    target.style.backgroundRepeat = 'no-repeat';
+    target.textContent = '';
+    target.setAttribute('data-has-avatar', 'true');
+  } else {
+    target.style.backgroundImage = 'none';
+    target.style.backgroundSize = '';
+    target.style.backgroundPosition = '';
+    target.style.backgroundRepeat = '';
+    target.textContent = initials;
+    target.setAttribute('data-has-avatar', 'false');
+  }
 }
 
 export function updateUserBadge(user) {
@@ -34,52 +134,37 @@ export function updateUserBadge(user) {
     return;
   }
 
-  const fullName = (user.fullName || '').trim();
+  const identity = normalizeUserIdentity(user);
   const firstName =
-    fullName.split(/\s+/)[0] ||
-    (user.email ? user.email.split('@')[0] : '');
+    identity.fullName.split(/\s+/)[0] ||
+    (identity.email ? identity.email.split('@')[0] : '');
 
   userBadgeName.textContent = firstName || t('profile_default_name', 'Profile');
   userBadge.classList.remove('hidden');
 }
 
 export function updateAvatars(user) {
-  const key = getAvatarKey(user);
-  const avatarUrl = localStorage.getItem(key);
+  const avatarUrl = getStoredAvatar(user);
+  const initials = getInitials(user);
 
-  let initials = 'P';
-  if (user && typeof user === 'object') {
-    if (user.fullName && typeof user.fullName === 'string' && user.fullName.trim() !== '') {
-      initials = user.fullName
-        .trim()
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((n) => n[0].toUpperCase())
-        .join('');
-    } else if (user.email && typeof user.email === 'string' && user.email.length > 0) {
-      initials = user.email[0].toUpperCase();
-    }
-  }
-
-  const applyAvatar = (target) => {
-    if (!target) return;
-
-    if (avatarUrl) {
-      target.style.backgroundImage = `url(${avatarUrl})`;
-      target.textContent = '';
-    } else {
-      target.style.backgroundImage = 'none';
-      target.textContent = initials;
-    }
-  };
-
-  applyAvatar(el('user-badge-avatar'));
-  applyAvatar(el('profile-avatar-preview'));
+  setAvatarOnTarget(el('user-badge-avatar'), avatarUrl, initials);
+  setAvatarOnTarget(el('profile-avatar-preview'), avatarUrl, initials);
 
   const badgeAvatar = document.getElementById('user-badge-avatar');
   if (badgeAvatar) {
     badgeAvatar.setAttribute('title', t('profile_avatar_title', 'Click to change image'));
   }
+
+  const previewAvatar = document.getElementById('profile-avatar-preview');
+  if (previewAvatar) {
+    previewAvatar.setAttribute('title', t('profile_avatar_title', 'Click to change image'));
+  }
+}
+
+function setAvatarStatus(messageKey, fallback) {
+  const status = document.getElementById('profile-avatar-status');
+  if (!status) return;
+  status.textContent = t(messageKey, fallback);
 }
 
 function initAvatarUpload() {
@@ -112,17 +197,50 @@ function initAvatarUpload() {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
 
+      if (!file.type || !file.type.startsWith('image/')) {
+        setAvatarStatus('profile_avatar_error_filetype', 'Välj en bildfil.');
+        input.value = '';
+        return;
+      }
+
+      const maxBytes = 2 * 1024 * 1024;
+      if (file.size > maxBytes) {
+        setAvatarStatus('profile_avatar_error_size', 'Bilden är för stor. Välj en bild under 2 MB.');
+        input.value = '';
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          const user = auth.getUser();
-          const key = getAvatarKey(user);
-          localStorage.setItem(key, reader.result);
+          const user = auth.getUser?.() || null;
+          if (!user) {
+            setAvatarStatus('profile_avatar_error_login', 'Du måste vara inloggad för att spara profilbild.');
+            return;
+          }
+
+          const result = typeof reader.result === 'string' ? reader.result : '';
+          if (!result) {
+            setAvatarStatus('profile_avatar_error_read', 'Kunde inte läsa bildfilen.');
+            return;
+          }
+
+          setStoredAvatar(user, result);
           updateAvatars(user);
+          setAvatarStatus('profile_avatar_saved', 'Profilbilden sparades lokalt i din webbläsare.');
         } catch (err) {
           console.error('Kunde inte spara/uppdatera avatar', err);
+          setAvatarStatus('profile_avatar_error_save', 'Kunde inte spara profilbilden.');
+        } finally {
+          input.value = '';
         }
       };
+
+      reader.onerror = () => {
+        setAvatarStatus('profile_avatar_error_read', 'Kunde inte läsa bildfilen.');
+        input.value = '';
+      };
+
       reader.readAsDataURL(file);
     });
   }
@@ -279,7 +397,7 @@ function bindLanguageChangeHandler() {
   languageChangeBound = true;
 
   window.addEventListener('peerrate:language-changed', () => {
-    const user = auth.getUser();
+    const user = auth.getUser?.() || null;
     updateUserBadge(user);
     updateAvatars(user);
     rerenderExternalDataFromCache();
@@ -303,11 +421,13 @@ async function loadProfileData() {
       if (!local) return;
 
       customer = {
-        fullName: local.fullName || `${local.firstName || ''} ${local.lastName || ''}`.trim(),
-        email: local.email || '',
-        firstName: local.firstName,
-        lastName: local.lastName,
-        title: (local.title || '').trim() || undefined,
+        id: local.id || local.customer?.id,
+        subjectRef: local.subjectRef || local.customer?.subjectRef,
+        fullName: local.fullName || local.customer?.fullName || `${local.firstName || local.customer?.firstName || ''} ${local.lastName || local.customer?.lastName || ''}`.trim(),
+        email: local.email || local.customer?.email || '',
+        firstName: local.firstName || local.customer?.firstName,
+        lastName: local.lastName || local.customer?.lastName,
+        title: (local.title || local.customer?.title || '').trim() || undefined,
       };
     }
 
@@ -392,7 +512,7 @@ export async function initProfilePage() {
   }
 
   try {
-    const user = auth.getUser();
+    const user = auth.getUser?.() || null;
     const loginCard = document.getElementById('login-card');
     const profileRoot = document.getElementById('profile-root');
 
@@ -413,6 +533,7 @@ export async function initProfilePage() {
         console.error('profile data loaders error', err);
       }
 
+      updateAvatars(auth.getUser?.() || user);
       applyLang(document);
     } else {
       if (loginCard) loginCard.classList.remove('hidden');

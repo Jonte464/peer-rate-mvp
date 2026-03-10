@@ -268,6 +268,12 @@ function ensureHamburgerFallbackOnlyOnCustomer() {
   });
 }
 
+function refreshUserUi(user) {
+  updateUserBadge(user);
+  updateAvatars(user);
+  updateTopUserPill(user);
+}
+
 function initApp() {
   console.log('DOM ready');
   initRatingContextGuards();
@@ -275,10 +281,7 @@ function initApp() {
   ensureMenuHooks();
 
   const user = auth.getUser?.() || null;
-
-  updateUserBadge(user);
-  updateAvatars(user);
-  updateTopUserPill(user);
+  refreshUserUi(user);
 
   try {
     initLandingMenu();
@@ -294,9 +297,7 @@ function initApp() {
       getUser: () => auth.getUser?.() || null,
       onAfterLogout: () => {
         const u2 = auth.getUser?.() || null;
-        updateTopUserPill(u2);
-        updateUserBadge(u2);
-        updateAvatars(u2);
+        refreshUserUi(u2);
       },
     });
   } catch (e) {
@@ -348,12 +349,16 @@ function initApp() {
     initLanding();
   }
 
-  // Keep top-user pill updated if other tabs log in/out
+  // Keep top-user pill + avatar updated if other tabs log in/out or avatar changes
   window.addEventListener('storage', () => {
-    updateTopUserPill(auth.getUser?.() || null);
+    const currentUser = auth.getUser?.() || null;
+    refreshUserUi(currentUser);
   });
 
-  setInterval(() => updateTopUserPill(auth.getUser?.() || null), 1500);
+  setInterval(() => {
+    const currentUser = auth.getUser?.() || null;
+    refreshUserUi(currentUser);
+  }, 1500);
 }
 
 // Boot-safe: kör init även om DOMContentLoaded redan hänt
