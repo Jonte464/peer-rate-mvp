@@ -23,6 +23,14 @@ function normalizeTextLower(v) {
   return normalizeText(v).toLowerCase();
 }
 
+function digitsOnly(v) {
+  return normalizeText(v).replace(/\D/g, "");
+}
+
+function uniqueNonEmpty(arr) {
+  return Array.from(new Set((arr || []).map((v) => normalizeText(v)).filter(Boolean)));
+}
+
 function mapExternalPlatform(input) {
   const v = normalizeText(input).toUpperCase();
 
@@ -47,6 +55,14 @@ function extractProofRef(body) {
     normalizeText(body?.deal?.externalProofRef) ||
     normalizeText(body?.counterparty?.orderId) ||
     normalizeText(body?.pageUrl) ||
+    ""
+  );
+}
+
+function extractItemId(body) {
+  return (
+    normalizeText(body?.deal?.itemId) ||
+    normalizeText(body?.counterparty?.itemId) ||
     ""
   );
 }
@@ -92,84 +108,164 @@ router.get("/ratings/exists", requireAuthCompat, async (req, res) => {
  * POST /api/ratings/check-deal-status
  *
  * Public check för extension + frontend.
- * Syfte:
- * - avgöra om en verifierad affär redan blivit betygsatt
- * - fungera plattformsoberoende
  *
- * In:
- * {
- *   source: "tradera",
- *   proofRef: "145376613",
- *   pageUrl: "...",
- *   deal: {...}
- * }
- *
- * Ut:
- * {
- *   ok: true,
- *   alreadyRated: true/false,
- *   canRate: true/false,
- *   platform: "TRADERA",
- *   proofRef: "...",
- *   canonicalKey: "tradera|145376613",
- *   matchedBy: "deal+rating" | "rating.proofRef" | null
- * }
+ * Robust matchning i flera steg:
+ * 1) deal via platform + externalProofRef
+ * 2) deal via platform + externalItemId
+ * 3) rating.proofRef
+ * 4) deal via pageUrl
  */
 router.post("/ratings/check-deal-status", async (req, res) => {
   try {
     const platform = mapExternalPlatform(req.body?.source || req.body?.deal?.platform || "");
     const proofRef = extractProofRef(req.body);
+    const itemId = extractItemId(req.body);
+    const pageUrl = normalizeText(req.body?.pageUrl || req.body?.deal?.pageUrl || req.body?.counterparty?.pageUrl || "");
     const canonicalKey = buildCanonicalKey(platform, proofRef);
 
-    if (!proofRef) {
+    if (!proofRef && !itemId && !pageUrl) {
       return res.status(400).json({
         ok: false,
-        error: "Missing proofRef",
+        error: "Missing proofRef/itemId/pageUrl",
       });
     }
 
     let matchedBy = null;
     let alreadyRated = false;
+    let matchedDealId = null;
 
-    // 1) Försök först hitta deal via platform + externalProofRef
-    const existingDeal = await prisma.deal.findFirst({
-      where: {
-        platform,
-        externalProofRef: {
-          equals: proofRef,
-          mode: "insensitive",
+    const proofCandidates = uniqueNonEmpty([
+      proofRef,
+      digitsOnly(proofRef),
+      req.body?.deal?.orderId,
+      digitsOnly(req.body?.deal?.orderId),
+      req.body?.counterparty?.orderId,
+      digitsOnly(req.body?.counterparty?.orderId),
+    ]);
+
+    const itemCandidates = uniqueNonEmpty([
+      itemId,
+      digitsOnly(itemId),
+      req.body?.deal?.itemId,
+      digitsOnly(req.body?.deal?.itemId),
+      req.body?.counterparty?.itemId,
+      digitsOnly(req.body?.counterparty?.itemId),
+    ]);
+
+    // -----------------------------
+    // 1) Matcha deal via externalProofRef
+    // -----------------------------
+    if (!alreadyRated && proofCandidates.length) {
+      const existingDeal = await prisma.deal.findFirst({
+        where: {
+          platform,
+          OR: proofCandidates.map((candidate) => ({
+            externalProofRef: {
+              equals: candidate,
+              mode: "insensitive",
+            },
+          })),
         },
-      },
-      select: { id: true },
-    });
-
-    if (existingDeal?.id) {
-      const ratingOnDeal = await prisma.rating.findFirst({
-        where: { dealId: existingDeal.id },
-        select: { id: true },
+        select: { id: true, externalProofRef: true, externalItemId: true },
       });
 
-      if (ratingOnDeal?.id) {
-        alreadyRated = true;
-        matchedBy = "deal+rating";
+      if (existingDeal?.id) {
+        matchedDealId = existingDeal.id;
+
+        const ratingOnDeal = await prisma.rating.findFirst({
+          where: { dealId: existingDeal.id },
+          select: { id: true },
+        });
+
+        if (ratingOnDeal?.id) {
+          alreadyRated = true;
+          matchedBy = "deal.externalProofRef -> rating.dealId";
+        }
       }
     }
 
-    // 2) Fallback: rating.proofRef
-    if (!alreadyRated) {
+    // -----------------------------
+    // 2) Matcha deal via externalItemId
+    // -----------------------------
+    if (!alreadyRated && itemCandidates.length) {
+      const existingDealByItem = await prisma.deal.findFirst({
+        where: {
+          platform,
+          OR: itemCandidates.map((candidate) => ({
+            externalItemId: {
+              equals: candidate,
+              mode: "insensitive",
+            },
+          })),
+        },
+        select: { id: true, externalProofRef: true, externalItemId: true },
+      });
+
+      if (existingDealByItem?.id) {
+        matchedDealId = existingDealByItem.id;
+
+        const ratingOnDeal = await prisma.rating.findFirst({
+          where: { dealId: existingDealByItem.id },
+          select: { id: true },
+        });
+
+        if (ratingOnDeal?.id) {
+          alreadyRated = true;
+          matchedBy = "deal.externalItemId -> rating.dealId";
+        }
+      }
+    }
+
+    // -----------------------------
+    // 3) Fallback: rating.proofRef
+    // -----------------------------
+    if (!alreadyRated && proofCandidates.length) {
       const ratingByProofRef = await prisma.rating.findFirst({
         where: {
-          proofRef: {
-            equals: proofRef,
+          OR: proofCandidates.map((candidate) => ({
+            proofRef: {
+              equals: candidate,
+              mode: "insensitive",
+            },
+          })),
+        },
+        select: { id: true, proofRef: true, dealId: true },
+      });
+
+      if (ratingByProofRef?.id) {
+        alreadyRated = true;
+        matchedBy = "rating.proofRef";
+        matchedDealId = ratingByProofRef.dealId || null;
+      }
+    }
+
+    // -----------------------------
+    // 4) Fallback: deal via pageUrl
+    // -----------------------------
+    if (!alreadyRated && pageUrl) {
+      const existingDealByUrl = await prisma.deal.findFirst({
+        where: {
+          platform,
+          externalPageUrl: {
+            equals: pageUrl,
             mode: "insensitive",
           },
         },
         select: { id: true },
       });
 
-      if (ratingByProofRef?.id) {
-        alreadyRated = true;
-        matchedBy = "rating.proofRef";
+      if (existingDealByUrl?.id) {
+        matchedDealId = existingDealByUrl.id;
+
+        const ratingOnDeal = await prisma.rating.findFirst({
+          where: { dealId: existingDealByUrl.id },
+          select: { id: true },
+        });
+
+        if (ratingOnDeal?.id) {
+          alreadyRated = true;
+          matchedBy = "deal.externalPageUrl -> rating.dealId";
+        }
       }
     }
 
@@ -179,8 +275,15 @@ router.post("/ratings/check-deal-status", async (req, res) => {
       canRate: !alreadyRated,
       platform,
       proofRef,
+      itemId,
+      pageUrl: pageUrl || null,
       canonicalKey,
       matchedBy,
+      matchedDealId,
+      debug: {
+        proofCandidates,
+        itemCandidates,
+      },
     });
   } catch (err) {
     console.error("[POST /ratings/check-deal-status] error:", err);
