@@ -108,6 +108,38 @@ function setVisibility(isLoggedIn) {
   }
 }
 
+function hasPendingIdentity(p) {
+  return !!(
+    p?.proofRef ||
+    p?.deal?.orderId ||
+    p?.deal?.bookingId ||
+    p?.deal?.transactionId ||
+    p?.pageUrl
+  );
+}
+
+async function syncPendingStatusWithBackend() {
+  const pending = getPending();
+  if (!pending || !hasPendingIdentity(pending)) {
+    return { ok: true, alreadyRated: false };
+  }
+
+  try {
+    const status = await api.checkRatingDealStatus(pending);
+
+    if (status?.ok && status.alreadyRated) {
+      try { markDealRated(pending); } catch {}
+      clearPending();
+      return status;
+    }
+
+    return status || { ok: false };
+  } catch (err) {
+    console.warn('[PeerRate] syncPendingStatusWithBackend failed:', err);
+    return { ok: false };
+  }
+}
+
 function renderAll() {
   const p = getPending();
 
@@ -174,6 +206,21 @@ export function initRatingLogin() {
   window.addEventListener('storage', () => {
     try { renderAll(); } catch {}
   });
+
+  // ✅ Nytt: dubbelkolla backend så stale pending försvinner även om lokal cache saknas
+  void (async () => {
+    const status = await syncPendingStatusWithBackend();
+    if (status?.ok && status.alreadyRated) {
+      try {
+        showNotification(
+          'success',
+          t('rate_info_already_completed', 'Den här affären är redan betygsatt och har därför tagits bort från listan.'),
+          'notice'
+        );
+      } catch {}
+    }
+    renderAll();
+  })();
 }
 
 async function handleLoginSubmit(e) {

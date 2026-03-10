@@ -1,5 +1,6 @@
 // =====================================================
 // api.js – stabil version med datumformat + adressstöd
+// + deal status check för verifierade affärer
 // =====================================================
 
 // --- Helpers -----------------------------------------------------
@@ -62,6 +63,38 @@ function formatDate(dateStr) {
   }
 }
 
+function normalizeText(v) {
+  return String(v || '').trim();
+}
+
+function normalizeSourceForDealCheck(input) {
+  const v = normalizeText(input).toLowerCase();
+
+  if (v.includes('tradera')) return 'TRADERA';
+  if (v.includes('blocket')) return 'BLOCKET';
+  if (v.includes('airbnb')) return 'AIRBNB';
+  if (v.includes('ebay')) return 'EBAY';
+  if (v.includes('tiptap')) return 'TIPTAP';
+  if (v.includes('hygglo')) return 'HYGGLO';
+  if (v.includes('husknuten')) return 'HUSKNUTEN';
+  if (v.includes('facebook')) return 'FACEBOOK';
+
+  return 'OTHER';
+}
+
+function extractProofRefForDealCheck(payload) {
+  return (
+    normalizeText(payload?.proofRef) ||
+    normalizeText(payload?.deal?.orderId) ||
+    normalizeText(payload?.deal?.bookingId) ||
+    normalizeText(payload?.deal?.transactionId) ||
+    normalizeText(payload?.deal?.externalProofRef) ||
+    normalizeText(payload?.counterparty?.orderId) ||
+    normalizeText(payload?.pageUrl) ||
+    ''
+  );
+}
+
 // --- API ---------------------------------------------------------
 
 const api = {
@@ -71,6 +104,28 @@ const api = {
       headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(payload),
       credentials: 'include'
+    }).then(async (r) => {
+      const raw = await r.text();
+      try { return JSON.parse(raw); }
+      catch { return { ok: r.ok, status: r.status, raw }; }
+    });
+  },
+
+  checkRatingDealStatus: (payload) => {
+    const source = normalizeSourceForDealCheck(payload?.source || payload?.deal?.platform || '');
+    const proofRef = extractProofRefForDealCheck(payload);
+
+    return fetch('/api/ratings/check-deal-status', {
+      method: 'POST',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      credentials: 'include',
+      body: JSON.stringify({
+        source,
+        proofRef,
+        pageUrl: payload?.pageUrl || '',
+        counterparty: payload?.counterparty || null,
+        deal: payload?.deal || null,
+      }),
     }).then(async (r) => {
       const raw = await r.text();
       try { return JSON.parse(raw); }
@@ -171,7 +226,6 @@ const api = {
   },
 
   getCurrentCustomer: async () => {
-    // Börja med den primära /me-endpointen
     try {
       const json = await api._clientGet('/api/customers/me');
 
@@ -180,7 +234,6 @@ const api = {
       if (json?.id && (json.email || json.subjectRef)) return json;
     } catch {}
 
-    // Alias som fallback om den primära inte ger data
     const fallbackEndpoints = ['/api/auth/me', '/api/profile/me'];
 
     for (const ep of fallbackEndpoints) {
@@ -194,7 +247,6 @@ const api = {
       } catch {}
     }
 
-    // Sista fallback: localStorage + sökning
     try {
       const cached = getStoredUser();
       if (!cached) return null;
