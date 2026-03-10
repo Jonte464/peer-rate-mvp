@@ -4,6 +4,7 @@
 // - backend måste uttryckligen svara canRate === true för att vi ska öppna rate.html
 // - vid alreadyRated cachear vi lokalt
 // - vid fel/timeout/oklart svar => öppna INTE
+// - rate.html kan dessutom markera deals som rated tillbaka till extensionen
 
 const API_BASE = "https://api.peerrate.ai";
 const RATE_PAGE_BASE = "https://peerrate.ai/rate.html";
@@ -176,17 +177,21 @@ async function checkDealStatusWithBackend(payload) {
   }
 
   try {
-    const res = await fetchWithTimeout(`${API_BASE}/api/ratings/check-deal-status`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        source,
-        proofRef,
-        pageUrl: payload?.pageUrl || "",
-        counterparty: payload?.counterparty || null,
-        deal: payload?.deal || null,
-      }),
-    }, 6000);
+    const res = await fetchWithTimeout(
+      `${API_BASE}/api/ratings/check-deal-status`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source,
+          proofRef,
+          pageUrl: payload?.pageUrl || "",
+          counterparty: payload?.counterparty || null,
+          deal: payload?.deal || null,
+        }),
+      },
+      6000
+    );
 
     const raw = await res.text();
 
@@ -227,7 +232,6 @@ async function checkDealStatusWithBackend(payload) {
       };
     }
 
-    // otydligt svar => fail closed
     return {
       ok: false,
       alreadyRated: false,
@@ -262,7 +266,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const payload = msg.payload || {};
       const result = await checkDealStatusWithBackend(payload);
 
-      // Öppna bara om backend explicit säger ja
       if (result?.ok === true && result?.canRate === true && result?.alreadyRated !== true) {
         const url = buildRateUrl(payload);
         await chrome.tabs.create({ url });
@@ -292,6 +295,20 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         alreadyRated: false,
         canRate: false,
         error: result?.error || "Rating flow blocked because backend did not explicitly allow it.",
+      });
+    })();
+    return true;
+  }
+
+  if (msg.type === "markDealRatedFromPage") {
+    (async () => {
+      const payload = msg.payload || {};
+      const ok = await markDealRated(payload);
+
+      sendResponse({
+        ok: !!ok,
+        stored: !!ok,
+        key: buildDealKey(payload),
       });
     })();
     return true;

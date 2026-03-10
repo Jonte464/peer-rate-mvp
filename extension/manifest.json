@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PeerRate – Verified Deal Trigger (MVP)",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Skickar verifierad affärsinfo från plattformar (börjar med Tradera) till PeerRate.",
   "action": {
     "default_title": "PeerRate",
@@ -30,6 +30,14 @@
       ],
       "js": ["content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://peerrate.ai/*",
+        "https://www.peerrate.ai/*"
+      ],
+      "js": ["page-bridge.js"],
+      "run_at": "document_start"
     }
   ]
 }

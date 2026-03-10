@@ -139,6 +139,42 @@ function hasPendingIdentity(p) {
   );
 }
 
+function buildDealPayloadForExtension(pendingLike) {
+  const p = pendingLike || {};
+  return {
+    source: p?.source || p?.deal?.platform || '',
+    proofRef:
+      p?.proofRef ||
+      p?.deal?.orderId ||
+      p?.counterparty?.orderId ||
+      p?.pageUrl ||
+      '',
+    pageUrl: p?.pageUrl || p?.deal?.pageUrl || p?.counterparty?.pageUrl || '',
+    deal: p?.deal || null,
+    counterparty: p?.counterparty || null,
+  };
+}
+
+function notifyExtensionDealRated(pendingLike) {
+  try {
+    const payload = buildDealPayloadForExtension(pendingLike);
+    const proofRef = String(payload?.proofRef || '').trim();
+    const source = String(payload?.source || '').trim();
+
+    if (!proofRef || !source) return;
+
+    window.postMessage(
+      {
+        type: 'PEERRATE_MARK_DEAL_RATED',
+        payload,
+      },
+      window.location.origin
+    );
+  } catch (err) {
+    console.warn('[PeerRate] notifyExtensionDealRated failed:', err);
+  }
+}
+
 async function syncPendingStatusWithBackend() {
   const pending = getPending();
   if (!pending || !hasPendingIdentity(pending)) {
@@ -150,6 +186,7 @@ async function syncPendingStatusWithBackend() {
 
     if (status?.ok && status.alreadyRated) {
       try { markDealRated(pending); } catch {}
+      notifyExtensionDealRated(pending);
       clearPending();
       return status;
     }
@@ -175,6 +212,7 @@ async function renderAll() {
   const p = getPending();
 
   if (p && isDealRated(p)) {
+    notifyExtensionDealRated(p);
     clearPending();
     renderVerifiedDealUI(null);
     removeLockedFormCard();
@@ -204,6 +242,7 @@ export function initRatingLogin() {
   const pending = fromUrl || getPending();
 
   if (pending && isDealRated(pending)) {
+    notifyExtensionDealRated(pending);
     clearPending();
     renderVerifiedDealUI(null);
   } else if (pending) {
@@ -343,6 +382,7 @@ async function handleSubmit(e) {
     if (!result || result.ok === false) {
       if (isDuplicateRatingError(result)) {
         try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
+        notifyExtensionDealRated(pending || { source: sourceRaw, proofRef });
         clearPending();
         showNotification('error', t('rate_error_duplicate', 'Omdöme har redan lämnats för denna affär.'), 'notice');
       } else {
@@ -355,6 +395,7 @@ async function handleSubmit(e) {
     }
 
     try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
+    notifyExtensionDealRated(pending || { source: sourceRaw, proofRef });
     clearPending();
 
     showNotification('success', t('rate_success_saved_toast', 'Tack! Ditt omdöme är sparat.'), 'notice');
