@@ -3,12 +3,17 @@
 // Behåller legacy-endpointen /ratings/exists
 // och lägger till ny plattformsoberoende endpoint:
 // POST /api/ratings/check-deal-status
+//
+// NYTT:
+// - Extension-kanalen för TRADERA kräver marketplace identity match
+// - Backend jämför aktivt marketplace-konto från sidan mot sparat ExternalProfile
+// - Om identiteten inte matchar blockeras rating-popup
 
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = global.prisma || new PrismaClient();
 
 function requireAuthCompat(req, res, next) {
   if (req.user) return next();
@@ -20,6 +25,10 @@ function normalizeText(v) {
 }
 
 function normalizeTextLower(v) {
+  return normalizeText(v).toLowerCase();
+}
+
+function normalizeEmail(v) {
   return normalizeText(v).toLowerCase();
 }
 
@@ -74,6 +83,217 @@ function buildCanonicalKey(source, proofRef) {
   return `${s}|${p}`;
 }
 
+function extractPeerRateIdentity(req) {
+  const headerEmail = normalizeEmail(req.headers["x-user-email"]);
+  const bodyEmail =
+    normalizeEmail(req.body?.peerRateIdentity?.email) ||
+    normalizeEmail(req.body?.peerRateIdentity?.subjectRef) ||
+    normalizeEmail(req.body?.peerRateEmail) ||
+    "";
+
+  const email = headerEmail || bodyEmail || "";
+
+  return {
+    email,
+    id: normalizeText(req.body?.peerRateIdentity?.id || ""),
+    subjectRef: normalizeEmail(req.body?.peerRateIdentity?.subjectRef || ""),
+    fullName: normalizeText(req.body?.peerRateIdentity?.fullName || ""),
+  };
+}
+
+function extractActiveMarketplaceIdentity(body) {
+  const raw = body?.activeMarketplaceIdentity || {};
+  const platform = mapExternalPlatform(raw.platform || body?.source || body?.deal?.platform || "");
+
+  return {
+    platform,
+    username: normalizeText(raw.username || raw.alias || ""),
+    email: normalizeEmail(raw.email || ""),
+    name: normalizeText(raw.name || ""),
+    confidence: normalizeText(raw.confidence || ""),
+  };
+}
+
+function buildComparableIdentitySet(values) {
+  const set = new Set();
+
+  for (const v of values || []) {
+    const text = normalizeTextLower(v);
+    if (text) set.add(text);
+  }
+
+  return set;
+}
+
+async function findCustomerByIdentityEmail(email) {
+  if (!email) return null;
+
+  return prisma.customer.findFirst({
+    where: {
+      OR: [
+        { email },
+        { subjectRef: email },
+      ],
+    },
+    select: {
+      id: true,
+      email: true,
+      subjectRef: true,
+      fullName: true,
+    },
+  });
+}
+
+async function findLinkedExternalProfile(customerId, platform) {
+  if (!customerId || !platform || platform === "OTHER") return null;
+
+  return prisma.externalProfile.findFirst({
+    where: {
+      customerId,
+      platform,
+    },
+    select: {
+      id: true,
+      platform: true,
+      username: true,
+      email: true,
+      externalUserId: true,
+      status: true,
+      updatedAt: true,
+    },
+  });
+}
+
+function evaluateIdentityMatch(linkedProfile, activeIdentity) {
+  const linkedStatus = normalizeText(linkedProfile?.status || "").toUpperCase();
+  const linkedUsername = normalizeText(linkedProfile?.username || "");
+  const linkedEmail = normalizeEmail(linkedProfile?.email || "");
+  const linkedExternalUserId = normalizeText(linkedProfile?.externalUserId || "");
+
+  if (!linkedProfile) {
+    return {
+      ok: false,
+      identityMatch: false,
+      reason: "missing_linked_marketplace_profile",
+      matchedOn: null,
+    };
+  }
+
+  if (linkedStatus !== "ACTIVE") {
+    return {
+      ok: false,
+      identityMatch: false,
+      reason: "linked_marketplace_profile_not_active",
+      matchedOn: null,
+    };
+  }
+
+  if (!linkedUsername && !linkedEmail && !linkedExternalUserId) {
+    return {
+      ok: false,
+      identityMatch: false,
+      reason: "linked_marketplace_profile_missing_identity_values",
+      matchedOn: null,
+    };
+  }
+
+  const activeUsername = normalizeText(activeIdentity?.username || "");
+  const activeEmail = normalizeEmail(activeIdentity?.email || "");
+
+  if (!activeUsername && !activeEmail) {
+    return {
+      ok: false,
+      identityMatch: false,
+      reason: "missing_active_marketplace_identity",
+      matchedOn: null,
+    };
+  }
+
+  const linkedComparable = buildComparableIdentitySet([
+    linkedUsername,
+    linkedEmail,
+    linkedExternalUserId,
+  ]);
+
+  const activeComparable = buildComparableIdentitySet([
+    activeUsername,
+    activeEmail,
+  ]);
+
+  for (const candidate of activeComparable) {
+    if (linkedComparable.has(candidate)) {
+      let matchedOn = "identity";
+      if (candidate === normalizeTextLower(linkedUsername)) matchedOn = "username";
+      else if (candidate === normalizeTextLower(linkedEmail)) matchedOn = "email";
+      else if (candidate === normalizeTextLower(linkedExternalUserId)) matchedOn = "externalUserId";
+
+      return {
+        ok: true,
+        identityMatch: true,
+        reason: null,
+        matchedOn,
+      };
+    }
+  }
+
+  return {
+    ok: false,
+    identityMatch: false,
+    reason: "active_marketplace_identity_mismatch",
+    matchedOn: null,
+  };
+}
+
+async function evaluateMarketplaceIdentityGate(req, platform) {
+  const peerRateIdentity = extractPeerRateIdentity(req);
+  const activeMarketplaceIdentity = extractActiveMarketplaceIdentity(req.body);
+
+  if (!peerRateIdentity.email) {
+    return {
+      ok: false,
+      identityMatch: false,
+      reason: "missing_peerrate_identity",
+      matchedOn: null,
+      linkedProfileFound: false,
+      linkedProfileStatus: null,
+      peerRateCustomerId: null,
+      peerRateIdentity,
+      activeMarketplaceIdentity,
+    };
+  }
+
+  const customer = await findCustomerByIdentityEmail(peerRateIdentity.email);
+
+  if (!customer?.id) {
+    return {
+      ok: false,
+      identityMatch: false,
+      reason: "peerrate_customer_not_found",
+      matchedOn: null,
+      linkedProfileFound: false,
+      linkedProfileStatus: null,
+      peerRateCustomerId: null,
+      peerRateIdentity,
+      activeMarketplaceIdentity,
+    };
+  }
+
+  const linkedProfile = await findLinkedExternalProfile(customer.id, platform);
+  const identityResult = evaluateIdentityMatch(linkedProfile, activeMarketplaceIdentity);
+
+  return {
+    ok: identityResult.ok,
+    identityMatch: identityResult.identityMatch,
+    reason: identityResult.reason,
+    matchedOn: identityResult.matchedOn,
+    linkedProfileFound: !!linkedProfile,
+    linkedProfileStatus: linkedProfile?.status || null,
+    peerRateCustomerId: customer.id,
+    peerRateIdentity,
+    activeMarketplaceIdentity,
+  };
+}
+
 /**
  * Legacy:
  * GET /api/ratings/exists?dealId=...
@@ -114,6 +334,9 @@ router.get("/ratings/exists", requireAuthCompat, async (req, res) => {
  * 2) deal via platform + externalItemId
  * 3) rating.proofRef
  * 4) deal via pageUrl
+ *
+ * NYTT:
+ * - För TRADERA + extension-kanal krävs marketplace identity match
  */
 router.post("/ratings/check-deal-status", async (req, res) => {
   try {
@@ -122,12 +345,58 @@ router.post("/ratings/check-deal-status", async (req, res) => {
     const itemId = extractItemId(req.body);
     const pageUrl = normalizeText(req.body?.pageUrl || req.body?.deal?.pageUrl || req.body?.counterparty?.pageUrl || "");
     const canonicalKey = buildCanonicalKey(platform, proofRef);
+    const channel = normalizeTextLower(req.body?.channel || "");
+    const identityRequired = channel === "extension" && platform === "TRADERA";
 
     if (!proofRef && !itemId && !pageUrl) {
       return res.status(400).json({
         ok: false,
         error: "Missing proofRef/itemId/pageUrl",
       });
+    }
+
+    let identityGate = {
+      ok: true,
+      identityMatch: null,
+      reason: null,
+      matchedOn: null,
+      linkedProfileFound: false,
+      linkedProfileStatus: null,
+      peerRateCustomerId: null,
+      peerRateIdentity: extractPeerRateIdentity(req),
+      activeMarketplaceIdentity: extractActiveMarketplaceIdentity(req.body),
+    };
+
+    if (identityRequired) {
+      identityGate = await evaluateMarketplaceIdentityGate(req, platform);
+
+      if (!identityGate.ok) {
+        return res.json({
+          ok: true,
+          alreadyRated: false,
+          canRate: false,
+          platform,
+          proofRef,
+          itemId,
+          pageUrl: pageUrl || null,
+          canonicalKey,
+          matchedBy: null,
+          matchedDealId: null,
+          identityRequired: true,
+          identityMatch: false,
+          identityReason: identityGate.reason,
+          identityMatchedOn: identityGate.matchedOn,
+          linkedMarketplaceFound: identityGate.linkedProfileFound,
+          linkedMarketplaceStatus: identityGate.linkedProfileStatus,
+          debug: {
+            channel,
+            identityRequired,
+            peerRateIdentityEmail: identityGate.peerRateIdentity?.email || null,
+            activeMarketplaceUsername: identityGate.activeMarketplaceIdentity?.username || null,
+            activeMarketplaceEmail: identityGate.activeMarketplaceIdentity?.email || null,
+          },
+        });
+      }
     }
 
     let matchedBy = null;
@@ -272,7 +541,9 @@ router.post("/ratings/check-deal-status", async (req, res) => {
     return res.json({
       ok: true,
       alreadyRated,
-      canRate: !alreadyRated,
+      canRate: identityRequired
+        ? identityGate.identityMatch === true && !alreadyRated
+        : !alreadyRated,
       platform,
       proofRef,
       itemId,
@@ -280,9 +551,19 @@ router.post("/ratings/check-deal-status", async (req, res) => {
       canonicalKey,
       matchedBy,
       matchedDealId,
+      identityRequired,
+      identityMatch: identityRequired ? identityGate.identityMatch === true : null,
+      identityReason: identityRequired ? identityGate.reason : null,
+      identityMatchedOn: identityRequired ? identityGate.matchedOn : null,
+      linkedMarketplaceFound: identityRequired ? identityGate.linkedProfileFound : null,
+      linkedMarketplaceStatus: identityRequired ? identityGate.linkedProfileStatus : null,
       debug: {
+        channel,
         proofCandidates,
         itemCandidates,
+        peerRateIdentityEmail: identityGate.peerRateIdentity?.email || null,
+        activeMarketplaceUsername: identityGate.activeMarketplaceIdentity?.username || null,
+        activeMarketplaceEmail: identityGate.activeMarketplaceIdentity?.email || null,
       },
     });
   } catch (err) {

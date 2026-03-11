@@ -5,6 +5,11 @@
 // - vid alreadyRated cachear vi lokalt
 // - vid fel/timeout/oklart svar => öppna INTE
 // - rate.html kan dessutom markera deals som rated tillbaka till extensionen
+//
+// NYTT:
+// - sparar inloggad PeerRate-identitet från peerrate.ai
+// - skickar PeerRate-identitet + aktiv marketplace-identitet till backend
+// - för TRADERA krävs identity match i backend
 
 const API_BASE = "https://api.peerrate.ai";
 const RATE_PAGE_BASE = "https://peerrate.ai/rate.html";
@@ -12,11 +17,17 @@ const RATE_PAGE_BASE = "https://peerrate.ai/rate.html";
 const RATED_CACHE_KEY = "peerrate_extension_rated_cache_v1";
 const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90 dagar
 
+const AUTH_IDENTITY_KEY = "peerrate_extension_auth_identity_v1";
+
 function normalizeText(v) {
   return String(v || "").trim();
 }
 
 function normalizeLower(v) {
+  return normalizeText(v).toLowerCase();
+}
+
+function normalizeEmail(v) {
   return normalizeText(v).toLowerCase();
 }
 
@@ -79,6 +90,55 @@ function storageSetLocal(obj) {
   return new Promise((resolve) => {
     chrome.storage.local.set(obj, () => resolve(true));
   });
+}
+
+function storageRemoveLocal(key) {
+  return new Promise((resolve) => {
+    chrome.storage.local.remove(key, () => resolve(true));
+  });
+}
+
+function normalizePeerRateIdentity(identity) {
+  const out = {
+    id: normalizeText(identity?.id || ""),
+    email: normalizeEmail(identity?.email || identity?.subjectRef || ""),
+    subjectRef: normalizeEmail(identity?.subjectRef || identity?.email || ""),
+    fullName: normalizeText(identity?.fullName || ""),
+    syncedAt: normalizeText(identity?.syncedAt || new Date().toISOString()),
+  };
+
+  if (!out.email && !out.subjectRef && !out.id) return null;
+  return out;
+}
+
+async function readAuthIdentity() {
+  try {
+    const raw = await storageGetLocal(AUTH_IDENTITY_KEY);
+    const normalized = normalizePeerRateIdentity(raw || {});
+    return normalized || null;
+  } catch {
+    return null;
+  }
+}
+
+async function writeAuthIdentity(identity) {
+  try {
+    const normalized = normalizePeerRateIdentity(identity || {});
+    if (!normalized) return false;
+    await storageSetLocal({ [AUTH_IDENTITY_KEY]: normalized });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function clearAuthIdentity() {
+  try {
+    await storageRemoveLocal(AUTH_IDENTITY_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function readRatedCache() {
@@ -153,6 +213,7 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
 async function checkDealStatusWithBackend(payload) {
   const source = normalizeSource(payload?.source || payload?.deal?.platform || "");
   const proofRef = extractProofRef(payload);
+  const peerRateIdentity = await readAuthIdentity();
 
   if (!proofRef) {
     return {
@@ -177,15 +238,26 @@ async function checkDealStatusWithBackend(payload) {
   }
 
   try {
+    const headers = {
+      "Content-Type": "application/json",
+    };
+
+    if (peerRateIdentity?.email) {
+      headers["x-user-email"] = peerRateIdentity.email;
+    }
+
     const res = await fetchWithTimeout(
       `${API_BASE}/api/ratings/check-deal-status`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
+          channel: "extension",
           source,
           proofRef,
           pageUrl: payload?.pageUrl || "",
+          peerRateIdentity: peerRateIdentity || null,
+          activeMarketplaceIdentity: payload?.activeMarketplaceIdentity || null,
           counterparty: payload?.counterparty || null,
           deal: payload?.deal || null,
         }),
@@ -214,11 +286,14 @@ async function checkDealStatusWithBackend(payload) {
     }
 
     if (json.alreadyRated === true || json.canRate === false) {
-      await markDealRated({ source, proofRef });
+      if (json.alreadyRated === true) {
+        await markDealRated({ source, proofRef });
+      }
+
       return {
         ...json,
         ok: true,
-        alreadyRated: true,
+        alreadyRated: !!json.alreadyRated,
         canRate: false,
       };
     }
@@ -252,6 +327,28 @@ async function checkDealStatusWithBackend(payload) {
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.type) return;
+
+  if (msg.type === "syncAuthIdentityFromPage") {
+    (async () => {
+      const ok = await writeAuthIdentity(msg.payload || {});
+      const stored = await readAuthIdentity();
+
+      sendResponse({
+        ok: !!ok,
+        stored: !!stored,
+        email: stored?.email || null,
+      });
+    })();
+    return true;
+  }
+
+  if (msg.type === "clearAuthIdentityFromPage") {
+    (async () => {
+      const ok = await clearAuthIdentity();
+      sendResponse({ ok: !!ok, cleared: !!ok });
+    })();
+    return true;
+  }
 
   if (msg.type === "checkDealStatus") {
     (async () => {
@@ -294,7 +391,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         opened: false,
         alreadyRated: false,
         canRate: false,
-        error: result?.error || "Rating flow blocked because backend did not explicitly allow it.",
+        error: result?.error || result?.identityReason || "Rating flow blocked because backend did not explicitly allow it.",
       });
     })();
     return true;

@@ -5,6 +5,11 @@
 // - okänt fel / timeout / otydligt svar => visa INTE knapp
 // - alreadyRated => visa INTE knapp
 // - canRate === true => visa knapp
+//
+// NYTT:
+// - försöker läsa aktivt Tradera-konto från sidan
+// - skickar activeMarketplaceIdentity till backend
+// - om aktiv identitet inte kan läsas blir det ingen knapp
 
 (function () {
   const DEFAULTS = { peerrate_enabled: true };
@@ -172,6 +177,7 @@
     const pageUrl = location.href;
     const cp = extractCounterpartyFromOrderPage();
     const order = extractOrderInfo();
+    const activeIdentity = extractActiveTraderaIdentity(cp);
 
     const hasCounterparty = !!(cp.email || cp.username);
     const proofRef = order.orderId || pageUrl;
@@ -179,11 +185,15 @@
     if (!hasCounterparty) return null;
     if (!proofRef) return null;
 
+    // Konservativt:
+    // Om vi inte kan läsa aktivt konto från sidan skickar vi ändå payload till backend,
+    // men backend kommer att blockera canRate för extension-kanalen.
     return {
-      v: 1,
+      v: 2,
       source: "tradera",
       pageUrl,
       proofRef,
+      activeMarketplaceIdentity: activeIdentity,
       deal: {
         platform: "TRADERA",
         orderId: order.orderId || null,
@@ -281,7 +291,6 @@
             return;
           }
 
-          // okänt eller nekad kontroll => öppna inte
           console.warn("[PeerRate extension] Rating flow blocked because canRate was not explicitly true.", result);
         } catch (err) {
           console.warn("[PeerRate extension] click handler failed:", err);
@@ -381,6 +390,181 @@
     const dateISO = extractDateISO(t);
 
     return { orderId, itemId, title, amount, currency: amount != null ? "SEK" : null, dateISO };
+  }
+
+  function extractActiveTraderaIdentity(counterparty) {
+    const counterpartyUsername = normalizeLower(counterparty?.username || "");
+    const counterpartyEmail = normalizeLower(counterparty?.email || "");
+
+    const stopWords = new Set([
+      "logga in",
+      "logga ut",
+      "konto",
+      "konton",
+      "mina sidor",
+      "min sida",
+      "mina köp",
+      "mina salda",
+      "mina sålda",
+      "köp",
+      "sälj",
+      "salj",
+      "meddelanden",
+      "aviseringar",
+      "notiser",
+      "hjälp",
+      "hjalp",
+      "support",
+      "tradera",
+      "meny",
+      "menu",
+      "spara",
+      "redigera",
+      "profil",
+      "account",
+      "my account",
+      "settings",
+    ]);
+
+    function isLikelyAlias(text) {
+      const value = normalizeText(text);
+      const lower = value.toLowerCase();
+
+      if (!value) return false;
+      if (value.length < 3 || value.length > 40) return false;
+      if (value.includes("@")) return false;
+      if (/^\d+$/.test(value)) return false;
+      if (value.split(/\s+/).length > 3) return false;
+      if (stopWords.has(lower)) return false;
+
+      return true;
+    }
+
+    function extractAliasCandidatesFromHref(href) {
+      try {
+        if (!href) return [];
+        const url = new URL(href, location.origin);
+        const parts = url.pathname.split("/").map((p) => p.trim()).filter(Boolean);
+        const out = [];
+
+        for (let i = 0; i < parts.length; i += 1) {
+          const part = decodeURIComponent(parts[i] || "");
+          const lower = part.toLowerCase();
+
+          if (["profile", "member", "user", "konto", "account", "seller", "buyer"].includes(lower)) {
+            const next = decodeURIComponent(parts[i + 1] || "");
+            if (isLikelyAlias(next)) out.push(next);
+          }
+        }
+
+        return out;
+      } catch {
+        return [];
+      }
+    }
+
+    function collectAccountTexts() {
+      const selectors = [
+        "header a",
+        "header button",
+        "header [title]",
+        "nav a",
+        "nav button",
+        "[aria-label*='konto' i]",
+        "[aria-label*='account' i]",
+        "[data-testid*='account' i]",
+        "[class*='account'] a",
+        "[class*='profile'] a",
+      ];
+
+      const seen = new Set();
+      const out = [];
+
+      for (const selector of selectors) {
+        const nodes = document.querySelectorAll(selector);
+        for (const node of nodes) {
+          const texts = [
+            node.textContent || "",
+            node.getAttribute?.("aria-label") || "",
+            node.getAttribute?.("title") || "",
+          ];
+
+          for (const raw of texts) {
+            const text = normalizeText(raw);
+            if (!text) continue;
+            if (seen.has(text)) continue;
+            seen.add(text);
+            out.push(text);
+          }
+
+          const href = node.getAttribute?.("href") || "";
+          const hrefCandidates = extractAliasCandidatesFromHref(href);
+          for (const candidate of hrefCandidates) {
+            if (!candidate) continue;
+            if (seen.has(candidate)) continue;
+            seen.add(candidate);
+            out.push(candidate);
+          }
+        }
+      }
+
+      return out;
+    }
+
+    function collectEmailsFromAccountAreas() {
+      const selectors = [
+        "header",
+        "nav",
+        "[aria-label*='konto' i]",
+        "[aria-label*='account' i]",
+        "[data-testid*='account' i]",
+        "[class*='account']",
+        "[class*='profile']",
+      ];
+
+      const emails = new Set();
+
+      for (const selector of selectors) {
+        const nodes = document.querySelectorAll(selector);
+        for (const node of nodes) {
+          const text = normalizeText(node.innerText || "");
+          if (!text) continue;
+
+          const matches = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || [];
+          for (const match of matches) {
+            const email = normalizeLower(match);
+            if (email) emails.add(email);
+          }
+        }
+      }
+
+      return Array.from(emails);
+    }
+
+    const rawTexts = collectAccountTexts();
+
+    const aliasCandidates = rawTexts
+      .map((text) => normalizeText(text))
+      .filter((text) => isLikelyAlias(text))
+      .filter((text) => normalizeLower(text) !== counterpartyUsername)
+      .filter((text) => normalizeLower(text) !== counterpartyEmail);
+
+    const emailCandidates = collectEmailsFromAccountAreas()
+      .filter((email) => email !== counterpartyEmail);
+
+    const username = aliasCandidates[0] || null;
+    const email = emailCandidates[0] || null;
+
+    if (!username && !email) {
+      return null;
+    }
+
+    return {
+      platform: "TRADERA",
+      username,
+      email,
+      confidence: username || email ? "heuristic" : "none",
+    };
   }
 
   function extractAmountSEK(text) {
