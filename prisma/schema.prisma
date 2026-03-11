@@ -255,6 +255,7 @@ model ExternalProfile {
 
   @@index([customerId])
   @@index([platform, username])
+  @@unique([customerId, platform])
 }
 
 /**
@@ -393,12 +394,18 @@ enum ExternalPlatform {
   BLOCKET
   TRADERA
   EBAY
+  AIRBNB
+  TIPTAP
+  HYGGLO
+  HUSKNUTEN
+  FACEBOOK
 }
 
 enum ExternalProfileStatus {
   ACTIVE
   DISABLED
   ERROR
+  NO_ACCOUNT
 }
 
 enum ListingStatus {

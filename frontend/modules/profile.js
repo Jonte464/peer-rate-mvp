@@ -7,13 +7,23 @@ import { renderPRating, loadMyRating, rerenderRatingWidgetsFromCache } from './p
 import { initRatingForm } from './ratingForm.js';
 import { t, applyLang } from './landing/language.js';
 
-export { initRatingLogin } from './ratingForm.js'; // vidareexport för /rate.html
+export { initRatingLogin } from './ratingForm.js';
 
 let latestExternalData = null;
 let latestMarketplaceProfiles = null;
 let languageChangeBound = false;
 
 const LEGACY_AVATAR_KEY = 'peerrate.avatar.dataUrl';
+const MARKETPLACE_PLATFORMS = [
+  { key: 'TRADERA', label: 'Tradera' },
+  { key: 'BLOCKET', label: 'Blocket' },
+  { key: 'AIRBNB', label: 'Airbnb' },
+  { key: 'EBAY', label: 'eBay' },
+  { key: 'TIPTAP', label: 'Tiptap' },
+  { key: 'HYGGLO', label: 'Hygglo' },
+  { key: 'HUSKNUTEN', label: 'Husknuten' },
+  { key: 'FACEBOOK', label: 'Facebook Marketplace' },
+];
 
 function normalizeUserIdentity(user) {
   if (!user || typeof user !== 'object') {
@@ -246,47 +256,121 @@ function initAvatarUpload() {
   }
 }
 
+function getMarketplaceTableBody() {
+  return document.getElementById('marketplace-table-body');
+}
+
 function normalizeMarketplaceProfilesResponse(profiles) {
   const p = profiles || {};
+  const out = {};
+  for (const row of MARKETPLACE_PLATFORMS) {
+    out[row.key] = p[row.key] || null;
+  }
+  return out;
+}
+
+function getStatusMeta(profile) {
+  if (!profile) {
+    return {
+      text: 'Inte kopplad',
+      className: 'status-not-linked',
+      rowClass: '',
+      noAccount: false,
+      username: '',
+    };
+  }
+
+  if (profile.status === 'NO_ACCOUNT') {
+    return {
+      text: 'Konto saknas',
+      className: 'status-missing',
+      rowClass: 'marketplace-row-disabled',
+      noAccount: true,
+      username: '',
+    };
+  }
+
+  if (profile.status === 'ACTIVE' && profile.username && profile.username !== '__NO_ACCOUNT__') {
+    return {
+      text: 'Kopplad',
+      className: 'status-linked',
+      rowClass: '',
+      noAccount: false,
+      username: profile.username,
+    };
+  }
+
   return {
-    TRADERA: p.TRADERA || null,
-    BLOCKET: p.BLOCKET || null,
-    EBAY: p.EBAY || null,
+    text: 'Inte kopplad',
+    className: 'status-not-linked',
+    rowClass: '',
+    noAccount: false,
+    username: '',
   };
 }
 
 function renderMarketplaceProfiles() {
+  const tbody = getMarketplaceTableBody();
+  if (!tbody) return;
+
   const profiles = normalizeMarketplaceProfilesResponse(latestMarketplaceProfiles);
 
-  const traderaInput = document.getElementById('marketplace-tradera-username');
-  const blocketInput = document.getElementById('marketplace-blocket-username');
-  const ebayInput = document.getElementById('marketplace-ebay-username');
+  tbody.innerHTML = '';
 
-  const traderaStatus = document.getElementById('marketplace-tradera-status');
-  const blocketStatus = document.getElementById('marketplace-blocket-status');
-  const ebayStatus = document.getElementById('marketplace-ebay-status');
+  for (const platform of MARKETPLACE_PLATFORMS) {
+    const profile = profiles[platform.key];
+    const meta = getStatusMeta(profile);
 
-  if (traderaInput) traderaInput.value = profiles.TRADERA?.username || '';
-  if (blocketInput) blocketInput.value = profiles.BLOCKET?.username || '';
-  if (ebayInput) ebayInput.value = profiles.EBAY?.username || '';
+    const tr = document.createElement('tr');
+    tr.className = meta.rowClass;
 
-  if (traderaStatus) {
-    traderaStatus.textContent = profiles.TRADERA?.username
-      ? `Kopplat: ${profiles.TRADERA.username}`
-      : 'Ej kopplat';
+    tr.innerHTML = `
+      <td class="marketplace-platform-cell">${platform.label}</td>
+      <td class="marketplace-username-cell">
+        <input
+          type="text"
+          class="marketplace-username-input"
+          data-platform="${platform.key}"
+          value="${escapeHtml(meta.username)}"
+          placeholder="Ange användarnamn"
+          ${meta.noAccount ? 'disabled' : ''}
+        />
+      </td>
+      <td class="marketplace-status-cell">
+        <span class="marketplace-status ${meta.className}">${meta.text}</span>
+      </td>
+      <td class="marketplace-actions-cell">
+        <div class="marketplace-action-wrap">
+          <button
+            type="button"
+            class="secondary marketplace-save-btn"
+            data-platform="${platform.key}"
+          >
+            Spara
+          </button>
+          <button
+            type="button"
+            class="secondary marketplace-toggle-missing-btn"
+            data-platform="${platform.key}"
+            data-no-account="${meta.noAccount ? '1' : '0'}"
+          >
+            ${meta.noAccount ? 'Aktivera' : 'Saknar konto'}
+          </button>
+        </div>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
   }
+}
 
-  if (blocketStatus) {
-    blocketStatus.textContent = profiles.BLOCKET?.username
-      ? `Kopplat: ${profiles.BLOCKET.username}`
-      : 'Ej kopplat';
-  }
-
-  if (ebayStatus) {
-    ebayStatus.textContent = profiles.EBAY?.username
-      ? `Kopplat: ${profiles.EBAY.username}`
-      : 'Ej kopplat';
-  }
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 async function loadMarketplaceProfiles() {
@@ -307,11 +391,12 @@ async function loadMarketplaceProfiles() {
   }
 }
 
-async function saveMarketplaceProfile(platform, username) {
+async function saveMarketplaceProfile(platform, username, noAccount = false) {
   try {
     const result = await api.saveExternalProfile({
       platform,
       username,
+      noAccount,
     });
 
     if (!result || result.ok === false) {
@@ -327,9 +412,9 @@ async function saveMarketplaceProfile(platform, username) {
 
     showNotification(
       'success',
-      username && String(username).trim()
-        ? 'Konto sparat.'
-        : 'Koppling borttagen.',
+      noAccount
+        ? 'Plattform markerad som konto saknas.'
+        : (username && String(username).trim() ? 'Konto sparat.' : 'Koppling borttagen.'),
       'notice'
     );
 
@@ -346,40 +431,44 @@ async function saveMarketplaceProfile(platform, username) {
 }
 
 function bindMarketplaceButtons() {
-  const mappings = [
-    {
-      buttonId: 'save-tradera-profile-btn',
-      inputId: 'marketplace-tradera-username',
-      platform: 'TRADERA',
-    },
-    {
-      buttonId: 'save-blocket-profile-btn',
-      inputId: 'marketplace-blocket-username',
-      platform: 'BLOCKET',
-    },
-    {
-      buttonId: 'save-ebay-profile-btn',
-      inputId: 'marketplace-ebay-username',
-      platform: 'EBAY',
-    },
-  ];
+  const tbody = getMarketplaceTableBody();
+  if (!tbody || tbody.dataset.bound === 'true') return;
+  tbody.dataset.bound = 'true';
 
-  for (const row of mappings) {
-    const btn = document.getElementById(row.buttonId);
-    const input = document.getElementById(row.inputId);
+  tbody.addEventListener('click', async (event) => {
+    const saveBtn = event.target.closest('.marketplace-save-btn');
+    const toggleBtn = event.target.closest('.marketplace-toggle-missing-btn');
 
-    if (!btn || !input || btn.dataset.bound === 'true') continue;
-    btn.dataset.bound = 'true';
+    if (saveBtn) {
+      const platform = saveBtn.getAttribute('data-platform') || '';
+      const input = tbody.querySelector(`.marketplace-username-input[data-platform="${platform}"]`);
+      const username = input ? input.value : '';
 
-    btn.addEventListener('click', async () => {
-      btn.disabled = true;
+      saveBtn.disabled = true;
       try {
-        await saveMarketplaceProfile(row.platform, input.value || '');
+        await saveMarketplaceProfile(platform, username, false);
       } finally {
-        btn.disabled = false;
+        saveBtn.disabled = false;
       }
-    });
-  }
+      return;
+    }
+
+    if (toggleBtn) {
+      const platform = toggleBtn.getAttribute('data-platform') || '';
+      const isNoAccount = toggleBtn.getAttribute('data-no-account') === '1';
+
+      toggleBtn.disabled = true;
+      try {
+        if (isNoAccount) {
+          await saveMarketplaceProfile(platform, '', false);
+        } else {
+          await saveMarketplaceProfile(platform, '', true);
+        }
+      } finally {
+        toggleBtn.disabled = false;
+      }
+    }
+  });
 }
 
 async function handleLoginSubmit(event) {

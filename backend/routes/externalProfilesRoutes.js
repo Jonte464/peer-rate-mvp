@@ -6,6 +6,17 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const router = express.Router();
 
+const SUPPORTED_PLATFORMS = [
+  "TRADERA",
+  "BLOCKET",
+  "AIRBNB",
+  "EBAY",
+  "TIPTAP",
+  "HYGGLO",
+  "HUSKNUTEN",
+  "FACEBOOK",
+];
+
 function getEmailFromReq(req) {
   const h = String(req.headers["x-user-email"] || "").trim().toLowerCase();
   if (h) return h;
@@ -18,14 +29,15 @@ function getEmailFromReq(req) {
 
 function normalizePlatform(input) {
   const v = String(input || "").trim().toUpperCase();
-  if (v === "TRADERA") return "TRADERA";
-  if (v === "BLOCKET") return "BLOCKET";
-  if (v === "EBAY") return "EBAY";
-  return "";
+  return SUPPORTED_PLATFORMS.includes(v) ? v : "";
 }
 
 function normalizeUsername(input) {
   return String(input || "").trim();
+}
+
+function normalizeNoAccount(input) {
+  return input === true;
 }
 
 async function findCustomerByIdentity(req) {
@@ -51,7 +63,21 @@ async function findCustomerByIdentity(req) {
 const saveSchema = Joi.object({
   platform: Joi.string().required(),
   username: Joi.string().allow("", null).optional(),
+  noAccount: Joi.boolean().optional(),
 }).required();
+
+function emptyProfilesMap() {
+  return {
+    TRADERA: null,
+    BLOCKET: null,
+    AIRBNB: null,
+    EBAY: null,
+    TIPTAP: null,
+    HYGGLO: null,
+    HUSKNUTEN: null,
+    FACEBOOK: null,
+  };
+}
 
 router.get("/external-profiles", async (req, res) => {
   try {
@@ -68,7 +94,7 @@ router.get("/external-profiles", async (req, res) => {
       where: {
         customerId: customer.id,
         platform: {
-          in: ["TRADERA", "BLOCKET", "EBAY"],
+          in: SUPPORTED_PLATFORMS,
         },
       },
       select: {
@@ -83,11 +109,7 @@ router.get("/external-profiles", async (req, res) => {
       },
     });
 
-    const byPlatform = {
-      TRADERA: null,
-      BLOCKET: null,
-      EBAY: null,
-    };
+    const byPlatform = emptyProfilesMap();
 
     for (const row of rows) {
       if (!byPlatform[row.platform]) {
@@ -136,6 +158,7 @@ router.post("/external-profiles", async (req, res) => {
 
     const platform = normalizePlatform(value.platform);
     const username = normalizeUsername(value.username);
+    const noAccount = normalizeNoAccount(value.noAccount);
 
     if (!platform) {
       return res.status(400).json({
@@ -144,20 +167,65 @@ router.post("/external-profiles", async (req, res) => {
       });
     }
 
-    const existing = await prisma.externalProfile.findFirst({
+    const existing = await prisma.externalProfile.findUnique({
       where: {
-        customerId: customer.id,
-        platform,
-      },
-      orderBy: {
-        updatedAt: "desc",
+        customerId_platform: {
+          customerId: customer.id,
+          platform,
+        },
       },
       select: {
         id: true,
+        platform: true,
+        username: true,
+        status: true,
       },
     });
 
-    // Tom username = ta bort koppling för plattformen
+    // Om användaren uttryckligen saknar konto
+    if (noAccount) {
+      let saved;
+
+      if (existing?.id) {
+        saved = await prisma.externalProfile.update({
+          where: { id: existing.id },
+          data: {
+            username: "__NO_ACCOUNT__",
+            status: "NO_ACCOUNT",
+          },
+          select: {
+            id: true,
+            platform: true,
+            username: true,
+            status: true,
+            updatedAt: true,
+          },
+        });
+      } else {
+        saved = await prisma.externalProfile.create({
+          data: {
+            customerId: customer.id,
+            platform,
+            username: "__NO_ACCOUNT__",
+            status: "NO_ACCOUNT",
+          },
+          select: {
+            id: true,
+            platform: true,
+            username: true,
+            status: true,
+            updatedAt: true,
+          },
+        });
+      }
+
+      return res.json({
+        ok: true,
+        profile: saved,
+      });
+    }
+
+    // Tomt username och inte "saknar konto" => ta bort koppling helt
     if (!username) {
       if (existing?.id) {
         await prisma.externalProfile.delete({
