@@ -144,6 +144,62 @@ async function loadAdminSummary() {
   }
 }
 
+function formatDateTime(value) {
+  try {
+    const d = new Date(value || '');
+    return Number.isNaN(d.getTime()) ? '' : d.toLocaleString('sv-SE');
+  } catch {
+    return '';
+  }
+}
+
+function shortText(value, max = 120) {
+  const v = String(value || '');
+  if (v.length <= max) return v;
+  return `${v.slice(0, max - 1)}…`;
+}
+
+function buildRaterDisplay(rating) {
+  return (
+    rating?.raterName ||
+    rating?.raterEmail ||
+    rating?.raterDisplay ||
+    '–'
+  );
+}
+
+async function deleteAdminRating(ratingId) {
+  if (!ratingId) return;
+
+  const ok = window.confirm(
+    'Är du säker på att du vill radera det här omdömet? Detta kan inte ångras.'
+  );
+  if (!ok) return;
+
+  try {
+    const res = await api.adminFetch(
+      `/api/admin/ratings/${encodeURIComponent(ratingId)}`,
+      {
+        method: 'DELETE',
+      }
+    );
+
+    if (res && res.ok) {
+      alert('Omdömet har raderats.');
+      await Promise.all([
+        loadAdminSummary(),
+        loadAdminRecentRatings(),
+      ]);
+      return;
+    }
+
+    alert(res?.error || 'Kunde inte radera omdömet.');
+  } catch (err) {
+    console.error('delete rating error', err);
+    alert('Fel vid radering av omdöme.');
+  }
+}
+
 // ---------------------------------------------------------
 // Senaste betyg
 // ---------------------------------------------------------
@@ -151,26 +207,66 @@ async function loadAdminRecentRatings() {
   if (!adminRatingsTable) return;
   try {
     const res = await api.adminFetch('/api/admin/ratings/recent');
+
     if (res && res.ok && Array.isArray(res.ratings)) {
       const rows = res.ratings;
+
+      if (!rows.length) {
+        adminRatingsTable.innerHTML =
+          '<div class="tiny muted">Det finns inga omdömen ännu.</div>';
+        return;
+      }
+
       let html =
-        '<table><thead><tr><th>Datum</th><th>Kund</th><th>Betyg</th><th>Kommentar</th></tr></thead><tbody>';
+        '<table><thead><tr><th>Datum</th><th>Fått omdöme</th><th>Lämnat av</th><th>Betyg</th><th>Kommentar</th><th></th></tr></thead><tbody>';
+
       rows.forEach((r) => {
-        const d = new Date(r.createdAt);
-        const dateStr = isNaN(d.getTime())
-          ? ''
-          : d.toLocaleString('sv-SE');
-        html += `<tr><td>${dateStr}</td><td>${escapeHtml(
-          r.subject
-        )}</td><td>${escapeHtml(String(r.rating))}</td><td>${escapeHtml(
-          (r.comment || '').slice(0, 120)
-        )}</td></tr>`;
+        html += `
+          <tr data-rating-id="${escapeHtml(String(r.id || ''))}">
+            <td>${escapeHtml(formatDateTime(r.createdAt))}</td>
+            <td>${escapeHtml(r.ratedUser || r.subject || '')}</td>
+            <td>${escapeHtml(buildRaterDisplay(r))}</td>
+            <td>${escapeHtml(String(r.rating ?? r.score ?? ''))}</td>
+            <td>${escapeHtml(shortText(r.comment || r.text || '', 120))}</td>
+            <td>
+              <button
+                type="button"
+                class="icon-btn danger delete-rating-btn"
+                data-id="${escapeHtml(String(r.id || ''))}"
+              >
+                Ta bort
+              </button>
+            </td>
+          </tr>
+        `;
       });
+
       html += '</tbody></table>';
       adminRatingsTable.innerHTML = html;
-    } else {
-      adminRatingsTable.textContent = 'Kunde inte ladda senaste betyg.';
+
+      adminRatingsTable
+        .querySelectorAll('.delete-rating-btn')
+        .forEach((btn) => {
+          btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const id = btn.getAttribute('data-id');
+            if (!id) return;
+
+            btn.disabled = true;
+            try {
+              await deleteAdminRating(id);
+            } finally {
+              btn.disabled = false;
+            }
+          });
+        });
+
+      return;
     }
+
+    adminRatingsTable.textContent = 'Kunde inte ladda senaste betyg.';
   } catch (err) {
     console.error('loadAdminRecentRatings error', err);
     adminRatingsTable.textContent = 'Fel vid hämtning.';
@@ -347,7 +443,10 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
             if (res && res.ok) {
               alert('Kunden har raderats.');
               // Ladda om kundlistan (börjar om från första sidan)
-              loadAdminCustomers(1);
+              await Promise.all([
+                loadAdminCustomers(1),
+                loadAdminSummary(),
+              ]);
               if (adminSearchResult) adminSearchResult.textContent = '';
             } else {
               alert(res?.error || 'Kunde inte radera kunden.');
@@ -405,7 +504,7 @@ function renderCustomerDetails(c) {
       html += `<tr><td>${dateStr}</td><td>${escapeHtml(
         String(r.score || r.rating || '')
       )}</td><td>${escapeHtml(
-        r.raterName || ''
+        r.raterName || r.raterEmail || ''
       )}</td><td>${escapeHtml(
         (r.text || r.comment || '').slice(0, 160)
       )}</td></tr>`;

@@ -8,11 +8,10 @@ const {
   adminGetCounts,
   adminListRecentReports,
   adminGetCustomerWithRatings,
-  listRecentRatings,
   averageForSubjectRef,
 } = require('../storage');
 
-const prisma = new PrismaClient();
+const prisma = global.prisma || new PrismaClient();
 const router = express.Router();
 
 // Läs adminlösenord från .env
@@ -34,6 +33,47 @@ function requireAdmin(req, res, next) {
   const key = req.headers['x-admin-key'] || '';
   if (key && key === ADMIN_PASSWORD) return next();
   return res.status(401).json({ ok: false, error: 'Ej behörig (admin).' });
+}
+
+function safeDateIso(value) {
+  try {
+    if (!value) return null;
+    const d = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  } catch {
+    return null;
+  }
+}
+
+function formatRecentRatingRow(row) {
+  const customerEmail = row?.customer?.email || null;
+  const customerSubjectRef = row?.customer?.subjectRef || null;
+
+  const ratedUser =
+    customerEmail ||
+    customerSubjectRef ||
+    null;
+
+  const raterDisplay =
+    row?.raterName ||
+    row?.raterEmail ||
+    '–';
+
+  return {
+    id: row.id,
+    createdAt: safeDateIso(row.createdAt),
+    rating: row.score,
+    score: row.score,
+    subject: ratedUser,
+    ratedUser,
+    comment: row.text || '',
+    text: row.text || '',
+    raterName: row.raterName || null,
+    raterEmail: row.raterEmail || null,
+    raterDisplay,
+    dealId: row.dealId || null,
+    ratingSource: row.ratingSource || null,
+  };
 }
 
 /* -------------------------------------------------------
@@ -79,15 +119,106 @@ router.get('/summary', async (_req, res) => {
 
 /** GET /api/admin/ratings/recent – senaste ratings (admin) */
 router.get('/ratings/recent', async (req, res) => {
-  const limit = Number(req.query.limit || 20);
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit || 20)));
+
   try {
-    const list = await listRecentRatings(limit);
-    res.json({ ok: true, ratings: list });
+    const rows = await prisma.rating.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+      select: {
+        id: true,
+        score: true,
+        text: true,
+        raterName: true,
+        raterEmail: true,
+        ratingSource: true,
+        dealId: true,
+        createdAt: true,
+        customer: {
+          select: {
+            email: true,
+            subjectRef: true,
+            fullName: true,
+          },
+        },
+      },
+    });
+
+    const ratings = rows.map(formatRecentRatingRow);
+    res.json({ ok: true, ratings });
   } catch (e) {
     console.error('[GET /api/admin/ratings/recent] error:', e);
     res.status(500).json({
       ok: false,
       error: 'Kunde inte hämta senaste ratings (admin).',
+    });
+  }
+});
+
+/** DELETE /api/admin/ratings/:id – radera rating (admin) */
+router.delete('/ratings/:id', async (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!id) {
+    return res.status(400).json({
+      ok: false,
+      error: 'Ogiltigt rating-ID.',
+    });
+  }
+
+  try {
+    const rating = await prisma.rating.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        dealId: true,
+      },
+    });
+
+    if (!rating) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Omdömet hittades inte.',
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Ta bort rapporter som är direkt kopplade till just detta omdöme
+      await tx.report.deleteMany({
+        where: {
+          ratingId: id,
+        },
+      });
+
+      // Ta bort själva ratingen
+      await tx.rating.delete({
+        where: { id },
+      });
+
+      // Om ratingen hörde till en deal:
+      // sätt tillbaka deal till PENDING_RATING om inga ratings längre finns kvar
+      if (rating.dealId) {
+        const remaining = await tx.rating.count({
+          where: { dealId: rating.dealId },
+        });
+
+        if (remaining === 0) {
+          await tx.deal.update({
+            where: { id: rating.dealId },
+            data: { status: 'PENDING_RATING' },
+          });
+        }
+      }
+    });
+
+    return res.json({
+      ok: true,
+      deletedRatingId: id,
+    });
+  } catch (e) {
+    console.error('[DELETE /api/admin/ratings/:id] error:', e);
+    return res.status(500).json({
+      ok: false,
+      error: 'Kunde inte radera omdömet.',
     });
   }
 });
@@ -251,6 +382,7 @@ router.get('/customer', async (req, res) => {
           score: r.score,
           text: r.text,
           raterName: r.raterName,
+          raterEmail: r.raterEmail,
           createdAt: r.createdAt,
         })),
         average: avgData.average,

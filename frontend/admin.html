@@ -106,6 +106,7 @@
       padding:6px 4px;
       text-align:left;
       border-bottom:1px solid rgba(0,0,0,.05);
+      vertical-align:top;
     }
     th{font-weight:700;color:var(--brand-ink-d);}
     tr:nth-child(even){background:rgba(255,255,255,.6);}
@@ -125,6 +126,7 @@
       font-size:11px;
       line-height:1.2;
       cursor:pointer;
+      white-space:nowrap;
     }
     .icon-btn.danger{
       background:#fff5f5;
@@ -162,7 +164,6 @@
         <div class="row" style="align-items:center;justify-content:space-between;">
           <h2 style="margin-bottom:0;">Översikt</h2>
           <div style="display:flex;gap:8px;flex:0 0 auto;">
-            <!-- NY KNAPP: Öppna PeerRate Agent -->
             <button
               type="button"
               class="secondary"
@@ -171,7 +172,6 @@
               Öppna PeerRate Agent
             </button>
 
-            <!-- Befintlig logga ut-knapp -->
             <button
               id="admin-logout-btn"
               type="button"
@@ -226,7 +226,10 @@
       <!-- Senaste betyg -->
       <section class="card">
         <h2>Senaste betyg</h2>
-        <p class="tiny muted">De senaste inskickade betygen i systemet.</p>
+        <p class="tiny muted">
+          De senaste inskickade betygen i systemet. Här ser du både vem som fått omdömet och vem som lämnat det.
+          Du kan även radera ett enskilt omdöme.
+        </p>
         <div id="admin-ratings-table" class="tiny muted">Laddar…</div>
       </section>
 
