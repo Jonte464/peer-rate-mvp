@@ -13,7 +13,7 @@
 <body>
 
   <div id="slot-top-row"></div>
-  <div id="profile-build-marker" style="display:none;">profile-i18n-marker-v2-avatar-fix</div>
+  <div id="profile-build-marker" style="display:none;">profile-i18n-marker-v3-marketplaces</div>
 
   <main class="page">
     <div class="wrap">
@@ -115,6 +115,42 @@
               style="display:inline-block;text-decoration:none;padding:10px 14px;border-radius:10px;"
               data-i18n="profile_workrefs_btn"
             >Öppna arbetsreferenser</a>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Mina marketplace-konton</h2>
+          <p class="tiny muted">
+            Lägg till ditt användarnamn per plattform. Detta används för att senare säkerställa att rätt PeerRate-konto matchar rätt marketplace-konto.
+          </p>
+
+          <div class="profile-list" style="display:grid;gap:16px;">
+            <div>
+              <label for="marketplace-tradera-username" class="profile-label">Tradera username</label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px;">
+                <input id="marketplace-tradera-username" type="text" placeholder="t.ex. jonte82" style="flex:1;min-width:240px;" />
+                <button id="save-tradera-profile-btn" type="button" class="secondary">Spara</button>
+              </div>
+              <div id="marketplace-tradera-status" class="tiny muted" style="margin-top:6px;">Ej kopplat</div>
+            </div>
+
+            <div>
+              <label for="marketplace-blocket-username" class="profile-label">Blocket username</label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px;">
+                <input id="marketplace-blocket-username" type="text" placeholder="t.ex. jonathan_s" style="flex:1;min-width:240px;" />
+                <button id="save-blocket-profile-btn" type="button" class="secondary">Spara</button>
+              </div>
+              <div id="marketplace-blocket-status" class="tiny muted" style="margin-top:6px;">Ej kopplat</div>
+            </div>
+
+            <div>
+              <label for="marketplace-ebay-username" class="profile-label">eBay username</label>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px;">
+                <input id="marketplace-ebay-username" type="text" placeholder="t.ex. jonte-shop" style="flex:1;min-width:240px;" />
+                <button id="save-ebay-profile-btn" type="button" class="secondary">Spara</button>
+              </div>
+              <div id="marketplace-ebay-status" class="tiny muted" style="margin-top:6px;">Ej kopplat</div>
+            </div>
           </div>
         </section>
 

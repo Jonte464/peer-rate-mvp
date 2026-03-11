@@ -10,6 +10,7 @@ import { t, applyLang } from './landing/language.js';
 export { initRatingLogin } from './ratingForm.js'; // vidareexport för /rate.html
 
 let latestExternalData = null;
+let latestMarketplaceProfiles = null;
 let languageChangeBound = false;
 
 const LEGACY_AVATAR_KEY = 'peerrate.avatar.dataUrl';
@@ -81,7 +82,6 @@ function getStoredAvatar(user) {
     const direct = localStorage.getItem(key);
     if (direct) return direct;
 
-    // Migrera gammal global nyckel till per-user nyckel om sådan finns
     const legacy = localStorage.getItem(LEGACY_AVATAR_KEY);
     if (legacy && user) {
       localStorage.setItem(key, legacy);
@@ -246,6 +246,142 @@ function initAvatarUpload() {
   }
 }
 
+function normalizeMarketplaceProfilesResponse(profiles) {
+  const p = profiles || {};
+  return {
+    TRADERA: p.TRADERA || null,
+    BLOCKET: p.BLOCKET || null,
+    EBAY: p.EBAY || null,
+  };
+}
+
+function renderMarketplaceProfiles() {
+  const profiles = normalizeMarketplaceProfilesResponse(latestMarketplaceProfiles);
+
+  const traderaInput = document.getElementById('marketplace-tradera-username');
+  const blocketInput = document.getElementById('marketplace-blocket-username');
+  const ebayInput = document.getElementById('marketplace-ebay-username');
+
+  const traderaStatus = document.getElementById('marketplace-tradera-status');
+  const blocketStatus = document.getElementById('marketplace-blocket-status');
+  const ebayStatus = document.getElementById('marketplace-ebay-status');
+
+  if (traderaInput) traderaInput.value = profiles.TRADERA?.username || '';
+  if (blocketInput) blocketInput.value = profiles.BLOCKET?.username || '';
+  if (ebayInput) ebayInput.value = profiles.EBAY?.username || '';
+
+  if (traderaStatus) {
+    traderaStatus.textContent = profiles.TRADERA?.username
+      ? `Kopplat: ${profiles.TRADERA.username}`
+      : 'Ej kopplat';
+  }
+
+  if (blocketStatus) {
+    blocketStatus.textContent = profiles.BLOCKET?.username
+      ? `Kopplat: ${profiles.BLOCKET.username}`
+      : 'Ej kopplat';
+  }
+
+  if (ebayStatus) {
+    ebayStatus.textContent = profiles.EBAY?.username
+      ? `Kopplat: ${profiles.EBAY.username}`
+      : 'Ej kopplat';
+  }
+}
+
+async function loadMarketplaceProfiles() {
+  try {
+    const result = await api.getExternalProfiles();
+    if (!result || result.ok === false) {
+      latestMarketplaceProfiles = null;
+      renderMarketplaceProfiles();
+      return;
+    }
+
+    latestMarketplaceProfiles = normalizeMarketplaceProfilesResponse(result.profiles);
+    renderMarketplaceProfiles();
+  } catch (err) {
+    console.error('Could not load marketplace profiles', err);
+    latestMarketplaceProfiles = null;
+    renderMarketplaceProfiles();
+  }
+}
+
+async function saveMarketplaceProfile(platform, username) {
+  try {
+    const result = await api.saveExternalProfile({
+      platform,
+      username,
+    });
+
+    if (!result || result.ok === false) {
+      showNotification(
+        'error',
+        result?.error || 'Kunde inte spara konto.',
+        'notice'
+      );
+      return false;
+    }
+
+    await loadMarketplaceProfiles();
+
+    showNotification(
+      'success',
+      username && String(username).trim()
+        ? 'Konto sparat.'
+        : 'Koppling borttagen.',
+      'notice'
+    );
+
+    return true;
+  } catch (err) {
+    console.error('saveMarketplaceProfile error', err);
+    showNotification(
+      'error',
+      'Tekniskt fel vid sparande av konto.',
+      'notice'
+    );
+    return false;
+  }
+}
+
+function bindMarketplaceButtons() {
+  const mappings = [
+    {
+      buttonId: 'save-tradera-profile-btn',
+      inputId: 'marketplace-tradera-username',
+      platform: 'TRADERA',
+    },
+    {
+      buttonId: 'save-blocket-profile-btn',
+      inputId: 'marketplace-blocket-username',
+      platform: 'BLOCKET',
+    },
+    {
+      buttonId: 'save-ebay-profile-btn',
+      inputId: 'marketplace-ebay-username',
+      platform: 'EBAY',
+    },
+  ];
+
+  for (const row of mappings) {
+    const btn = document.getElementById(row.buttonId);
+    const input = document.getElementById(row.inputId);
+
+    if (!btn || !input || btn.dataset.bound === 'true') continue;
+    btn.dataset.bound = 'true';
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        await saveMarketplaceProfile(row.platform, input.value || '');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+}
+
 async function handleLoginSubmit(event) {
   event.preventDefault();
 
@@ -401,6 +537,7 @@ function bindLanguageChangeHandler() {
     updateUserBadge(user);
     updateAvatars(user);
     rerenderExternalDataFromCache();
+    renderMarketplaceProfiles();
     rerenderRatingWidgetsFromCache();
     applyLang(document);
   });
@@ -507,6 +644,7 @@ export async function initProfilePage() {
     initLogoutButton();
     initRatingForm();
     initAvatarUpload();
+    bindMarketplaceButtons();
   } catch (err) {
     console.error('initProfilePage auxiliary inits error', err);
   }
@@ -527,6 +665,7 @@ export async function initProfilePage() {
         await Promise.all([
           loadProfileData(),
           loadExternalData(),
+          loadMarketplaceProfiles(),
           loadMyRating(),
         ]);
       } catch (err) {

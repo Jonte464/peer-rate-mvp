@@ -1,6 +1,7 @@
 // =====================================================
 // api.js – stabil version med datumformat + adressstöd
 // + deal status check för verifierade affärer
+// + external profile save/load
 // =====================================================
 
 // --- Helpers -----------------------------------------------------
@@ -53,7 +54,6 @@ function buildAuthHeaders(baseHeaders = {}) {
   return headers;
 }
 
-// Format YYYY-MM-DD istället för ISO
 function formatDate(dateStr) {
   if (!dateStr) return null;
   try {
@@ -126,6 +126,31 @@ const api = {
         counterparty: payload?.counterparty || null,
         deal: payload?.deal || null,
       }),
+    }).then(async (r) => {
+      const raw = await r.text();
+      try { return JSON.parse(raw); }
+      catch { return { ok: r.ok, status: r.status, raw }; }
+    });
+  },
+
+  getExternalProfiles: () => {
+    return fetch('/api/external-profiles', {
+      method: 'GET',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      credentials: 'include',
+    }).then(async (r) => {
+      const raw = await r.text();
+      try { return JSON.parse(raw); }
+      catch { return { ok: r.ok, status: r.status, raw }; }
+    });
+  },
+
+  saveExternalProfile: (payload) => {
+    return fetch('/api/external-profiles', {
+      method: 'POST',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      credentials: 'include',
+      body: JSON.stringify(payload || {}),
     }).then(async (r) => {
       const raw = await r.text();
       try { return JSON.parse(raw); }

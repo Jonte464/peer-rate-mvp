@@ -58,6 +58,7 @@ let ratingsRoutes,
   adminRoutes,
   integrationsRoutes,
   externalDataRoutes,
+  externalProfilesRoutes,
   blocketRoutes,
   traderaRoutes,
   ebayRoutes,
@@ -75,6 +76,7 @@ if (dbConfigured) {
   adminRoutes = load("adminRoutes", "./routes/adminRoutes");
   integrationsRoutes = load("integrationsRoutes", "./routes/integrationsRoutes");
   externalDataRoutes = load("externalDataRoutes", "./routes/externalDataRoutes");
+  externalProfilesRoutes = load("externalProfilesRoutes", "./routes/externalProfilesRoutes");
   blocketRoutes = load("blocketRoutes", "./routes/blocketRoutes");
   traderaRoutes = load("traderaRoutes", "./routes/traderaRoutes");
   ebayRoutes = load("ebayRoutes", "./routes/ebayRoutes");
@@ -171,6 +173,7 @@ app.use("/api", authRoutes);
 if (adminRoutes) app.use("/api/admin", adminRoutes);
 
 if (externalDataRoutes) app.use("/api", externalDataRoutes);
+if (externalProfilesRoutes) app.use("/api", externalProfilesRoutes);
 if (blocketRoutes) app.use("/api", blocketRoutes);
 if (integrationsRoutes) app.use("/api", integrationsRoutes);
 if (traderaRoutes) app.use("/api", traderaRoutes);
