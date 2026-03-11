@@ -15,14 +15,14 @@ let languageChangeBound = false;
 
 const LEGACY_AVATAR_KEY = 'peerrate.avatar.dataUrl';
 const MARKETPLACE_PLATFORMS = [
-  { key: 'TRADERA', label: 'Tradera' },
-  { key: 'BLOCKET', label: 'Blocket' },
-  { key: 'AIRBNB', label: 'Airbnb' },
-  { key: 'EBAY', label: 'eBay' },
-  { key: 'TIPTAP', label: 'Tiptap' },
-  { key: 'HYGGLO', label: 'Hygglo' },
-  { key: 'HUSKNUTEN', label: 'Husknuten' },
-  { key: 'FACEBOOK', label: 'Facebook Marketplace' },
+  { key: 'TRADERA', label: 'Tradera', badge: 'T', badgeClass: 'platform-tradera' },
+  { key: 'BLOCKET', label: 'Blocket', badge: 'B', badgeClass: 'platform-blocket' },
+  { key: 'AIRBNB', label: 'Airbnb', badge: 'A', badgeClass: 'platform-airbnb' },
+  { key: 'EBAY', label: 'eBay', badge: 'e', badgeClass: 'platform-ebay' },
+  { key: 'TIPTAP', label: 'Tiptap', badge: 'TT', badgeClass: 'platform-tiptap' },
+  { key: 'HYGGLO', label: 'Hygglo', badge: 'H', badgeClass: 'platform-hygglo' },
+  { key: 'HUSKNUTEN', label: 'Husknuten', badge: 'HK', badgeClass: 'platform-husknuten' },
+  { key: 'FACEBOOK', label: 'Facebook Marketplace', badge: 'f', badgeClass: 'platform-facebook' },
 ];
 
 function normalizeUserIdentity(user) {
@@ -280,7 +280,10 @@ function getStatusMeta(profile) {
     };
   }
 
-  if (profile.status === 'NO_ACCOUNT') {
+  const rawUsername = String(profile.username || '').trim();
+  const rawStatus = String(profile.status || '').trim().toUpperCase();
+
+  if (rawStatus === 'NO_ACCOUNT' || rawUsername === '__NO_ACCOUNT__') {
     return {
       text: 'Konto saknas',
       className: 'status-missing',
@@ -290,13 +293,13 @@ function getStatusMeta(profile) {
     };
   }
 
-  if (profile.status === 'ACTIVE' && profile.username && profile.username !== '__NO_ACCOUNT__') {
+  if (rawUsername) {
     return {
       text: 'Kopplad',
       className: 'status-linked',
       rowClass: '',
       noAccount: false,
-      username: profile.username,
+      username: rawUsername,
     };
   }
 
@@ -307,6 +310,10 @@ function getStatusMeta(profile) {
     noAccount: false,
     username: '',
   };
+}
+
+function getPlatformMeta(platformKey) {
+  return MARKETPLACE_PLATFORMS.find((p) => p.key === platformKey) || null;
 }
 
 function renderMarketplaceProfiles() {
@@ -325,7 +332,13 @@ function renderMarketplaceProfiles() {
     tr.className = meta.rowClass;
 
     tr.innerHTML = `
-      <td class="marketplace-platform-cell">${platform.label}</td>
+      <td class="marketplace-platform-cell">
+        <div class="marketplace-platform-inline">
+          <span class="marketplace-platform-badge ${platform.badgeClass}" aria-hidden="true">${escapeHtml(platform.badge)}</span>
+          <span class="marketplace-platform-label">${escapeHtml(platform.label)}</span>
+        </div>
+      </td>
+
       <td class="marketplace-username-cell">
         <input
           type="text"
@@ -336,27 +349,30 @@ function renderMarketplaceProfiles() {
           ${meta.noAccount ? 'disabled' : ''}
         />
       </td>
+
       <td class="marketplace-status-cell">
         <span class="marketplace-status ${meta.className}">${meta.text}</span>
       </td>
-      <td class="marketplace-actions-cell">
-        <div class="marketplace-action-wrap">
-          <button
-            type="button"
-            class="secondary marketplace-save-btn"
-            data-platform="${platform.key}"
-          >
-            Spara
-          </button>
-          <button
-            type="button"
-            class="secondary marketplace-toggle-missing-btn"
-            data-platform="${platform.key}"
-            data-no-account="${meta.noAccount ? '1' : '0'}"
-          >
-            ${meta.noAccount ? 'Aktivera' : 'Saknar konto'}
-          </button>
-        </div>
+
+      <td class="marketplace-save-cell">
+        <button
+          type="button"
+          class="secondary marketplace-save-btn"
+          data-platform="${platform.key}"
+        >
+          Spara
+        </button>
+      </td>
+
+      <td class="marketplace-missing-cell">
+        <button
+          type="button"
+          class="secondary marketplace-toggle-missing-btn ${meta.noAccount ? 'is-active' : ''}"
+          data-platform="${platform.key}"
+          data-no-account="${meta.noAccount ? '1' : '0'}"
+        >
+          ${meta.noAccount ? 'Aktivera' : 'Saknar konto'}
+        </button>
       </td>
     `;
 
@@ -376,9 +392,16 @@ function escapeHtml(value) {
 async function loadMarketplaceProfiles() {
   try {
     const result = await api.getExternalProfiles();
+
     if (!result || result.ok === false) {
+      console.error('Could not load marketplace profiles:', result);
       latestMarketplaceProfiles = null;
       renderMarketplaceProfiles();
+
+      if (result?.error) {
+        showNotification('error', result.error, 'notice');
+      }
+
       return;
     }
 
@@ -467,6 +490,25 @@ function bindMarketplaceButtons() {
       } finally {
         toggleBtn.disabled = false;
       }
+    }
+  });
+
+  tbody.addEventListener('keydown', async (event) => {
+    const input = event.target.closest('.marketplace-username-input');
+    if (!input) return;
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+
+    const platform = input.getAttribute('data-platform') || '';
+    const saveBtn = tbody.querySelector(`.marketplace-save-btn[data-platform="${platform}"]`);
+    const username = input.value || '';
+
+    if (saveBtn) saveBtn.disabled = true;
+    try {
+      await saveMarketplaceProfile(platform, username, false);
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
     }
   });
 }

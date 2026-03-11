@@ -8,101 +8,12 @@
   <link rel="stylesheet" href="/css/pr-theme.css" />
   <link rel="stylesheet" href="/css/top-row.css" />
   <link rel="stylesheet" href="/css/profile.css" />
-  <style>
-    .marketplace-table-wrap {
-      overflow-x: auto;
-      margin-top: 12px;
-      border: 1px solid rgba(15,15,18,.08);
-      border-radius: 14px;
-      background: rgba(255,255,255,.92);
-    }
-
-    .marketplace-table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 860px;
-    }
-
-    .marketplace-table th,
-    .marketplace-table td {
-      text-align: left;
-      padding: 12px 14px;
-      border-bottom: 1px solid rgba(15,15,18,.08);
-      vertical-align: middle;
-    }
-
-    .marketplace-table thead th {
-      font-size: 13px;
-      font-weight: 800;
-      color: rgba(15,15,18,.82);
-      background: rgba(15,15,18,.03);
-    }
-
-    .marketplace-table tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    .marketplace-platform-cell {
-      font-weight: 700;
-      color: var(--pr-purple);
-      white-space: nowrap;
-    }
-
-    .marketplace-username-input {
-      width: 100%;
-      min-width: 240px;
-      padding: 10px 12px;
-      border-radius: 10px;
-      border: 1px solid rgba(15,15,18,.14);
-      background: #fff;
-      color: #111827;
-      font: inherit;
-    }
-
-    .marketplace-username-input:disabled {
-      background: rgba(15,15,18,.05);
-      color: rgba(15,15,18,.45);
-      cursor: not-allowed;
-    }
-
-    .marketplace-status {
-      font-weight: 800;
-      white-space: nowrap;
-    }
-
-    .status-linked {
-      color: #15803d;
-    }
-
-    .status-not-linked {
-      color: #b91c1c;
-    }
-
-    .status-missing {
-      color: #6b7280;
-    }
-
-    .marketplace-row-disabled {
-      background: rgba(15,15,18,.04);
-    }
-
-    .marketplace-action-wrap {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      justify-content: flex-start;
-    }
-
-    .marketplace-actions-cell button {
-      min-width: 110px;
-    }
-  </style>
 </head>
 
 <body>
 
   <div id="slot-top-row"></div>
-  <div id="profile-build-marker" style="display:none;">profile-i18n-marker-v4-marketplace-list</div>
+  <div id="profile-build-marker" style="display:none;">profile-i18n-marker-v5-marketplace-compact</div>
 
   <main class="page">
     <div class="wrap">
@@ -220,7 +131,8 @@
                   <th>Plattform</th>
                   <th>Användarnamn</th>
                   <th>Status</th>
-                  <th>Åtgärd</th>
+                  <th>Spara</th>
+                  <th>Saknar konto</th>
                 </tr>
               </thead>
               <tbody id="marketplace-table-body"></tbody>
