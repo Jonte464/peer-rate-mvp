@@ -6,10 +6,9 @@
 // - alreadyRated => visa INTE knapp
 // - canRate === true => visa knapp
 //
-// NYTT:
-// - försöker läsa aktivt Tradera-konto från sidan
-// - skickar activeMarketplaceIdentity till backend
-// - om aktiv identitet inte kan läsas blir det ingen knapp
+// Uppdatering:
+// - activeMarketplaceIdentity försöker fortfarande läsas ut och skickas med som signal/debug
+// - men backend blockerar inte längre popup bara för att identity inte kunde matchas
 
 (function () {
   const DEFAULTS = { peerrate_enabled: true };
@@ -126,7 +125,6 @@
         };
       }
 
-      // ✅ HÅRD REGEL:
       // Visa bara knapp om backend uttryckligen säger canRate === true
       if (!status || status.ok !== true || status.canRate !== true || status.alreadyRated === true) {
         removeButton();
@@ -185,9 +183,6 @@
     if (!hasCounterparty) return null;
     if (!proofRef) return null;
 
-    // Konservativt:
-    // Om vi inte kan läsa aktivt konto från sidan skickar vi ändå payload till backend,
-    // men backend kommer att blockera canRate för extension-kanalen.
     return {
       v: 2,
       source: "tradera",
@@ -277,7 +272,6 @@
             payload: activePayload,
           });
 
-          // Öppna bara om backend uttryckligen godkände
           if (result?.ok === true && result?.opened === true && result?.canRate === true) {
             btn.disabled = false;
             btn.textContent = originalText;

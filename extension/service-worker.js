@@ -6,10 +6,10 @@
 // - vid fel/timeout/oklart svar => öppna INTE
 // - rate.html kan dessutom markera deals som rated tillbaka till extensionen
 //
-// NYTT:
-// - sparar inloggad PeerRate-identitet från peerrate.ai
-// - skickar PeerRate-identitet + aktiv marketplace-identitet till backend
-// - för TRADERA krävs identity match i backend
+// Uppdatering:
+// - PeerRate-identitet sparas fortfarande från peerrate.ai
+// - aktiv marketplace-identitet skickas fortfarande med som signal/debug
+// - men backend blockerar inte längre rating baserat på identity match
 
 const API_BASE = "https://api.peerrate.ai";
 const RATE_PAGE_BASE = "https://peerrate.ai/rate.html";
@@ -391,7 +391,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         opened: false,
         alreadyRated: false,
         canRate: false,
-        error: result?.error || result?.identityReason || "Rating flow blocked because backend did not explicitly allow it.",
+        error: result?.error || "Rating flow blocked because backend did not explicitly allow it.",
       });
     })();
     return true;
