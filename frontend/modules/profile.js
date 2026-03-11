@@ -15,14 +15,62 @@ let languageChangeBound = false;
 
 const LEGACY_AVATAR_KEY = 'peerrate.avatar.dataUrl';
 const MARKETPLACE_PLATFORMS = [
-  { key: 'TRADERA', label: 'Tradera', badge: 'T', badgeClass: 'platform-tradera' },
-  { key: 'BLOCKET', label: 'Blocket', badge: 'B', badgeClass: 'platform-blocket' },
-  { key: 'AIRBNB', label: 'Airbnb', badge: 'A', badgeClass: 'platform-airbnb' },
-  { key: 'EBAY', label: 'eBay', badge: 'e', badgeClass: 'platform-ebay' },
-  { key: 'TIPTAP', label: 'Tiptap', badge: 'TT', badgeClass: 'platform-tiptap' },
-  { key: 'HYGGLO', label: 'Hygglo', badge: 'H', badgeClass: 'platform-hygglo' },
-  { key: 'HUSKNUTEN', label: 'Husknuten', badge: 'HK', badgeClass: 'platform-husknuten' },
-  { key: 'FACEBOOK', label: 'Facebook Marketplace', badge: 'f', badgeClass: 'platform-facebook' },
+  {
+    key: 'TRADERA',
+    label: 'Tradera',
+    fallbackBadge: 'T',
+    logoSrc: '/assets/marketplaces/tradera.png',
+    logoAlt: 'Tradera',
+  },
+  {
+    key: 'BLOCKET',
+    label: 'Blocket',
+    fallbackBadge: 'B',
+    logoSrc: '/assets/marketplaces/blocket.png',
+    logoAlt: 'Blocket',
+  },
+  {
+    key: 'AIRBNB',
+    label: 'Airbnb',
+    fallbackBadge: 'A',
+    logoSrc: '/assets/marketplaces/airbnb.png',
+    logoAlt: 'Airbnb',
+  },
+  {
+    key: 'EBAY',
+    label: 'eBay',
+    fallbackBadge: 'e',
+    logoSrc: '/assets/marketplaces/ebay.png',
+    logoAlt: 'eBay',
+  },
+  {
+    key: 'TIPTAP',
+    label: 'Tiptap',
+    fallbackBadge: 'TT',
+    logoSrc: '/assets/marketplaces/tiptap.png',
+    logoAlt: 'Tiptap',
+  },
+  {
+    key: 'HYGGLO',
+    label: 'Hygglo',
+    fallbackBadge: 'H',
+    logoSrc: '/assets/marketplaces/hygglo.png',
+    logoAlt: 'Hygglo',
+  },
+  {
+    key: 'HUSKNUTEN',
+    label: 'Husknuten',
+    fallbackBadge: 'HK',
+    logoSrc: '/assets/marketplaces/husknuten.png',
+    logoAlt: 'Husknuten',
+  },
+  {
+    key: 'FACEBOOK',
+    label: 'Facebook Marketplace',
+    fallbackBadge: 'f',
+    logoSrc: '/assets/marketplaces/facebook.png',
+    logoAlt: 'Facebook Marketplace',
+  },
 ];
 
 function normalizeUserIdentity(user) {
@@ -276,30 +324,33 @@ function getStatusMeta(profile) {
       className: 'status-not-linked',
       rowClass: '',
       noAccount: false,
-      username: '',
+      identifier: '',
+      isLinked: false,
     };
   }
 
-  const rawUsername = String(profile.username || '').trim();
+  const rawIdentifier = String(profile.username || '').trim();
   const rawStatus = String(profile.status || '').trim().toUpperCase();
 
-  if (rawStatus === 'NO_ACCOUNT' || rawUsername === '__NO_ACCOUNT__') {
+  if (rawStatus === 'NO_ACCOUNT' || rawIdentifier === '__NO_ACCOUNT__') {
     return {
       text: 'Konto saknas',
       className: 'status-missing',
       rowClass: 'marketplace-row-disabled',
       noAccount: true,
-      username: '',
+      identifier: '',
+      isLinked: false,
     };
   }
 
-  if (rawUsername) {
+  if (rawIdentifier) {
     return {
       text: 'Kopplad',
       className: 'status-linked',
       rowClass: '',
       noAccount: false,
-      username: rawUsername,
+      identifier: rawIdentifier,
+      isLinked: true,
     };
   }
 
@@ -308,12 +359,33 @@ function getStatusMeta(profile) {
     className: 'status-not-linked',
     rowClass: '',
     noAccount: false,
-    username: '',
+    identifier: '',
+    isLinked: false,
   };
 }
 
-function getPlatformMeta(platformKey) {
-  return MARKETPLACE_PLATFORMS.find((p) => p.key === platformKey) || null;
+function escapeHtml(value) {
+  return String(value || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function renderPlatformLogo(platform) {
+  return `
+    <span class="marketplace-platform-logo-wrap">
+      <img
+        class="marketplace-platform-logo"
+        src="${escapeHtml(platform.logoSrc)}"
+        alt="${escapeHtml(platform.logoAlt)}"
+        loading="lazy"
+        onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';"
+      />
+      <span class="marketplace-platform-badge-fallback">${escapeHtml(platform.fallbackBadge)}</span>
+    </span>
+  `;
 }
 
 function renderMarketplaceProfiles() {
@@ -334,18 +406,18 @@ function renderMarketplaceProfiles() {
     tr.innerHTML = `
       <td class="marketplace-platform-cell">
         <div class="marketplace-platform-inline">
-          <span class="marketplace-platform-badge ${platform.badgeClass}" aria-hidden="true">${escapeHtml(platform.badge)}</span>
+          ${renderPlatformLogo(platform)}
           <span class="marketplace-platform-label">${escapeHtml(platform.label)}</span>
         </div>
       </td>
 
-      <td class="marketplace-username-cell">
+      <td class="marketplace-identifier-cell">
         <input
           type="text"
-          class="marketplace-username-input"
+          class="marketplace-identifier-input"
           data-platform="${platform.key}"
-          value="${escapeHtml(meta.username)}"
-          placeholder="Ange användarnamn"
+          value="${escapeHtml(meta.identifier)}"
+          placeholder="Användarnamn / e-post / visningsnamn"
           ${meta.noAccount ? 'disabled' : ''}
         />
       </td>
@@ -359,6 +431,7 @@ function renderMarketplaceProfiles() {
           type="button"
           class="secondary marketplace-save-btn"
           data-platform="${platform.key}"
+          ${meta.noAccount ? 'disabled' : ''}
         >
           Spara
         </button>
@@ -371,22 +444,13 @@ function renderMarketplaceProfiles() {
           data-platform="${platform.key}"
           data-no-account="${meta.noAccount ? '1' : '0'}"
         >
-          ${meta.noAccount ? 'Aktivera' : 'Saknar konto'}
+          ${meta.noAccount ? 'Aktivera konto' : 'Saknar konto'}
         </button>
       </td>
     `;
 
     tbody.appendChild(tr);
   }
-}
-
-function escapeHtml(value) {
-  return String(value || '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
 }
 
 async function loadMarketplaceProfiles() {
@@ -414,11 +478,11 @@ async function loadMarketplaceProfiles() {
   }
 }
 
-async function saveMarketplaceProfile(platform, username, noAccount = false) {
+async function saveMarketplaceProfile(platform, identifier, noAccount = false) {
   try {
     const result = await api.saveExternalProfile({
       platform,
-      username,
+      username: identifier,
       noAccount,
     });
 
@@ -437,7 +501,7 @@ async function saveMarketplaceProfile(platform, username, noAccount = false) {
       'success',
       noAccount
         ? 'Plattform markerad som konto saknas.'
-        : (username && String(username).trim() ? 'Konto sparat.' : 'Koppling borttagen.'),
+        : (identifier && String(identifier).trim() ? 'Konto sparat.' : 'Koppling borttagen.'),
       'notice'
     );
 
@@ -464,12 +528,12 @@ function bindMarketplaceButtons() {
 
     if (saveBtn) {
       const platform = saveBtn.getAttribute('data-platform') || '';
-      const input = tbody.querySelector(`.marketplace-username-input[data-platform="${platform}"]`);
-      const username = input ? input.value : '';
+      const input = tbody.querySelector(`.marketplace-identifier-input[data-platform="${platform}"]`);
+      const identifier = input ? input.value : '';
 
       saveBtn.disabled = true;
       try {
-        await saveMarketplaceProfile(platform, username, false);
+        await saveMarketplaceProfile(platform, identifier, false);
       } finally {
         saveBtn.disabled = false;
       }
@@ -494,7 +558,7 @@ function bindMarketplaceButtons() {
   });
 
   tbody.addEventListener('keydown', async (event) => {
-    const input = event.target.closest('.marketplace-username-input');
+    const input = event.target.closest('.marketplace-identifier-input');
     if (!input) return;
     if (event.key !== 'Enter') return;
 
@@ -502,11 +566,11 @@ function bindMarketplaceButtons() {
 
     const platform = input.getAttribute('data-platform') || '';
     const saveBtn = tbody.querySelector(`.marketplace-save-btn[data-platform="${platform}"]`);
-    const username = input.value || '';
+    const identifier = input.value || '';
 
     if (saveBtn) saveBtn.disabled = true;
     try {
-      await saveMarketplaceProfile(platform, username, false);
+      await saveMarketplaceProfile(platform, identifier, false);
     } finally {
       if (saveBtn) saveBtn.disabled = false;
     }
