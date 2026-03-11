@@ -36,6 +36,10 @@ function normalizeUsername(input) {
   return String(input || "").trim();
 }
 
+function normalizeProfileEmail(input) {
+  return String(input || "").trim().toLowerCase();
+}
+
 function normalizeNoAccount(input) {
   return input === true;
 }
@@ -57,6 +61,7 @@ function toApiProfile(row) {
   if (!row) return null;
 
   const rawUsername = String(row.username || "").trim();
+  const rawEmail = String(row.email || "").trim();
   const rawStatus = String(row.status || "").trim().toUpperCase();
 
   const noAccount = rawStatus === "NO_ACCOUNT" || rawUsername === "__NO_ACCOUNT__";
@@ -65,6 +70,7 @@ function toApiProfile(row) {
     id: row.id,
     platform: row.platform,
     username: noAccount ? "" : rawUsername,
+    email: noAccount ? "" : rawEmail,
     status: noAccount ? "NO_ACCOUNT" : (rawStatus || "ACTIVE"),
     updatedAt: row.updatedAt,
   };
@@ -108,6 +114,7 @@ async function findAllProfilesForCustomer(customerId) {
       id: true,
       platform: true,
       username: true,
+      email: true,
       status: true,
       updatedAt: true,
     },
@@ -126,6 +133,7 @@ async function findProfilesForPlatform(customerId, platform) {
 const saveSchema = Joi.object({
   platform: Joi.string().required(),
   username: Joi.string().allow("", null).optional(),
+  email: Joi.string().allow("", null).optional(),
   noAccount: Joi.boolean().optional(),
 }).required();
 
@@ -185,6 +193,7 @@ router.post("/external-profiles", async (req, res) => {
 
     const platform = normalizePlatform(value.platform);
     const username = normalizeUsername(value.username);
+    const email = normalizeProfileEmail(value.email);
     const noAccount = normalizeNoAccount(value.noAccount);
 
     if (!platform) {
@@ -207,12 +216,14 @@ router.post("/external-profiles", async (req, res) => {
             where: { id: latestExisting.id },
             data: {
               username: "__NO_ACCOUNT__",
+              email: null,
               status: "NO_ACCOUNT",
             },
             select: {
               id: true,
               platform: true,
               username: true,
+              email: true,
               status: true,
               updatedAt: true,
             },
@@ -223,12 +234,14 @@ router.post("/external-profiles", async (req, res) => {
               customerId: customer.id,
               platform,
               username: "__NO_ACCOUNT__",
+              email: null,
               status: "NO_ACCOUNT",
             },
             select: {
               id: true,
               platform: true,
               username: true,
+              email: true,
               status: true,
               updatedAt: true,
             },
@@ -250,12 +263,14 @@ router.post("/external-profiles", async (req, res) => {
                 where: { id: latestExisting.id },
                 data: {
                   username: "__NO_ACCOUNT__",
+                  email: null,
                   status: "DISABLED",
                 },
                 select: {
                   id: true,
                   platform: true,
                   username: true,
+                  email: true,
                   status: true,
                   updatedAt: true,
                 },
@@ -266,12 +281,14 @@ router.post("/external-profiles", async (req, res) => {
                   customerId: customer.id,
                   platform,
                   username: "__NO_ACCOUNT__",
+                  email: null,
                   status: "DISABLED",
                 },
                 select: {
                   id: true,
                   platform: true,
                   username: true,
+                  email: true,
                   status: true,
                   updatedAt: true,
                 },
@@ -309,8 +326,8 @@ router.post("/external-profiles", async (req, res) => {
       }
     }
 
-    // Tomt username och inte "saknar konto" => ta bort koppling helt
-    if (!username) {
+    // Om användaren aktiverar konto men lämnar båda tomma => ta bort helt
+    if (!username && !email) {
       if (existingRows.length) {
         await prisma.externalProfile.deleteMany({
           where: {
@@ -335,13 +352,15 @@ router.post("/external-profiles", async (req, res) => {
         saved = await prisma.externalProfile.update({
           where: { id: latestExisting.id },
           data: {
-            username,
+            username: username || "",
+            email: email || null,
             status: "ACTIVE",
           },
           select: {
             id: true,
             platform: true,
             username: true,
+            email: true,
             status: true,
             updatedAt: true,
           },
@@ -351,20 +370,22 @@ router.post("/external-profiles", async (req, res) => {
           data: {
             customerId: customer.id,
             platform,
-            username,
+            username: username || "",
+            email: email || null,
             status: "ACTIVE",
           },
           select: {
             id: true,
             platform: true,
             username: true,
+            email: true,
             status: true,
             updatedAt: true,
           },
         });
       }
 
-      // Städar eventuella gamla dubletter för samma customer+platform
+      // Städar gamla dubletter för samma customer+platform
       if (existingRows.length > 1) {
         const duplicateIds = existingRows
           .slice(1)

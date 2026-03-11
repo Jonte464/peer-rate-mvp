@@ -263,14 +263,17 @@ function getStatusMeta(profile) {
       className: 'status-not-linked',
       rowClass: '',
       noAccount: false,
-      identifier: '',
+      username: '',
+      email: '',
       locked: false,
     };
   }
 
-  const rawIdentifier = String(profile.username || '').trim();
+  const rawUsername = String(profile.username || '').trim();
+  const rawEmail = String(profile.email || '').trim();
   const rawStatus = String(profile.status || '').trim().toUpperCase();
-  const isNoAccount = rawStatus === 'NO_ACCOUNT' || rawIdentifier === '__NO_ACCOUNT__';
+  const isNoAccount = rawStatus === 'NO_ACCOUNT' || rawUsername === '__NO_ACCOUNT__';
+  const hasValues = Boolean(rawUsername || rawEmail);
 
   if (isNoAccount) {
     return {
@@ -278,18 +281,20 @@ function getStatusMeta(profile) {
       className: 'status-missing',
       rowClass: 'marketplace-row-disabled',
       noAccount: true,
-      identifier: '',
+      username: '',
+      email: '',
       locked: true,
     };
   }
 
-  if (rawIdentifier) {
+  if (hasValues) {
     return {
       text: 'Kopplad',
       className: 'status-linked',
       rowClass: '',
       noAccount: false,
-      identifier: rawIdentifier,
+      username: rawUsername,
+      email: rawEmail,
       locked: true,
     };
   }
@@ -299,7 +304,8 @@ function getStatusMeta(profile) {
     className: 'status-not-linked',
     rowClass: '',
     noAccount: false,
-    identifier: '',
+    username: '',
+    email: '',
     locked: false,
   };
 }
@@ -331,24 +337,31 @@ function renderPlatformLogo(platform) {
 function applyMarketplaceRowState(tr, meta) {
   if (!tr) return;
 
-  const input = tr.querySelector('.marketplace-identifier-input');
+  const usernameInput = tr.querySelector('.marketplace-username-input');
+  const emailInput = tr.querySelector('.marketplace-email-input');
   const saveBtn = tr.querySelector('.marketplace-save-btn');
   const editBtn = tr.querySelector('.marketplace-edit-btn');
   const toggleBtn = tr.querySelector('.marketplace-toggle-missing-btn');
+  const statusEl = tr.querySelector('.marketplace-status');
 
   tr.classList.toggle('marketplace-row-disabled', Boolean(meta.noAccount));
+  tr.setAttribute('data-no-account', meta.noAccount ? '1' : '0');
+  tr.setAttribute('data-locked', meta.locked ? '1' : '0');
 
-  if (input) {
-    input.disabled = Boolean(meta.noAccount || meta.locked);
+  if (statusEl) {
+    statusEl.className = `marketplace-status ${meta.className}`;
+    statusEl.textContent = meta.text;
   }
 
-  if (saveBtn) {
-    saveBtn.disabled = Boolean(meta.noAccount || meta.locked);
-  }
+  const disableInputs = Boolean(meta.noAccount || meta.locked);
+  if (usernameInput) usernameInput.disabled = disableInputs;
+  if (emailInput) emailInput.disabled = disableInputs;
+
+  if (saveBtn) saveBtn.disabled = disableInputs;
 
   if (editBtn) {
-    editBtn.textContent = meta.locked && !meta.noAccount ? 'Redigera' : 'Låst upp';
     editBtn.disabled = Boolean(meta.noAccount);
+    editBtn.textContent = meta.noAccount ? 'Konto saknas' : (meta.locked ? 'Redigera' : 'Redigerar');
   }
 
   if (toggleBtn) {
@@ -383,14 +396,30 @@ function renderMarketplaceProfiles() {
         </div>
       </td>
 
-      <td class="marketplace-identifier-cell">
-        <input
-          type="text"
-          class="marketplace-identifier-input"
-          data-platform="${platform.key}"
-          value="${escapeHtml(meta.identifier)}"
-          placeholder="Användarnamn / e-post / visningsnamn"
-        />
+      <td class="marketplace-account-cell">
+        <div class="marketplace-account-fields">
+          <div class="marketplace-account-field">
+            <div class="marketplace-field-label">Alias / användarnamn</div>
+            <input
+              type="text"
+              class="marketplace-username-input"
+              data-platform="${platform.key}"
+              value="${escapeHtml(meta.username)}"
+              placeholder="Användarnamn eller alias"
+            />
+          </div>
+
+          <div class="marketplace-account-field">
+            <div class="marketplace-field-label">E-post</div>
+            <input
+              type="email"
+              class="marketplace-email-input"
+              data-platform="${platform.key}"
+              value="${escapeHtml(meta.email)}"
+              placeholder="namn@example.com"
+            />
+          </div>
+        </div>
       </td>
 
       <td class="marketplace-status-cell">
@@ -403,7 +432,7 @@ function renderMarketplaceProfiles() {
           class="secondary marketplace-edit-btn"
           data-platform="${platform.key}"
         >
-          ${meta.locked && !meta.noAccount ? 'Redigera' : 'Låst upp'}
+          ${meta.noAccount ? 'Konto saknas' : (meta.locked ? 'Redigera' : 'Redigerar')}
         </button>
       </td>
 
@@ -458,11 +487,12 @@ async function loadMarketplaceProfiles() {
   }
 }
 
-async function saveMarketplaceProfile(platform, identifier, noAccount = false) {
+async function saveMarketplaceProfile(platform, username, email, noAccount = false) {
   try {
     const result = await api.saveExternalProfile({
       platform,
-      username: identifier,
+      username,
+      email,
       noAccount,
     });
 
@@ -477,7 +507,7 @@ async function saveMarketplaceProfile(platform, identifier, noAccount = false) {
       'success',
       noAccount
         ? 'Plattform markerad som konto saknas.'
-        : (identifier && String(identifier).trim() ? 'Konto sparat.' : 'Koppling borttagen.'),
+        : ((String(username || '').trim() || String(email || '').trim()) ? 'Konto sparat.' : 'Koppling borttagen.'),
       'notice'
     );
 
@@ -491,33 +521,43 @@ async function saveMarketplaceProfile(platform, identifier, noAccount = false) {
 
 function unlockMarketplaceRow(tr) {
   if (!tr) return;
-  tr.setAttribute('data-locked', '0');
 
-  const input = tr.querySelector('.marketplace-identifier-input');
+  const usernameInput = tr.querySelector('.marketplace-username-input');
+  const emailInput = tr.querySelector('.marketplace-email-input');
   const saveBtn = tr.querySelector('.marketplace-save-btn');
   const editBtn = tr.querySelector('.marketplace-edit-btn');
 
-  if (input) {
-    input.disabled = false;
-    input.focus();
-    input.select();
-  }
+  tr.setAttribute('data-locked', '0');
+
+  if (usernameInput) usernameInput.disabled = false;
+  if (emailInput) emailInput.disabled = false;
   if (saveBtn) saveBtn.disabled = false;
-  if (editBtn) editBtn.textContent = 'Låst upp';
+  if (editBtn) editBtn.textContent = 'Redigerar';
+
+  if (usernameInput) {
+    usernameInput.focus();
+    usernameInput.select();
+  }
 }
 
 function lockMarketplaceRow(tr) {
   if (!tr) return;
-  tr.setAttribute('data-locked', '1');
 
   const isNoAccount = tr.getAttribute('data-no-account') === '1';
-  const input = tr.querySelector('.marketplace-identifier-input');
+  const usernameInput = tr.querySelector('.marketplace-username-input');
+  const emailInput = tr.querySelector('.marketplace-email-input');
   const saveBtn = tr.querySelector('.marketplace-save-btn');
   const editBtn = tr.querySelector('.marketplace-edit-btn');
 
-  if (input) input.disabled = isNoAccount ? true : true;
+  tr.setAttribute('data-locked', '1');
+
+  if (usernameInput) usernameInput.disabled = true;
+  if (emailInput) emailInput.disabled = true;
   if (saveBtn) saveBtn.disabled = true;
-  if (editBtn) editBtn.textContent = 'Redigera';
+  if (editBtn) {
+    editBtn.disabled = Boolean(isNoAccount);
+    editBtn.textContent = isNoAccount ? 'Konto saknas' : 'Redigera';
+  }
 }
 
 function bindMarketplaceButtons() {
@@ -533,6 +573,7 @@ function bindMarketplaceButtons() {
     if (editBtn) {
       const tr = editBtn.closest('tr');
       if (!tr) return;
+
       const isNoAccount = tr.getAttribute('data-no-account') === '1';
       if (isNoAccount) return;
 
@@ -545,19 +586,19 @@ function bindMarketplaceButtons() {
     if (saveBtn) {
       const platform = saveBtn.getAttribute('data-platform') || '';
       const tr = saveBtn.closest('tr');
-      const input = tbody.querySelector(`.marketplace-identifier-input[data-platform="${platform}"]`);
-      const identifier = input ? input.value : '';
+      const usernameInput = tbody.querySelector(`.marketplace-username-input[data-platform="${platform}"]`);
+      const emailInput = tbody.querySelector(`.marketplace-email-input[data-platform="${platform}"]`);
+      const username = usernameInput ? usernameInput.value : '';
+      const email = emailInput ? emailInput.value : '';
 
       saveBtn.disabled = true;
       try {
-        const ok = await saveMarketplaceProfile(platform, identifier, false);
-        if (ok && tr) {
-          tr.setAttribute('data-no-account', '0');
-          tr.setAttribute('data-locked', identifier.trim() ? '1' : '0');
-        }
+        await saveMarketplaceProfile(platform, username, email, false);
       } finally {
         saveBtn.disabled = false;
       }
+
+      if (tr) lockMarketplaceRow(tr);
       return;
     }
 
@@ -568,44 +609,71 @@ function bindMarketplaceButtons() {
 
       toggleBtn.disabled = true;
       try {
-        const ok = isNoAccount
-          ? await saveMarketplaceProfile(platform, '', false)
-          : await saveMarketplaceProfile(platform, '', true);
-
-        if (ok && tr) {
-          tr.setAttribute('data-no-account', isNoAccount ? '0' : '1');
+        if (isNoAccount) {
+          await saveMarketplaceProfile(platform, '', '', false);
+        } else {
+          await saveMarketplaceProfile(platform, '', '', true);
         }
       } finally {
         toggleBtn.disabled = false;
       }
+
+      if (tr) {
+        if (isNoAccount) {
+          applyMarketplaceRowState(tr, {
+            text: 'Inte kopplad',
+            className: 'status-not-linked',
+            rowClass: '',
+            noAccount: false,
+            username: '',
+            email: '',
+            locked: false,
+          });
+        } else {
+          applyMarketplaceRowState(tr, {
+            text: 'Konto saknas',
+            className: 'status-missing',
+            rowClass: 'marketplace-row-disabled',
+            noAccount: true,
+            username: '',
+            email: '',
+            locked: true,
+          });
+        }
+      }
+      return;
     }
   });
 
   tbody.addEventListener('keydown', async (event) => {
-    const input = event.target.closest('.marketplace-identifier-input');
+    const usernameInput = event.target.closest('.marketplace-username-input');
+    const emailInput = event.target.closest('.marketplace-email-input');
+    const input = usernameInput || emailInput;
     if (!input) return;
     if (event.key !== 'Enter') return;
 
     event.preventDefault();
 
+    const platform = input.getAttribute('data-platform') || '';
     const tr = input.closest('tr');
     const isNoAccount = tr?.getAttribute('data-no-account') === '1';
     if (isNoAccount) return;
 
-    const platform = input.getAttribute('data-platform') || '';
     const saveBtn = tbody.querySelector(`.marketplace-save-btn[data-platform="${platform}"]`);
-    const identifier = input.value || '';
+    const rowUsernameInput = tbody.querySelector(`.marketplace-username-input[data-platform="${platform}"]`);
+    const rowEmailInput = tbody.querySelector(`.marketplace-email-input[data-platform="${platform}"]`);
+
+    const username = rowUsernameInput ? rowUsernameInput.value : '';
+    const email = rowEmailInput ? rowEmailInput.value : '';
 
     if (saveBtn) saveBtn.disabled = true;
     try {
-      const ok = await saveMarketplaceProfile(platform, identifier, false);
-      if (ok && tr) {
-        tr.setAttribute('data-no-account', '0');
-        tr.setAttribute('data-locked', identifier.trim() ? '1' : '0');
-      }
+      await saveMarketplaceProfile(platform, username, email, false);
     } finally {
       if (saveBtn) saveBtn.disabled = false;
     }
+
+    if (tr) lockMarketplaceRow(tr);
   });
 }
 

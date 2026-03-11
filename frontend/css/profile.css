@@ -273,7 +273,7 @@ body:not([data-page="profile"]) .menu-link:hover{ background: rgba(15,15,18,.04)
 }
 
 .wrap{
-  max-width: 1160px;
+  max-width: 1180px;
   margin: 0 auto;
   padding: 0 16px 40px;
 }
@@ -539,7 +539,7 @@ button.secondary{
 .marketplace-table{
   width:100%;
   border-collapse:collapse;
-  min-width:860px;
+  min-width:940px;
 }
 
 .marketplace-table th,
@@ -565,7 +565,7 @@ button.secondary{
 .marketplace-table .marketplace-toggle-missing-btn,
 .marketplace-table .marketplace-edit-btn{
   width:auto;
-  min-width:98px;
+  min-width:102px;
   margin-top:0;
   padding:8px 10px;
   white-space:nowrap;
@@ -573,7 +573,7 @@ button.secondary{
 
 .marketplace-platform-cell{
   white-space:nowrap;
-  min-width:170px;
+  min-width:180px;
 }
 
 .marketplace-platform-inline{
@@ -619,14 +619,32 @@ button.secondary{
   color:var(--pr-purple, #1f3fb7);
 }
 
-.marketplace-identifier-cell{
-  width:34%;
-  min-width:260px;
+.marketplace-account-cell{
+  width:40%;
+  min-width:360px;
 }
 
-.marketplace-identifier-input{
+.marketplace-account-fields{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:8px;
+}
+
+.marketplace-account-field{
+  min-width:0;
+}
+
+.marketplace-field-label{
+  font-size:11px;
+  font-weight:700;
+  color:rgba(15,15,18,.62);
+  margin-bottom:4px;
+}
+
+.marketplace-username-input,
+.marketplace-email-input{
   width:100%;
-  min-width:220px;
+  min-width:0;
   padding:9px 12px;
   border-radius:10px;
   border:1px solid rgba(15,15,18,.14);
@@ -635,7 +653,8 @@ button.secondary{
   font:inherit;
 }
 
-.marketplace-identifier-input:disabled{
+.marketplace-username-input:disabled,
+.marketplace-email-input:disabled{
   background:rgba(15,15,18,.04);
   color:rgba(15,15,18,.38);
   cursor:not-allowed;
@@ -663,6 +682,10 @@ button.secondary{
   color:rgba(15,15,18,.58);
 }
 
+.marketplace-row-disabled .marketplace-field-label{
+  color:rgba(15,15,18,.45);
+}
+
 .marketplace-row-disabled .marketplace-save-btn,
 .marketplace-row-disabled .marketplace-edit-btn{
   opacity:.55;
@@ -681,17 +704,17 @@ button.secondary{
   font-weight:800;
 }
 
-@media (max-width: 900px){
+@media (max-width: 960px){
   .wrap{
-    max-width: 980px;
+    max-width: 100%;
   }
 
   .marketplace-table{
-    min-width:820px;
+    min-width:900px;
   }
 
-  .marketplace-identifier-cell{
-    min-width:220px;
+  .marketplace-account-cell{
+    min-width:340px;
   }
 }
 
@@ -707,6 +730,14 @@ button.secondary{
   }
 
   .marketplace-table{
-    min-width:860px;
+    min-width:980px;
+  }
+
+  .marketplace-account-fields{
+    grid-template-columns: 1fr;
+  }
+
+  .marketplace-account-cell{
+    min-width:300px;
   }
 }

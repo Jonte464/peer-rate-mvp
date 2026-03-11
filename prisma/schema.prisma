@@ -225,6 +225,7 @@ model ExternalProfile {
 
   platform ExternalPlatform
   username String
+  email    String?
 
   // Generellt extern-id (t.ex. Tradera userId)
   externalUserId String?
@@ -255,6 +256,7 @@ model ExternalProfile {
 
   @@index([customerId])
   @@index([platform, username])
+  @@index([platform, email])
   @@unique([customerId, platform])
 }
 
