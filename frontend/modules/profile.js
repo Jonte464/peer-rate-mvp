@@ -14,72 +14,21 @@ let latestMarketplaceProfiles = null;
 let languageChangeBound = false;
 
 const LEGACY_AVATAR_KEY = 'peerrate.avatar.dataUrl';
+
 const MARKETPLACE_PLATFORMS = [
-  {
-    key: 'TRADERA',
-    label: 'Tradera',
-    fallbackBadge: 'T',
-    logoSrc: '/assets/marketplaces/tradera.png',
-    logoAlt: 'Tradera',
-  },
-  {
-    key: 'BLOCKET',
-    label: 'Blocket',
-    fallbackBadge: 'B',
-    logoSrc: '/assets/marketplaces/blocket.png',
-    logoAlt: 'Blocket',
-  },
-  {
-    key: 'AIRBNB',
-    label: 'Airbnb',
-    fallbackBadge: 'A',
-    logoSrc: '/assets/marketplaces/airbnb.png',
-    logoAlt: 'Airbnb',
-  },
-  {
-    key: 'EBAY',
-    label: 'eBay',
-    fallbackBadge: 'e',
-    logoSrc: '/assets/marketplaces/ebay.png',
-    logoAlt: 'eBay',
-  },
-  {
-    key: 'TIPTAP',
-    label: 'Tiptap',
-    fallbackBadge: 'TT',
-    logoSrc: '/assets/marketplaces/tiptap.png',
-    logoAlt: 'Tiptap',
-  },
-  {
-    key: 'HYGGLO',
-    label: 'Hygglo',
-    fallbackBadge: 'H',
-    logoSrc: '/assets/marketplaces/hygglo.png',
-    logoAlt: 'Hygglo',
-  },
-  {
-    key: 'HUSKNUTEN',
-    label: 'Husknuten',
-    fallbackBadge: 'HK',
-    logoSrc: '/assets/marketplaces/husknuten.png',
-    logoAlt: 'Husknuten',
-  },
-  {
-    key: 'FACEBOOK',
-    label: 'Facebook Marketplace',
-    fallbackBadge: 'f',
-    logoSrc: '/assets/marketplaces/facebook.png',
-    logoAlt: 'Facebook Marketplace',
-  },
+  { key: 'TRADERA', label: 'Tradera', fallbackBadge: 'T', logoSrc: '/assets/marketplaces/tradera.png', logoAlt: 'Tradera' },
+  { key: 'BLOCKET', label: 'Blocket', fallbackBadge: 'B', logoSrc: '/assets/marketplaces/blocket.png', logoAlt: 'Blocket' },
+  { key: 'AIRBNB', label: 'Airbnb', fallbackBadge: 'A', logoSrc: '/assets/marketplaces/airbnb.png', logoAlt: 'Airbnb' },
+  { key: 'EBAY', label: 'eBay', fallbackBadge: 'e', logoSrc: '/assets/marketplaces/ebay.png', logoAlt: 'eBay' },
+  { key: 'TIPTAP', label: 'Tiptap', fallbackBadge: 'TT', logoSrc: '/assets/marketplaces/tiptap.png', logoAlt: 'Tiptap' },
+  { key: 'HYGGLO', label: 'Hygglo', fallbackBadge: 'H', logoSrc: '/assets/marketplaces/hygglo.png', logoAlt: 'Hygglo' },
+  { key: 'HUSKNUTEN', label: 'Husknuten', fallbackBadge: 'HK', logoSrc: '/assets/marketplaces/husknuten.png', logoAlt: 'Husknuten' },
+  { key: 'FACEBOOK', label: 'Facebook Marketplace', fallbackBadge: 'f', logoSrc: '/assets/marketplaces/facebook.png', logoAlt: 'Facebook Marketplace' },
 ];
 
 function normalizeUserIdentity(user) {
   if (!user || typeof user !== 'object') {
-    return {
-      storageId: 'default',
-      email: '',
-      fullName: '',
-    };
+    return { storageId: 'default', email: '', fullName: '' };
   }
 
   const email =
@@ -104,11 +53,7 @@ function normalizeUserIdentity(user) {
 
   const storageId = email || subjectRef || id || 'default';
 
-  return {
-    storageId,
-    email,
-    fullName,
-  };
+  return { storageId, email, fullName };
 }
 
 function getAvatarKey(user) {
@@ -209,14 +154,10 @@ export function updateAvatars(user) {
   setAvatarOnTarget(el('profile-avatar-preview'), avatarUrl, initials);
 
   const badgeAvatar = document.getElementById('user-badge-avatar');
-  if (badgeAvatar) {
-    badgeAvatar.setAttribute('title', t('profile_avatar_title', 'Click to change image'));
-  }
+  if (badgeAvatar) badgeAvatar.setAttribute('title', t('profile_avatar_title', 'Click to change image'));
 
   const previewAvatar = document.getElementById('profile-avatar-preview');
-  if (previewAvatar) {
-    previewAvatar.setAttribute('title', t('profile_avatar_title', 'Click to change image'));
-  }
+  if (previewAvatar) previewAvatar.setAttribute('title', t('profile_avatar_title', 'Click to change image'));
 }
 
 function setAvatarStatus(messageKey, fallback) {
@@ -230,9 +171,7 @@ function initAvatarUpload() {
   if (!input) return;
 
   const openPicker = () => {
-    try {
-      input.click();
-    } catch {}
+    try { input.click(); } catch {}
   };
 
   const badgeAvatar = document.getElementById('user-badge-avatar');
@@ -325,21 +264,22 @@ function getStatusMeta(profile) {
       rowClass: '',
       noAccount: false,
       identifier: '',
-      isLinked: false,
+      locked: false,
     };
   }
 
   const rawIdentifier = String(profile.username || '').trim();
   const rawStatus = String(profile.status || '').trim().toUpperCase();
+  const isNoAccount = rawStatus === 'NO_ACCOUNT' || rawIdentifier === '__NO_ACCOUNT__';
 
-  if (rawStatus === 'NO_ACCOUNT' || rawIdentifier === '__NO_ACCOUNT__') {
+  if (isNoAccount) {
     return {
       text: 'Konto saknas',
       className: 'status-missing',
       rowClass: 'marketplace-row-disabled',
       noAccount: true,
       identifier: '',
-      isLinked: false,
+      locked: true,
     };
   }
 
@@ -350,7 +290,7 @@ function getStatusMeta(profile) {
       rowClass: '',
       noAccount: false,
       identifier: rawIdentifier,
-      isLinked: true,
+      locked: true,
     };
   }
 
@@ -360,7 +300,7 @@ function getStatusMeta(profile) {
     rowClass: '',
     noAccount: false,
     identifier: '',
-    isLinked: false,
+    locked: false,
   };
 }
 
@@ -388,12 +328,41 @@ function renderPlatformLogo(platform) {
   `;
 }
 
+function applyMarketplaceRowState(tr, meta) {
+  if (!tr) return;
+
+  const input = tr.querySelector('.marketplace-identifier-input');
+  const saveBtn = tr.querySelector('.marketplace-save-btn');
+  const editBtn = tr.querySelector('.marketplace-edit-btn');
+  const toggleBtn = tr.querySelector('.marketplace-toggle-missing-btn');
+
+  tr.classList.toggle('marketplace-row-disabled', Boolean(meta.noAccount));
+
+  if (input) {
+    input.disabled = Boolean(meta.noAccount || meta.locked);
+  }
+
+  if (saveBtn) {
+    saveBtn.disabled = Boolean(meta.noAccount || meta.locked);
+  }
+
+  if (editBtn) {
+    editBtn.textContent = meta.locked && !meta.noAccount ? 'Redigera' : 'Låst upp';
+    editBtn.disabled = Boolean(meta.noAccount);
+  }
+
+  if (toggleBtn) {
+    toggleBtn.textContent = meta.noAccount ? 'Aktivera konto' : 'Saknar konto';
+    toggleBtn.setAttribute('data-no-account', meta.noAccount ? '1' : '0');
+    toggleBtn.classList.toggle('is-active', Boolean(meta.noAccount));
+  }
+}
+
 function renderMarketplaceProfiles() {
   const tbody = getMarketplaceTableBody();
   if (!tbody) return;
 
   const profiles = normalizeMarketplaceProfilesResponse(latestMarketplaceProfiles);
-
   tbody.innerHTML = '';
 
   for (const platform of MARKETPLACE_PLATFORMS) {
@@ -402,6 +371,9 @@ function renderMarketplaceProfiles() {
 
     const tr = document.createElement('tr');
     tr.className = meta.rowClass;
+    tr.setAttribute('data-platform', platform.key);
+    tr.setAttribute('data-no-account', meta.noAccount ? '1' : '0');
+    tr.setAttribute('data-locked', meta.locked ? '1' : '0');
 
     tr.innerHTML = `
       <td class="marketplace-platform-cell">
@@ -418,7 +390,6 @@ function renderMarketplaceProfiles() {
           data-platform="${platform.key}"
           value="${escapeHtml(meta.identifier)}"
           placeholder="Användarnamn / e-post / visningsnamn"
-          ${meta.noAccount ? 'disabled' : ''}
         />
       </td>
 
@@ -426,12 +397,21 @@ function renderMarketplaceProfiles() {
         <span class="marketplace-status ${meta.className}">${meta.text}</span>
       </td>
 
+      <td class="marketplace-edit-cell">
+        <button
+          type="button"
+          class="secondary marketplace-edit-btn"
+          data-platform="${platform.key}"
+        >
+          ${meta.locked && !meta.noAccount ? 'Redigera' : 'Låst upp'}
+        </button>
+      </td>
+
       <td class="marketplace-save-cell">
         <button
           type="button"
           class="secondary marketplace-save-btn"
           data-platform="${platform.key}"
-          ${meta.noAccount ? 'disabled' : ''}
         >
           Spara
         </button>
@@ -450,6 +430,7 @@ function renderMarketplaceProfiles() {
     `;
 
     tbody.appendChild(tr);
+    applyMarketplaceRowState(tr, meta);
   }
 }
 
@@ -465,7 +446,6 @@ async function loadMarketplaceProfiles() {
       if (result?.error) {
         showNotification('error', result.error, 'notice');
       }
-
       return;
     }
 
@@ -487,11 +467,7 @@ async function saveMarketplaceProfile(platform, identifier, noAccount = false) {
     });
 
     if (!result || result.ok === false) {
-      showNotification(
-        'error',
-        result?.error || 'Kunde inte spara konto.',
-        'notice'
-      );
+      showNotification('error', result?.error || 'Kunde inte spara konto.', 'notice');
       return false;
     }
 
@@ -508,13 +484,40 @@ async function saveMarketplaceProfile(platform, identifier, noAccount = false) {
     return true;
   } catch (err) {
     console.error('saveMarketplaceProfile error', err);
-    showNotification(
-      'error',
-      'Tekniskt fel vid sparande av konto.',
-      'notice'
-    );
+    showNotification('error', 'Tekniskt fel vid sparande av konto.', 'notice');
     return false;
   }
+}
+
+function unlockMarketplaceRow(tr) {
+  if (!tr) return;
+  tr.setAttribute('data-locked', '0');
+
+  const input = tr.querySelector('.marketplace-identifier-input');
+  const saveBtn = tr.querySelector('.marketplace-save-btn');
+  const editBtn = tr.querySelector('.marketplace-edit-btn');
+
+  if (input) {
+    input.disabled = false;
+    input.focus();
+    input.select();
+  }
+  if (saveBtn) saveBtn.disabled = false;
+  if (editBtn) editBtn.textContent = 'Låst upp';
+}
+
+function lockMarketplaceRow(tr) {
+  if (!tr) return;
+  tr.setAttribute('data-locked', '1');
+
+  const isNoAccount = tr.getAttribute('data-no-account') === '1';
+  const input = tr.querySelector('.marketplace-identifier-input');
+  const saveBtn = tr.querySelector('.marketplace-save-btn');
+  const editBtn = tr.querySelector('.marketplace-edit-btn');
+
+  if (input) input.disabled = isNoAccount ? true : true;
+  if (saveBtn) saveBtn.disabled = true;
+  if (editBtn) editBtn.textContent = 'Redigera';
 }
 
 function bindMarketplaceButtons() {
@@ -525,15 +528,33 @@ function bindMarketplaceButtons() {
   tbody.addEventListener('click', async (event) => {
     const saveBtn = event.target.closest('.marketplace-save-btn');
     const toggleBtn = event.target.closest('.marketplace-toggle-missing-btn');
+    const editBtn = event.target.closest('.marketplace-edit-btn');
+
+    if (editBtn) {
+      const tr = editBtn.closest('tr');
+      if (!tr) return;
+      const isNoAccount = tr.getAttribute('data-no-account') === '1';
+      if (isNoAccount) return;
+
+      const isLocked = tr.getAttribute('data-locked') === '1';
+      if (isLocked) unlockMarketplaceRow(tr);
+      else lockMarketplaceRow(tr);
+      return;
+    }
 
     if (saveBtn) {
       const platform = saveBtn.getAttribute('data-platform') || '';
+      const tr = saveBtn.closest('tr');
       const input = tbody.querySelector(`.marketplace-identifier-input[data-platform="${platform}"]`);
       const identifier = input ? input.value : '';
 
       saveBtn.disabled = true;
       try {
-        await saveMarketplaceProfile(platform, identifier, false);
+        const ok = await saveMarketplaceProfile(platform, identifier, false);
+        if (ok && tr) {
+          tr.setAttribute('data-no-account', '0');
+          tr.setAttribute('data-locked', identifier.trim() ? '1' : '0');
+        }
       } finally {
         saveBtn.disabled = false;
       }
@@ -542,14 +563,17 @@ function bindMarketplaceButtons() {
 
     if (toggleBtn) {
       const platform = toggleBtn.getAttribute('data-platform') || '';
+      const tr = toggleBtn.closest('tr');
       const isNoAccount = toggleBtn.getAttribute('data-no-account') === '1';
 
       toggleBtn.disabled = true;
       try {
-        if (isNoAccount) {
-          await saveMarketplaceProfile(platform, '', false);
-        } else {
-          await saveMarketplaceProfile(platform, '', true);
+        const ok = isNoAccount
+          ? await saveMarketplaceProfile(platform, '', false)
+          : await saveMarketplaceProfile(platform, '', true);
+
+        if (ok && tr) {
+          tr.setAttribute('data-no-account', isNoAccount ? '0' : '1');
         }
       } finally {
         toggleBtn.disabled = false;
@@ -564,13 +588,21 @@ function bindMarketplaceButtons() {
 
     event.preventDefault();
 
+    const tr = input.closest('tr');
+    const isNoAccount = tr?.getAttribute('data-no-account') === '1';
+    if (isNoAccount) return;
+
     const platform = input.getAttribute('data-platform') || '';
     const saveBtn = tbody.querySelector(`.marketplace-save-btn[data-platform="${platform}"]`);
     const identifier = input.value || '';
 
     if (saveBtn) saveBtn.disabled = true;
     try {
-      await saveMarketplaceProfile(platform, identifier, false);
+      const ok = await saveMarketplaceProfile(platform, identifier, false);
+      if (ok && tr) {
+        tr.setAttribute('data-no-account', '0');
+        tr.setAttribute('data-locked', identifier.trim() ? '1' : '0');
+      }
     } finally {
       if (saveBtn) saveBtn.disabled = false;
     }
@@ -596,19 +628,12 @@ async function handleLoginSubmit(event) {
   try {
     const res = await login(email, password);
     if (!res || res.ok === false) {
-      const message =
-        res?.error ||
-        t('profile_login_error_failed', 'Login failed. Please check your details.');
+      const message = res?.error || t('profile_login_error_failed', 'Login failed. Please check your details.');
       showNotification('error', message, 'login-status');
       return;
     }
 
-    showNotification(
-      'success',
-      t('profile_login_success', 'You are now logged in.'),
-      'login-status'
-    );
-
+    showNotification('success', t('profile_login_success', 'You are now logged in.'), 'login-status');
     window.setTimeout(() => window.location.reload(), 500);
   } catch (err) {
     console.error('handleLoginSubmit error', err);
@@ -628,19 +653,11 @@ export function initLogoutButton() {
   btn.addEventListener('click', async () => {
     try {
       await logout();
-      showNotification(
-        'success',
-        t('profile_logout_success', 'You are now logged out.'),
-        'notice'
-      );
+      showNotification('success', t('profile_logout_success', 'You are now logged out.'), 'notice');
       window.setTimeout(() => window.location.reload(), 500);
     } catch (err) {
       console.error('Logout error', err);
-      showNotification(
-        'error',
-        t('profile_logout_error', 'Could not log out. Please try again.'),
-        'notice'
-      );
+      showNotification('error', t('profile_logout_error', 'Could not log out. Please try again.'), 'notice');
     }
   });
 }
@@ -769,10 +786,7 @@ async function loadProfileData() {
       node.textContent = value === undefined || value === null || value === '' ? '-' : String(value);
     };
 
-    set(
-      'profile-name',
-      customer.fullName || customer.name || `${customer.firstName || ''} ${customer.lastName || ''}`.trim()
-    );
+    set('profile-name', customer.fullName || customer.name || `${customer.firstName || ''} ${customer.lastName || ''}`.trim());
     set('profile-email', customer.email || customer.subjectRef || '-');
     set('profile-personalNumber', customer.personalNumber || customer.ssn || '-');
     set('profile-phone', customer.phone || '-');

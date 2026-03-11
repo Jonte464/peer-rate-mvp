@@ -31,9 +31,6 @@ a:active, button:active { transform: translateY(1px); }
   .shell{ padding: 0 14px; }
 }
 
-/* =========================
-   TOP ROW
-   ========================= */
 body:not([data-page="profile"]) .top-row{
   position: sticky;
   top: 0;
@@ -271,15 +268,12 @@ body:not([data-page="profile"]) .menu-link{
 }
 body:not([data-page="profile"]) .menu-link:hover{ background: rgba(15,15,18,.04); }
 
-/* =========================
-   Page layout
-   ========================= */
 .page{
   padding: 34px 0 50px;
 }
 
 .wrap{
-  max-width: 980px;
+  max-width: 1160px;
   margin: 0 auto;
   padding: 0 16px 40px;
 }
@@ -347,6 +341,11 @@ textarea{min-height:110px;resize:vertical;}
   margin-bottom:16px;
 }
 
+.card-marketplace{
+  padding-right: 12px;
+  padding-left: 12px;
+}
+
 button.primary{
   background: rgba(15,23,42,.92);
   color:#fff;
@@ -366,7 +365,6 @@ button.secondary{
 
 .hidden{display:none !important;}
 
-/* Inloggningsbadge */
 .user-badge{
   display:flex;
   align-items:center;
@@ -397,7 +395,6 @@ button.secondary{
 .user-label{color: var(--w-muted);}
 .user-name{font-weight:700;}
 
-/* Lists / profile UI */
 .profile-list{
   margin:0;
   padding:0;
@@ -447,7 +444,6 @@ button.secondary{
 .rating-meta{ font-size:12px; color: var(--w-muted); margin-top:2px; }
 .rating-comment-inline{ font-size:12px; font-style:italic; color: var(--w-muted); margin-left:8px; flex:1; }
 
-/* Profilbild-block */
 .profile-avatar-block{
   display:flex;
   align-items:center;
@@ -479,7 +475,6 @@ button.secondary{
   opacity: 0;
 }
 
-/* Ratings visuals */
 .ratings-visuals{
   display:flex;
   gap:16px;
@@ -531,27 +526,26 @@ button.secondary{
   color:transparent;
 }
 
-/* =========================
-   Marketplace table
-   ========================= */
+/* Marketplace */
 .marketplace-table-wrap{
   overflow-x:auto;
   margin-top:12px;
   border:1px solid rgba(15,15,18,.08);
   border-radius:14px;
   background:rgba(255,255,255,.92);
+  -webkit-overflow-scrolling: touch;
 }
 
 .marketplace-table{
   width:100%;
   border-collapse:collapse;
-  min-width:940px;
+  min-width:860px;
 }
 
 .marketplace-table th,
 .marketplace-table td{
   text-align:left;
-  padding:10px 12px;
+  padding:10px 10px;
   border-bottom:1px solid rgba(15,15,18,.08);
   vertical-align:middle;
 }
@@ -568,16 +562,18 @@ button.secondary{
 }
 
 .marketplace-table .marketplace-save-btn,
-.marketplace-table .marketplace-toggle-missing-btn{
+.marketplace-table .marketplace-toggle-missing-btn,
+.marketplace-table .marketplace-edit-btn{
   width:auto;
-  min-width:122px;
+  min-width:98px;
   margin-top:0;
-  padding:9px 12px;
+  padding:8px 10px;
   white-space:nowrap;
 }
 
 .marketplace-platform-cell{
   white-space:nowrap;
+  min-width:170px;
 }
 
 .marketplace-platform-inline{
@@ -624,12 +620,13 @@ button.secondary{
 }
 
 .marketplace-identifier-cell{
-  width:36%;
+  width:34%;
+  min-width:260px;
 }
 
 .marketplace-identifier-input{
   width:100%;
-  min-width:230px;
+  min-width:220px;
   padding:9px 12px;
   border-radius:10px;
   border:1px solid rgba(15,15,18,.14);
@@ -645,38 +642,36 @@ button.secondary{
   border-color:rgba(15,15,18,.08);
 }
 
+.marketplace-status-cell{
+  min-width:110px;
+}
+
 .marketplace-status{
   font-weight:800;
   white-space:nowrap;
 }
 
-.status-linked{
-  color:#15803d;
-}
-
-.status-not-linked{
-  color:#b91c1c;
-}
-
-.status-missing{
-  color:#6b7280;
-}
+.status-linked{ color:#15803d; }
+.status-not-linked{ color:#b91c1c; }
+.status-missing{ color:#6b7280; }
 
 .marketplace-row-disabled td{
-  background:rgba(15,15,18,.045);
+  background:rgba(15,15,18,.05);
 }
 
 .marketplace-row-disabled .marketplace-platform-label{
   color:rgba(15,15,18,.58);
 }
 
-.marketplace-row-disabled .marketplace-save-btn{
+.marketplace-row-disabled .marketplace-save-btn,
+.marketplace-row-disabled .marketplace-edit-btn{
   opacity:.55;
 }
 
+.marketplace-edit-cell,
 .marketplace-save-cell,
 .marketplace-missing-cell{
-  width:132px;
+  width:112px;
   white-space:nowrap;
 }
 
@@ -686,9 +681,32 @@ button.secondary{
   font-weight:800;
 }
 
+@media (max-width: 900px){
+  .wrap{
+    max-width: 980px;
+  }
+
+  .marketplace-table{
+    min-width:820px;
+  }
+
+  .marketplace-identifier-cell{
+    min-width:220px;
+  }
+}
+
 @media (max-width:600px){
   .page{ padding: 20px 0 40px; }
-  .wrap{ padding:0 12px 32px; }
+  .wrap{ padding:0 12px 32px; max-width:100%; }
   h1{font-size:30px;}
   .ratings-visuals{flex-direction:column;}
+
+  .card-marketplace{
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .marketplace-table{
+    min-width:860px;
+  }
 }
