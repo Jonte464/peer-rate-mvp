@@ -3,7 +3,9 @@ const PENDING_KEY = 'peerrate_pending_rating_v2';
 const TTL_MS = 1000 * 60 * 60 * 24;
 
 const RATED_CACHE_KEY = 'peerrate_rated_deals_v1';
-const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90 dagar
+const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90;
+
+let bridgeRequestInFlight = false;
 
 function now() {
   return Date.now();
@@ -71,6 +73,24 @@ function normalizeSourceDisplay(source) {
   if (s === 'facebook') return 'Facebook Marketplace';
 
   return normalizeText(source);
+}
+
+function hasRichPendingData(p) {
+  return !!(
+    p?.subjectEmail ||
+    p?.counterparty?.email ||
+    p?.counterparty?.name ||
+    p?.counterparty?.phone ||
+    p?.counterparty?.addressStreet ||
+    p?.counterparty?.addressCity ||
+    p?.deal?.orderId ||
+    p?.deal?.itemId ||
+    p?.deal?.title ||
+    p?.deal?.amount != null ||
+    p?.deal?.amountSek != null ||
+    p?.deal?.date ||
+    p?.deal?.dateISO
+  );
 }
 
 export function normalizeIncoming(inObj) {
@@ -146,9 +166,39 @@ export function normalizeIncoming(inObj) {
   return out;
 }
 
+function mergePendingData(baseObj, incomingObj) {
+  const base = normalizeIncoming(baseObj || {});
+  const incoming = normalizeIncoming(incomingObj || {});
+
+  const merged = {
+    ...base,
+    ...incoming,
+    counterparty: {
+      ...(base.counterparty || {}),
+      ...(incoming.counterparty || {}),
+    },
+    deal: {
+      ...(base.deal || {}),
+      ...(incoming.deal || {}),
+      counterparty: {
+        ...(base.deal?.counterparty || {}),
+        ...(incoming.deal?.counterparty || {}),
+      },
+    },
+  };
+
+  if (!incoming.subjectEmail && base.subjectEmail) merged.subjectEmail = base.subjectEmail;
+  if (!incoming.proofRef && base.proofRef) merged.proofRef = base.proofRef;
+  if (!incoming.pageUrl && base.pageUrl) merged.pageUrl = base.pageUrl;
+  if (!incoming.source && base.source) merged.source = base.source;
+
+  return normalizeIncoming(merged);
+}
+
 export function setPending(data) {
   try {
-    const normalized = normalizeIncoming(data || {});
+    const existing = getPending();
+    const normalized = existing ? mergePendingData(existing, data || {}) : normalizeIncoming(data || {});
     const payload = { ...normalized, _ts: now() };
     localStorage.setItem(PENDING_KEY, JSON.stringify(payload));
     dispatchPendingUpdated(payload);
@@ -178,10 +228,6 @@ export function clearPending() {
   } catch {}
   dispatchPendingCleared();
 }
-
-/* -----------------------------
-   Rated deals cache
------------------------------- */
 
 function normalizeSource(s) {
   return String(s || '').trim().toLowerCase();
@@ -276,12 +322,57 @@ export function isDealRated(pendingOrKey) {
   }
 }
 
-/**
- * Läser pending från URL:
- * - pr=<base64-json> (extension primary)
- * - eller source/pageUrl/proofRef (fallback)
- * Rensar query params efter capture så de inte återkommer vid refresh.
- */
+function requestPendingFromExtensionInBackground() {
+  if (bridgeRequestInFlight) return;
+  if (typeof window === 'undefined' || typeof window.postMessage !== 'function') return;
+
+  bridgeRequestInFlight = true;
+
+  const onMessage = (event) => {
+    try {
+      if (event.source !== window) return;
+      if (!event.origin || !/^https:\/\/(www\.)?peerrate\.ai$/i.test(event.origin)) return;
+
+      const data = event.data;
+      if (!data || data.type !== 'PEERRATE_PENDING_PAYLOAD_RESPONSE') return;
+
+      const payload = data?.payload?.payload || null;
+      if (payload && typeof payload === 'object') {
+        const existing = getPending();
+        const merged = existing ? mergePendingData(existing, payload) : normalizeIncoming(payload);
+        setPending(merged);
+      }
+
+      try {
+        window.postMessage(
+          { type: 'PEERRATE_CLEAR_PENDING_PAYLOAD' },
+          window.location.origin
+        );
+      } catch {}
+    } finally {
+      bridgeRequestInFlight = false;
+      try { window.removeEventListener('message', onMessage); } catch {}
+    }
+  };
+
+  try {
+    window.addEventListener('message', onMessage);
+
+    window.postMessage(
+      { type: 'PEERRATE_REQUEST_PENDING_PAYLOAD' },
+      window.location.origin
+    );
+
+    setTimeout(() => {
+      bridgeRequestInFlight = false;
+      try { window.removeEventListener('message', onMessage); } catch {}
+    }, 1800);
+  } catch {
+    bridgeRequestInFlight = false;
+    try { window.removeEventListener('message', onMessage); } catch {}
+  }
+}
+
 export function captureFromUrl() {
   const qs = new URLSearchParams(window.location.search || '');
   const pr = qs.get('pr');
@@ -289,7 +380,9 @@ export function captureFromUrl() {
   const pageUrl = qs.get('pageUrl') || '';
   const proofRef = qs.get('proofRef') || '';
 
-  if (!pr && !source && !pageUrl && !proofRef) return null;
+  const isRatePage = (window.location.pathname || '').toLowerCase().includes('/rate.html');
+
+  let result = null;
 
   if (pr) {
     const decoded = readB64Json(pr);
@@ -298,52 +391,45 @@ export function captureFromUrl() {
       if (!decoded.pageUrl && pageUrl) decoded.pageUrl = pageUrl;
       if (!decoded.proofRef && proofRef) decoded.proofRef = proofRef;
 
-      const normalized = normalizeIncoming(decoded);
+      const existing = getPending();
+      const normalized = existing ? mergePendingData(existing, decoded) : normalizeIncoming(decoded);
       setPending(normalized);
-
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.delete('pr');
-        url.searchParams.delete('source');
-        url.searchParams.delete('pageUrl');
-        url.searchParams.delete('proofRef');
-        window.history.replaceState({}, '', url.toString());
-      } catch {}
-
-      return normalized;
+      result = normalized;
     }
   }
 
-  const existing = getPending() || {};
-  const merged = normalizeIncoming({
-    ...existing,
-    source: source || existing.source,
-    pageUrl: pageUrl || existing.pageUrl,
-    proofRef: proofRef || existing.proofRef,
-  });
+  if (!result && (source || pageUrl || proofRef)) {
+    const existing = getPending() || {};
+    const merged = mergePendingData(existing, {
+      source: source || existing.source,
+      pageUrl: pageUrl || existing.pageUrl,
+      proofRef: proofRef || existing.proofRef,
+    });
 
-  setPending(merged);
-
-  try {
-    const url = new URL(window.location.href);
-    url.searchParams.delete('pr');
-    url.searchParams.delete('source');
-    url.searchParams.delete('pageUrl');
-    url.searchParams.delete('proofRef');
-    window.history.replaceState({}, '', url.toString());
-  } catch {}
-
-  return merged;
-}
-
-// Nytt:
-// fallback om URL-transporten tappat payloaden.
-// Hämtar senaste pending payload från extensionens page-bridge.
-export async function captureFromExtensionBridge(timeoutMs = 1500) {
-  if (typeof window === 'undefined' || typeof window.postMessage !== 'function') {
-    return null;
+    setPending(merged);
+    result = merged;
   }
 
+  if ((isRatePage && result && !hasRichPendingData(result)) || (isRatePage && !result)) {
+    requestPendingFromExtensionInBackground();
+  }
+
+  if (pr || source || pageUrl || proofRef) {
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('pr');
+      url.searchParams.delete('source');
+      url.searchParams.delete('pageUrl');
+      url.searchParams.delete('proofRef');
+      window.history.replaceState({}, '', url.toString());
+    } catch {}
+  }
+
+  return result;
+}
+
+// Behålls för kompatibilitet med äldre importer.
+export async function captureFromExtensionBridge(timeoutMs = 1500) {
   return new Promise((resolve) => {
     let done = false;
     let timer = null;
@@ -374,7 +460,8 @@ export async function captureFromExtensionBridge(timeoutMs = 1500) {
           return;
         }
 
-        const normalized = normalizeIncoming(payload);
+        const existing = getPending();
+        const normalized = existing ? mergePendingData(existing, payload) : normalizeIncoming(payload);
         setPending(normalized);
 
         try {

@@ -1,6 +1,5 @@
 // extension/page-bridge.js
 // Brygga mellan peerrate.ai-sidan och extensionens service worker.
-// Tar emot window.postMessage från peerrate.ai och skickar vidare till extensionen.
 
 (function () {
   function isTrustedPeerRateMessage(data) {
@@ -73,7 +72,6 @@
         return;
       }
 
-      // Nytt: peerrate.ai kan be extensionen om senaste pending payload
       if (data.type === "PEERRATE_REQUEST_PENDING_PAYLOAD") {
         safeSendRuntimeMessage(
           {
@@ -89,7 +87,6 @@
         return;
       }
 
-      // Nytt: peerrate.ai kan säga till extensionen att payloaden nu är hämtad
       if (data.type === "PEERRATE_CLEAR_PENDING_PAYLOAD") {
         safeSendRuntimeMessage({
           type: "clearPendingPayloadForPage",

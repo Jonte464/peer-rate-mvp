@@ -1,9 +1,10 @@
 // extension/service-worker.js
 // PeerRate background/service-worker
-// Robust pending-bridge:
-// - backend måste uttryckligen svara canRate === true för att vi ska öppna rate.html
-// - payload sparas lokalt i extensionen innan rate.html öppnas
-// - rate.html kan sedan hämta payload via page-bridge (utan att vara beroende av lång URL)
+// Basic reset:
+// - backend måste uttryckligen svara canRate === true
+// - full payload sparas i extension storage
+// - rate.html öppnas med kort URL
+// - page-bridge kan läsa ut full payload efteråt
 
 const API_BASE = "https://api.peerrate.ai";
 const RATE_PAGE_BASE = "https://peerrate.ai/rate.html";
@@ -13,9 +14,8 @@ const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90 dagar
 
 const AUTH_IDENTITY_KEY = "peerrate_extension_auth_identity_v1";
 
-// Nytt: pending payload som page-bridge kan läsa ut
 const PENDING_PAYLOAD_KEY = "peerrate_extension_pending_payload_v1";
-const PENDING_TTL_MS = 1000 * 60 * 15; // 15 min räcker gott
+const PENDING_TTL_MS = 1000 * 60 * 30; // 30 min
 
 function normalizeText(v) {
   return String(v || "").trim();
@@ -64,19 +64,17 @@ function buildDealKey(payload) {
   return `${source}|${proofRef}`;
 }
 
-function encodePayload(payload) {
-  const json = JSON.stringify(payload || {});
-  return encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
-}
-
 function buildRateUrl(payload) {
-  const pageUrl = payload?.pageUrl || "";
+  const pageUrl = normalizeText(payload?.pageUrl || payload?.deal?.pageUrl || "");
   const proofRef = extractProofRef(payload);
   const source = normalizeSource(payload?.source || payload?.deal?.platform || "");
 
-  const pr = encodePayload(payload);
+  const qs = new URLSearchParams();
+  if (source) qs.set("source", source);
+  if (pageUrl) qs.set("pageUrl", pageUrl);
+  if (proofRef) qs.set("proofRef", proofRef);
 
-  return `${RATE_PAGE_BASE}?source=${encodeURIComponent(source)}&pageUrl=${encodeURIComponent(pageUrl)}&proofRef=${encodeURIComponent(proofRef)}&pr=${pr}`;
+  return `${RATE_PAGE_BASE}?${qs.toString()}`;
 }
 
 function storageGetLocal(key) {
@@ -192,10 +190,6 @@ async function isDealRatedLocally(payloadOrKey) {
   const cache = await cleanupRatedCache();
   return !!cache[key];
 }
-
-// ---------------------------
-// Pending payload bridge
-// ---------------------------
 
 function normalizePendingPayload(payload) {
   if (!payload || typeof payload !== "object") return null;
@@ -472,7 +466,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  // Nytt: page-bridge kan be om senaste pending payload
   if (msg.type === "getPendingPayloadForPage") {
     (async () => {
       const payload = await readPendingPayload();
@@ -485,7 +478,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  // Nytt: page kan säga att payload nu är fångad och sparad i vanlig pendingStore
   if (msg.type === "clearPendingPayloadForPage") {
     (async () => {
       const ok = await clearPendingPayload();
