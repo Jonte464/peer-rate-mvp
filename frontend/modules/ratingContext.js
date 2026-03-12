@@ -1,7 +1,4 @@
 // frontend/modules/ratingContext.js
-// PendingStore är enda sanningskällan.
-// ratingContext visar bara overlay och reagerar robust även om pending kommer lite sent.
-
 import auth from './auth.js';
 import { t } from './landing/language.js';
 import { captureFromUrl, captureFromExtensionBridge, getPending, clearPending } from './pendingStore.js';
@@ -66,36 +63,34 @@ function removeOverlay() {
   } catch {}
 }
 
-function scrollToBestTarget() {
-  const tryScroll = (attempt = 0) => {
-    const loginTarget =
-      document.getElementById('login-card') ||
-      document.getElementById('rating-login-card') ||
-      document.getElementById('rating-login-form');
+function dispatchOpenPendingRating() {
+  try {
+    window.dispatchEvent(new CustomEvent('pr:open-pending-rating'));
+  } catch {}
+}
 
-    const formTarget =
-      document.getElementById('locked-rating-card') ||
-      document.getElementById('verified-deals-card') ||
-      document.getElementById('rate-context-card') ||
-      document.getElementById('rating-form') ||
-      document.getElementById('rating-card');
+async function ensurePendingForOverlay({
+  attempts = 8,
+  delayMs = 350,
+} = {}) {
+  for (let i = 0; i < attempts; i += 1) {
+    captureFromUrl();
 
-    if (!isLoggedIn() && loginTarget) {
-      loginTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
+    let pending = getPending();
+    if (pending) return pending;
+
+    pending = await captureFromExtensionBridge(1200);
+    if (pending) return pending;
+
+    pending = getPending();
+    if (pending) return pending;
+
+    if (i < attempts - 1) {
+      await sleep(delayMs);
     }
+  }
 
-    if (formTarget) {
-      formTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-
-    if (attempt < 10) {
-      setTimeout(() => tryScroll(attempt + 1), 180);
-    }
-  };
-
-  tryScroll(0);
+  return getPending();
 }
 
 function createOverlayIfNeeded(deal) {
@@ -174,33 +169,9 @@ function createOverlayIfNeeded(deal) {
 
     card.querySelector('#pr-pending-go')?.addEventListener('click', () => {
       removeOverlay();
-      scrollToBestTarget();
+      dispatchOpenPendingRating();
     });
   } catch {}
-}
-
-async function ensurePendingForOverlay({
-  attempts = 8,
-  delayMs = 350,
-} = {}) {
-  for (let i = 0; i < attempts; i += 1) {
-    captureFromUrl();
-
-    let pending = getPending();
-    if (pending) return pending;
-
-    pending = await captureFromExtensionBridge(1200);
-    if (pending) return pending;
-
-    pending = getPending();
-    if (pending) return pending;
-
-    if (i < attempts - 1) {
-      await sleep(delayMs);
-    }
-  }
-
-  return getPending();
 }
 
 async function renderOverlayFromCanonicalPending() {

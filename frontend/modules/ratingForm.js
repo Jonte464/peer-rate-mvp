@@ -295,6 +295,35 @@ async function bootstrapPendingAndRender() {
   await renderAll();
 }
 
+async function openPendingRatingFlow() {
+  await ensurePendingCapturedRobust({
+    attempts: 8,
+    delayMs: 250,
+  });
+
+  await renderAll();
+
+  const tryScroll = async (attempt = 0) => {
+    const lockedCard =
+      document.getElementById('locked-rating-card') ||
+      document.getElementById('verified-deals-card') ||
+      document.getElementById('rate-context-card');
+
+    if (lockedCard) {
+      lockedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    if (attempt < 8) {
+      await sleep(180);
+      await renderAll();
+      return tryScroll(attempt + 1);
+    }
+  };
+
+  await tryScroll(0);
+}
+
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
 
@@ -314,6 +343,10 @@ export function initRatingLogin() {
     window.addEventListener('pr:pending-cleared', () => {
       void renderAll();
     });
+
+    window.addEventListener('pr:open-pending-rating', () => {
+      void openPendingRatingFlow();
+    });
   }
 
   window.addEventListener('storage', () => {
@@ -322,7 +355,6 @@ export function initRatingLogin() {
 
   void bootstrapPendingAndRender();
 
-  // Extra retry för sega race conditions när ny tab öppnas från extension
   if (isRatePage()) {
     setTimeout(() => {
       if (!getPending()) {
@@ -360,24 +392,7 @@ async function handleLoginSubmit(e) {
     showNotification('success', t('profile_login_success', 'Du är nu inloggad.'), 'login-status');
 
     if (isRatePage()) {
-      await ensurePendingCapturedRobust({
-        attempts: 6,
-        delayMs: 300,
-      });
-
-      await syncPendingStatusWithBackend();
-      await renderAll();
-
-      const lockedCard =
-        document.getElementById('locked-rating-card') ||
-        document.getElementById('verified-deals-card') ||
-        document.getElementById('rate-context-card');
-
-      if (lockedCard) {
-        setTimeout(() => {
-          lockedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 120);
-      }
+      await openPendingRatingFlow();
       return;
     }
 
