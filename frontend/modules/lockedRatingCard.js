@@ -189,11 +189,13 @@ export function ensureLockedFormCard(p, user) {
     card = document.createElement('section');
     card.className = 'pr-card';
     card.id = 'locked-rating-card';
+    card.style.marginTop = '16px';
     card.style.marginBottom = '16px';
 
     anchor.parentElement.insertBefore(card, anchor.nextSibling);
   }
 
+  card.style.display = 'block';
   card.innerHTML = getLockedFormMarkup(isLoggedIn);
   bindLockedFormSubmitOnce();
   updateLockedFormWithPending(p, user);

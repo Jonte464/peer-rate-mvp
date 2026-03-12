@@ -98,14 +98,6 @@ function setVisibility(isLoggedIn) {
   const hasLoginTargets = loginCards.length > 0;
   const hasRatingTargets = ratingWrappers.length > 0;
 
-  if (!hasLoginTargets && !hasRatingTargets) {
-    console.warn('[PeerRate] setVisibility: no targets found; skipping toggle to avoid blank UI.');
-    return;
-  }
-
-  const shouldShowLogin = !isLoggedIn || (!hasRatingTargets && isLoggedIn);
-  const shouldShowRating = isLoggedIn && hasRatingTargets;
-
   if (isLoggedIn) {
     hideLoginCard();
   } else if (hasLoginTargets) {
@@ -119,8 +111,9 @@ function setVisibility(isLoggedIn) {
 
   if (hasRatingTargets) {
     ratingWrappers.forEach((el) => {
-      el.style.display = shouldShowRating ? 'block' : 'none';
-      el.classList.toggle('hidden', !shouldShowRating);
+      const shouldShow = !!isLoggedIn;
+      el.style.display = shouldShow ? 'block' : 'none';
+      el.classList.toggle('hidden', !shouldShow);
     });
   }
 }
@@ -250,9 +243,10 @@ async function renderAll() {
 
   if (p) {
     applyPendingContextCard(p);
+    renderVerifiedDealUI(p);
+  } else {
+    renderVerifiedDealUI(null);
   }
-
-  renderVerifiedDealUI(p);
 
   const u = await resolveAuthUser();
   setVisibility(!!u);
@@ -267,7 +261,7 @@ async function renderAll() {
 async function bootstrapPendingAndRender() {
   const pending = await ensurePendingCapturedRobust({
     attempts: 10,
-    delayMs: 350,
+    delayMs: 300,
   });
 
   if (pending && isDealRated(pending)) {
@@ -295,53 +289,30 @@ async function bootstrapPendingAndRender() {
   await renderAll();
 }
 
-async function openPendingRatingFlow() {
+async function openDirectRatingFlow() {
   await ensurePendingCapturedRobust({
-    attempts: 8,
+    attempts: 6,
     delayMs: 250,
   });
 
   await renderAll();
 
   const user = await resolveAuthUser();
-  const shouldScrollToLogin = !user;
 
-  const tryScroll = async (attempt = 0) => {
-    const loginCard =
-      document.getElementById('login-card') ||
-      document.getElementById('rating-login-card') ||
-      document.getElementById('rating-login-form');
+  const target =
+    user
+      ? document.getElementById('locked-rating-card')
+      : (
+          document.getElementById('login-card') ||
+          document.getElementById('rating-login-card') ||
+          document.getElementById('rating-login-form')
+        );
 
-    const lockedCard = document.getElementById('locked-rating-card');
-
-    if (shouldScrollToLogin && loginCard) {
-      loginCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-
-    if (!shouldScrollToLogin && lockedCard) {
-      lockedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-
-    if (attempt < 10) {
-      await sleep(220);
-      await renderAll();
-      return tryScroll(attempt + 1);
-    }
-
-    // sista fallback om något fortfarande segar
-    const fallback =
-      lockedCard ||
-      loginCard ||
-      document.getElementById('rate-context-card');
-
-    if (fallback) {
-      fallback.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  };
-
-  await tryScroll(0);
+  if (target) {
+    setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 120);
+  }
 }
 
 export function initRatingLogin() {
@@ -363,10 +334,6 @@ export function initRatingLogin() {
     window.addEventListener('pr:pending-cleared', () => {
       void renderAll();
     });
-
-    window.addEventListener('pr:open-pending-rating', () => {
-      void openPendingRatingFlow();
-    });
   }
 
   window.addEventListener('storage', () => {
@@ -377,16 +344,12 @@ export function initRatingLogin() {
 
   if (isRatePage()) {
     setTimeout(() => {
-      if (!getPending()) {
-        void bootstrapPendingAndRender();
-      }
-    }, 1000);
+      void bootstrapPendingAndRender();
+    }, 800);
 
     setTimeout(() => {
-      if (!getPending()) {
-        void bootstrapPendingAndRender();
-      }
-    }, 2200);
+      void bootstrapPendingAndRender();
+    }, 1800);
   }
 }
 
@@ -412,7 +375,7 @@ async function handleLoginSubmit(e) {
     showNotification('success', t('profile_login_success', 'Du är nu inloggad.'), 'login-status');
 
     if (isRatePage()) {
-      await openPendingRatingFlow();
+      await openDirectRatingFlow();
       return;
     }
 
