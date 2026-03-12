@@ -94,30 +94,35 @@ function showLockedSuccessCard(message) {
   `;
 }
 
-export function removeLockedFormCard() {
-  const el = document.getElementById('locked-rating-card');
-  if (el) el.remove();
+function getLockedAuthHintMarkup(isLoggedIn) {
+  if (isLoggedIn) return '';
+
+  return `
+    <div id="locked-auth-hint" style="
+      border:1px solid rgba(245,158,11,.28);
+      background:rgba(245,158,11,.10);
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:12px;
+    ">
+      <div style="font-weight:800; margin-bottom:4px;">
+        ${escapeHtml(t('rate_login_required_title', 'Logga in för att skicka omdömet'))}
+      </div>
+      <div style="font-size:13px; color:var(--pr-text,#111); line-height:1.5;">
+        ${escapeHtml(t('rate_login_required_body', 'Affären är identifierad och formuläret är förifyllt, men du behöver logga in innan du kan skicka ditt omdöme.'))}
+      </div>
+    </div>
+  `;
 }
 
-export function ensureLockedFormCard(p, user) {
-  if (document.getElementById('locked-rating-card')) {
-    updateLockedFormWithPending(p, user);
-    return;
-  }
-
-  const anchor = document.getElementById('verified-deals-card') || document.getElementById('rate-context-card');
-  if (!anchor || !anchor.parentElement) return;
-
-  const card = document.createElement('section');
-  card.className = 'pr-card';
-  card.id = 'locked-rating-card';
-  card.style.marginBottom = '16px';
-
-  card.innerHTML = `
+function getLockedFormMarkup(isLoggedIn) {
+  return `
     <h2 style="margin:0 0 8px;">${escapeHtml(t('rate_step3_title', 'Steg 3: Lämna omdöme'))}</h2>
     <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.55;">
       ${escapeHtml(t('rate_step3_lead', 'Formuläret är låst till verifierad affär. Du kan bara välja betyg och skriva kommentar.'))}
     </p>
+
+    ${getLockedAuthHintMarkup(isLoggedIn)}
 
     <div id="locked-meta" style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:14px;padding:12px;margin-bottom:12px;"></div>
 
@@ -129,7 +134,7 @@ export function ensureLockedFormCard(p, user) {
 
       <div class="pr-field">
         <label class="pr-label" for="locked-score">${escapeHtml(t('rate_score_label', 'Betyg'))}</label>
-        <select class="pr-select" id="locked-score" name="score" required>
+        <select class="pr-select" id="locked-score" name="score" required ${isLoggedIn ? '' : 'disabled'}>
           <option value="" selected>${escapeHtml(t('rate_pick_score', 'Välj…'))}</option>
           <option value="1">${escapeHtml(t('rate_score_1', '1 – Mycket dåligt'))}</option>
           <option value="2">${escapeHtml(t('rate_score_2', '2 – Dåligt'))}</option>
@@ -147,22 +152,50 @@ export function ensureLockedFormCard(p, user) {
           name="comment"
           rows="4"
           placeholder="${escapeHtml(t('rate_comment_ph', 'Vad fungerade bra eller dåligt?'))}"
+          ${isLoggedIn ? '' : 'disabled'}
         ></textarea>
       </div>
 
       <div class="pr-actions">
-        <button class="pr-btn pr-btn-primary" type="submit">${escapeHtml(t('rate_submit_rating', 'Skicka omdöme'))}</button>
+        <button class="pr-btn pr-btn-primary" type="submit" ${isLoggedIn ? '' : 'disabled'}>${escapeHtml(t('rate_submit_rating', 'Skicka omdöme'))}</button>
       </div>
 
       <div id="locked-notice" class="notice" style="margin-top:10px;"></div>
     </form>
   `;
+}
 
-  anchor.parentElement.insertBefore(card, anchor.nextSibling);
-
+function bindLockedFormSubmitOnce() {
   const form = document.getElementById('locked-rating-form');
-  if (form) form.addEventListener('submit', handleLockedSubmit);
+  if (!form || form.dataset.bound === '1') return;
 
+  form.dataset.bound = '1';
+  form.addEventListener('submit', handleLockedSubmit);
+}
+
+export function removeLockedFormCard() {
+  const el = document.getElementById('locked-rating-card');
+  if (el) el.remove();
+}
+
+export function ensureLockedFormCard(p, user) {
+  const isLoggedIn = !!user;
+  let card = document.getElementById('locked-rating-card');
+
+  if (!card) {
+    const anchor = document.getElementById('verified-deals-card') || document.getElementById('rate-context-card');
+    if (!anchor || !anchor.parentElement) return;
+
+    card = document.createElement('section');
+    card.className = 'pr-card';
+    card.id = 'locked-rating-card';
+    card.style.marginBottom = '16px';
+
+    anchor.parentElement.insertBefore(card, anchor.nextSibling);
+  }
+
+  card.innerHTML = getLockedFormMarkup(isLoggedIn);
+  bindLockedFormSubmitOnce();
   updateLockedFormWithPending(p, user);
 }
 
@@ -226,10 +259,24 @@ export function updateLockedFormWithPending(p, user) {
     </div>
   `;
 
-  form.querySelector('input[name="ratedUserEmail"]').value = cpEmail || '';
-  form.querySelector('input[name="source"]').value = p?.source || '';
-  form.querySelector('input[name="proofRef"]').value = p?.proofRef || '';
-  form.querySelector('input[name="rater"]').value = user?.email || '';
+  const ratedInput = form.querySelector('input[name="ratedUserEmail"]');
+  const sourceInput = form.querySelector('input[name="source"]');
+  const proofInput = form.querySelector('input[name="proofRef"]');
+  const raterInput = form.querySelector('input[name="rater"]');
+
+  if (ratedInput) ratedInput.value = cpEmail || '';
+  if (sourceInput) sourceInput.value = p?.source || '';
+  if (proofInput) proofInput.value = p?.proofRef || '';
+  if (raterInput) raterInput.value = user?.email || '';
+
+  const isLoggedIn = !!user;
+  const scoreEl = form.querySelector('select[name="score"]');
+  const commentEl = form.querySelector('textarea[name="comment"]');
+  const submitBtn = form.querySelector('button[type="submit"]');
+
+  if (scoreEl) scoreEl.disabled = !isLoggedIn;
+  if (commentEl) commentEl.disabled = !isLoggedIn;
+  if (submitBtn) submitBtn.disabled = !isLoggedIn;
 }
 
 async function handleLockedSubmit(e) {

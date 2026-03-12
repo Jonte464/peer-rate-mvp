@@ -20,7 +20,6 @@ import {
   isDuplicateRatingError
 } from './lockedRatingCard.js';
 
-// ✅ Backwards compat exports
 export { initPlatformPicker, initPlatformStarter } from './platformPicker.js';
 
 function isRatePage() {
@@ -219,22 +218,24 @@ async function renderAll() {
     return;
   }
 
-  if (p) applyPendingContextCard(p);
+  if (p) {
+    applyPendingContextCard(p);
+  }
   renderVerifiedDealUI(p);
 
   const u = await resolveAuthUser();
   setVisibility(!!u);
 
-  if (p && u) {
+  // Viktig ändring:
+  // Bygg alltid det låsta formuläret om pending finns.
+  // Är användaren inte inloggad så visas formuläret i disabled-läge med login-hint.
+  if (p) {
     ensureLockedFormCard(p, u);
   } else {
     removeLockedFormCard();
   }
 }
 
-/**
- * initRatingLogin = login + pending + render verifierad affär + locked card
- */
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
 
@@ -253,7 +254,10 @@ export function initRatingLogin() {
   }
 
   const loginForm = document.getElementById('rating-login-form');
-  if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
+  if (loginForm && loginForm.dataset.bound !== '1') {
+    loginForm.dataset.bound = '1';
+    loginForm.addEventListener('submit', handleLoginSubmit);
+  }
 
   void renderAll();
 
@@ -311,6 +315,17 @@ async function handleLoginSubmit(e) {
 
     if (isRatePage()) {
       await renderAll();
+
+      const lockedCard =
+        document.getElementById('locked-rating-card') ||
+        document.getElementById('verified-deals-card') ||
+        document.getElementById('rate-context-card');
+
+      if (lockedCard) {
+        setTimeout(() => {
+          lockedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 120);
+      }
       return;
     }
 
@@ -324,9 +339,6 @@ async function handleLoginSubmit(e) {
   }
 }
 
-/**
- * Legacy open rating form
- */
 export function initRatingForm() {
   const form = document.getElementById('rating-form');
   if (!form) return;
