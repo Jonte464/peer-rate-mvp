@@ -1,26 +1,22 @@
 // extension/content.js
-// PeerRate – Tradera trigger (MVP)
-// Visar endast knapp om backend EXPLICIT säger att affären kan betygsättas.
-// Konservativ strategi:
-// - okänt fel / timeout / otydligt svar => visa INTE knapp
-// - alreadyRated => visa INTE knapp
-// - canRate === true => visa knapp
-//
-// Uppdatering:
-// - activeMarketplaceIdentity försöker fortfarande läsas ut och skickas med som signal/debug
-// - men backend blockerar inte längre popup bara för att identity inte kunde matchas
+// PeerRate – Tradera trigger (basic reset)
+// Enkel strategi:
+// - hitta relevant Tradera order-sida
+// - extrahera så mycket som möjligt direkt från sidans synliga innehåll
+// - fråga backend om affären får betygsättas
+// - visa knapp om canRate === true
+// - inget identitetsmatchningslager i content-script
 
 (function () {
   const DEFAULTS = { peerrate_enabled: true };
-  const BTN_ID = "peerrate-float-btn";
+  const BTN_ID = 'peerrate-float-btn';
 
   let evaluateTimer = null;
   let isEvaluating = false;
   let latestPayload = null;
 
-  // kort minnescache för aktuell sida
   let lastStatus = {
-    key: "",
+    key: '',
     at: 0,
     ok: false,
     alreadyRated: false,
@@ -53,8 +49,8 @@
       subtree: true,
     });
 
-    window.addEventListener("pageshow", () => scheduleEvaluate(0));
-    window.addEventListener("focus", () => scheduleEvaluate(0));
+    window.addEventListener('pageshow', () => scheduleEvaluate(0));
+    window.addEventListener('focus', () => scheduleEvaluate(0));
   }
 
   function scheduleEvaluate(delayMs = 200) {
@@ -65,7 +61,7 @@
   }
 
   function normalizeText(v) {
-    return String(v || "").trim();
+    return String(v || '').trim();
   }
 
   function normalizeLower(v) {
@@ -73,15 +69,15 @@
   }
 
   function buildLocalKey(payload) {
-    const source = normalizeLower(payload?.source || payload?.deal?.platform || "");
+    const source = normalizeLower(payload?.source || payload?.deal?.platform || '');
     const proofRef = normalizeLower(
       payload?.proofRef ||
       payload?.deal?.orderId ||
       payload?.pageUrl ||
-      ""
+      ''
     );
 
-    if (!source || !proofRef) return "";
+    if (!source || !proofRef) return '';
     return `${source}|${proofRef}`;
   }
 
@@ -104,15 +100,11 @@
       const now = Date.now();
 
       let status = null;
-      if (
-        key &&
-        lastStatus.key === key &&
-        (now - lastStatus.at) < 10000
-      ) {
+      if (key && lastStatus.key === key && (now - lastStatus.at) < 10000) {
         status = lastStatus;
       } else {
         status = await sendMessageAsync({
-          type: "checkDealStatus",
+          type: 'checkDealStatus',
           payload,
         });
 
@@ -125,7 +117,6 @@
         };
       }
 
-      // Visa bara knapp om backend uttryckligen säger canRate === true
       if (!status || status.ok !== true || status.canRate !== true || status.alreadyRated === true) {
         removeButton();
         return;
@@ -133,7 +124,7 @@
 
       injectOrUpdateButton(payload);
     } catch (err) {
-      console.warn("[PeerRate extension] evaluatePage failed:", err);
+      console.warn('[PeerRate extension] evaluatePage failed:', err);
       removeButton();
     } finally {
       isEvaluating = false;
@@ -156,7 +147,7 @@
       } catch (err) {
         resolve({
           ok: false,
-          error: String(err?.message || err || "Unknown error"),
+          error: String(err?.message || err || 'Unknown error'),
         });
       }
     });
@@ -164,8 +155,8 @@
 
   function isRelevantTraderaOrderPage() {
     const url = location.href.toLowerCase();
-    if (!url.includes("tradera.")) return false;
-    if (!url.includes("/my/order/")) return false;
+    if (!url.includes('tradera.')) return false;
+    if (!url.includes('/my/order/')) return false;
     return true;
   }
 
@@ -175,49 +166,54 @@
     const pageUrl = location.href;
     const cp = extractCounterpartyFromOrderPage();
     const order = extractOrderInfo();
-    const activeIdentity = extractActiveTraderaIdentity(cp);
 
-    const hasCounterparty = !!(cp.email || cp.username);
+    const hasCounterparty = !!(cp.email || cp.name || cp.phone || cp.addressStreet || cp.addressCity);
     const proofRef = order.orderId || pageUrl;
 
-    if (!hasCounterparty) return null;
     if (!proofRef) return null;
 
     return {
       v: 2,
-      source: "tradera",
+      source: 'tradera',
       pageUrl,
       proofRef,
-      activeMarketplaceIdentity: activeIdentity,
       deal: {
-        platform: "TRADERA",
+        platform: 'TRADERA',
         orderId: order.orderId || null,
         itemId: order.itemId || null,
         title: order.title || null,
         amount: order.amount != null ? order.amount : null,
-        currency: order.currency || (order.amount != null ? "SEK" : null),
+        currency: order.currency || (order.amount != null ? 'SEK' : null),
         date: order.dateISO || null,
         dateISO: order.dateISO || null,
         pageUrl,
         counterparty: {
           email: cp.email ? cp.email.toLowerCase() : null,
-          username: cp.username || null,
           name: cp.name || null,
-          phone: cp.phone || null
+          phone: cp.phone || null,
+          addressStreet: cp.addressStreet || null,
+          addressZip: cp.addressZip || null,
+          addressCity: cp.addressCity || null,
+          country: cp.country || null,
         }
       },
       counterparty: {
         email: cp.email ? cp.email.toLowerCase() : null,
-        username: cp.username || null,
         name: cp.name || null,
         phone: cp.phone || null,
-        platform: "TRADERA",
+        addressStreet: cp.addressStreet || null,
+        addressZip: cp.addressZip || null,
+        addressCity: cp.addressCity || null,
+        country: cp.country || null,
+        platform: 'TRADERA',
         pageUrl,
         orderId: order.orderId || null,
         itemId: order.itemId || null,
         title: order.title || null,
         amountSek: order.amount != null ? order.amount : null,
-      }
+      },
+      // fallback för frontend om e-post saknas
+      subjectEmail: cp.email ? cp.email.toLowerCase() : '',
     };
   }
 
@@ -225,54 +221,54 @@
     let btn = document.getElementById(BTN_ID);
 
     if (!btn) {
-      btn = document.createElement("button");
+      btn = document.createElement('button');
       btn.id = BTN_ID;
-      btn.type = "button";
-      btn.textContent = "Betygsätt med PeerRate";
+      btn.type = 'button';
+      btn.textContent = 'Betygsätt med PeerRate';
 
       Object.assign(btn.style, {
-        position: "fixed",
-        right: "20px",
-        bottom: "20px",
-        zIndex: "999999",
-        background: "linear-gradient(135deg, #0b1f3b, #132f55)",
-        color: "#ffffff",
-        padding: "14px 18px",
-        borderRadius: "14px",
-        border: "1px solid rgba(255,255,255,0.15)",
-        fontSize: "14px",
-        fontWeight: "700",
-        letterSpacing: "0.2px",
-        cursor: "pointer",
-        boxShadow: "0 16px 40px rgba(0,0,0,0.45)",
-        backdropFilter: "blur(6px)"
+        position: 'fixed',
+        right: '20px',
+        bottom: '20px',
+        zIndex: '999999',
+        background: 'linear-gradient(135deg, #0b1f3b, #132f55)',
+        color: '#ffffff',
+        padding: '14px 18px',
+        borderRadius: '14px',
+        border: '1px solid rgba(255,255,255,0.15)',
+        fontSize: '14px',
+        fontWeight: '700',
+        letterSpacing: '0.2px',
+        cursor: 'pointer',
+        boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
+        backdropFilter: 'blur(6px)'
       });
 
-      btn.addEventListener("mouseenter", () => {
-        btn.style.transform = "translateY(-1px)";
-        btn.style.boxShadow = "0 20px 50px rgba(0,0,0,0.6)";
+      btn.addEventListener('mouseenter', () => {
+        btn.style.transform = 'translateY(-1px)';
+        btn.style.boxShadow = '0 20px 50px rgba(0,0,0,0.6)';
       });
 
-      btn.addEventListener("mouseleave", () => {
-        btn.style.transform = "translateY(0)";
-        btn.style.boxShadow = "0 16px 40px rgba(0,0,0,0.45)";
+      btn.addEventListener('mouseleave', () => {
+        btn.style.transform = 'translateY(0)';
+        btn.style.boxShadow = '0 16px 40px rgba(0,0,0,0.45)';
       });
 
-      btn.addEventListener("click", async () => {
+      btn.addEventListener('click', async () => {
         const activePayload = latestPayload || payload;
         if (!activePayload) return;
 
         btn.disabled = true;
         const originalText = btn.textContent;
-        btn.textContent = "Kontrollerar affären...";
+        btn.textContent = 'Öppnar PeerRate...';
 
         try {
           const result = await sendMessageAsync({
-            type: "openRatingForPayload",
+            type: 'openRatingForPayload',
             payload: activePayload,
           });
 
-          if (result?.ok === true && result?.opened === true && result?.canRate === true) {
+          if (result?.ok === true && result?.opened === true) {
             btn.disabled = false;
             btn.textContent = originalText;
             return;
@@ -281,13 +277,13 @@
           removeButton();
 
           if (result?.alreadyRated === true) {
-            alert("Den här affären har redan betygsatts i PeerRate.");
+            alert('Den här affären har redan betygsatts i PeerRate.');
             return;
           }
 
-          console.warn("[PeerRate extension] Rating flow blocked because canRate was not explicitly true.", result);
+          console.warn('[PeerRate extension] openRatingForPayload failed', result);
         } catch (err) {
-          console.warn("[PeerRate extension] click handler failed:", err);
+          console.warn('[PeerRate extension] click handler failed:', err);
           removeButton();
         } finally {
           const liveBtn = document.getElementById(BTN_ID);
@@ -301,8 +297,8 @@
       document.documentElement.appendChild(btn);
     }
 
-    btn.dataset.proofRef = payload?.proofRef || "";
-    btn.dataset.source = payload?.source || "";
+    btn.dataset.proofRef = payload?.proofRef || '';
+    btn.dataset.source = payload?.source || '';
   }
 
   function removeButton() {
@@ -310,268 +306,177 @@
     if (btn) btn.remove();
   }
 
+  function getNormalizedLines(text) {
+    return String(text || '')
+      .split('\n')
+      .map((s) => s.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+  }
+
+  function isProbablyLabel(line) {
+    const lower = normalizeLower(line);
+    return [
+      'ordernr',
+      'objektnr',
+      'summering',
+      'frakt',
+      'totalt',
+      'betald',
+      'avhämtning',
+      'omdöme',
+      'behöver du hjälp',
+      'köp nu',
+      'fler åtgärder',
+      'sälj vidare',
+      'lämna omdöme',
+      'tradera',
+    ].some((x) => lower.includes(x));
+  }
+
+  function isZipCityLine(line) {
+    return /^\d{3}\s?\d{2}\s+.+/.test(normalizeText(line));
+  }
+
   function extractCounterpartyFromOrderPage() {
     const mailEl = document.querySelector('a[href^="mailto:"]');
-    const email = mailEl ? (mailEl.getAttribute("href") || "").replace(/^mailto:/i, "").trim() : null;
+    const email = mailEl
+      ? normalizeText((mailEl.getAttribute('href') || '').replace(/^mailto:/i, ''))
+      : null;
 
     const telEl = document.querySelector('a[href^="tel:"]');
-    let phone = null;
-    if (telEl) {
-      phone = (telEl.textContent || "").trim();
-    }
+    let phone = telEl ? normalizeText(telEl.textContent || '') : null;
 
-    let username = null;
     let name = null;
+    let addressStreet = null;
+    let addressZip = null;
+    let addressCity = null;
+    let country = null;
+
+    let bestLines = [];
 
     if (mailEl) {
-      const container = mailEl.closest("div") || mailEl.parentElement;
-      const blockText = (container?.innerText || "")
-        .split("\n")
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      for (const line of blockText.slice(0, 10)) {
-        if (line.includes("@")) continue;
-        if (line.length < 3 || line.length > 30) continue;
-        if (line.includes(" ")) continue;
-        if (/^\d+$/.test(line)) continue;
-        username = line;
-        break;
+      let node = mailEl.closest('div, section, article, li') || mailEl.parentElement;
+      for (let i = 0; i < 5 && node; i += 1) {
+        const lines = getNormalizedLines(node.innerText || '');
+        if (lines.length > bestLines.length) {
+          bestLines = lines;
+        }
+        node = node.parentElement;
       }
+    }
 
-      for (const line of blockText) {
-        if (line.includes("@")) continue;
-        if (line.length < 3 || line.length > 60) continue;
-        if (line.split(" ").length >= 2) {
+    if (!bestLines.length) {
+      bestLines = getNormalizedLines(document.body?.innerText || '');
+    }
+
+    for (const line of bestLines) {
+      if (!line) continue;
+      if (email && normalizeLower(line).includes(normalizeLower(email))) continue;
+      if (isProbablyLabel(line)) continue;
+
+      if (!name) {
+        const words = line.split(/\s+/);
+        if (
+          words.length >= 2 &&
+          words.length <= 5 &&
+          !/\d{3}\s?\d{2}/.test(line) &&
+          !line.includes('@')
+        ) {
           name = line;
-          break;
+          continue;
         }
       }
 
-      if (!phone) {
-        const merged = blockText.join(" ");
-        phone = extractPhoneFromText(merged);
+      if (!addressStreet) {
+        if (
+          /\d/.test(line) &&
+          /[A-Za-zÅÄÖåäö]/.test(line) &&
+          !isZipCityLine(line) &&
+          !line.includes('@')
+        ) {
+          addressStreet = line;
+          continue;
+        }
+      }
+
+      if (!addressZip && !addressCity && isZipCityLine(line)) {
+        const m = line.match(/^(\d{3}\s?\d{2})\s+(.+)$/);
+        if (m) {
+          addressZip = normalizeText(m[1]);
+          addressCity = normalizeText(m[2]);
+          continue;
+        }
+      }
+
+      if (!country && /^(sverige|sweden)$/i.test(normalizeText(line))) {
+        country = normalizeText(line);
       }
     }
 
     if (!phone) {
-      phone = extractPhoneFromText(document.body?.innerText || "");
+      phone = extractPhoneFromText(document.body?.innerText || '');
     }
 
-    return { email, username, name, phone };
+    return {
+      email,
+      name,
+      phone,
+      addressStreet,
+      addressZip,
+      addressCity,
+      country,
+    };
   }
 
   function extractOrderInfo() {
-    const t = (document.body?.innerText || "");
+    const t = String(document.body?.innerText || '');
 
-    const orderMatch = t.match(/Ordernr\.\s*([0-9 ]{4,})/i);
-    const orderId = orderMatch ? orderMatch[1].trim().replace(/\s+/g, "") : null;
+    const orderMatch = t.match(/Ordernr\.?\s*([0-9 ]{4,})/i);
+    const orderId = orderMatch ? orderMatch[1].trim().replace(/\s+/g, '') : null;
 
     const itemMatch = t.match(/Objektnr\s*([0-9 ]{4,})/i);
-    const itemId = itemMatch ? itemMatch[1].trim().replace(/\s+/g, "") : null;
+    const itemId = itemMatch ? itemMatch[1].trim().replace(/\s+/g, '') : null;
 
     let title = null;
     if (itemMatch) {
       const idx = t.indexOf(itemMatch[0]);
       if (idx !== -1) {
-        const after = t.slice(idx + itemMatch[0].length, idx + itemMatch[0].length + 260);
-        const lines = after.split("\n").map((s) => s.trim()).filter(Boolean);
-        if (lines[0] && lines[0].length > 2) title = lines[0];
+        const after = t.slice(idx + itemMatch[0].length, idx + itemMatch[0].length + 300);
+        const lines = getNormalizedLines(after);
+        title = lines.find((line) => {
+          if (!line) return false;
+          if (isProbablyLabel(line)) return false;
+          if (/^\d+\s*kr$/i.test(line)) return false;
+          if (/\b\d{1,2}\s+(jan|feb|mar|apr|maj|jun|jul|aug|sep|okt|nov|dec)\b/i.test(line)) return false;
+          return line.length >= 3;
+        }) || null;
       }
     }
 
     const amount = extractAmountSEK(t);
     const dateISO = extractDateISO(t);
 
-    return { orderId, itemId, title, amount, currency: amount != null ? "SEK" : null, dateISO };
-  }
-
-  function extractActiveTraderaIdentity(counterparty) {
-    const counterpartyUsername = normalizeLower(counterparty?.username || "");
-    const counterpartyEmail = normalizeLower(counterparty?.email || "");
-
-    const stopWords = new Set([
-      "logga in",
-      "logga ut",
-      "konto",
-      "konton",
-      "mina sidor",
-      "min sida",
-      "mina köp",
-      "mina salda",
-      "mina sålda",
-      "köp",
-      "sälj",
-      "salj",
-      "meddelanden",
-      "aviseringar",
-      "notiser",
-      "hjälp",
-      "hjalp",
-      "support",
-      "tradera",
-      "meny",
-      "menu",
-      "spara",
-      "redigera",
-      "profil",
-      "account",
-      "my account",
-      "settings",
-    ]);
-
-    function isLikelyAlias(text) {
-      const value = normalizeText(text);
-      const lower = value.toLowerCase();
-
-      if (!value) return false;
-      if (value.length < 3 || value.length > 40) return false;
-      if (value.includes("@")) return false;
-      if (/^\d+$/.test(value)) return false;
-      if (value.split(/\s+/).length > 3) return false;
-      if (stopWords.has(lower)) return false;
-
-      return true;
-    }
-
-    function extractAliasCandidatesFromHref(href) {
-      try {
-        if (!href) return [];
-        const url = new URL(href, location.origin);
-        const parts = url.pathname.split("/").map((p) => p.trim()).filter(Boolean);
-        const out = [];
-
-        for (let i = 0; i < parts.length; i += 1) {
-          const part = decodeURIComponent(parts[i] || "");
-          const lower = part.toLowerCase();
-
-          if (["profile", "member", "user", "konto", "account", "seller", "buyer"].includes(lower)) {
-            const next = decodeURIComponent(parts[i + 1] || "");
-            if (isLikelyAlias(next)) out.push(next);
-          }
-        }
-
-        return out;
-      } catch {
-        return [];
-      }
-    }
-
-    function collectAccountTexts() {
-      const selectors = [
-        "header a",
-        "header button",
-        "header [title]",
-        "nav a",
-        "nav button",
-        "[aria-label*='konto' i]",
-        "[aria-label*='account' i]",
-        "[data-testid*='account' i]",
-        "[class*='account'] a",
-        "[class*='profile'] a",
-      ];
-
-      const seen = new Set();
-      const out = [];
-
-      for (const selector of selectors) {
-        const nodes = document.querySelectorAll(selector);
-        for (const node of nodes) {
-          const texts = [
-            node.textContent || "",
-            node.getAttribute?.("aria-label") || "",
-            node.getAttribute?.("title") || "",
-          ];
-
-          for (const raw of texts) {
-            const text = normalizeText(raw);
-            if (!text) continue;
-            if (seen.has(text)) continue;
-            seen.add(text);
-            out.push(text);
-          }
-
-          const href = node.getAttribute?.("href") || "";
-          const hrefCandidates = extractAliasCandidatesFromHref(href);
-          for (const candidate of hrefCandidates) {
-            if (!candidate) continue;
-            if (seen.has(candidate)) continue;
-            seen.add(candidate);
-            out.push(candidate);
-          }
-        }
-      }
-
-      return out;
-    }
-
-    function collectEmailsFromAccountAreas() {
-      const selectors = [
-        "header",
-        "nav",
-        "[aria-label*='konto' i]",
-        "[aria-label*='account' i]",
-        "[data-testid*='account' i]",
-        "[class*='account']",
-        "[class*='profile']",
-      ];
-
-      const emails = new Set();
-
-      for (const selector of selectors) {
-        const nodes = document.querySelectorAll(selector);
-        for (const node of nodes) {
-          const text = normalizeText(node.innerText || "");
-          if (!text) continue;
-
-          const matches = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || [];
-          for (const match of matches) {
-            const email = normalizeLower(match);
-            if (email) emails.add(email);
-          }
-        }
-      }
-
-      return Array.from(emails);
-    }
-
-    const rawTexts = collectAccountTexts();
-
-    const aliasCandidates = rawTexts
-      .map((text) => normalizeText(text))
-      .filter((text) => isLikelyAlias(text))
-      .filter((text) => normalizeLower(text) !== counterpartyUsername)
-      .filter((text) => normalizeLower(text) !== counterpartyEmail);
-
-    const emailCandidates = collectEmailsFromAccountAreas()
-      .filter((email) => email !== counterpartyEmail);
-
-    const username = aliasCandidates[0] || null;
-    const email = emailCandidates[0] || null;
-
-    if (!username && !email) {
-      return null;
-    }
-
     return {
-      platform: "TRADERA",
-      username,
-      email,
-      confidence: username || email ? "heuristic" : "none",
+      orderId,
+      itemId,
+      title,
+      amount,
+      currency: amount != null ? 'SEK' : null,
+      dateISO,
     };
   }
 
   function extractAmountSEK(text) {
-    const lower = (text || "").toLowerCase();
+    const lower = String(text || '').toLowerCase();
 
-    const keys = ["totalt", "total", "summa", "att betala"];
+    const keys = ['totalt', 'total', 'summa', 'att betala'];
     for (const key of keys) {
       const idx = lower.indexOf(key);
       if (idx !== -1) {
         const windowText = text.slice(idx, idx + 500);
         const m = windowText.match(/([0-9]{1,3}(?:[ \u00A0][0-9]{3})*|[0-9]{1,7})\s*kr\b/i);
         if (m) {
-          const num = m[1].replace(/[ \u00A0]/g, "");
+          const num = m[1].replace(/[ \u00A0]/g, '');
           const n = Number(num);
           if (!Number.isNaN(n)) return n;
         }
@@ -581,7 +486,7 @@
     const all = Array.from(text.matchAll(/([0-9]{1,3}(?:[ \u00A0][0-9]{3})*|[0-9]{1,7})\s*kr\b/gi));
     if (all.length) {
       const last = all[all.length - 1];
-      const num = (last[1] || "").replace(/[ \u00A0]/g, "");
+      const num = (last[1] || '').replace(/[ \u00A0]/g, '');
       const n = Number(num);
       if (!Number.isNaN(n)) return n;
     }
@@ -590,24 +495,24 @@
   }
 
   function extractDateISO(text) {
-    const t = text || "";
+    const t = text || '';
 
     const iso = t.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/);
     if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
 
     const se = t.match(/\b(\d{1,2})\/(\d{1,2})\/(20\d{2})\b/);
     if (se) {
-      const dd = String(se[1]).padStart(2, "0");
-      const mm = String(se[2]).padStart(2, "0");
+      const dd = String(se[1]).padStart(2, '0');
+      const mm = String(se[2]).padStart(2, '0');
       return `${se[3]}-${mm}-${dd}`;
     }
 
     const m = t.match(/\b(\d{1,2})\s+(jan|feb|mar|apr|maj|jun|jul|aug|sep|okt|nov|dec)\b(?:\s+(20\d{2}))?/i);
     if (m) {
-      const dd = String(m[1]).padStart(2, "0");
+      const dd = String(m[1]).padStart(2, '0');
       const mon = m[2].toLowerCase();
-      const map = { jan:"01", feb:"02", mar:"03", apr:"04", maj:"05", jun:"06", jul:"07", aug:"08", sep:"09", okt:"10", nov:"11", dec:"12" };
-      const mm = map[mon] || "01";
+      const map = { jan:'01', feb:'02', mar:'03', apr:'04', maj:'05', jun:'06', jul:'07', aug:'08', sep:'09', okt:'10', nov:'11', dec:'12' };
+      const mm = map[mon] || '01';
       const yyyy = m[3] ? String(m[3]) : String(new Date().getFullYear());
       return `${yyyy}-${mm}-${dd}`;
     }
@@ -616,7 +521,7 @@
   }
 
   function extractPhoneFromText(text) {
-    const t = (text || "").replace(/\s+/g, " ").trim();
+    const t = String(text || '').replace(/\s+/g, ' ').trim();
 
     const m =
       t.match(/(\+46\s?\d{1,3}[-\s]?\d{2,3}[-\s]?\d{2,3}[-\s]?\d{2,3})/) ||

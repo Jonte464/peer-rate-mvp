@@ -6,7 +6,6 @@ import { t } from './landing/language.js';
 
 import {
   captureFromUrl,
-  captureFromExtensionBridge,
   getPending,
   clearPending,
   markDealRated,
@@ -143,6 +142,16 @@ function notifyExtensionDealRated(pendingLike) {
   }
 }
 
+async function resolveAuthUser() {
+  try {
+    const user = await auth.getResolvedUser();
+    return user || null;
+  } catch (err) {
+    console.warn('[PeerRate] resolveAuthUser failed:', err);
+    return null;
+  }
+}
+
 async function syncPendingStatusWithBackend() {
   const pending = activePending || getPending();
   if (!pending || !hasPendingIdentity(pending)) {
@@ -167,57 +176,31 @@ async function syncPendingStatusWithBackend() {
   }
 }
 
-async function resolveAuthUser() {
-  try {
-    const user = await auth.getResolvedUser();
-    return user || null;
-  } catch (err) {
-    console.warn('[PeerRate] resolveAuthUser failed:', err);
-    return null;
-  }
-}
-
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function capturePendingSimple() {
-  // 1. URL först
+async function capturePendingBasic() {
   const fromUrl = captureFromUrl();
   if (fromUrl) {
     activePending = fromUrl;
+    return activePending;
   }
 
-  // 2. om vi redan har pending lokalt, använd den
   const stored = getPending();
   if (stored) {
     activePending = stored;
+    return activePending;
   }
 
-  // 3. om vi fortfarande inte har något, fråga extension bridge
-  if (!activePending) {
-    const fromBridge = await captureFromExtensionBridge(1600);
-    if (fromBridge) {
-      activePending = fromBridge;
-    }
-  }
-
-  // 4. sista koll i localStorage efter ev bridge
-  if (!activePending) {
-    const storedAfter = getPending();
-    if (storedAfter) {
-      activePending = storedAfter;
-    }
-  }
-
-  return activePending;
+  return null;
 }
 
 async function capturePendingRobust() {
-  for (let i = 0; i < 6; i += 1) {
-    const pending = await capturePendingSimple();
-    if (pending) return pending;
-    await sleep(250);
+  for (let i = 0; i < 4; i += 1) {
+    const p = await capturePendingBasic();
+    if (p) return p;
+    await sleep(220);
   }
   return activePending || getPending() || null;
 }
@@ -317,8 +300,8 @@ export function initRatingLogin() {
   void bootstrapPage();
 
   if (isRatePage()) {
-    setTimeout(() => { void bootstrapPage(); }, 700);
-    setTimeout(() => { void bootstrapPage(); }, 1600);
+    setTimeout(() => { void bootstrapPage(); }, 600);
+    setTimeout(() => { void bootstrapPage(); }, 1300);
   }
 }
 
