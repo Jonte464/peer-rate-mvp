@@ -23,22 +23,26 @@ const adminRatingsTable = el('admin-ratings-table');
 const adminReportsTable = el('admin-reports-table');
 const adminReportDetail = el('admin-report-detail');
 
+const adminAlertsSummary = el('admin-alerts-summary');
+const adminAlertsTable = el('admin-alerts-table');
+const adminAlertDetail = el('admin-alert-detail');
+
 let adminCustomersCurrentPage = 1;
 let adminCustomersPageSize = 50;
 let adminReportsCache = [];
+let adminAlertsCache = [];
 
 // ---------------------------------------------------------
 // Hjälpfunktion: vad händer när admin är inloggad?
-// (används både vid vanlig login och vid auto-login på reload/F5)
 // ---------------------------------------------------------
 function onAdminLoggedIn() {
   if (!adminRoot) return;
   adminRoot.classList.remove('hidden');
   if (adminLoginCard) adminLoginCard.classList.add('hidden');
 
-  // Ladda allt innehåll
   loadAdminSummary();
   loadAdminRecentRatings();
+  loadAdminSuspiciousDeals();
   loadAdminRecentReports();
   loadAdminCustomers();
 }
@@ -67,7 +71,6 @@ if (adminLoginForm && adminPasswordInput) {
           'Admin-inloggning lyckades.',
           'admin-login-notice'
         );
-        // Spara nyckeln i localStorage så att F5 inte loggar ut
         localStorage.setItem('peerRateAdminKey', pwd);
         onAdminLoggedIn();
       } else {
@@ -104,15 +107,13 @@ if (adminLogoutBtn) {
 // ---------------------------------------------------------
 async function tryAutoAdminLogin() {
   const storedKey = localStorage.getItem('peerRateAdminKey');
-  if (!storedKey) return; // Ingen sparad nyckel
+  if (!storedKey) return;
 
   try {
-    // Testa att hämta summary – funkar det så är nyckeln giltig
     const res = await api.adminFetch('/api/admin/summary');
     if (res && res.ok) {
       onAdminLoggedIn();
     } else {
-      // Nyckeln funkar inte längre – ta bort den
       localStorage.removeItem('peerRateAdminKey');
     }
   } catch (err) {
@@ -120,22 +121,18 @@ async function tryAutoAdminLogin() {
   }
 }
 
-// Kör auto-login direkt när modulen lästs in
 tryAutoAdminLogin();
 
 // ---------------------------------------------------------
-// Ladda admin-översikt (totalsiffror)
+// Helpers
 // ---------------------------------------------------------
 async function loadAdminSummary() {
   try {
     const res = await api.adminFetch('/api/admin/summary');
     if (res && res.ok && res.counts) {
-      if (adminStatCustomers)
-        adminStatCustomers.textContent = res.counts.customers ?? '–';
-      if (adminStatRatings)
-        adminStatRatings.textContent = res.counts.ratings ?? '–';
-      if (adminStatReports)
-        adminStatReports.textContent = res.counts.reports ?? '–';
+      if (adminStatCustomers) adminStatCustomers.textContent = res.counts.customers ?? '–';
+      if (adminStatRatings) adminStatRatings.textContent = res.counts.ratings ?? '–';
+      if (adminStatReports) adminStatReports.textContent = res.counts.reports ?? '–';
     } else {
       console.warn('loadAdminSummary failed', res);
     }
@@ -168,6 +165,30 @@ function buildRaterDisplay(rating) {
   );
 }
 
+function getSeverityLabel(ratingCount) {
+  const n = Number(ratingCount || 0);
+  if (n >= 5) return 'Hög risk';
+  if (n >= 4) return 'Förhöjd risk';
+  return 'Behöver granskas';
+}
+
+function renderAlertSummary(count) {
+  if (!adminAlertsSummary) return;
+
+  const n = Number(count || 0);
+  if (n <= 0) {
+    adminAlertsSummary.classList.add('hidden');
+    adminAlertsSummary.textContent = '';
+    return;
+  }
+
+  adminAlertsSummary.classList.remove('hidden');
+  adminAlertsSummary.textContent =
+    n === 1
+      ? '1 misstänkt affär har flaggats eftersom samma verifierade deal har fler än 2 omdömen.'
+      : `${n} misstänkta affärer har flaggats eftersom samma verifierade deal har fler än 2 omdömen.`;
+}
+
 async function deleteAdminRating(ratingId) {
   if (!ratingId) return;
 
@@ -189,6 +210,7 @@ async function deleteAdminRating(ratingId) {
       await Promise.all([
         loadAdminSummary(),
         loadAdminRecentRatings(),
+        loadAdminSuspiciousDeals(),
       ]);
       return;
     }
@@ -274,7 +296,149 @@ async function loadAdminRecentRatings() {
 }
 
 // ---------------------------------------------------------
-// Senaste rapporter (med klickbar detaljvy)
+// Alerts – misstänkta deals med fler än 2 omdömen
+// ---------------------------------------------------------
+async function loadAdminSuspiciousDeals() {
+  if (!adminAlertsTable) return;
+
+  try {
+    const res = await api.adminFetch('/api/admin/alerts/suspicious-deals');
+
+    if (!res || res.ok !== true || !Array.isArray(res.alerts)) {
+      renderAlertSummary(0);
+      adminAlertsTable.textContent = 'Kunde inte ladda alerts.';
+      if (adminAlertDetail) adminAlertDetail.innerHTML = '';
+      return;
+    }
+
+    adminAlertsCache = res.alerts || [];
+    renderAlertSummary(adminAlertsCache.length);
+
+    if (!adminAlertsCache.length) {
+      adminAlertsTable.innerHTML =
+        '<div class="tiny muted">Inga misstänkta affärer hittades just nu.</div>';
+      if (adminAlertDetail) adminAlertDetail.innerHTML = '';
+      return;
+    }
+
+    let html =
+      '<table><thead><tr><th>Plattform</th><th>Order / proofRef</th><th>Antal omdömen</th><th>Severity</th><th>Senast uppdaterad</th></tr></thead><tbody>';
+
+    adminAlertsCache.forEach((alert, idx) => {
+      html += `
+        <tr data-index="${idx}" style="cursor:pointer;">
+          <td>${escapeHtml(alert.platform || '')}</td>
+          <td>${escapeHtml(alert.externalProofRef || '–')}</td>
+          <td>${escapeHtml(String(alert.ratingCount || 0))}</td>
+          <td><span class="severity-pill">${escapeHtml(getSeverityLabel(alert.ratingCount))}</span></td>
+          <td>${escapeHtml(formatDateTime(alert.updatedAt))}</td>
+        </tr>
+      `;
+    });
+
+    html += '</tbody></table>';
+    adminAlertsTable.innerHTML = html;
+
+    adminAlertsTable.querySelectorAll('tbody tr').forEach((tr) => {
+      tr.addEventListener('click', () => {
+        const idx = Number(tr.getAttribute('data-index') || '-1');
+        if (idx < 0 || idx >= adminAlertsCache.length) return;
+        renderSuspiciousDealDetail(adminAlertsCache[idx]);
+      });
+    });
+
+    renderSuspiciousDealDetail(adminAlertsCache[0]);
+  } catch (err) {
+    console.error('loadAdminSuspiciousDeals error', err);
+    renderAlertSummary(0);
+    adminAlertsTable.textContent = 'Fel vid hämtning.';
+    if (adminAlertDetail) adminAlertDetail.innerHTML = '';
+  }
+}
+
+function renderSuspiciousDealDetail(alert) {
+  if (!adminAlertDetail) return;
+  if (!alert) {
+    adminAlertDetail.innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  html += `<div class="detail-card">`;
+  html += `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">`;
+  html += `<h3>Detaljer för misstänkt affär</h3>`;
+  html += `<span class="severity-pill">${escapeHtml(getSeverityLabel(alert.ratingCount))}</span>`;
+  html += `</div>`;
+
+  html += `<div class="detail-grid">`;
+  html += `<div class="detail-item"><strong>Plattform</strong><div>${escapeHtml(alert.platform || '–')}</div></div>`;
+  html += `<div class="detail-item"><strong>Order / proofRef</strong><div>${escapeHtml(alert.externalProofRef || '–')}</div></div>`;
+  html += `<div class="detail-item"><strong>Item ID</strong><div>${escapeHtml(alert.externalItemId || '–')}</div></div>`;
+  html += `<div class="detail-item"><strong>Antal omdömen</strong><div>${escapeHtml(String(alert.ratingCount || 0))}</div></div>`;
+  html += `<div class="detail-item"><strong>Titel</strong><div>${escapeHtml(alert.title || '–')}</div></div>`;
+  html += `<div class="detail-item"><strong>Belopp</strong><div>${escapeHtml(alert.amountDisplay || '–')}</div></div>`;
+  html += `<div class="detail-item"><strong>Deal ID</strong><div>${escapeHtml(alert.dealId || '–')}</div></div>`;
+  html += `<div class="detail-item"><strong>Senast uppdaterad</strong><div>${escapeHtml(formatDateTime(alert.updatedAt))}</div></div>`;
+  html += `</div>`;
+
+  if (alert.externalPageUrl) {
+    html += `<div class="tiny" style="margin-top:8px;"><strong>Källsida:</strong> <a href="${escapeHtml(alert.externalPageUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(alert.externalPageUrl)}</a></div>`;
+  }
+
+  html += `<div style="margin-top:12px;"><strong>Omdömen kopplade till affären</strong></div>`;
+
+  const ratings = Array.isArray(alert.ratings) ? alert.ratings : [];
+  if (!ratings.length) {
+    html += `<div class="tiny muted" style="margin-top:6px;">Inga omdömen kopplade till denna alert.</div>`;
+  } else {
+    html += `<table><thead><tr><th>Datum</th><th>Fått omdöme</th><th>Lämnat av</th><th>Betyg</th><th>Kommentar</th><th></th></tr></thead><tbody>`;
+    ratings.forEach((r) => {
+      html += `
+        <tr>
+          <td>${escapeHtml(formatDateTime(r.createdAt))}</td>
+          <td>${escapeHtml(r.ratedUser || '–')}</td>
+          <td>${escapeHtml(buildRaterDisplay(r))}</td>
+          <td>${escapeHtml(String(r.score ?? r.rating ?? ''))}</td>
+          <td>${escapeHtml(shortText(r.text || r.comment || '', 140))}</td>
+          <td>
+            <button
+              type="button"
+              class="icon-btn danger detail-delete-rating-btn"
+              data-id="${escapeHtml(String(r.id || ''))}"
+            >
+              Ta bort
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+    html += `</tbody></table>`;
+  }
+
+  html += `<details style="margin-top:10px;">
+    <summary class="tiny">Visa rådata för alert</summary>
+    <pre class="tiny" style="white-space:pre-wrap;margin-top:4px;">${escapeHtml(JSON.stringify(alert, null, 2))}</pre>
+  </details>`;
+
+  html += `</div>`;
+  adminAlertDetail.innerHTML = html;
+
+  adminAlertDetail.querySelectorAll('.detail-delete-rating-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-id');
+      if (!id) return;
+      btn.disabled = true;
+      try {
+        await deleteAdminRating(id);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
+// ---------------------------------------------------------
+// Senaste rapporter
 // ---------------------------------------------------------
 async function loadAdminRecentReports() {
   if (!adminReportsTable) return;
@@ -299,7 +463,6 @@ async function loadAdminRecentReports() {
       html += '</tbody></table>';
       adminReportsTable.innerHTML = html;
 
-      // Klick på rad -> visa alla detaljer om rapporten
       adminReportsTable.querySelectorAll('tbody tr').forEach((tr) => {
         tr.addEventListener('click', () => {
           const idx = Number(tr.getAttribute('data-index') || '-1');
@@ -378,7 +541,6 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
     });
     html += '</tbody></table>';
 
-    // Pagination controls
     const totalPages = Math.max(
       1,
       Math.ceil(total / adminCustomersPageSize)
@@ -394,7 +556,6 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
 
     adminCustomersTable.innerHTML = html;
 
-    // Klick på rad -> hämta kunddetaljer
     adminCustomersTable.querySelectorAll('tbody tr').forEach((tr) => {
       tr.addEventListener('click', async () => {
         const key = tr.getAttribute('data-key');
@@ -419,12 +580,11 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
       });
     });
 
-    // Klick på radera-knappar (stoppar bubbla så att raden inte triggar detaljvisning)
     adminCustomersTable
       .querySelectorAll('.delete-customer-btn')
       .forEach((btn) => {
         btn.addEventListener('click', async (e) => {
-          e.stopPropagation(); // Viktigt: klicka inte raden samtidigt
+          e.stopPropagation();
           const id = btn.getAttribute('data-id');
           if (!id) return;
 
@@ -442,10 +602,11 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
             );
             if (res && res.ok) {
               alert('Kunden har raderats.');
-              // Ladda om kundlistan (börjar om från första sidan)
               await Promise.all([
                 loadAdminCustomers(1),
                 loadAdminSummary(),
+                loadAdminRecentRatings(),
+                loadAdminSuspiciousDeals(),
               ]);
               if (adminSearchResult) adminSearchResult.textContent = '';
             } else {
@@ -458,7 +619,6 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
         });
       });
 
-    // Pagination button handlers
     const prevBtn = adminCustomersTable.querySelector('#cust-prev');
     const nextBtn = adminCustomersTable.querySelector('#cust-next');
     if (prevBtn)
@@ -480,7 +640,7 @@ async function loadAdminCustomers(page = adminCustomersCurrentPage) {
 }
 
 // ---------------------------------------------------------
-// Rendera kunddetaljer i samma area som sökresultatet
+// Rendera kunddetaljer
 // ---------------------------------------------------------
 function renderCustomerDetails(c) {
   if (!adminSearchResult) return;
@@ -515,8 +675,7 @@ function renderCustomerDetails(c) {
 }
 
 // ---------------------------------------------------------
-// Hjälp: plocka ut äldre "Datum: .. Tid: .. Belopp: .. Länk: .."-mönster
-// ur beskrivningsfältet (för gamla rapporter).
+// Hjälp: äldre rapportbeskrivning
 // ---------------------------------------------------------
 function parseLegacyDescription(details) {
   if (!details) return null;
@@ -539,7 +698,6 @@ function parseLegacyDescription(details) {
   if (amountMatch) result.amount = amountMatch[1];
   if (linkMatch) result.link = linkMatch[1];
 
-  // Ta bort dessa bitar ur själva texten
   text = text.replace(dateRe, '');
   text = text.replace(timeRe, '');
   text = text.replace(amountRe, '');
@@ -551,7 +709,7 @@ function parseLegacyDescription(details) {
 }
 
 // ---------------------------------------------------------
-// Rendera rapport-detaljer (klick från listan "Senaste rapporter")
+// Rendera rapport-detaljer
 // ---------------------------------------------------------
 function renderReportDetails(r) {
   if (!adminReportDetail) return;
@@ -568,7 +726,6 @@ function renderReportDetails(r) {
       ? occurred.toLocaleString('sv-SE')
       : null;
 
-  // Plocka ev. ut datum/tid/belopp/länk ur äldre "ihopsmetad" beskrivning
   const legacy =
     r.details && typeof r.details === 'string'
       ? parseLegacyDescription(r.details)
@@ -581,16 +738,13 @@ function renderReportDetails(r) {
     occurredStr = parts.join(' ');
   }
 
-  // Belopp: använd riktiga fält först, annars ev. extraherat värde
   let amountDisplay = r.amount;
   if ((amountDisplay === null || amountDisplay === undefined) && legacy && legacy.amount) {
     amountDisplay = legacy.amount;
   }
 
-  // Länk: använd counterpartyLink om det finns, annars ev. länk i beskrivningen
   const counterpartyLink = r.counterpartyLink || (legacy && legacy.link) || null;
 
-  // Beskrivning: rensad text om vi lyckats plocka ut datum/belopp/länk, annars original
   let descriptionText = r.details;
   if (legacy && legacy.text !== null) {
     descriptionText = legacy.text;
@@ -661,7 +815,6 @@ function renderReportDetails(r) {
     )}</div>`;
   }
 
-  // Visa alltid "rådata" så att du ser ALLT som finns i objektet
   html += `<details style="margin-top:8px;">
     <summary class="tiny">Visa rådata (alla fält från API:t)</summary>
     <pre class="tiny" style="white-space:pre-wrap;margin-top:4px;">${escapeHtml(
@@ -673,7 +826,7 @@ function renderReportDetails(r) {
 }
 
 // ---------------------------------------------------------
-// basic HTML escaper
+// HTML escaper
 // ---------------------------------------------------------
 function escapeHtml(str) {
   if (!str) return '';

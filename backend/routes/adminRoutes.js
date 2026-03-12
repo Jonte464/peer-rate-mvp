@@ -14,7 +14,6 @@ const {
 const prisma = global.prisma || new PrismaClient();
 const router = express.Router();
 
-// Läs adminlösenord från .env
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || null;
 
 /** Admin-login-schema */
@@ -76,6 +75,11 @@ function formatRecentRatingRow(row) {
   };
 }
 
+function formatAmountDisplay(amount, currency) {
+  if (amount === null || amount === undefined || amount === '') return null;
+  return `${String(amount)} ${String(currency || 'SEK')}`.trim();
+}
+
 /* -------------------------------------------------------
    POST /api/admin/login
    ------------------------------------------------------- */
@@ -96,14 +100,12 @@ router.post('/login', (req, res) => {
       .status(401)
       .json({ ok: false, error: 'Fel admin-lösenord.' });
   }
-  // Frontend sparar detta lösenord och skickar i x-admin-key-header.
   res.json({ ok: true });
 });
 
-// Alla routes nedan kräver admin
 router.use(requireAdmin);
 
-/** GET /api/admin/summary – admin-översikt: totalsiffror */
+/** GET /api/admin/summary – admin-översikt */
 router.get('/summary', async (_req, res) => {
   try {
     const counts = await adminGetCounts();
@@ -155,6 +157,103 @@ router.get('/ratings/recent', async (req, res) => {
   }
 });
 
+/** GET /api/admin/alerts/suspicious-deals – deals med fler än 2 omdömen */
+router.get('/alerts/suspicious-deals', async (req, res) => {
+  const limit = Math.min(200, Math.max(1, Number(req.query.limit || 50)));
+
+  try {
+    const deals = await prisma.deal.findMany({
+      where: {
+        externalProofRef: {
+          not: null,
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+      take: 500,
+      select: {
+        id: true,
+        platform: true,
+        externalProofRef: true,
+        externalItemId: true,
+        externalPageUrl: true,
+        title: true,
+        amount: true,
+        currency: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            ratings: true,
+          },
+        },
+        ratings: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          select: {
+            id: true,
+            score: true,
+            text: true,
+            raterName: true,
+            raterEmail: true,
+            createdAt: true,
+            customer: {
+              select: {
+                email: true,
+                subjectRef: true,
+                fullName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const suspicious = deals
+      .filter((deal) => Number(deal?._count?.ratings || 0) > 2)
+      .slice(0, limit)
+      .map((deal) => ({
+        dealId: deal.id,
+        platform: deal.platform,
+        externalProofRef: deal.externalProofRef || null,
+        externalItemId: deal.externalItemId || null,
+        externalPageUrl: deal.externalPageUrl || null,
+        title: deal.title || null,
+        amountDisplay: formatAmountDisplay(deal.amount, deal.currency),
+        ratingCount: Number(deal?._count?.ratings || 0),
+        updatedAt: safeDateIso(deal.updatedAt),
+        ratings: (deal.ratings || []).map((r) => ({
+          id: r.id,
+          createdAt: safeDateIso(r.createdAt),
+          score: r.score,
+          rating: r.score,
+          text: r.text || '',
+          comment: r.text || '',
+          ratedUser:
+            r?.customer?.email ||
+            r?.customer?.subjectRef ||
+            null,
+          raterName: r.raterName || null,
+          raterEmail: r.raterEmail || null,
+          raterDisplay: r.raterName || r.raterEmail || '–',
+        })),
+      }));
+
+    return res.json({
+      ok: true,
+      count: suspicious.length,
+      alerts: suspicious,
+    });
+  } catch (e) {
+    console.error('[GET /api/admin/alerts/suspicious-deals] error:', e);
+    return res.status(500).json({
+      ok: false,
+      error: 'Kunde inte hämta suspicious deal alerts.',
+    });
+  }
+});
+
 /** DELETE /api/admin/ratings/:id – radera rating (admin) */
 router.delete('/ratings/:id', async (req, res) => {
   const id = String(req.params.id || '').trim();
@@ -182,20 +281,16 @@ router.delete('/ratings/:id', async (req, res) => {
     }
 
     await prisma.$transaction(async (tx) => {
-      // Ta bort rapporter som är direkt kopplade till just detta omdöme
       await tx.report.deleteMany({
         where: {
           ratingId: id,
         },
       });
 
-      // Ta bort själva ratingen
       await tx.rating.delete({
         where: { id },
       });
 
-      // Om ratingen hörde till en deal:
-      // sätt tillbaka deal till PENDING_RATING om inga ratings längre finns kvar
       if (rating.dealId) {
         const remaining = await tx.rating.count({
           where: { dealId: rating.dealId },
@@ -309,20 +404,17 @@ router.delete('/customers/:id', async (req, res) => {
     }
 
     await prisma.$transaction(async (tx) => {
-      // Barn-tabeller som pekar på kunden måste bort först
       await tx.rating.deleteMany({ where: { customerId: id } });
       await tx.report.deleteMany({ where: { reportedCustomerId: id } });
       await tx.transaction.deleteMany({ where: { customerId: id } });
       await tx.score.deleteMany({ where: { customerId: id } });
 
-      // Deals där kunden är säljare eller köpare
       await tx.deal.deleteMany({
         where: {
           OR: [{ sellerId: id }, { buyerId: id }],
         },
       });
 
-      // Traderaordrar + annonser + externa profiler
       await tx.traderaOrder.deleteMany({
         where: {
           externalProfile: { customerId: id },
@@ -335,7 +427,6 @@ router.delete('/customers/:id', async (req, res) => {
       });
       await tx.externalProfile.deleteMany({ where: { customerId: id } });
 
-      // Till sist: kunden själv
       await tx.customer.delete({ where: { id } });
     });
 
