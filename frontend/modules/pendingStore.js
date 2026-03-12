@@ -1,11 +1,9 @@
 // frontend/modules/pendingStore.js
-// Förenklad pending-store.
-// Primär källa: full payload i URL-parametern "pr"
-// Sekundär källa: extension bridge
-// Tertiär fallback: tunn querydata
-// Lokal lagring: localStorage
+// Extremt förenklad pending-store.
+// Primär och i princip enda källa: URL-parametrar.
+// localStorage används bara för att hålla state stabilt efter första läsningen.
 
-const PENDING_KEY = 'peerrate_pending_rating_v4';
+const PENDING_KEY = 'peerrate_pending_rating_v5';
 const TTL_MS = 1000 * 60 * 60 * 24;
 
 const RATED_CACHE_KEY = 'peerrate_rated_deals_v1';
@@ -52,31 +50,6 @@ function normalizeSourceDisplay(source) {
   if (s === 'facebook') return 'Facebook Marketplace';
 
   return normalizeText(source);
-}
-
-function readB64Json(b64) {
-  if (!b64) return null;
-
-  try {
-    const cleaned = decodeURIComponent(b64);
-
-    try {
-      const raw = atob(cleaned);
-      const utf8 = decodeURIComponent(escape(raw));
-      const parsed = safeParse(utf8);
-      if (parsed && typeof parsed === 'object') return parsed;
-    } catch {}
-
-    try {
-      const raw2 = atob(cleaned);
-      const parsed2 = safeParse(raw2);
-      if (parsed2 && typeof parsed2 === 'object') return parsed2;
-    } catch {}
-
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 export function hasRichPendingData(p) {
@@ -331,111 +304,106 @@ export function isDealRated(pendingOrKey) {
 
 export function captureFromUrl() {
   const qs = new URLSearchParams(window.location.search || '');
-  const pr = qs.get('pr');
+
   const source = qs.get('source') || '';
   const pageUrl = qs.get('pageUrl') || '';
   const proofRef = qs.get('proofRef') || '';
 
-  let result = null;
+  const subjectEmail = qs.get('subjectEmail') || '';
+  const cpEmail = qs.get('cpEmail') || '';
+  const cpName = qs.get('cpName') || '';
+  const cpPhone = qs.get('cpPhone') || '';
+  const cpAddressStreet = qs.get('cpAddressStreet') || '';
+  const cpAddressZip = qs.get('cpAddressZip') || '';
+  const cpAddressCity = qs.get('cpAddressCity') || '';
+  const cpCountry = qs.get('cpCountry') || '';
+  const cpPlatform = qs.get('cpPlatform') || '';
+  const cpPlatformUsername = qs.get('cpPlatformUsername') || '';
+  const cpOrderId = qs.get('cpOrderId') || '';
+  const cpItemId = qs.get('cpItemId') || '';
+  const cpAmountSek = qs.get('cpAmountSek') || '';
+  const cpTitle = qs.get('cpTitle') || '';
 
-  if (pr) {
-    const decoded = readB64Json(pr);
-    if (decoded && typeof decoded === 'object') {
-      const existing = getPending() || {};
-      const merged = mergePendingData(existing, decoded);
-      setPending(merged);
-      result = merged;
-    }
+  const dealPlatform = qs.get('dealPlatform') || '';
+  const dealOrderId = qs.get('dealOrderId') || '';
+  const dealItemId = qs.get('dealItemId') || '';
+  const dealTitle = qs.get('dealTitle') || '';
+  const dealAmount = qs.get('dealAmount') || '';
+  const dealAmountSek = qs.get('dealAmountSek') || '';
+  const dealCurrency = qs.get('dealCurrency') || '';
+  const dealDate = qs.get('dealDate') || '';
+  const dealDateISO = qs.get('dealDateISO') || '';
+
+  const hasAnyRelevantParam = !!(
+    source || pageUrl || proofRef ||
+    subjectEmail || cpEmail || cpName || cpPhone ||
+    cpAddressStreet || cpAddressZip || cpAddressCity || cpCountry ||
+    dealOrderId || dealItemId || dealTitle || dealAmount || dealAmountSek || dealDate || dealDateISO
+  );
+
+  if (!hasAnyRelevantParam) {
+    return null;
   }
 
-  if (!result && (source || pageUrl || proofRef)) {
-    const existing = getPending() || {};
-    const merged = mergePendingData(existing, {
-      source: source || existing.source,
-      pageUrl: pageUrl || existing.pageUrl,
-      proofRef: proofRef || existing.proofRef,
-    });
-    setPending(merged);
-    result = merged;
-  }
+  const incoming = {
+    source,
+    pageUrl,
+    proofRef,
+    subjectEmail,
+    counterparty: {
+      email: cpEmail,
+      name: cpName,
+      phone: cpPhone,
+      addressStreet: cpAddressStreet,
+      addressZip: cpAddressZip,
+      addressCity: cpAddressCity,
+      country: cpCountry,
+      platform: cpPlatform,
+      platformUsername: cpPlatformUsername,
+      orderId: cpOrderId,
+      itemId: cpItemId,
+      amountSek: cpAmountSek ? Number(cpAmountSek) : undefined,
+      title: cpTitle,
+      pageUrl,
+    },
+    deal: {
+      platform: dealPlatform || source,
+      orderId: dealOrderId,
+      itemId: dealItemId,
+      title: dealTitle,
+      amount: dealAmount ? Number(dealAmount) : undefined,
+      amountSek: dealAmountSek ? Number(dealAmountSek) : undefined,
+      currency: dealCurrency,
+      date: dealDate,
+      dateISO: dealDateISO,
+      pageUrl,
+    },
+  };
 
-  if (pr || source || pageUrl || proofRef) {
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('pr');
-      url.searchParams.delete('source');
-      url.searchParams.delete('pageUrl');
-      url.searchParams.delete('proofRef');
-      window.history.replaceState({}, '', url.toString());
-    } catch {}
-  }
+  const existing = getPending() || {};
+  const merged = mergePendingData(existing, incoming);
+  setPending(merged);
 
-  return result;
+  try {
+    const url = new URL(window.location.href);
+    [
+      'source', 'pageUrl', 'proofRef',
+      'subjectEmail',
+      'cpEmail', 'cpName', 'cpPhone',
+      'cpAddressStreet', 'cpAddressZip', 'cpAddressCity', 'cpCountry',
+      'cpPlatform', 'cpPlatformUsername', 'cpOrderId', 'cpItemId', 'cpAmountSek', 'cpTitle',
+      'dealPlatform', 'dealOrderId', 'dealItemId', 'dealTitle',
+      'dealAmount', 'dealAmountSek', 'dealCurrency', 'dealDate', 'dealDateISO'
+    ].forEach((key) => url.searchParams.delete(key));
+
+    window.history.replaceState({}, '', url.toString());
+  } catch {}
+
+  return merged;
 }
 
-export async function captureFromExtensionBridge(timeoutMs = 1800) {
-  return new Promise((resolve) => {
-    let done = false;
-    let timer = null;
-
-    const finish = (value) => {
-      if (done) return;
-      done = true;
-
-      try {
-        window.removeEventListener('message', onMessage);
-      } catch {}
-
-      if (timer) clearTimeout(timer);
-      resolve(value || null);
-    };
-
-    const onMessage = (event) => {
-      try {
-        if (event.source !== window) return;
-        if (!event.origin || !/^https:\/\/(www\.)?peerrate\.ai$/i.test(event.origin)) return;
-
-        const data = event.data;
-        if (!data || data.type !== 'PEERRATE_PENDING_PAYLOAD_RESPONSE') return;
-
-        const payload = data?.payload?.payload || null;
-
-        if (!payload || typeof payload !== 'object') {
-          finish(null);
-          return;
-        }
-
-        const existing = getPending();
-        const normalized = existing
-          ? mergePendingData(existing, payload)
-          : normalizeIncoming(payload);
-
-        setPending(normalized);
-
-        try {
-          window.postMessage(
-            { type: 'PEERRATE_CLEAR_PENDING_PAYLOAD' },
-            window.location.origin
-          );
-        } catch {}
-
-        finish(normalized);
-      } catch {
-        finish(null);
-      }
-    };
-
-    timer = setTimeout(() => finish(null), timeoutMs);
-
-    try {
-      window.addEventListener('message', onMessage);
-
-      window.postMessage(
-        { type: 'PEERRATE_REQUEST_PENDING_PAYLOAD' },
-        window.location.origin
-      );
-    } catch {
-      finish(null);
-    }
-  });
+// Behålls bara för kompatibilitet med befintlig kod.
+// Vi använder inte längre bridge som primär transport.
+export async function captureFromExtensionBridge() {
+  return getPending();
 }
