@@ -1,16 +1,12 @@
 // extension/service-worker.js
 // PeerRate background/service-worker
-// Förenklad transport:
-// - content.js skickar payload
-// - vi kontrollerar med backend om affären får betygsättas
-// - om ja: spara full payload i chrome.storage.local
-// - öppna kort URL till rate.html
-// - rate.html hämtar sedan full payload via page-bridge
+// Enkel och robust transport:
+// - kontrollera med backend om affären får betygsättas
+// - spara full payload i extension storage
+// - öppna rate.html med både tunn query + full payload i pr-param
+// - rate.html kan då läsa payload direkt från URL
 //
-// Viktigt:
-// - spärr mot dubbelbetyg finns kvar
-// - ingen auth-sync här
-// - ingen onödig smarthet
+// Dubbelbetygsspärr behålls.
 
 const API_BASE = 'https://api.peerrate.ai';
 const RATE_PAGE_BASE = 'https://peerrate.ai/rate.html';
@@ -65,6 +61,14 @@ function buildDealKey(payload) {
   return `${source}|${proofRef}`;
 }
 
+function base64EncodeUnicode(str) {
+  try {
+    return btoa(unescape(encodeURIComponent(str)));
+  } catch {
+    return btoa(str);
+  }
+}
+
 function buildRateUrl(payload) {
   const source = normalizeSource(payload?.source || payload?.deal?.platform || '');
   const pageUrl = normalizeText(payload?.pageUrl || payload?.deal?.pageUrl || '');
@@ -74,6 +78,17 @@ function buildRateUrl(payload) {
   if (source) qs.set('source', source);
   if (pageUrl) qs.set('pageUrl', pageUrl);
   if (proofRef) qs.set('proofRef', proofRef);
+
+  try {
+    const normalized = normalizePendingPayload(payload);
+    if (normalized) {
+      const json = JSON.stringify(normalized);
+      const pr = encodeURIComponent(base64EncodeUnicode(json));
+      qs.set('pr', pr);
+    }
+  } catch (err) {
+    console.warn('[PeerRate extension] failed to attach pr payload to URL:', err);
+  }
 
   return `${RATE_PAGE_BASE}?${qs.toString()}`;
 }
@@ -158,7 +173,7 @@ function normalizePendingPayload(payload) {
 
   if (!source || !proofRef) return null;
 
-  const out = {
+  return {
     ...payload,
     source,
     proofRef,
@@ -166,8 +181,6 @@ function normalizePendingPayload(payload) {
     _ts: Date.now(),
     savedAt: new Date().toISOString(),
   };
-
-  return out;
 }
 
 async function writePendingPayload(payload) {

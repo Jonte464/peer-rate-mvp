@@ -1,10 +1,11 @@
 // frontend/modules/pendingStore.js
 // Förenklad pending-store.
-// Primär källa: extension bridge
-// Sekundär fallback: URL-parametrar
-// Lokal lagring: localStorage så sidan kan rendera stabilt
+// Primär källa: full payload i URL-parametern "pr"
+// Sekundär källa: extension bridge
+// Tertiär fallback: tunn querydata
+// Lokal lagring: localStorage
 
-const PENDING_KEY = 'peerrate_pending_rating_v3';
+const PENDING_KEY = 'peerrate_pending_rating_v4';
 const TTL_MS = 1000 * 60 * 60 * 24;
 
 const RATED_CACHE_KEY = 'peerrate_rated_deals_v1';
@@ -51,6 +52,31 @@ function normalizeSourceDisplay(source) {
   if (s === 'facebook') return 'Facebook Marketplace';
 
   return normalizeText(source);
+}
+
+function readB64Json(b64) {
+  if (!b64) return null;
+
+  try {
+    const cleaned = decodeURIComponent(b64);
+
+    try {
+      const raw = atob(cleaned);
+      const utf8 = decodeURIComponent(escape(raw));
+      const parsed = safeParse(utf8);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch {}
+
+    try {
+      const raw2 = atob(cleaned);
+      const parsed2 = safeParse(raw2);
+      if (parsed2 && typeof parsed2 === 'object') return parsed2;
+    } catch {}
+
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 export function hasRichPendingData(p) {
@@ -305,25 +331,38 @@ export function isDealRated(pendingOrKey) {
 
 export function captureFromUrl() {
   const qs = new URLSearchParams(window.location.search || '');
+  const pr = qs.get('pr');
   const source = qs.get('source') || '';
   const pageUrl = qs.get('pageUrl') || '';
   const proofRef = qs.get('proofRef') || '';
 
   let result = null;
 
-  if (source || pageUrl || proofRef) {
+  if (pr) {
+    const decoded = readB64Json(pr);
+    if (decoded && typeof decoded === 'object') {
+      const existing = getPending() || {};
+      const merged = mergePendingData(existing, decoded);
+      setPending(merged);
+      result = merged;
+    }
+  }
+
+  if (!result && (source || pageUrl || proofRef)) {
     const existing = getPending() || {};
     const merged = mergePendingData(existing, {
       source: source || existing.source,
       pageUrl: pageUrl || existing.pageUrl,
       proofRef: proofRef || existing.proofRef,
     });
-
     setPending(merged);
     result = merged;
+  }
 
+  if (pr || source || pageUrl || proofRef) {
     try {
       const url = new URL(window.location.href);
+      url.searchParams.delete('pr');
       url.searchParams.delete('source');
       url.searchParams.delete('pageUrl');
       url.searchParams.delete('proofRef');
