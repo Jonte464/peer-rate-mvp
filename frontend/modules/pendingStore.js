@@ -1,11 +1,14 @@
 // frontend/modules/pendingStore.js
-const PENDING_KEY = 'peerrate_pending_rating_v2';
+// Förenklad pending-store.
+// Primär källa: extension bridge
+// Sekundär fallback: URL-parametrar
+// Lokal lagring: localStorage så sidan kan rendera stabilt
+
+const PENDING_KEY = 'peerrate_pending_rating_v3';
 const TTL_MS = 1000 * 60 * 60 * 24;
 
 const RATED_CACHE_KEY = 'peerrate_rated_deals_v1';
 const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90;
-
-let bridgeRequestInFlight = false;
 
 function now() {
   return Date.now();
@@ -31,31 +34,6 @@ function dispatchPendingCleared() {
   } catch {}
 }
 
-function readB64Json(b64) {
-  if (!b64) return null;
-
-  try {
-    const cleaned = decodeURIComponent(b64);
-
-    try {
-      const raw = atob(cleaned);
-      const j = safeParse(raw);
-      if (j && typeof j === 'object') return j;
-    } catch {}
-
-    try {
-      const raw = atob(cleaned);
-      const utf8 = decodeURIComponent(escape(raw));
-      const j2 = safeParse(utf8);
-      if (j2 && typeof j2 === 'object') return j2;
-    } catch {}
-
-    return null;
-  } catch {
-    return null;
-  }
-}
-
 function normalizeText(v) {
   return String(v || '').trim();
 }
@@ -75,7 +53,7 @@ function normalizeSourceDisplay(source) {
   return normalizeText(source);
 }
 
-function hasRichPendingData(p) {
+export function hasRichPendingData(p) {
   return !!(
     p?.subjectEmail ||
     p?.counterparty?.email ||
@@ -198,7 +176,10 @@ function mergePendingData(baseObj, incomingObj) {
 export function setPending(data) {
   try {
     const existing = getPending();
-    const normalized = existing ? mergePendingData(existing, data || {}) : normalizeIncoming(data || {});
+    const normalized = existing
+      ? mergePendingData(existing, data || {})
+      : normalizeIncoming(data || {});
+
     const payload = { ...normalized, _ts: now() };
     localStorage.setItem(PENDING_KEY, JSON.stringify(payload));
     dispatchPendingUpdated(payload);
@@ -322,83 +303,15 @@ export function isDealRated(pendingOrKey) {
   }
 }
 
-function requestPendingFromExtensionInBackground() {
-  if (bridgeRequestInFlight) return;
-  if (typeof window === 'undefined' || typeof window.postMessage !== 'function') return;
-
-  bridgeRequestInFlight = true;
-
-  const onMessage = (event) => {
-    try {
-      if (event.source !== window) return;
-      if (!event.origin || !/^https:\/\/(www\.)?peerrate\.ai$/i.test(event.origin)) return;
-
-      const data = event.data;
-      if (!data || data.type !== 'PEERRATE_PENDING_PAYLOAD_RESPONSE') return;
-
-      const payload = data?.payload?.payload || null;
-      if (payload && typeof payload === 'object') {
-        const existing = getPending();
-        const merged = existing ? mergePendingData(existing, payload) : normalizeIncoming(payload);
-        setPending(merged);
-      }
-
-      try {
-        window.postMessage(
-          { type: 'PEERRATE_CLEAR_PENDING_PAYLOAD' },
-          window.location.origin
-        );
-      } catch {}
-    } finally {
-      bridgeRequestInFlight = false;
-      try { window.removeEventListener('message', onMessage); } catch {}
-    }
-  };
-
-  try {
-    window.addEventListener('message', onMessage);
-
-    window.postMessage(
-      { type: 'PEERRATE_REQUEST_PENDING_PAYLOAD' },
-      window.location.origin
-    );
-
-    setTimeout(() => {
-      bridgeRequestInFlight = false;
-      try { window.removeEventListener('message', onMessage); } catch {}
-    }, 1800);
-  } catch {
-    bridgeRequestInFlight = false;
-    try { window.removeEventListener('message', onMessage); } catch {}
-  }
-}
-
 export function captureFromUrl() {
   const qs = new URLSearchParams(window.location.search || '');
-  const pr = qs.get('pr');
   const source = qs.get('source') || '';
   const pageUrl = qs.get('pageUrl') || '';
   const proofRef = qs.get('proofRef') || '';
 
-  const isRatePage = (window.location.pathname || '').toLowerCase().includes('/rate.html');
-
   let result = null;
 
-  if (pr) {
-    const decoded = readB64Json(pr);
-    if (decoded && typeof decoded === 'object') {
-      if (!decoded.source && source) decoded.source = source;
-      if (!decoded.pageUrl && pageUrl) decoded.pageUrl = pageUrl;
-      if (!decoded.proofRef && proofRef) decoded.proofRef = proofRef;
-
-      const existing = getPending();
-      const normalized = existing ? mergePendingData(existing, decoded) : normalizeIncoming(decoded);
-      setPending(normalized);
-      result = normalized;
-    }
-  }
-
-  if (!result && (source || pageUrl || proofRef)) {
+  if (source || pageUrl || proofRef) {
     const existing = getPending() || {};
     const merged = mergePendingData(existing, {
       source: source || existing.source,
@@ -408,16 +321,9 @@ export function captureFromUrl() {
 
     setPending(merged);
     result = merged;
-  }
 
-  if ((isRatePage && result && !hasRichPendingData(result)) || (isRatePage && !result)) {
-    requestPendingFromExtensionInBackground();
-  }
-
-  if (pr || source || pageUrl || proofRef) {
     try {
       const url = new URL(window.location.href);
-      url.searchParams.delete('pr');
       url.searchParams.delete('source');
       url.searchParams.delete('pageUrl');
       url.searchParams.delete('proofRef');
@@ -428,8 +334,7 @@ export function captureFromUrl() {
   return result;
 }
 
-// Behålls för kompatibilitet med äldre importer.
-export async function captureFromExtensionBridge(timeoutMs = 1500) {
+export async function captureFromExtensionBridge(timeoutMs = 1800) {
   return new Promise((resolve) => {
     let done = false;
     let timer = null;
@@ -455,13 +360,17 @@ export async function captureFromExtensionBridge(timeoutMs = 1500) {
         if (!data || data.type !== 'PEERRATE_PENDING_PAYLOAD_RESPONSE') return;
 
         const payload = data?.payload?.payload || null;
+
         if (!payload || typeof payload !== 'object') {
           finish(null);
           return;
         }
 
         const existing = getPending();
-        const normalized = existing ? mergePendingData(existing, payload) : normalizeIncoming(payload);
+        const normalized = existing
+          ? mergePendingData(existing, payload)
+          : normalizeIncoming(payload);
+
         setPending(normalized);
 
         try {

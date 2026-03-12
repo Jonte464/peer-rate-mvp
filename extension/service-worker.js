@@ -1,47 +1,47 @@
 // extension/service-worker.js
 // PeerRate background/service-worker
-// Basic reset:
-// - backend måste uttryckligen svara canRate === true
-// - full payload sparas i extension storage
-// - rate.html öppnas med kort URL
-// - page-bridge kan läsa ut full payload efteråt
+// Förenklad transport:
+// - content.js skickar payload
+// - vi kontrollerar med backend om affären får betygsättas
+// - om ja: spara full payload i chrome.storage.local
+// - öppna kort URL till rate.html
+// - rate.html hämtar sedan full payload via page-bridge
+//
+// Viktigt:
+// - spärr mot dubbelbetyg finns kvar
+// - ingen auth-sync här
+// - ingen onödig smarthet
 
-const API_BASE = "https://api.peerrate.ai";
-const RATE_PAGE_BASE = "https://peerrate.ai/rate.html";
+const API_BASE = 'https://api.peerrate.ai';
+const RATE_PAGE_BASE = 'https://peerrate.ai/rate.html';
 
-const RATED_CACHE_KEY = "peerrate_extension_rated_cache_v1";
+const RATED_CACHE_KEY = 'peerrate_extension_rated_cache_v1';
 const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90 dagar
 
-const AUTH_IDENTITY_KEY = "peerrate_extension_auth_identity_v1";
-
-const PENDING_PAYLOAD_KEY = "peerrate_extension_pending_payload_v1";
+const PENDING_PAYLOAD_KEY = 'peerrate_extension_pending_payload_v2';
 const PENDING_TTL_MS = 1000 * 60 * 30; // 30 min
 
 function normalizeText(v) {
-  return String(v || "").trim();
+  return String(v || '').trim();
 }
 
 function normalizeLower(v) {
   return normalizeText(v).toLowerCase();
 }
 
-function normalizeEmail(v) {
-  return normalizeText(v).toLowerCase();
-}
-
 function normalizeSource(input) {
   const v = normalizeLower(input);
 
-  if (v.includes("tradera")) return "tradera";
-  if (v.includes("blocket")) return "blocket";
-  if (v.includes("airbnb")) return "airbnb";
-  if (v.includes("ebay")) return "ebay";
-  if (v.includes("tiptap")) return "tiptap";
-  if (v.includes("hygglo")) return "hygglo";
-  if (v.includes("husknuten")) return "husknuten";
-  if (v.includes("facebook")) return "facebook";
+  if (v.includes('tradera')) return 'tradera';
+  if (v.includes('blocket')) return 'blocket';
+  if (v.includes('airbnb')) return 'airbnb';
+  if (v.includes('ebay')) return 'ebay';
+  if (v.includes('tiptap')) return 'tiptap';
+  if (v.includes('hygglo')) return 'hygglo';
+  if (v.includes('husknuten')) return 'husknuten';
+  if (v.includes('facebook')) return 'facebook';
 
-  return "other";
+  return 'other';
 }
 
 function extractProofRef(payload) {
@@ -53,26 +53,27 @@ function extractProofRef(payload) {
     normalizeText(payload?.deal?.externalProofRef) ||
     normalizeText(payload?.counterparty?.orderId) ||
     normalizeText(payload?.pageUrl) ||
-    ""
+    ''
   );
 }
 
 function buildDealKey(payload) {
-  const source = normalizeSource(payload?.source || payload?.deal?.platform || "");
+  const source = normalizeSource(payload?.source || payload?.deal?.platform || '');
   const proofRef = normalizeLower(extractProofRef(payload));
-  if (!source || !proofRef) return "";
+
+  if (!source || !proofRef) return '';
   return `${source}|${proofRef}`;
 }
 
 function buildRateUrl(payload) {
-  const pageUrl = normalizeText(payload?.pageUrl || payload?.deal?.pageUrl || "");
+  const source = normalizeSource(payload?.source || payload?.deal?.platform || '');
+  const pageUrl = normalizeText(payload?.pageUrl || payload?.deal?.pageUrl || '');
   const proofRef = extractProofRef(payload);
-  const source = normalizeSource(payload?.source || payload?.deal?.platform || "");
 
   const qs = new URLSearchParams();
-  if (source) qs.set("source", source);
-  if (pageUrl) qs.set("pageUrl", pageUrl);
-  if (proofRef) qs.set("proofRef", proofRef);
+  if (source) qs.set('source', source);
+  if (pageUrl) qs.set('pageUrl', pageUrl);
+  if (proofRef) qs.set('proofRef', proofRef);
 
   return `${RATE_PAGE_BASE}?${qs.toString()}`;
 }
@@ -95,53 +96,10 @@ function storageRemoveLocal(key) {
   });
 }
 
-function normalizePeerRateIdentity(identity) {
-  const out = {
-    id: normalizeText(identity?.id || ""),
-    email: normalizeEmail(identity?.email || identity?.subjectRef || ""),
-    subjectRef: normalizeEmail(identity?.subjectRef || identity?.email || ""),
-    fullName: normalizeText(identity?.fullName || ""),
-    syncedAt: normalizeText(identity?.syncedAt || new Date().toISOString()),
-  };
-
-  if (!out.email && !out.subjectRef && !out.id) return null;
-  return out;
-}
-
-async function readAuthIdentity() {
-  try {
-    const raw = await storageGetLocal(AUTH_IDENTITY_KEY);
-    const normalized = normalizePeerRateIdentity(raw || {});
-    return normalized || null;
-  } catch {
-    return null;
-  }
-}
-
-async function writeAuthIdentity(identity) {
-  try {
-    const normalized = normalizePeerRateIdentity(identity || {});
-    if (!normalized) return false;
-    await storageSetLocal({ [AUTH_IDENTITY_KEY]: normalized });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function clearAuthIdentity() {
-  try {
-    await storageRemoveLocal(AUTH_IDENTITY_KEY);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function readRatedCache() {
   try {
     const obj = (await storageGetLocal(RATED_CACHE_KEY)) || {};
-    return obj && typeof obj === "object" ? obj : {};
+    return obj && typeof obj === 'object' ? obj : {};
   } catch {
     return {};
   }
@@ -174,7 +132,7 @@ async function cleanupRatedCache() {
 }
 
 async function markDealRated(payloadOrKey) {
-  const key = typeof payloadOrKey === "string" ? payloadOrKey : buildDealKey(payloadOrKey);
+  const key = typeof payloadOrKey === 'string' ? payloadOrKey : buildDealKey(payloadOrKey);
   if (!key) return false;
 
   const cache = await cleanupRatedCache();
@@ -184,7 +142,7 @@ async function markDealRated(payloadOrKey) {
 }
 
 async function isDealRatedLocally(payloadOrKey) {
-  const key = typeof payloadOrKey === "string" ? payloadOrKey : buildDealKey(payloadOrKey);
+  const key = typeof payloadOrKey === 'string' ? payloadOrKey : buildDealKey(payloadOrKey);
   if (!key) return false;
 
   const cache = await cleanupRatedCache();
@@ -192,15 +150,21 @@ async function isDealRatedLocally(payloadOrKey) {
 }
 
 function normalizePendingPayload(payload) {
-  if (!payload || typeof payload !== "object") return null;
+  if (!payload || typeof payload !== 'object') return null;
+
+  const source = normalizeSource(payload?.source || payload?.deal?.platform || '');
+  const proofRef = extractProofRef(payload);
+  const pageUrl = normalizeText(payload?.pageUrl || payload?.deal?.pageUrl || '');
+
+  if (!source || !proofRef) return null;
 
   const out = {
     ...payload,
-    source: payload.source || payload?.deal?.platform || "",
-    proofRef: extractProofRef(payload),
-    pageUrl: normalizeText(payload?.pageUrl || payload?.deal?.pageUrl || ""),
-    savedAt: new Date().toISOString(),
+    source,
+    proofRef,
+    pageUrl,
     _ts: Date.now(),
+    savedAt: new Date().toISOString(),
   };
 
   return out;
@@ -224,7 +188,7 @@ async function writePendingPayload(payload) {
 async function readPendingPayload() {
   try {
     const raw = await storageGetLocal(PENDING_PAYLOAD_KEY);
-    if (!raw || typeof raw !== "object") return null;
+    if (!raw || typeof raw !== 'object') return null;
 
     const ts = Number(raw._ts || 0);
     if (!ts || (Date.now() - ts) > PENDING_TTL_MS) {
@@ -249,7 +213,7 @@ async function clearPendingPayload() {
 
 function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("timeout")), timeoutMs);
+    const timer = setTimeout(() => reject(new Error('timeout')), timeoutMs);
 
     fetch(url, options)
       .then((res) => {
@@ -264,16 +228,15 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
 }
 
 async function checkDealStatusWithBackend(payload) {
-  const source = normalizeSource(payload?.source || payload?.deal?.platform || "");
+  const source = normalizeSource(payload?.source || payload?.deal?.platform || '');
   const proofRef = extractProofRef(payload);
-  const peerRateIdentity = await readAuthIdentity();
 
-  if (!proofRef) {
+  if (!source || !proofRef) {
     return {
       ok: false,
       alreadyRated: false,
       canRate: false,
-      error: "Missing proofRef",
+      error: 'Missing source or proofRef',
     };
   }
 
@@ -291,26 +254,18 @@ async function checkDealStatusWithBackend(payload) {
   }
 
   try {
-    const headers = {
-      "Content-Type": "application/json",
-    };
-
-    if (peerRateIdentity?.email) {
-      headers["x-user-email"] = peerRateIdentity.email;
-    }
-
     const res = await fetchWithTimeout(
       `${API_BASE}/api/ratings/check-deal-status`,
       {
-        method: "POST",
-        headers,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          channel: "extension",
+          channel: 'extension',
           source,
           proofRef,
-          pageUrl: payload?.pageUrl || "",
-          peerRateIdentity: peerRateIdentity || null,
-          activeMarketplaceIdentity: payload?.activeMarketplaceIdentity || null,
+          pageUrl: payload?.pageUrl || '',
           counterparty: payload?.counterparty || null,
           deal: payload?.deal || null,
         }),
@@ -333,20 +288,17 @@ async function checkDealStatusWithBackend(payload) {
         alreadyRated: false,
         canRate: false,
         status: res.status,
-        error: json?.error || "Backend check failed",
+        error: json?.error || 'Backend check failed',
         raw: json?.raw || raw || null,
       };
     }
 
-    if (json.alreadyRated === true || json.canRate === false) {
-      if (json.alreadyRated === true) {
-        await markDealRated({ source, proofRef });
-      }
-
+    if (json.alreadyRated === true) {
+      await markDealRated({ source, proofRef });
       return {
         ...json,
         ok: true,
-        alreadyRated: !!json.alreadyRated,
+        alreadyRated: true,
         canRate: false,
       };
     }
@@ -361,19 +313,18 @@ async function checkDealStatusWithBackend(payload) {
     }
 
     return {
-      ok: false,
+      ok: true,
       alreadyRated: false,
       canRate: false,
-      error: "Ambiguous backend response",
-      raw: json,
+      error: 'Backend did not allow rating',
     };
   } catch (err) {
-    console.warn("[PeerRate extension] checkDealStatusWithBackend failed:", err);
+    console.warn('[PeerRate extension] checkDealStatusWithBackend failed:', err);
     return {
       ok: false,
       alreadyRated: false,
       canRate: false,
-      error: String(err?.message || err || "Unknown error"),
+      error: String(err?.message || err || 'Unknown error'),
     };
   }
 }
@@ -381,29 +332,7 @@ async function checkDealStatusWithBackend(payload) {
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.type) return;
 
-  if (msg.type === "syncAuthIdentityFromPage") {
-    (async () => {
-      const ok = await writeAuthIdentity(msg.payload || {});
-      const stored = await readAuthIdentity();
-
-      sendResponse({
-        ok: !!ok,
-        stored: !!stored,
-        email: stored?.email || null,
-      });
-    })();
-    return true;
-  }
-
-  if (msg.type === "clearAuthIdentityFromPage") {
-    (async () => {
-      const ok = await clearAuthIdentity();
-      sendResponse({ ok: !!ok, cleared: !!ok });
-    })();
-    return true;
-  }
-
-  if (msg.type === "checkDealStatus") {
+  if (msg.type === 'checkDealStatus') {
     (async () => {
       const result = await checkDealStatusWithBackend(msg.payload || {});
       sendResponse(result);
@@ -411,13 +340,23 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  if (msg.type === "openRatingForPayload") {
+  if (msg.type === 'openRatingForPayload') {
     (async () => {
       const payload = msg.payload || {};
       const result = await checkDealStatusWithBackend(payload);
 
       if (result?.ok === true && result?.canRate === true && result?.alreadyRated !== true) {
-        await writePendingPayload(payload);
+        const saved = await writePendingPayload(payload);
+        if (!saved) {
+          sendResponse({
+            ok: false,
+            opened: false,
+            alreadyRated: false,
+            canRate: false,
+            error: 'Could not store pending payload in extension storage.',
+          });
+          return;
+        }
 
         const url = buildRateUrl(payload);
         await chrome.tabs.create({ url });
@@ -446,13 +385,13 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         opened: false,
         alreadyRated: false,
         canRate: false,
-        error: result?.error || "Rating flow blocked because backend did not explicitly allow it.",
+        error: result?.error || 'Rating flow blocked by backend.',
       });
     })();
     return true;
   }
 
-  if (msg.type === "markDealRatedFromPage") {
+  if (msg.type === 'markDealRatedFromPage') {
     (async () => {
       const payload = msg.payload || {};
       const ok = await markDealRated(payload);
@@ -466,7 +405,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  if (msg.type === "getPendingPayloadForPage") {
+  if (msg.type === 'getPendingPayloadForPage') {
     (async () => {
       const payload = await readPendingPayload();
 
@@ -478,7 +417,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
-  if (msg.type === "clearPendingPayloadForPage") {
+  if (msg.type === 'clearPendingPayloadForPage') {
     (async () => {
       const ok = await clearPendingPayload();
       sendResponse({

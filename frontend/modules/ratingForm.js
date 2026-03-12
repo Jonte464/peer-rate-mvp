@@ -6,6 +6,7 @@ import { t } from './landing/language.js';
 
 import {
   captureFromUrl,
+  captureFromExtensionBridge,
   getPending,
   clearPending,
   markDealRated,
@@ -23,6 +24,7 @@ import {
 export { initPlatformPicker, initPlatformStarter } from './platformPicker.js';
 
 let activePending = null;
+let bootstrapInFlight = false;
 
 function isRatePage() {
   return (window.location.pathname || '').toLowerCase().includes('/rate.html');
@@ -180,28 +182,33 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function capturePendingBasic() {
+async function capturePendingRobust() {
   const fromUrl = captureFromUrl();
   if (fromUrl) {
     activePending = fromUrl;
-    return activePending;
   }
 
   const stored = getPending();
-  if (stored) {
+  if (stored && !activePending) {
     activePending = stored;
-    return activePending;
   }
 
-  return null;
-}
+  if (isRatePage()) {
+    const bridged = await captureFromExtensionBridge(1800);
+    if (bridged) {
+      activePending = bridged;
+      return activePending;
+    }
 
-async function capturePendingRobust() {
-  for (let i = 0; i < 4; i += 1) {
-    const p = await capturePendingBasic();
-    if (p) return p;
-    await sleep(220);
+    await sleep(250);
+
+    const bridgedRetry = await captureFromExtensionBridge(1400);
+    if (bridgedRetry) {
+      activePending = bridgedRetry;
+      return activePending;
+    }
   }
+
   return activePending || getPending() || null;
 }
 
@@ -235,20 +242,27 @@ async function renderAll() {
 }
 
 async function bootstrapPage() {
-  await capturePendingRobust();
+  if (bootstrapInFlight) return;
+  bootstrapInFlight = true;
 
-  const status = await syncPendingStatusWithBackend();
-  if (status?.ok && status.alreadyRated) {
-    try {
-      showNotification(
-        'success',
-        t('rate_info_already_completed', 'Den här affären är redan betygsatt och har därför tagits bort från listan.'),
-        'notice'
-      );
-    } catch {}
+  try {
+    await capturePendingRobust();
+
+    const status = await syncPendingStatusWithBackend();
+    if (status?.ok && status.alreadyRated) {
+      try {
+        showNotification(
+          'success',
+          t('rate_info_already_completed', 'Den här affären är redan betygsatt och har därför tagits bort från listan.'),
+          'notice'
+        );
+      } catch {}
+    }
+
+    await renderAll();
+  } finally {
+    bootstrapInFlight = false;
   }
-
-  await renderAll();
 }
 
 function scrollToRelevantTarget(isLoggedIn) {
@@ -300,8 +314,7 @@ export function initRatingLogin() {
   void bootstrapPage();
 
   if (isRatePage()) {
-    setTimeout(() => { void bootstrapPage(); }, 600);
-    setTimeout(() => { void bootstrapPage(); }, 1300);
+    setTimeout(() => { void bootstrapPage(); }, 700);
   }
 }
 
