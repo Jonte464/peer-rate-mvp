@@ -303,21 +303,41 @@ async function openPendingRatingFlow() {
 
   await renderAll();
 
-  const tryScroll = async (attempt = 0) => {
-    const lockedCard =
-      document.getElementById('locked-rating-card') ||
-      document.getElementById('verified-deals-card') ||
-      document.getElementById('rate-context-card');
+  const user = await resolveAuthUser();
+  const shouldScrollToLogin = !user;
 
-    if (lockedCard) {
+  const tryScroll = async (attempt = 0) => {
+    const loginCard =
+      document.getElementById('login-card') ||
+      document.getElementById('rating-login-card') ||
+      document.getElementById('rating-login-form');
+
+    const lockedCard = document.getElementById('locked-rating-card');
+
+    if (shouldScrollToLogin && loginCard) {
+      loginCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    if (!shouldScrollToLogin && lockedCard) {
       lockedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
 
-    if (attempt < 8) {
-      await sleep(180);
+    if (attempt < 10) {
+      await sleep(220);
       await renderAll();
       return tryScroll(attempt + 1);
+    }
+
+    // sista fallback om något fortfarande segar
+    const fallback =
+      lockedCard ||
+      loginCard ||
+      document.getElementById('rate-context-card');
+
+    if (fallback) {
+      fallback.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
