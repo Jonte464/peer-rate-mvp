@@ -95,12 +95,9 @@ function setVisibility(isLoggedIn) {
     document.getElementById('ratingHint') ||
     null;
 
-  const hasLoginTargets = loginCards.length > 0;
-  const hasRatingTargets = ratingWrappers.length > 0;
-
   if (isLoggedIn) {
     hideLoginCard();
-  } else if (hasLoginTargets) {
+  } else if (loginCards.length > 0) {
     showLoginCardIfPresent();
   }
 
@@ -109,7 +106,7 @@ function setVisibility(isLoggedIn) {
     hint.style.display = isLoggedIn ? 'none' : '';
   }
 
-  if (hasRatingTargets) {
+  if (ratingWrappers.length > 0) {
     ratingWrappers.forEach((el) => {
       const shouldShow = !!isLoggedIn;
       el.style.display = shouldShow ? 'block' : 'none';
@@ -125,6 +122,21 @@ function hasPendingIdentity(p) {
     p?.deal?.bookingId ||
     p?.deal?.transactionId ||
     p?.pageUrl
+  );
+}
+
+function hasRichPendingData(p) {
+  return !!(
+    p?.subjectEmail ||
+    p?.counterparty?.email ||
+    p?.counterparty?.name ||
+    p?.deal?.orderId ||
+    p?.deal?.itemId ||
+    p?.deal?.title ||
+    p?.deal?.amount != null ||
+    p?.deal?.amountSek != null ||
+    p?.deal?.date ||
+    p?.deal?.dateISO
   );
 }
 
@@ -203,31 +215,41 @@ function sleep(ms) {
 
 async function ensurePendingCapturedOnce() {
   const fromUrl = captureFromUrl();
-  if (fromUrl) return fromUrl;
+  if (fromUrl && hasRichPendingData(fromUrl)) return fromUrl;
 
   const existing = getPending();
-  if (existing) return existing;
+  if (existing && hasRichPendingData(existing)) return existing;
 
-  const fromBridge = await captureFromExtensionBridge(1400);
+  const fromBridge = await captureFromExtensionBridge(1600);
   if (fromBridge) return fromBridge;
 
-  return getPending();
+  const afterBridge = getPending();
+  if (afterBridge) return afterBridge;
+
+  if (fromUrl) return fromUrl;
+  return existing || null;
 }
 
 async function ensurePendingCapturedRobust({
   attempts = 8,
   delayMs = 350,
 } = {}) {
+  let best = getPending();
+
   for (let i = 0; i < attempts; i += 1) {
     const pending = await ensurePendingCapturedOnce();
-    if (pending) return pending;
+
+    if (pending) {
+      best = pending;
+      if (hasRichPendingData(pending)) return pending;
+    }
 
     if (i < attempts - 1) {
       await sleep(delayMs);
     }
   }
 
-  return getPending();
+  return best;
 }
 
 async function renderAll() {
@@ -251,7 +273,7 @@ async function renderAll() {
   const u = await resolveAuthUser();
   setVisibility(!!u);
 
-  if (p) {
+  if (p && hasPendingIdentity(p)) {
     ensureLockedFormCard(p, u);
   } else {
     removeLockedFormCard();
@@ -299,14 +321,13 @@ async function openDirectRatingFlow() {
 
   const user = await resolveAuthUser();
 
-  const target =
-    user
-      ? document.getElementById('locked-rating-card')
-      : (
-          document.getElementById('login-card') ||
-          document.getElementById('rating-login-card') ||
-          document.getElementById('rating-login-form')
-        );
+  const target = user
+    ? document.getElementById('locked-rating-card')
+    : (
+        document.getElementById('login-card') ||
+        document.getElementById('rating-login-card') ||
+        document.getElementById('rating-login-form')
+      );
 
   if (target) {
     setTimeout(() => {
