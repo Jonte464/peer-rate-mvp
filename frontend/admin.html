@@ -1,400 +1,312 @@
-// backend/routes/adminRoutes.js
+<!doctype html> 
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin – PeerRate</title>
+  <style>
+    :root{
+      --brand-orange:#f6a94b;
+      --brand-card:#fbf2e6;
+      --brand-border:#eadfce;
+      --brand-ink:#1e1830;
+      --brand-ink-d:#4a425e;
+      --brand-purple:#1b1533;
+      --ok:#0b7a65;
+      --err:#9b1c1c;
+      --warn:#9a6700;
+      --warn-bg:#fff8db;
+      --warn-border:#f0d98a;
+    }
+    *{box-sizing:border-box;}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;
+      color:var(--brand-ink);
+      background:transparent;
+    }
+    .wrap{
+      max-width:960px;
+      margin:40px auto 60px;
+      padding:0 16px 40px;
+    }
+    h1{margin:0 0 6px;font-size:32px;}
+    h2{margin:0 0 6px;font-size:22px;}
+    h3{margin:0 0 6px;font-size:16px;}
+    .lead{margin:0 0 18px;font-size:15px;color:var(--brand-ink-d);}
+    label{display:block;font-weight:700;margin:12px 0 6px;font-size:14px;}
+    input,button{
+      width:100%;
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid #d9cbb7;
+      background:#fff;
+      color:var(--brand-ink);
+      font:inherit;
+    }
+    input::placeholder{color:#9b8f87}
+    .row{display:flex;gap:10px;flex-wrap:wrap;}
+    .row>*{flex:1;}
+    .muted{color:var(--brand-ink-d);font-size:13px;}
+    .tiny{font-size:12px;}
+    .card{
+      background:var(--brand-card);
+      border:1px solid var(--brand-border);
+      border-radius:18px;
+      padding:18px 16px 22px;
+      box-shadow:0 8px 22px rgba(0,0,0,.06);
+      margin-bottom:16px;
+    }
+    button.primary{
+      background:var(--brand-purple);
+      color:#fff;
+      border:0;
+      cursor:pointer;
+      font-weight:800;
+      margin-top:8px;
+    }
+    button.primary:hover{filter:brightness(1.05);}
+    button.secondary{
+      background:#fff;
+      color:var(--brand-ink);
+      border:1px solid var(--brand-border);
+      margin-top:8px;
+    }
+    .notice{
+      display:none;
+      margin-top:12px;
+      border-radius:12px;
+      padding:10px 14px;
+      font-weight:600;
+      border:1px solid transparent;
+      font-size:14px;
+    }
+    .notice.ok{display:block;background:#e7f5f1;border-color:#bde6db;color:var(--ok);}
+    .notice.err{display:block;background:#fdecec;border-color:#f6c4c4;color:var(--err);}
+    .hidden{display:none !important;}
 
-const express = require('express');
-const Joi = require('joi');
-const { PrismaClient } = require('@prisma/client');
+    .stats-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+      gap:12px;
+      margin-top:12px;
+    }
+    .stat-box{
+      background:#fff;
+      border-radius:14px;
+      padding:10px 12px;
+      border:1px solid rgba(0,0,0,.05);
+    }
+    .stat-label{font-size:12px;color:var(--brand-ink-d);}
+    .stat-value{font-size:22px;font-weight:800;}
 
-const {
-  adminGetCounts,
-  adminListRecentReports,
-  adminGetCustomerWithRatings,
-  averageForSubjectRef,
-} = require('../storage');
-
-const prisma = global.prisma || new PrismaClient();
-const router = express.Router();
-
-// Läs adminlösenord från .env
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || null;
-
-/** Admin-login-schema */
-const adminLoginSchema = Joi.object({
-  password: Joi.string().min(6).max(200).required(),
-});
-
-/** Middleware: kräver admin */
-function requireAdmin(req, res, next) {
-  if (!ADMIN_PASSWORD) {
-    return res.status(500).json({
-      ok: false,
-      error: 'Admin-läge ej konfigurerat (saknar ADMIN_PASSWORD).',
-    });
-  }
-  const key = req.headers['x-admin-key'] || '';
-  if (key && key === ADMIN_PASSWORD) return next();
-  return res.status(401).json({ ok: false, error: 'Ej behörig (admin).' });
-}
-
-function safeDateIso(value) {
-  try {
-    if (!value) return null;
-    const d = value instanceof Date ? value : new Date(value);
-    return Number.isNaN(d.getTime()) ? null : d.toISOString();
-  } catch {
-    return null;
-  }
-}
-
-function formatRecentRatingRow(row) {
-  const customerEmail = row?.customer?.email || null;
-  const customerSubjectRef = row?.customer?.subjectRef || null;
-
-  const ratedUser =
-    customerEmail ||
-    customerSubjectRef ||
-    null;
-
-  const raterDisplay =
-    row?.raterName ||
-    row?.raterEmail ||
-    '–';
-
-  return {
-    id: row.id,
-    createdAt: safeDateIso(row.createdAt),
-    rating: row.score,
-    score: row.score,
-    subject: ratedUser,
-    ratedUser,
-    comment: row.text || '',
-    text: row.text || '',
-    raterName: row.raterName || null,
-    raterEmail: row.raterEmail || null,
-    raterDisplay,
-    dealId: row.dealId || null,
-    ratingSource: row.ratingSource || null,
-  };
-}
-
-/* -------------------------------------------------------
-   POST /api/admin/login
-   ------------------------------------------------------- */
-router.post('/login', (req, res) => {
-  const { error, value } = adminLoginSchema.validate(req.body);
-  if (error) {
-    return res
-      .status(400)
-      .json({ ok: false, error: 'Ogiltigt admin-lösenord.' });
-  }
-  if (!ADMIN_PASSWORD) {
-    return res
-      .status(500)
-      .json({ ok: false, error: 'ADMIN_PASSWORD saknas i servern.' });
-  }
-  if (value.password !== ADMIN_PASSWORD) {
-    return res
-      .status(401)
-      .json({ ok: false, error: 'Fel admin-lösenord.' });
-  }
-  // Frontend sparar detta lösenord och skickar i x-admin-key-header.
-  res.json({ ok: true });
-});
-
-// Alla routes nedan kräver admin
-router.use(requireAdmin);
-
-/** GET /api/admin/summary – admin-översikt: totalsiffror */
-router.get('/summary', async (_req, res) => {
-  try {
-    const counts = await adminGetCounts();
-    res.json({ ok: true, counts });
-  } catch (e) {
-    console.error('[GET /api/admin/summary] error:', e);
-    res.status(500).json({
-      ok: false,
-      error: 'Kunde inte hämta admin-sammanfattning.',
-    });
-  }
-});
-
-/** GET /api/admin/ratings/recent – senaste ratings (admin) */
-router.get('/ratings/recent', async (req, res) => {
-  const limit = Math.min(200, Math.max(1, Number(req.query.limit || 20)));
-
-  try {
-    const rows = await prisma.rating.findMany({
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      select: {
-        id: true,
-        score: true,
-        text: true,
-        raterName: true,
-        raterEmail: true,
-        ratingSource: true,
-        dealId: true,
-        createdAt: true,
-        customer: {
-          select: {
-            email: true,
-            subjectRef: true,
-            fullName: true,
-          },
-        },
-      },
-    });
-
-    const ratings = rows.map(formatRecentRatingRow);
-    res.json({ ok: true, ratings });
-  } catch (e) {
-    console.error('[GET /api/admin/ratings/recent] error:', e);
-    res.status(500).json({
-      ok: false,
-      error: 'Kunde inte hämta senaste ratings (admin).',
-    });
-  }
-});
-
-/** DELETE /api/admin/ratings/:id – radera rating (admin) */
-router.delete('/ratings/:id', async (req, res) => {
-  const id = String(req.params.id || '').trim();
-  if (!id) {
-    return res.status(400).json({
-      ok: false,
-      error: 'Ogiltigt rating-ID.',
-    });
-  }
-
-  try {
-    const rating = await prisma.rating.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        dealId: true,
-      },
-    });
-
-    if (!rating) {
-      return res.status(404).json({
-        ok: false,
-        error: 'Omdömet hittades inte.',
-      });
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:12px;
+      margin-top:8px;
+    }
+    th,td{
+      padding:6px 4px;
+      text-align:left;
+      border-bottom:1px solid rgba(0,0,0,.05);
+      vertical-align:top;
+    }
+    th{font-weight:700;color:var(--brand-ink-d);}
+    tr:nth-child(even){background:rgba(255,255,255,.6);}
+    code{
+      font-family:SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace;
+      font-size:11px;
+      background:rgba(0,0,0,.03);
+      padding:1px 3px;
+      border-radius:4px;
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Ta bort rapporter som är direkt kopplade till just detta omdöme
-      await tx.report.deleteMany({
-        where: {
-          ratingId: id,
-        },
-      });
-
-      // Ta bort själva ratingen
-      await tx.rating.delete({
-        where: { id },
-      });
-
-      // Om ratingen hörde till en deal:
-      // sätt tillbaka deal till PENDING_RATING om inga ratings längre finns kvar
-      if (rating.dealId) {
-        const remaining = await tx.rating.count({
-          where: { dealId: rating.dealId },
-        });
-
-        if (remaining === 0) {
-          await tx.deal.update({
-            where: { id: rating.dealId },
-            data: { status: 'PENDING_RATING' },
-          });
-        }
-      }
-    });
-
-    return res.json({
-      ok: true,
-      deletedRatingId: id,
-    });
-  } catch (e) {
-    console.error('[DELETE /api/admin/ratings/:id] error:', e);
-    return res.status(500).json({
-      ok: false,
-      error: 'Kunde inte radera omdömet.',
-    });
-  }
-});
-
-/** GET /api/admin/reports/recent – senaste rapporter (admin) */
-router.get('/reports/recent', async (req, res) => {
-  const limit = Number(req.query.limit || 20);
-  try {
-    const list = await adminListRecentReports(limit);
-    res.json({ ok: true, reports: list });
-  } catch (e) {
-    console.error('[GET /api/admin/reports/recent] error:', e);
-    res.status(500).json({
-      ok: false,
-      error: 'Kunde inte hämta senaste rapporter (admin).',
-    });
-  }
-});
-
-/** GET /api/admin/customers – lista kunder (admin) */
-router.get('/customers', async (req, res) => {
-  try {
-    const page = Math.max(1, Number(req.query.page || 1));
-    const pageSize = Math.min(
-      1000,
-      Math.max(1, Number(req.query.limit || 50))
-    );
-    const skip = (page - 1) * pageSize;
-
-    const [rows, total] = await Promise.all([
-      prisma.customer.findMany({
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: pageSize,
-        select: {
-          id: true,
-          subjectRef: true,
-          fullName: true,
-          email: true,
-          personalNumber: true,
-          createdAt: true,
-        },
-      }),
-      prisma.customer.count(),
-    ]);
-
-    const customers = rows.map((r) => ({
-      id: r.id,
-      subjectRef: r.subjectRef,
-      fullName: r.fullName || null,
-      email: r.email || null,
-      personalNumber: r.personalNumber || null,
-      createdAt: r.createdAt ? r.createdAt.toISOString() : null,
-    }));
-
-    res.json({
-      ok: true,
-      count: customers.length,
-      total,
-      page,
-      pageSize,
-      customers,
-    });
-  } catch (e) {
-    console.error('[GET /api/admin/customers] error:', e);
-    res.status(500).json({ ok: false, error: 'Kunde inte hämta kunder' });
-  }
-});
-
-/** DELETE /api/admin/customers/:id – radera kund + relaterade data (admin) */
-router.delete('/customers/:id', async (req, res) => {
-  const id = req.params.id;
-  if (!id) {
-    return res
-      .status(400)
-      .json({ ok: false, error: 'Ogiltigt kund-ID.' });
-  }
-
-  try {
-    const customer = await prisma.customer.findUnique({
-      where: { id },
-    });
-
-    if (!customer) {
-      return res
-        .status(404)
-        .json({ ok: false, error: 'Kunden hittades inte.' });
+    .icon-btn{
+      width:auto;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      line-height:1.2;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .icon-btn.danger{
+      background:#fff5f5;
+      border-color:#f6c4c4;
+      color:var(--err);
+      font-weight:600;
     }
 
-    await prisma.$transaction(async (tx) => {
-      // Barn-tabeller som pekar på kunden måste bort först
-      await tx.rating.deleteMany({ where: { customerId: id } });
-      await tx.report.deleteMany({ where: { reportedCustomerId: id } });
-      await tx.transaction.deleteMany({ where: { customerId: id } });
-      await tx.score.deleteMany({ where: { customerId: id } });
-
-      // Deals där kunden är säljare eller köpare
-      await tx.deal.deleteMany({
-        where: {
-          OR: [{ sellerId: id }, { buyerId: id }],
-        },
-      });
-
-      // Traderaordrar + annonser + externa profiler
-      await tx.traderaOrder.deleteMany({
-        where: {
-          externalProfile: { customerId: id },
-        },
-      });
-      await tx.listing.deleteMany({
-        where: {
-          externalProfile: { customerId: id },
-        },
-      });
-      await tx.externalProfile.deleteMany({ where: { customerId: id } });
-
-      // Till sist: kunden själv
-      await tx.customer.delete({ where: { id } });
-    });
-
-    res.json({ ok: true });
-  } catch (e) {
-    console.error('[DELETE /api/admin/customers/:id] error:', e);
-    res
-      .status(500)
-      .json({ ok: false, error: 'Kunde inte radera kund.' });
-  }
-});
-
-/** GET /api/admin/customer – sök kund + ratings (admin) */
-router.get('/customer', async (req, res) => {
-  const q = (req.query.q || '').trim();
-  if (!q)
-    return res
-      .status(400)
-      .json({ ok: false, error: 'Ange q i querystring.' });
-
-  try {
-    const customer = await adminGetCustomerWithRatings(q);
-    if (!customer) {
-      return res.json({ ok: true, customer: null });
-    }
-    const subjectRef =
-      customer.subjectRef || (customer.email || '').toLowerCase();
-    let avgData = { count: 0, average: 0 };
-    if (subjectRef) {
-      avgData = await averageForSubjectRef(subjectRef);
+    .alert-box{
+      background:var(--warn-bg);
+      border:1px solid var(--warn-border);
+      color:var(--warn);
+      border-radius:12px;
+      padding:10px 12px;
+      margin-top:10px;
+      font-size:12px;
+      font-weight:700;
     }
 
-    res.json({
-      ok: true,
-      customer: {
-        id: customer.id,
-        fullName: customer.fullName,
-        subjectRef: customer.subjectRef,
-        email: customer.email,
-        personalNumber: customer.personalNumber,
-        createdAt: customer.createdAt,
-        ratings: customer.ratings.map((r) => ({
-          id: r.id,
-          score: r.score,
-          text: r.text,
-          raterName: r.raterName,
-          raterEmail: r.raterEmail,
-          createdAt: r.createdAt,
-        })),
-        average: avgData.average,
-        count: avgData.count,
-      },
-    });
-  } catch (e) {
-    console.error('[GET /api/admin/customer] error:', e);
-    res
-      .status(500)
-      .json({ ok: false, error: 'Kunde inte hämta kund (admin).' });
-  }
-});
+    .detail-card{
+      margin-top:10px;
+      background:#fff;
+      border:1px solid rgba(0,0,0,.08);
+      border-radius:14px;
+      padding:12px;
+    }
 
-module.exports = router;
+    .detail-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:8px 14px;
+      margin-top:8px;
+    }
+
+    .detail-item strong{
+      display:block;
+      font-size:11px;
+      color:var(--brand-ink-d);
+      margin-bottom:2px;
+      text-transform:uppercase;
+      letter-spacing:.03em;
+    }
+
+    .severity-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      background:#fff3cd;
+      color:#7a5600;
+      border:1px solid #ead28a;
+      white-space:nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Admin – PeerRate</h1>
+    <p class="lead">
+      Intern översikt över användare, betyg och rapporter. Endast för administratörer.
+    </p>
+
+    <!-- ADMIN LOGIN -->
+    <section class="card" id="admin-login-card">
+      <h2>Logga in som admin</h2>
+      <p class="tiny muted">
+        Ange admin-lösenordet (från <code>ADMIN_PASSWORD</code> i serverns miljövariabler).
+      </p>
+      <form id="admin-login-form" autocomplete="off">
+        <label for="admin-password">Admin-lösenord</label>
+        <input id="admin-password" type="password" placeholder="••••••••" />
+        <button type="submit" class="primary">Logga in</button>
+        <div id="admin-login-notice" class="notice"></div>
+      </form>
+    </section>
+
+    <!-- ADMIN INNEHÅLL (döljs tills man är inloggad) -->
+    <div id="admin-root" class="hidden">
+      <!-- Översikt -->
+      <section class="card">
+        <div class="row" style="align-items:center;justify-content:space-between;">
+          <h2 style="margin-bottom:0;">Översikt</h2>
+          <div style="display:flex;gap:8px;flex:0 0 auto;">
+            <button
+              type="button"
+              class="secondary"
+              style="width:auto;"
+              onclick="window.location.href='agent.html'">
+              Öppna PeerRate Agent
+            </button>
+
+            <button
+              id="admin-logout-btn"
+              type="button"
+              class="secondary"
+              style="width:auto;">
+              Logga ut admin
+            </button>
+          </div>
+        </div>
+        <p class="tiny muted">Snabb överblick över PeerRate-data.</p>
+        <div class="stats-grid">
+          <div class="stat-box">
+            <div class="stat-label">Kunder</div>
+            <div class="stat-value" id="stat-customers">–</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Betyg</div>
+            <div class="stat-value" id="stat-ratings">–</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Rapporter</div>
+            <div class="stat-value" id="stat-reports">–</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Kundsök -->
+      <section class="card">
+        <h2>Sök kund</h2>
+        <p class="tiny muted">
+          Sök på e-post, subjectRef, personnummer eller namn för att se en kunds profil och omdömen.
+        </p>
+        <form id="admin-search-form" autocomplete="off">
+          <div class="row">
+            <input id="admin-search-input" type="text" placeholder="t.ex. erik@example.com eller 198001011234" />
+            <button type="submit" class="primary" style="flex:0 0 140px;">Sök</button>
+          </div>
+        </form>
+        <div id="admin-search-result" class="tiny muted" style="margin-top:10px;"></div>
+      </section>
+
+      <!-- Kundlista -->
+      <section class="card">
+        <h2>Kunder</h2>
+        <p class="tiny muted">
+          Lista över registrerade kunder. Klicka på en rad för att se detaljer, eller använd knappen
+          <strong>Ta bort</strong> för att radera en kund.
+        </p>
+        <div id="admin-customers-table" class="tiny muted">Laddar…</div>
+      </section>
+
+      <!-- Senaste betyg -->
+      <section class="card">
+        <h2>Senaste betyg</h2>
+        <p class="tiny muted">
+          De senaste inskickade betygen i systemet. Här ser du både vem som fått omdömet och vem som lämnat det.
+          Du kan även radera ett enskilt omdöme.
+        </p>
+        <div id="admin-ratings-table" class="tiny muted">Laddar…</div>
+      </section>
+
+      <!-- Alerts -->
+      <section class="card">
+        <h2>Alerts – misstänkta affärer</h2>
+        <p class="tiny muted">
+          Här flaggas affärer där samma verifierade deal/ordernummer har fler än 2 omdömen. Det kan tyda på dubletter,
+          missbruk eller att något i verifieringsflödet behöver följas upp manuellt.
+        </p>
+        <div id="admin-alerts-summary" class="alert-box hidden"></div>
+        <div id="admin-alerts-table" class="tiny muted">Laddar…</div>
+        <div id="admin-alert-detail" class="tiny muted" style="margin-top:10px;"></div>
+      </section>
+
+      <!-- Senaste rapporter -->
+      <section class="card">
+        <h2>Senaste rapporter</h2>
+        <p class="tiny muted">Senaste rapporter om misstänkt bedrägeri eller avvikelse.</p>
+        <div id="admin-reports-table" class="tiny muted">Laddar…</div>
+        <div id="admin-report-detail" class="tiny muted" style="margin-top:10px;"></div>
+      </section>
+    </div>
+  </div>
+
+  <script type="module" src="/modules/main.js"></script>
+</body>
+</html>
