@@ -204,15 +204,35 @@ async function resolveAuthUser() {
   }
 }
 
-async function ensurePendingCaptured() {
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function ensurePendingCapturedOnce() {
   const fromUrl = captureFromUrl();
   if (fromUrl) return fromUrl;
 
   const existing = getPending();
   if (existing) return existing;
 
-  const fromBridge = await captureFromExtensionBridge(1800);
+  const fromBridge = await captureFromExtensionBridge(1400);
   if (fromBridge) return fromBridge;
+
+  return getPending();
+}
+
+async function ensurePendingCapturedRobust({
+  attempts = 8,
+  delayMs = 350,
+} = {}) {
+  for (let i = 0; i < attempts; i += 1) {
+    const pending = await ensurePendingCapturedOnce();
+    if (pending) return pending;
+
+    if (i < attempts - 1) {
+      await sleep(delayMs);
+    }
+  }
 
   return getPending();
 }
@@ -231,6 +251,7 @@ async function renderAll() {
   if (p) {
     applyPendingContextCard(p);
   }
+
   renderVerifiedDealUI(p);
 
   const u = await resolveAuthUser();
@@ -241,6 +262,37 @@ async function renderAll() {
   } else {
     removeLockedFormCard();
   }
+}
+
+async function bootstrapPendingAndRender() {
+  const pending = await ensurePendingCapturedRobust({
+    attempts: 10,
+    delayMs: 350,
+  });
+
+  if (pending && isDealRated(pending)) {
+    notifyExtensionDealRated(pending);
+    clearPending();
+    renderVerifiedDealUI(null);
+  } else if (pending) {
+    applyPendingContextCard(pending);
+    renderVerifiedDealUI(pending);
+  } else {
+    renderVerifiedDealUI(null);
+  }
+
+  const status = await syncPendingStatusWithBackend();
+  if (status?.ok && status.alreadyRated) {
+    try {
+      showNotification(
+        'success',
+        t('rate_info_already_completed', 'Den här affären är redan betygsatt och har därför tagits bort från listan.'),
+        'notice'
+      );
+    } catch {}
+  }
+
+  await renderAll();
 }
 
 export function initRatingLogin() {
@@ -268,33 +320,22 @@ export function initRatingLogin() {
     void renderAll();
   });
 
-  void (async () => {
-    const pending = await ensurePendingCaptured();
+  void bootstrapPendingAndRender();
 
-    if (pending && isDealRated(pending)) {
-      notifyExtensionDealRated(pending);
-      clearPending();
-      renderVerifiedDealUI(null);
-    } else if (pending) {
-      applyPendingContextCard(pending);
-      renderVerifiedDealUI(pending);
-    } else {
-      renderVerifiedDealUI(null);
-    }
+  // Extra retry för sega race conditions när ny tab öppnas från extension
+  if (isRatePage()) {
+    setTimeout(() => {
+      if (!getPending()) {
+        void bootstrapPendingAndRender();
+      }
+    }, 1000);
 
-    const status = await syncPendingStatusWithBackend();
-    if (status?.ok && status.alreadyRated) {
-      try {
-        showNotification(
-          'success',
-          t('rate_info_already_completed', 'Den här affären är redan betygsatt och har därför tagits bort från listan.'),
-          'notice'
-        );
-      } catch {}
-    }
-
-    await renderAll();
-  })();
+    setTimeout(() => {
+      if (!getPending()) {
+        void bootstrapPendingAndRender();
+      }
+    }, 2200);
+  }
 }
 
 async function handleLoginSubmit(e) {
@@ -319,7 +360,11 @@ async function handleLoginSubmit(e) {
     showNotification('success', t('profile_login_success', 'Du är nu inloggad.'), 'login-status');
 
     if (isRatePage()) {
-      await ensurePendingCaptured();
+      await ensurePendingCapturedRobust({
+        attempts: 6,
+        delayMs: 300,
+      });
+
       await syncPendingStatusWithBackend();
       await renderAll();
 

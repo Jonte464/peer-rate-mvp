@@ -1,13 +1,10 @@
 // frontend/modules/ratingContext.js
-// Ny roll:
-// - Äger INTE längre pending-datan
-// - pendingStore.js är enda sanningskällan
-// - ratingContext visar endast overlay + clear/logik
-// - detta minskar race conditions mellan extension/url/UI
+// PendingStore är enda sanningskällan.
+// ratingContext visar bara overlay och reagerar robust även om pending kommer lite sent.
 
 import auth from './auth.js';
 import { t } from './landing/language.js';
-import { captureFromUrl, getPending, clearPending } from './pendingStore.js';
+import { captureFromUrl, captureFromExtensionBridge, getPending, clearPending } from './pendingStore.js';
 
 const LEGACY_CONTEXT_KEYS = [
   'peerRateRatingContext',
@@ -59,6 +56,10 @@ function escapeAttr(s) {
   return String(s || '').replaceAll('"', '%22');
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function removeOverlay() {
   try {
     document.getElementById('pr-pending-overlay')?.remove();
@@ -89,8 +90,8 @@ function scrollToBestTarget() {
       return;
     }
 
-    if (attempt < 8) {
-      setTimeout(() => tryScroll(attempt + 1), 150);
+    if (attempt < 10) {
+      setTimeout(() => tryScroll(attempt + 1), 180);
     }
   };
 
@@ -178,16 +179,44 @@ function createOverlayIfNeeded(deal) {
   } catch {}
 }
 
-function renderOverlayFromCanonicalPending() {
+async function ensurePendingForOverlay({
+  attempts = 8,
+  delayMs = 350,
+} = {}) {
+  for (let i = 0; i < attempts; i += 1) {
+    captureFromUrl();
+
+    let pending = getPending();
+    if (pending) return pending;
+
+    pending = await captureFromExtensionBridge(1200);
+    if (pending) return pending;
+
+    pending = getPending();
+    if (pending) return pending;
+
+    if (i < attempts - 1) {
+      await sleep(delayMs);
+    }
+  }
+
+  return getPending();
+}
+
+async function renderOverlayFromCanonicalPending() {
   removeOverlay();
 
   if (!isRatePage()) return;
 
-  const pending = getPending();
+  const pending = await ensurePendingForOverlay({
+    attempts: 6,
+    delayMs: 300,
+  });
+
   if (!pending) return;
 
   setTimeout(() => {
-    createOverlayIfNeeded(getPending());
+    createOverlayIfNeeded(getPending() || pending);
   }, 120);
 }
 
@@ -227,16 +256,14 @@ export function initRatingContextGuards() {
   try {
     if (!isRatePage() && !hasIncomingQuery() && !getPending()) return;
 
-    // Viktig ändring:
-    // använd exakt samma capture/normalisering som resten av appen
     if (hasIncomingQuery()) {
       captureFromUrl();
     }
 
-    renderOverlayFromCanonicalPending();
+    void renderOverlayFromCanonicalPending();
 
     window.addEventListener('pr:pending-updated', () => {
-      renderOverlayFromCanonicalPending();
+      void renderOverlayFromCanonicalPending();
     });
 
     window.addEventListener('pr:pending-cleared', () => {
@@ -244,8 +271,22 @@ export function initRatingContextGuards() {
     });
 
     window.addEventListener('storage', () => {
-      renderOverlayFromCanonicalPending();
+      void renderOverlayFromCanonicalPending();
     });
+
+    if (isRatePage()) {
+      setTimeout(() => {
+        if (!document.getElementById('pr-pending-overlay') && getPending()) {
+          void renderOverlayFromCanonicalPending();
+        }
+      }, 1000);
+
+      setTimeout(() => {
+        if (!document.getElementById('pr-pending-overlay')) {
+          void renderOverlayFromCanonicalPending();
+        }
+      }, 2200);
+    }
   } catch (e) {
     console.warn('[PeerRate] ratingContext guards failed (ignored):', e);
   }
