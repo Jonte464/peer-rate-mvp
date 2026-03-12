@@ -1,378 +1,314 @@
-// frontend/modules/ratingForm.js
+// frontend/modules/lockedRatingCard.js
 import { showNotification } from './utils.js';
-import auth, { login } from './auth.js';
+import auth from './auth.js';
 import api from './api.js';
+import { getPending, clearPending } from './pendingStore.js';
+import { clearAllPendingEverywhere } from './ratingContext.js';
 import { t } from './landing/language.js';
+import { escapeHtml, formatAmount, formatDateShort, formatAddress, showToast } from './verifiedDealUI.js';
 
-import {
-  captureFromUrl,
-  getPending,
-  clearPending,
-  markDealRated,
-  isDealRated,
-} from './pendingStore.js';
+export function sanitizeCounterparty(cp, deal) {
+  if (!cp || typeof cp !== 'object') return undefined;
 
-import { applyPendingContextCard, renderVerifiedDealUI } from './verifiedDealUI.js';
-import {
-  ensureLockedFormCard,
-  removeLockedFormCard,
-  sanitizeCounterparty,
-  isDuplicateRatingError
-} from './lockedRatingCard.js';
+  const platform = (deal?.platform || cp.platform || '').toString().toUpperCase();
+  const username = cp.platformUsername || cp.username || null;
 
-export { initPlatformPicker, initPlatformStarter } from './platformPicker.js';
+  const clean = {
+    email: cp.email || undefined,
+    name: cp.name || undefined,
+    phone: cp.phone || undefined,
+    addressStreet: cp.addressStreet || undefined,
+    addressZip: cp.addressZip || undefined,
+    addressCity: cp.addressCity || undefined,
+    country: cp.country || undefined,
 
-function isRatePage() {
-  return (window.location.pathname || '').toLowerCase().includes('/rate.html');
-}
+    platform: platform || undefined,
+    platformUsername: username || undefined,
+    pageUrl: cp.pageUrl || deal?.pageUrl || undefined,
 
-function getLoginCardEls() {
-  return [
-    document.getElementById('login-card'),
-    document.getElementById('rating-login-card'),
-    document.getElementById('rating-login'),
-    document.querySelector('[data-role="rating-login"]'),
-  ].filter(Boolean);
-}
-
-function getRatingWrapperEls() {
-  return [
-    document.getElementById('rating-form-wrapper'),
-    document.getElementById('rating-card'),
-    document.getElementById('rating-form-card'),
-    document.getElementById('rating-form'),
-  ].filter(Boolean);
-}
-
-function hideTestWithoutLoginButton() {
-  const byId =
-    document.getElementById('test-without-login') ||
-    document.getElementById('test-without-login-btn') ||
-    document.getElementById('testWithoutLogin') ||
-    document.getElementById('testWithoutLoginBtn') ||
-    document.getElementById('testWithoutLoginBtn2');
-
-  if (byId) {
-    byId.style.display = 'none';
-    byId.setAttribute('aria-hidden', 'true');
-    return;
-  }
-
-  const localizedNeedle = t('rate_test_without_login', 'test utan inloggning').toLowerCase();
-  const btns = Array.from(document.querySelectorAll('button, a'));
-  const hit = btns.find(el => (el.textContent || '').toLowerCase().includes(localizedNeedle));
-  if (hit) {
-    hit.style.display = 'none';
-    hit.setAttribute('aria-hidden', 'true');
-  }
-}
-
-function removeLoginCardCompletely() {
-  const els = getLoginCardEls();
-  els.forEach((el) => {
-    try {
-      el.remove();
-    } catch {
-      el.style.display = 'none';
-      el.classList.add('hidden');
-      el.setAttribute('aria-hidden', 'true');
-    }
-  });
-}
-
-function showLoginCardIfPresent() {
-  const els = getLoginCardEls();
-  els.forEach((el) => {
-    el.style.display = 'block';
-    el.classList.remove('hidden');
-    el.removeAttribute('aria-hidden');
-  });
-}
-
-function setVisibility(isLoggedIn) {
-  const loginCards = getLoginCardEls();
-  const ratingWrappers = getRatingWrapperEls();
-
-  const hint =
-    document.getElementById('rating-login-hint') ||
-    document.getElementById('ratingHint') ||
-    null;
-
-  const hasLoginTargets = loginCards.length > 0;
-  const hasRatingTargets = ratingWrappers.length > 0;
-
-  if (!hasLoginTargets && !hasRatingTargets) {
-    console.warn('[PeerRate] setVisibility: no targets found; skipping toggle to avoid blank UI.');
-    return;
-  }
-
-  const shouldShowLogin = !isLoggedIn || (!hasRatingTargets && isLoggedIn);
-  const shouldShowRating = isLoggedIn && hasRatingTargets;
-
-  if (isLoggedIn) {
-    removeLoginCardCompletely();
-  } else if (hasLoginTargets) {
-    showLoginCardIfPresent();
-  }
-
-  if (hint) {
-    hint.classList.toggle('hidden', isLoggedIn);
-    hint.style.display = isLoggedIn ? 'none' : '';
-  }
-
-  if (hasRatingTargets) {
-    ratingWrappers.forEach((el) => {
-      el.style.display = shouldShowRating ? 'block' : 'none';
-      el.classList.toggle('hidden', !shouldShowRating);
-    });
-  }
-}
-
-function hasPendingIdentity(p) {
-  return !!(
-    p?.proofRef ||
-    p?.deal?.orderId ||
-    p?.deal?.bookingId ||
-    p?.deal?.transactionId ||
-    p?.pageUrl
-  );
-}
-
-function buildDealPayloadForExtension(pendingLike) {
-  const p = pendingLike || {};
-  return {
-    source: p?.source || p?.deal?.platform || '',
-    proofRef:
-      p?.proofRef ||
-      p?.deal?.orderId ||
-      p?.counterparty?.orderId ||
-      p?.pageUrl ||
-      '',
-    pageUrl: p?.pageUrl || p?.deal?.pageUrl || p?.counterparty?.pageUrl || '',
-    deal: p?.deal || null,
-    counterparty: p?.counterparty || null,
+    orderId: cp.orderId || deal?.orderId || undefined,
+    itemId: cp.itemId || deal?.itemId || undefined,
+    amountSek: (cp.amountSek ?? deal?.amountSek ?? undefined),
+    title: cp.title || deal?.title || undefined,
   };
-}
 
-function notifyExtensionDealRated(pendingLike) {
-  try {
-    const payload = buildDealPayloadForExtension(pendingLike);
-    const proofRef = String(payload?.proofRef || '').trim();
-    const source = String(payload?.source || '').trim();
-
-    if (!proofRef || !source) return;
-
-    window.postMessage(
-      {
-        type: 'PEERRATE_MARK_DEAL_RATED',
-        payload,
-      },
-      window.location.origin
-    );
-  } catch (err) {
-    console.warn('[PeerRate] notifyExtensionDealRated failed:', err);
-  }
-}
-
-async function syncPendingStatusWithBackend() {
-  const pending = getPending();
-  if (!pending || !hasPendingIdentity(pending)) {
-    return { ok: true, alreadyRated: false };
-  }
-
-  try {
-    const status = await api.checkRatingDealStatus(pending);
-
-    if (status?.ok && status.alreadyRated) {
-      try { markDealRated(pending); } catch {}
-      notifyExtensionDealRated(pending);
-      clearPending();
-      return status;
-    }
-
-    return status || { ok: false };
-  } catch (err) {
-    console.warn('[PeerRate] syncPendingStatusWithBackend failed:', err);
-    return { ok: false };
-  }
-}
-
-async function resolveAuthUser() {
-  try {
-    const user = await auth.getResolvedUser();
-    return user || null;
-  } catch (err) {
-    console.warn('[PeerRate] resolveAuthUser failed:', err);
-    return null;
-  }
-}
-
-async function renderAll() {
-  const p = getPending();
-
-  if (p && isDealRated(p)) {
-    notifyExtensionDealRated(p);
-    clearPending();
-    renderVerifiedDealUI(null);
-    removeLockedFormCard();
-    return;
-  }
-
-  if (p) {
-    applyPendingContextCard(p);
-  }
-  renderVerifiedDealUI(p);
-
-  const u = await resolveAuthUser();
-  setVisibility(!!u);
-
-  // Viktig ändring:
-  // Bygg alltid det låsta formuläret om pending finns.
-  // Är användaren inte inloggad så visas formuläret i disabled-läge med login-hint.
-  if (p) {
-    ensureLockedFormCard(p, u);
-  } else {
-    removeLockedFormCard();
-  }
-}
-
-export function initRatingLogin() {
-  hideTestWithoutLoginButton();
-
-  const fromUrl = captureFromUrl();
-  const pending = fromUrl || getPending();
-
-  if (pending && isDealRated(pending)) {
-    notifyExtensionDealRated(pending);
-    clearPending();
-    renderVerifiedDealUI(null);
-  } else if (pending) {
-    applyPendingContextCard(pending);
-    renderVerifiedDealUI(pending);
-  } else {
-    renderVerifiedDealUI(null);
-  }
-
-  const loginForm = document.getElementById('rating-login-form');
-  if (loginForm && loginForm.dataset.bound !== '1') {
-    loginForm.dataset.bound = '1';
-    loginForm.addEventListener('submit', handleLoginSubmit);
-  }
-
-  void renderAll();
-
-  if (!window.__prPendingEventsBound) {
-    window.__prPendingEventsBound = true;
-
-    window.addEventListener('pr:pending-updated', () => {
-      void renderAll();
-    });
-
-    window.addEventListener('pr:pending-cleared', () => {
-      void renderAll();
-    });
-  }
-
-  window.addEventListener('storage', () => {
-    void renderAll();
+  Object.keys(clean).forEach((k) => {
+    if (clean[k] === undefined || clean[k] === null || clean[k] === '') delete clean[k];
   });
 
-  void (async () => {
-    const status = await syncPendingStatusWithBackend();
-    if (status?.ok && status.alreadyRated) {
-      try {
-        showNotification(
-          'success',
-          t('rate_info_already_completed', 'Den här affären är redan betygsatt och har därför tagits bort från listan.'),
-          'notice'
-        );
-      } catch {}
-    }
-    await renderAll();
-  })();
+  if (!clean.email) return undefined;
+  return clean;
 }
 
-async function handleLoginSubmit(e) {
-  e.preventDefault();
-  const form = e.currentTarget;
+export function isDuplicateRatingError(result) {
+  const msg = (result?.error || result?.message || '').toString().toLowerCase();
+  const raw = (result?.raw || '').toString().toLowerCase();
 
-  const email = form.querySelector('input[name="email"]')?.value?.trim() || '';
-  const password = form.querySelector('input[name="password"]')?.value || '';
+  if (result?.status === 409) return true;
+  if (msg.includes('duplicate')) return true;
+  if (msg.includes('already') && (msg.includes('rating') || msg.includes('betyg') || msg.includes('omdöme'))) return true;
+  if (msg.includes('redan') && (msg.includes('lämn') || msg.includes('skick'))) return true;
+  if (raw.includes('duplicate')) return true;
+  return false;
+}
 
-  if (!email || !password) {
-    showNotification('error', t('profile_login_error_missing_fields', 'Fyll i både e-post och lösenord.'), 'login-status');
-    return;
-  }
+function setSubmitLoading(form, isLoading) {
+  const btn = form?.querySelector('button[type="submit"]');
+  if (!btn) return;
 
-  try {
-    const res = await login(email, password);
-    if (!res || res.ok === false) {
-      showNotification('error', res?.error || t('profile_login_error_failed', 'Login failed.'), 'login-status');
-      return;
-    }
-
-    showNotification('success', t('profile_login_success', 'Du är nu inloggad.'), 'login-status');
-
-    if (isRatePage()) {
-      await renderAll();
-
-      const lockedCard =
-        document.getElementById('locked-rating-card') ||
-        document.getElementById('verified-deals-card') ||
-        document.getElementById('rate-context-card');
-
-      if (lockedCard) {
-        setTimeout(() => {
-          lockedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }, 120);
-      }
-      return;
-    }
-
-    window.setTimeout(() => {
-      window.location.href = '/profile.html';
-    }, 150);
-
-  } catch (err) {
-    console.error('login error', err);
-    showNotification('error', t('profile_login_error_technical', 'Tekniskt fel vid inloggning.'), 'login-status');
+  if (isLoading) {
+    if (!btn.dataset.origText) btn.dataset.origText = btn.textContent || t('rate_submit_rating', 'Skicka omdöme');
+    btn.disabled = true;
+    btn.textContent = t('rate_submit_loading', 'Skickar…');
+    btn.style.opacity = '.75';
+    btn.style.pointerEvents = 'none';
+  } else {
+    btn.disabled = false;
+    btn.textContent = btn.dataset.origText || t('rate_submit_rating', 'Skicka omdöme');
+    btn.style.opacity = '';
+    btn.style.pointerEvents = '';
   }
 }
 
-export function initRatingForm() {
-  const form = document.getElementById('rating-form');
+function showLockedSuccessCard(message) {
+  const form = document.getElementById('locked-rating-form');
   if (!form) return;
 
-  if (form.dataset.ratingBound === '1') return;
-  form.dataset.ratingBound = '1';
-
-  form.addEventListener('submit', handleSubmit);
-
-  const resetBtn = document.getElementById('reset-form');
-  if (resetBtn) resetBtn.addEventListener('click', () => form.reset());
+  form.innerHTML = `
+    <div style="
+      border:1px solid rgba(22,163,74,.35);
+      background:rgba(22,163,74,.10);
+      border-radius:14px;
+      padding:12px;
+    ">
+      <div style="font-weight:800; margin-bottom:6px;">${escapeHtml(t('rate_success_title', 'Tack för ditt omdöme! ✅'))}</div>
+      <div style="color:var(--pr-text,#111); font-weight:600;">${escapeHtml(message || t('rate_success_body', 'Ditt omdöme är registrerat.'))}</div>
+      <div style="margin-top:10px; font-size:13px; color:var(--pr-muted);">
+        ${escapeHtml(t('rate_success_next', 'Du kan nu stänga sidan eller gå till din profil.'))}
+      </div>
+      <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap;">
+        <a class="pr-btn" href="/profile.html" style="text-decoration:none;">${escapeHtml(t('rate_go_profile', 'Gå till profil'))}</a>
+        <a class="pr-btn pr-btn-primary" href="/" style="text-decoration:none;">${escapeHtml(t('rate_go_home', 'Till startsidan'))}</a>
+      </div>
+    </div>
+  `;
 }
 
-async function handleSubmit(e) {
+function getLockedAuthHintMarkup(isLoggedIn) {
+  if (isLoggedIn) return '';
+
+  return `
+    <div id="locked-auth-hint" style="
+      border:1px solid rgba(245,158,11,.28);
+      background:rgba(245,158,11,.10);
+      border-radius:14px;
+      padding:12px;
+      margin-bottom:12px;
+    ">
+      <div style="font-weight:800; margin-bottom:4px;">
+        ${escapeHtml(t('rate_login_required_title', 'Logga in för att skicka omdömet'))}
+      </div>
+      <div style="font-size:13px; color:var(--pr-text,#111); line-height:1.5;">
+        ${escapeHtml(t('rate_login_required_body', 'Affären är identifierad och formuläret är förifyllt, men du behöver logga in innan du kan skicka ditt omdöme.'))}
+      </div>
+    </div>
+  `;
+}
+
+function getLockedFormMarkup(isLoggedIn) {
+  return `
+    <h2 style="margin:0 0 8px;">${escapeHtml(t('rate_step3_title', 'Steg 3: Lämna omdöme'))}</h2>
+    <p style="margin:0 0 12px;color:var(--pr-muted);font-size:13px;line-height:1.55;">
+      ${escapeHtml(t('rate_step3_lead', 'Formuläret är låst till verifierad affär. Du kan bara välja betyg och skriva kommentar.'))}
+    </p>
+
+    ${getLockedAuthHintMarkup(isLoggedIn)}
+
+    <div id="locked-meta" style="border:1px solid rgba(0,0,0,.08);background:#fff;border-radius:14px;padding:12px;margin-bottom:12px;"></div>
+
+    <form id="locked-rating-form" autocomplete="off">
+      <input type="hidden" name="ratedUserEmail" />
+      <input type="hidden" name="source" />
+      <input type="hidden" name="proofRef" />
+      <input type="hidden" name="rater" />
+
+      <div class="pr-field">
+        <label class="pr-label" for="locked-score">${escapeHtml(t('rate_score_label', 'Betyg'))}</label>
+        <select class="pr-select" id="locked-score" name="score" required ${isLoggedIn ? '' : 'disabled'}>
+          <option value="" selected>${escapeHtml(t('rate_pick_score', 'Välj…'))}</option>
+          <option value="1">${escapeHtml(t('rate_score_1', '1 – Mycket dåligt'))}</option>
+          <option value="2">${escapeHtml(t('rate_score_2', '2 – Dåligt'))}</option>
+          <option value="3">${escapeHtml(t('rate_score_3', '3 – Okej'))}</option>
+          <option value="4">${escapeHtml(t('rate_score_4', '4 – Bra'))}</option>
+          <option value="5">${escapeHtml(t('rate_score_5', '5 – Mycket bra'))}</option>
+        </select>
+      </div>
+
+      <div class="pr-field">
+        <label class="pr-label" for="locked-comment">${escapeHtml(t('rate_comment_label', 'Kommentar (valfritt)'))}</label>
+        <textarea
+          class="pr-textarea"
+          id="locked-comment"
+          name="comment"
+          rows="4"
+          placeholder="${escapeHtml(t('rate_comment_ph', 'Vad fungerade bra eller dåligt?'))}"
+          ${isLoggedIn ? '' : 'disabled'}
+        ></textarea>
+      </div>
+
+      <div class="pr-actions">
+        <button class="pr-btn pr-btn-primary" type="submit" ${isLoggedIn ? '' : 'disabled'}>${escapeHtml(t('rate_submit_rating', 'Skicka omdöme'))}</button>
+      </div>
+
+      <div id="locked-notice" class="notice" style="margin-top:10px;"></div>
+    </form>
+  `;
+}
+
+function bindLockedFormSubmitOnce() {
+  const form = document.getElementById('locked-rating-form');
+  if (!form || form.dataset.bound === '1') return;
+
+  form.dataset.bound = '1';
+  form.addEventListener('submit', handleLockedSubmit);
+}
+
+export function removeLockedFormCard() {
+  const el = document.getElementById('locked-rating-card');
+  if (el) el.remove();
+}
+
+export function ensureLockedFormCard(p, user) {
+  const isLoggedIn = !!user;
+  let card = document.getElementById('locked-rating-card');
+
+  if (!card) {
+    const anchor = document.getElementById('verified-deals-card') || document.getElementById('rate-context-card');
+    if (!anchor || !anchor.parentElement) return;
+
+    card = document.createElement('section');
+    card.className = 'pr-card';
+    card.id = 'locked-rating-card';
+    card.style.marginBottom = '16px';
+
+    anchor.parentElement.insertBefore(card, anchor.nextSibling);
+  }
+
+  card.innerHTML = getLockedFormMarkup(isLoggedIn);
+  bindLockedFormSubmitOnce();
+  updateLockedFormWithPending(p, user);
+}
+
+export function updateLockedFormWithPending(p, user) {
+  const meta = document.getElementById('locked-meta');
+  const form = document.getElementById('locked-rating-form');
+  if (!meta || !form) return;
+
+  const deal = p?.deal || {};
+  const cp = p?.counterparty || {};
+  const cpEmail = p?.subjectEmail || cp.email || '';
+  const cpName = cp.name || '–';
+  const cpPhone = cp.phone || '–';
+  const cpAddress = formatAddress(cp);
+
+  const orderId = deal.orderId || p?.proofRef || '–';
+  const amount = (deal.amount != null) ? deal.amount : (deal.amountSek != null ? deal.amountSek : null);
+  const currency = deal.currency || (amount != null ? 'SEK' : '');
+  const date = deal.date || deal.dateISO || '';
+
+  const valStyle = 'font-weight:600;word-break:break-word;';
+  const labelStyle = 'font-size:12px;color:var(--pr-muted);';
+
+  meta.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;">
+      <div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_counterparty_email', 'Motpart (e-post)'))}</div>
+        <div style="${valStyle}">${escapeHtml(cpEmail || '–')}</div>
+      </div>
+      <div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_source', 'Källa'))}</div>
+        <div style="${valStyle}">${escapeHtml(p?.source || '–')}</div>
+      </div>
+
+      <div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_name', 'Namn'))}</div>
+        <div style="${valStyle}">${escapeHtml(cpName)}</div>
+      </div>
+      <div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_phone', 'Telefon'))}</div>
+        <div style="${valStyle}">${escapeHtml(cpPhone)}</div>
+      </div>
+
+      <div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_address', 'Adress'))}</div>
+        <div style="${valStyle}">${cpAddress}</div>
+      </div>
+      <div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_order_proof', 'Order/Proof'))}</div>
+        <div style="${valStyle}">${escapeHtml(orderId)}</div>
+      </div>
+
+      <div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_amount', 'Belopp'))}</div>
+        <div style="${valStyle}">${formatAmount(amount, currency)}</div>
+      </div>
+      <div>
+        <div style="${labelStyle}">${escapeHtml(t('rate_label_date', 'Datum'))}</div>
+        <div style="${valStyle}">${formatDateShort(date)}</div>
+      </div>
+    </div>
+  `;
+
+  const ratedInput = form.querySelector('input[name="ratedUserEmail"]');
+  const sourceInput = form.querySelector('input[name="source"]');
+  const proofInput = form.querySelector('input[name="proofRef"]');
+  const raterInput = form.querySelector('input[name="rater"]');
+
+  if (ratedInput) ratedInput.value = cpEmail || '';
+  if (sourceInput) sourceInput.value = p?.source || '';
+  if (proofInput) proofInput.value = p?.proofRef || '';
+  if (raterInput) raterInput.value = user?.email || '';
+
+  const isLoggedIn = !!user;
+  const scoreEl = form.querySelector('select[name="score"]');
+  const commentEl = form.querySelector('textarea[name="comment"]');
+  const submitBtn = form.querySelector('button[type="submit"]');
+
+  if (scoreEl) scoreEl.disabled = !isLoggedIn;
+  if (commentEl) commentEl.disabled = !isLoggedIn;
+  if (submitBtn) submitBtn.disabled = !isLoggedIn;
+}
+
+async function handleLockedSubmit(e) {
   e.preventDefault();
+
   const form = e.currentTarget;
+  const user = auth.getUser?.() || null;
+  if (!user) {
+    showNotification('error', t('rate_error_login_required', 'Du måste logga in för att skicka omdöme.'), 'locked-notice');
+    return;
+  }
 
   const subjectEmail = form.querySelector('input[name="ratedUserEmail"]')?.value?.trim() || '';
   const score = Number(form.querySelector('select[name="score"]')?.value || 0);
   const comment = form.querySelector('textarea[name="comment"]')?.value?.trim() || '';
   const proofRef = form.querySelector('input[name="proofRef"]')?.value?.trim() || '';
-  const sourceRaw = form.querySelector('select[name="source"]')?.value || '';
+  const sourceRaw = form.querySelector('input[name="source"]')?.value?.trim() || '';
+  const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || user.email;
 
-  if (!subjectEmail || !score) {
-    showNotification('error', t('rate_error_required_fields', 'Fyll i alla obligatoriska fält innan du skickar.'), 'notice');
+  if (!subjectEmail) {
+    showNotification('error', t('rate_error_missing_counterparty', 'Motpart saknas i verifierad affär.'), 'locked-notice');
+    return;
+  }
+  if (!score) {
+    showNotification('error', t('rate_error_pick_score', 'Välj ett betyg.'), 'locked-notice');
     return;
   }
 
   const pending = getPending();
-  const rawCounterparty = pending?.counterparty || null;
+  const rawCounterparty = pending?.counterparty || pending?.deal?.counterparty || null;
   const deal = pending?.deal || null;
   const counterparty = sanitizeCounterparty(rawCounterparty, deal);
-
-  const raterVal = form.querySelector('input[name="rater"]')?.value?.trim() || null;
 
   const payload = {
     subject: subjectEmail,
@@ -385,39 +321,33 @@ async function handleSubmit(e) {
     deal: deal || undefined,
   };
 
-  const btn = form.querySelector('button[type="submit"]');
-  if (btn) btn.disabled = true;
+  setSubmitLoading(form, true);
 
   try {
     const result = await api.createRating(payload);
-
     if (!result || result.ok === false) {
       if (isDuplicateRatingError(result)) {
-        try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
-        notifyExtensionDealRated(pending || { source: sourceRaw, proofRef });
+        clearAllPendingEverywhere();
         clearPending();
-        showNotification('error', t('rate_error_duplicate', 'Omdöme har redan lämnats för denna affär.'), 'notice');
+        showNotification('error', t('rate_error_duplicate', 'Omdöme har redan lämnats för denna affär.'), 'locked-notice');
       } else {
-        showNotification('error', result?.error || t('rate_error_save', 'Kunde inte spara betyget.'), 'notice');
+        showNotification('error', result?.error || t('rate_error_save', 'Kunde inte spara betyget.'), 'locked-notice');
       }
-
-      if (btn) btn.disabled = false;
-      await renderAll();
+      setSubmitLoading(form, false);
       return;
     }
 
-    try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
-    notifyExtensionDealRated(pending || { source: sourceRaw, proofRef });
+    showLockedSuccessCard(t('rate_success_saved', 'Ditt omdöme är sparat.'));
+    showToast('success', t('rate_success_saved_toast', 'Tack! Ditt omdöme är sparat.'));
+
+    clearAllPendingEverywhere();
     clearPending();
 
-    showNotification('success', t('rate_success_saved_toast', 'Tack! Ditt omdöme är sparat.'), 'notice');
-    form.reset();
-    if (btn) btn.disabled = false;
+    setSubmitLoading(form, false);
 
-    await renderAll();
   } catch (err) {
-    console.error('submit error', err);
-    showNotification('error', t('rate_error_technical', 'Tekniskt fel. Försök igen om en stund.'), 'notice');
-    if (btn) btn.disabled = false;
+    console.error('locked submit error', err);
+    showNotification('error', t('rate_error_technical', 'Tekniskt fel. Försök igen om en stund.'), 'locked-notice');
+    setSubmitLoading(form, false);
   }
 }
