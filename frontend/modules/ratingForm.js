@@ -23,6 +23,8 @@ import {
 
 export { initPlatformPicker, initPlatformStarter } from './platformPicker.js';
 
+let activePending = null;
+
 function isRatePage() {
   return (window.location.pathname || '').toLowerCase().includes('/rate.html');
 }
@@ -33,15 +35,6 @@ function getLoginCardEls() {
     document.getElementById('rating-login-card'),
     document.getElementById('rating-login'),
     document.querySelector('[data-role="rating-login"]'),
-  ].filter(Boolean);
-}
-
-function getRatingWrapperEls() {
-  return [
-    document.getElementById('rating-form-wrapper'),
-    document.getElementById('rating-card'),
-    document.getElementById('rating-form-card'),
-    document.getElementById('rating-form'),
   ].filter(Boolean);
 }
 
@@ -86,10 +79,7 @@ function showLoginCardIfPresent() {
   });
 }
 
-function setVisibility(isLoggedIn) {
-  const loginCards = getLoginCardEls();
-  const ratingWrappers = getRatingWrapperEls();
-
+function setLoginVisibility(isLoggedIn) {
   const hint =
     document.getElementById('rating-login-hint') ||
     document.getElementById('ratingHint') ||
@@ -97,21 +87,13 @@ function setVisibility(isLoggedIn) {
 
   if (isLoggedIn) {
     hideLoginCard();
-  } else if (loginCards.length > 0) {
+  } else {
     showLoginCardIfPresent();
   }
 
   if (hint) {
     hint.classList.toggle('hidden', isLoggedIn);
     hint.style.display = isLoggedIn ? 'none' : '';
-  }
-
-  if (ratingWrappers.length > 0) {
-    ratingWrappers.forEach((el) => {
-      const shouldShow = !!isLoggedIn;
-      el.style.display = shouldShow ? 'block' : 'none';
-      el.classList.toggle('hidden', !shouldShow);
-    });
   }
 }
 
@@ -122,21 +104,6 @@ function hasPendingIdentity(p) {
     p?.deal?.bookingId ||
     p?.deal?.transactionId ||
     p?.pageUrl
-  );
-}
-
-function hasRichPendingData(p) {
-  return !!(
-    p?.subjectEmail ||
-    p?.counterparty?.email ||
-    p?.counterparty?.name ||
-    p?.deal?.orderId ||
-    p?.deal?.itemId ||
-    p?.deal?.title ||
-    p?.deal?.amount != null ||
-    p?.deal?.amountSek != null ||
-    p?.deal?.date ||
-    p?.deal?.dateISO
   );
 }
 
@@ -177,7 +144,7 @@ function notifyExtensionDealRated(pendingLike) {
 }
 
 async function syncPendingStatusWithBackend() {
-  const pending = getPending();
+  const pending = activePending || getPending();
   if (!pending || !hasPendingIdentity(pending)) {
     return { ok: true, alreadyRated: false };
   }
@@ -188,6 +155,7 @@ async function syncPendingStatusWithBackend() {
     if (status?.ok && status.alreadyRated) {
       try { markDealRated(pending); } catch {}
       notifyExtensionDealRated(pending);
+      activePending = null;
       clearPending();
       return status;
     }
@@ -213,50 +181,53 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function ensurePendingCapturedOnce() {
+async function capturePendingSimple() {
+  // 1. URL först
   const fromUrl = captureFromUrl();
-  if (fromUrl && hasRichPendingData(fromUrl)) return fromUrl;
+  if (fromUrl) {
+    activePending = fromUrl;
+  }
 
-  const existing = getPending();
-  if (existing && hasRichPendingData(existing)) return existing;
+  // 2. om vi redan har pending lokalt, använd den
+  const stored = getPending();
+  if (stored) {
+    activePending = stored;
+  }
 
-  const fromBridge = await captureFromExtensionBridge(1600);
-  if (fromBridge) return fromBridge;
-
-  const afterBridge = getPending();
-  if (afterBridge) return afterBridge;
-
-  if (fromUrl) return fromUrl;
-  return existing || null;
-}
-
-async function ensurePendingCapturedRobust({
-  attempts = 8,
-  delayMs = 350,
-} = {}) {
-  let best = getPending();
-
-  for (let i = 0; i < attempts; i += 1) {
-    const pending = await ensurePendingCapturedOnce();
-
-    if (pending) {
-      best = pending;
-      if (hasRichPendingData(pending)) return pending;
-    }
-
-    if (i < attempts - 1) {
-      await sleep(delayMs);
+  // 3. om vi fortfarande inte har något, fråga extension bridge
+  if (!activePending) {
+    const fromBridge = await captureFromExtensionBridge(1600);
+    if (fromBridge) {
+      activePending = fromBridge;
     }
   }
 
-  return best;
+  // 4. sista koll i localStorage efter ev bridge
+  if (!activePending) {
+    const storedAfter = getPending();
+    if (storedAfter) {
+      activePending = storedAfter;
+    }
+  }
+
+  return activePending;
+}
+
+async function capturePendingRobust() {
+  for (let i = 0; i < 6; i += 1) {
+    const pending = await capturePendingSimple();
+    if (pending) return pending;
+    await sleep(250);
+  }
+  return activePending || getPending() || null;
 }
 
 async function renderAll() {
-  const p = getPending();
+  const p = activePending || getPending() || null;
 
   if (p && isDealRated(p)) {
     notifyExtensionDealRated(p);
+    activePending = null;
     clearPending();
     renderVerifiedDealUI(null);
     removeLockedFormCard();
@@ -270,32 +241,18 @@ async function renderAll() {
     renderVerifiedDealUI(null);
   }
 
-  const u = await resolveAuthUser();
-  setVisibility(!!u);
+  const user = await resolveAuthUser();
+  setLoginVisibility(!!user);
 
-  if (p && hasPendingIdentity(p)) {
-    ensureLockedFormCard(p, u);
+  if (p) {
+    ensureLockedFormCard(p, user);
   } else {
     removeLockedFormCard();
   }
 }
 
-async function bootstrapPendingAndRender() {
-  const pending = await ensurePendingCapturedRobust({
-    attempts: 10,
-    delayMs: 300,
-  });
-
-  if (pending && isDealRated(pending)) {
-    notifyExtensionDealRated(pending);
-    clearPending();
-    renderVerifiedDealUI(null);
-  } else if (pending) {
-    applyPendingContextCard(pending);
-    renderVerifiedDealUI(pending);
-  } else {
-    renderVerifiedDealUI(null);
-  }
+async function bootstrapPage() {
+  await capturePendingRobust();
 
   const status = await syncPendingStatusWithBackend();
   if (status?.ok && status.alreadyRated) {
@@ -311,17 +268,8 @@ async function bootstrapPendingAndRender() {
   await renderAll();
 }
 
-async function openDirectRatingFlow() {
-  await ensurePendingCapturedRobust({
-    attempts: 6,
-    delayMs: 250,
-  });
-
-  await renderAll();
-
-  const user = await resolveAuthUser();
-
-  const target = user
+function scrollToRelevantTarget(isLoggedIn) {
+  const target = isLoggedIn
     ? document.getElementById('locked-rating-card')
     : (
         document.getElementById('login-card') ||
@@ -349,28 +297,28 @@ export function initRatingLogin() {
     window.__prPendingEventsBound = true;
 
     window.addEventListener('pr:pending-updated', () => {
+      const p = getPending();
+      if (p) activePending = p;
       void renderAll();
     });
 
     window.addEventListener('pr:pending-cleared', () => {
+      activePending = null;
       void renderAll();
     });
   }
 
   window.addEventListener('storage', () => {
+    const p = getPending();
+    if (p) activePending = p;
     void renderAll();
   });
 
-  void bootstrapPendingAndRender();
+  void bootstrapPage();
 
   if (isRatePage()) {
-    setTimeout(() => {
-      void bootstrapPendingAndRender();
-    }, 800);
-
-    setTimeout(() => {
-      void bootstrapPendingAndRender();
-    }, 1800);
+    setTimeout(() => { void bootstrapPage(); }, 700);
+    setTimeout(() => { void bootstrapPage(); }, 1600);
   }
 }
 
@@ -395,14 +343,8 @@ async function handleLoginSubmit(e) {
 
     showNotification('success', t('profile_login_success', 'Du är nu inloggad.'), 'login-status');
 
-    if (isRatePage()) {
-      await openDirectRatingFlow();
-      return;
-    }
-
-    window.setTimeout(() => {
-      window.location.href = '/profile.html';
-    }, 150);
+    await renderAll();
+    scrollToRelevantTarget(true);
 
   } catch (err) {
     console.error('login error', err);
@@ -438,7 +380,7 @@ async function handleSubmit(e) {
     return;
   }
 
-  const pending = getPending();
+  const pending = activePending || getPending();
   const rawCounterparty = pending?.counterparty || null;
   const deal = pending?.deal || null;
   const counterparty = sanitizeCounterparty(rawCounterparty, deal);
@@ -466,6 +408,7 @@ async function handleSubmit(e) {
       if (isDuplicateRatingError(result)) {
         try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
         notifyExtensionDealRated(pending || { source: sourceRaw, proofRef });
+        activePending = null;
         clearPending();
         showNotification('error', t('rate_error_duplicate', 'Omdöme har redan lämnats för denna affär.'), 'notice');
       } else {
@@ -479,6 +422,7 @@ async function handleSubmit(e) {
 
     try { markDealRated(pending || { source: sourceRaw, proofRef }); } catch {}
     notifyExtensionDealRated(pending || { source: sourceRaw, proofRef });
+    activePending = null;
     clearPending();
 
     showNotification('success', t('rate_success_saved_toast', 'Tack! Ditt omdöme är sparat.'), 'notice');

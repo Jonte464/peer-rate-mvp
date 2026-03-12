@@ -1,9 +1,7 @@
 // frontend/modules/ratingContext.js
-// Förenklad version:
-// - ingen overlay
-// - ingen extra "open pending rating"-styrning
-// - pendingStore.js är enda sanningskällan
-// - denna modul används bara för städning och kompatibilitet
+// Enkel kompatibilitetsmodul.
+// Ingen overlay, ingen styrning av ratingflödet.
+// Används bara för att kunna rensa gammal pending-data på ett ställe.
 
 import { clearPending } from './pendingStore.js';
 
@@ -53,6 +51,4 @@ export function clearAllPendingEverywhere() {
 
 export function initRatingContextGuards() {
   // Medvetet tom.
-  // Vi behåller exporten så att main.js och annan kod inte går sönder,
-  // men vi låter inte längre denna modul styra själva rating-flödet.
 }
