@@ -2,26 +2,45 @@
 const PENDING_KEY = 'peerrate_pending_rating_v2';
 const TTL_MS = 1000 * 60 * 60 * 24;
 
-// ✅ Ny: lokal cache över redan betygsatta deals (för att kunna “stänga av” spök-pending)
 const RATED_CACHE_KEY = 'peerrate_rated_deals_v1';
 const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90 dagar
 
-function now() { return Date.now(); }
-function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
+function now() {
+  return Date.now();
+}
+
+function safeParse(s) {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return null;
+  }
+}
+
+function dispatchPendingUpdated(detail) {
+  try {
+    window.dispatchEvent(new CustomEvent('pr:pending-updated', { detail: detail || {} }));
+  } catch {}
+}
+
+function dispatchPendingCleared() {
+  try {
+    window.dispatchEvent(new CustomEvent('pr:pending-cleared'));
+  } catch {}
+}
 
 function readB64Json(b64) {
   if (!b64) return null;
+
   try {
     const cleaned = decodeURIComponent(b64);
 
-    // 1) vanilla atob
     try {
       const raw = atob(cleaned);
       const j = safeParse(raw);
       if (j && typeof j === 'object') return j;
     } catch {}
 
-    // 2) UTF-8 variant
     try {
       const raw = atob(cleaned);
       const utf8 = decodeURIComponent(escape(raw));
@@ -35,8 +54,105 @@ function readB64Json(b64) {
   }
 }
 
+function normalizeText(v) {
+  return String(v || '').trim();
+}
+
+function normalizeSourceDisplay(source) {
+  const s = normalizeText(source).toLowerCase();
+
+  if (s === 'tradera') return 'Tradera';
+  if (s === 'blocket') return 'Blocket';
+  if (s === 'airbnb') return 'Airbnb';
+  if (s === 'ebay') return 'eBay';
+  if (s === 'tiptap') return 'Tiptap';
+  if (s === 'hygglo') return 'Hygglo';
+  if (s === 'husknuten') return 'Husknuten';
+  if (s === 'facebook') return 'Facebook Marketplace';
+
+  return normalizeText(source);
+}
+
+export function normalizeIncoming(inObj) {
+  const obj = inObj && typeof inObj === 'object' ? { ...inObj } : {};
+  const out = { ...obj };
+
+  const deal = obj.deal && typeof obj.deal === 'object' ? { ...obj.deal } : null;
+  const nestedCp =
+    deal?.counterparty && typeof deal.counterparty === 'object' ? { ...deal.counterparty } : null;
+
+  const rawCounterparty =
+    obj.counterparty && typeof obj.counterparty === 'object' ? { ...obj.counterparty } : null;
+
+  out.source =
+    normalizeSourceDisplay(
+      obj.source ||
+        deal?.platform ||
+        rawCounterparty?.platform ||
+        ''
+    ) || '';
+
+  out.pageUrl =
+    normalizeText(
+      obj.pageUrl ||
+        deal?.pageUrl ||
+        rawCounterparty?.pageUrl ||
+        ''
+    ) || '';
+
+  out.counterparty = {
+    ...(rawCounterparty || {}),
+    ...(nestedCp || {}),
+  };
+
+  out.deal = deal || undefined;
+
+  out.subjectEmail =
+    normalizeText(
+      obj.subjectEmail ||
+        out.counterparty?.email ||
+        obj.subject ||
+        ''
+    ) || '';
+
+  out.proofRef =
+    normalizeText(
+      obj.proofRef ||
+        deal?.orderId ||
+        deal?.bookingId ||
+        deal?.transactionId ||
+        deal?.externalProofRef ||
+        out.counterparty?.orderId ||
+        out.pageUrl ||
+        ''
+    ) || '';
+
+  if (out.counterparty?.email) {
+    out.counterparty.email = normalizeText(out.counterparty.email).toLowerCase();
+  }
+
+  if (out.subjectEmail) {
+    out.subjectEmail = normalizeText(out.subjectEmail).toLowerCase();
+  }
+
+  if (out.deal?.counterparty?.email) {
+    out.deal.counterparty.email = normalizeText(out.deal.counterparty.email).toLowerCase();
+  }
+
+  Object.keys(out).forEach((k) => {
+    if (out[k] === undefined) delete out[k];
+  });
+
+  return out;
+}
+
 export function setPending(data) {
-  try { localStorage.setItem(PENDING_KEY, JSON.stringify({ ...(data || {}), _ts: now() })); } catch {}
+  try {
+    const normalized = normalizeIncoming(data || {});
+    const payload = { ...normalized, _ts: now() };
+    localStorage.setItem(PENDING_KEY, JSON.stringify(payload));
+    dispatchPendingUpdated(payload);
+  } catch {}
 }
 
 export function getPending() {
@@ -49,20 +165,22 @@ export function getPending() {
       localStorage.removeItem(PENDING_KEY);
       return null;
     }
-    return parsed;
+
+    return normalizeIncoming(parsed);
   } catch {
     return null;
   }
 }
 
 export function clearPending() {
-  try { localStorage.removeItem(PENDING_KEY); } catch {}
-  // signalera så UI kan uppdatera
-  try { window.dispatchEvent(new CustomEvent("pr:pending-cleared")); } catch {}
+  try {
+    localStorage.removeItem(PENDING_KEY);
+  } catch {}
+  dispatchPendingCleared();
 }
 
 /* -----------------------------
-   ✅ RATED DEALS CACHE
+   Rated deals cache
 ------------------------------ */
 
 function normalizeSource(s) {
@@ -74,17 +192,26 @@ function normalizeProofRef(s) {
 }
 
 export function dealKeyFromPending(p) {
-  const source = normalizeSource(p?.source || p?.deal?.source || p?.counterparty?.source || '');
-  // proofRef kan ligga på flera ställen
-  const proofRef =
-    normalizeProofRef(
-      p?.proofRef ||
+  const source = normalizeSource(
+    p?.source ||
+      p?.deal?.source ||
+      p?.deal?.platform ||
+      p?.counterparty?.source ||
+      p?.counterparty?.platform ||
+      ''
+  );
+
+  const proofRef = normalizeProofRef(
+    p?.proofRef ||
       p?.deal?.orderId ||
+      p?.deal?.bookingId ||
+      p?.deal?.transactionId ||
       p?.deal?.proofRef ||
       p?.counterparty?.orderId ||
       p?.counterparty?.proofRef ||
+      p?.pageUrl ||
       ''
-    );
+  );
 
   if (!source || !proofRef) return '';
   return `${source}|${proofRef}`;
@@ -110,10 +237,12 @@ function cleanupRatedCache(obj) {
   try {
     const o = obj || {};
     const t = now();
+
     for (const k of Object.keys(o)) {
       const ts = Number(o[k] || 0);
-      if (!ts || (t - ts) > RATED_TTL_MS) delete o[k];
+      if (!ts || t - ts > RATED_TTL_MS) delete o[k];
     }
+
     return o;
   } catch {
     return obj || {};
@@ -139,50 +268,12 @@ export function isDealRated(pendingOrKey) {
 
     let cache = readRatedCacheRaw();
     cache = cleanupRatedCache(cache);
-
-    // skriv tillbaka efter cleanup (optional)
     writeRatedCacheRaw(cache);
 
     return !!cache[key];
   } catch {
     return false;
   }
-}
-
-export function normalizeIncoming(inObj) {
-  const obj = (inObj && typeof inObj === 'object') ? { ...inObj } : {};
-  const out = { ...obj };
-
-  out.source = out.source || obj.source || '';
-  out.pageUrl = out.pageUrl || obj.pageUrl || '';
-
-  const deal = obj.deal || obj.counterparty?.deal || null;
-  const cp = (deal && deal.counterparty) ? deal.counterparty : (obj.counterparty || null);
-
-  out.subjectEmail =
-    obj.subjectEmail ||
-    cp?.email ||
-    obj.subject ||
-    '';
-
-  out.counterparty = {
-    ...(obj.counterparty && typeof obj.counterparty === 'object' ? obj.counterparty : {}),
-    ...(cp && typeof cp === 'object' ? cp : {}),
-  };
-
-  out.deal = deal && typeof deal === 'object' ? deal : (obj.deal || undefined);
-
-  out.proofRef =
-    obj.proofRef ||
-    deal?.orderId ||
-    obj.counterparty?.orderId ||
-    out.pageUrl ||
-    '';
-
-  const s = String(out.source || '').toLowerCase();
-  if (s === 'tradera') out.source = 'Tradera';
-
-  return out;
 }
 
 /**
@@ -200,7 +291,6 @@ export function captureFromUrl() {
 
   if (!pr && !source && !pageUrl && !proofRef) return null;
 
-  // 1) pr=... (base64 json)
   if (pr) {
     const decoded = readB64Json(pr);
     if (decoded && typeof decoded === 'object') {
@@ -211,7 +301,6 @@ export function captureFromUrl() {
       const normalized = normalizeIncoming(decoded);
       setPending(normalized);
 
-      // remove params
       try {
         const url = new URL(window.location.href);
         url.searchParams.delete('pr');
@@ -225,7 +314,6 @@ export function captureFromUrl() {
     }
   }
 
-  // 2) fallback merge query into existing pending
   const existing = getPending() || {};
   const merged = normalizeIncoming({
     ...existing,
@@ -236,9 +324,9 @@ export function captureFromUrl() {
 
   setPending(merged);
 
-  // remove params
   try {
     const url = new URL(window.location.href);
+    url.searchParams.delete('pr');
     url.searchParams.delete('source');
     url.searchParams.delete('pageUrl');
     url.searchParams.delete('proofRef');
