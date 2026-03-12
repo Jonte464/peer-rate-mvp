@@ -2,7 +2,8 @@
 // Säker pending-hantering som inte kan krascha hela sajten.
 // - Pending sparas per user i sessionStorage
 // - Pending speglas även till localStorage (peerrate_pending_rating_v2) för ratingForm.js
-// - Pending rensas när användaren byts
+// - Pending flyttas från anon -> inloggad användare istället för att rensas bort
+// - Pending rensas bara vid verkligt användarbyte mellan två olika riktiga användare
 // - Overlay visas bara på rate.html
 
 import auth from "./auth.js";
@@ -20,10 +21,9 @@ const LEGACY_CONTEXT_KEYS = [
   "peerRateDraftRating",
   "peerRatePendingRating",
   "peerRatePendingDeal",
-  "peerrate_pending_rating_v2", // ratingForm.js pending key
+  "peerrate_pending_rating_v2",
 ];
 
-// ratingForm.js läser denna:
 const LEGACY_PENDING_KEY = "peerrate_pending_rating_v2";
 const LEGACY_TTL_MS = 1000 * 60 * 60 * 24; // 24h
 
@@ -65,14 +65,12 @@ function readLegacyPending() {
   }
 }
 
-// Försök hitta email även om auth.getUser() inte hunnit uppdateras ännu
 function getBestEmailGuess() {
   try {
     const u = auth.getUser?.() || null;
     const emailFromAuth = (u?.email || u?.customer?.email || "").trim().toLowerCase();
     if (emailFromAuth) return emailFromAuth;
 
-    // Fallback: leta i vanliga localStorage-nycklar
     const candidates = ["peerRateUser", "peerRateCustomer", "user", "customer"];
     for (const k of candidates) {
       const raw = localStorage.getItem(k);
@@ -88,13 +86,12 @@ function getUserKey() {
   return getBestEmailGuess() || "anon";
 }
 
-// Spegla pending till localStorage så ratingForm.js hittar den
 function writeLegacyPending(deal) {
   try {
     if (!deal || typeof deal !== "object") return;
     localStorage.setItem(
       LEGACY_PENDING_KEY,
-      JSON.stringify({ ...deal, _ts: nowMs() })
+      JSON.stringify({ ...(deal || {}), _ts: nowMs() })
     );
   } catch {}
 }
@@ -105,18 +102,13 @@ function clearLegacyPending() {
   } catch {}
 }
 
-/**
- * ✅ EXPORT: så lockedRatingCard kan rensa pending överallt efter success/duplicate
- */
 export function clearAllPendingEverywhere() {
   try {
-    // Rensa legacy keys i både localStorage och sessionStorage
     for (const k of LEGACY_CONTEXT_KEYS) {
       try { localStorage.removeItem(k); } catch {}
       try { sessionStorage.removeItem(k); } catch {}
     }
 
-    // Rensa ALLA per-user pending i sessionStorage
     try {
       const prefix = "peerRatePendingDeal:";
       for (let i = sessionStorage.length - 1; i >= 0; i--) {
@@ -150,7 +142,6 @@ function writePendingDealFor(userKey, deal) {
       JSON.stringify(deal || {})
     );
 
-    // spegla till localStorage för ratingForm.js
     writeLegacyPending(deal);
 
     try {
@@ -163,10 +154,36 @@ function clearPendingDealFor(userKey) {
   try {
     sessionStorage.removeItem(perUserKey("peerRatePendingDeal", userKey));
   } catch {}
-  clearLegacyPending();
+
+  const current = getUserKey();
+  if (userKey === current || userKey === "anon") {
+    clearLegacyPending();
+  }
+
   try {
     window.dispatchEvent(new CustomEvent("pr:pending-cleared"));
   } catch {}
+}
+
+function movePendingDeal(fromUserKey, toUserKey) {
+  try {
+    if (!fromUserKey || !toUserKey || fromUserKey === toUserKey) return false;
+
+    const existingTarget = readPendingDealFor(toUserKey);
+    if (existingTarget) return true;
+
+    const fromPending = readPendingDealFor(fromUserKey);
+    if (!fromPending) return false;
+
+    writePendingDealFor(toUserKey, fromPending);
+    try {
+      sessionStorage.removeItem(perUserKey("peerRatePendingDeal", fromUserKey));
+    } catch {}
+
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function readDealFromQuery() {
@@ -177,8 +194,6 @@ function readDealFromQuery() {
     const proofRef = (params.get("proofRef") || "").trim();
     const pr = (params.get("pr") || "").trim();
 
-    // om vi har pr=... så ska ratingForm.js hantera det (den har base64-decode)
-    // ratingContext ska inte försöka decodea det här.
     if (!source && !pageUrl && !proofRef && !pr) return null;
 
     let decodedPageUrl = pageUrl;
@@ -193,7 +208,6 @@ function readDealFromQuery() {
       pageUrl: decodedPageUrl,
       proofRef,
       receivedAt: new Date().toISOString(),
-      // vi tar med pr så ratingForm.js kan ta den om den vill
       pr: pr || undefined,
     };
   } catch {
@@ -207,7 +221,6 @@ function removeQueryParams() {
     url.searchParams.delete("source");
     url.searchParams.delete("pageUrl");
     url.searchParams.delete("proofRef");
-    // vi tar INTE bort pr här — ratingForm.js behöver den för decode
     window.history.replaceState({}, "", url.toString());
   } catch {}
 }
@@ -295,7 +308,6 @@ function createOverlayIfNeeded(deal) {
     card.querySelector("#pr-pending-clear")?.addEventListener("click", () => {
       clearAllPendingEverywhere();
       try {
-        // ta bort även pr om vi rensar
         const url = new URL(window.location.href);
         url.searchParams.delete("source");
         url.searchParams.delete("pageUrl");
@@ -309,8 +321,12 @@ function createOverlayIfNeeded(deal) {
     card.querySelector("#pr-pending-go")?.addEventListener("click", () => {
       hide();
 
-      // Viktigt: ratingForm.js bygger locked-card. Vi scroller bara dit.
-      const target =
+      const loginTarget =
+        document.getElementById("login-card") ||
+        document.getElementById("rating-login-card") ||
+        document.getElementById("rating-login-form");
+
+      const formTarget =
         document.getElementById("locked-rating-card") ||
         document.getElementById("verified-deals-card") ||
         document.getElementById("rate-context-card") ||
@@ -318,24 +334,31 @@ function createOverlayIfNeeded(deal) {
         document.getElementById("rating-card") ||
         document.querySelector("form");
 
-      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      const currentUser = getUserKey();
+
+      if (!currentUser || currentUser === "anon") {
+        if (loginTarget) {
+          loginTarget.scrollIntoView({ behavior: "smooth", block: "start" });
+          return;
+        }
+      }
+
+      if (formTarget) {
+        formTarget.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     });
   } catch {}
 }
 
 function shouldRunGuardsNow() {
   try {
-    // Kör alltid på rate.html
     if (isRatePage()) return true;
 
-    // Kör om det finns query som tyder på pending
     const qs = new URLSearchParams(window.location.search || "");
     if (qs.get("source") || qs.get("pageUrl") || qs.get("proofRef") || qs.get("pr")) return true;
 
-    // Kör om det redan finns legacy pending (så vi kan rensa vid user switch)
     if (readLegacyPending()) return true;
 
-    // Kör om sessionStorage har något pending
     for (let i = 0; i < sessionStorage.length; i++) {
       const k = sessionStorage.key(i);
       if (k && k.startsWith("peerRatePendingDeal:")) return true;
@@ -344,55 +367,85 @@ function shouldRunGuardsNow() {
   return false;
 }
 
-export function initRatingContextGuards() {
+function handleUserTransition(prev, next) {
   try {
-    // SUPERviktigt: kör inte alls om vi inte behöver (för att inte riskera krascha andra sidor)
-    if (!shouldRunGuardsNow()) return;
-
-    let last = (localStorage.getItem(LAST_USER_KEY) || "").trim().toLowerCase();
-    let current = getUserKey();
-    localStorage.setItem(LAST_USER_KEY, current);
-
-    // Om vi just bytt användare: rensa ALL pending direkt
-    if (last && last !== current) {
-      clearAllPendingEverywhere();
+    if (!prev) {
+      localStorage.setItem(LAST_USER_KEY, next);
+      return;
     }
 
-    // Läs deal från query och spara per user (OBS: pr hanteras av ratingForm, men vi kan ändå spara basic)
+    if (prev === next) {
+      localStorage.setItem(LAST_USER_KEY, next);
+      return;
+    }
+
+    // Viktigaste fixen:
+    // Om vi går från anon -> riktig användare, flytta pending i stället för att rensa.
+    if (prev === "anon" && next !== "anon") {
+      movePendingDeal("anon", next);
+      localStorage.setItem(LAST_USER_KEY, next);
+      return;
+    }
+
+    // Om vi går från riktig användare -> anon, rensa inte direkt.
+    // Då kan sidan vara mitt i auth-hydrering eller refresh.
+    if (prev !== "anon" && next === "anon") {
+      localStorage.setItem(LAST_USER_KEY, next);
+      return;
+    }
+
+    // Bara om två olika riktiga användare byts ska pending rensas helt.
+    if (prev !== "anon" && next !== "anon" && prev !== next) {
+      clearAllPendingEverywhere();
+      localStorage.setItem(LAST_USER_KEY, next);
+      return;
+    }
+
+    localStorage.setItem(LAST_USER_KEY, next);
+  } catch {}
+}
+
+export function initRatingContextGuards() {
+  try {
+    if (!shouldRunGuardsNow()) return;
+
+    const last = (localStorage.getItem(LAST_USER_KEY) || "").trim().toLowerCase();
+    const current = getUserKey();
+
+    handleUserTransition(last, current);
+
+    const effectiveUser = getUserKey();
+
     const dealFromQuery = readDealFromQuery();
     if (dealFromQuery) {
-      writePendingDealFor(current, dealFromQuery);
-      // ta bort source/pageUrl/proofRef så den inte återkommer
+      writePendingDealFor(effectiveUser, dealFromQuery);
       removeQueryParams();
     }
 
-    // Om pending ligger kvar under "anon" men vi nu är inloggade: flytta
-    if (current !== "anon") {
+    if (effectiveUser !== "anon") {
       const anon = readPendingDealFor("anon");
-      const mine = readPendingDealFor(current);
-      if (anon && !mine) writePendingDealFor(current, anon);
-      clearPendingDealFor("anon");
+      const mine = readPendingDealFor(effectiveUser);
+      if (anon && !mine) writePendingDealFor(effectiveUser, anon);
+      try {
+        sessionStorage.removeItem(perUserKey("peerRatePendingDeal", "anon"));
+      } catch {}
     }
 
-    // Visa overlay på rate.html om pending finns (per user eller legacy)
     if (isRatePage()) {
-      const pending = readPendingDealFor(current) || readLegacyPending();
+      const pending = readPendingDealFor(effectiveUser) || readLegacyPending();
       if (pending) setTimeout(() => createOverlayIfNeeded(pending), 120);
     }
 
-    // Poll user switch (logout/login utan reload)
     setInterval(() => {
       try {
         const now = getUserKey();
         const prev = (localStorage.getItem(LAST_USER_KEY) || "").trim().toLowerCase();
-        if (prev && now !== prev) {
-          clearAllPendingEverywhere();
-          localStorage.setItem(LAST_USER_KEY, now);
+        if (now !== prev) {
+          handleUserTransition(prev, now);
         }
       } catch {}
-    }, 500);
+    }, 1000);
   } catch (e) {
-    // Absolut aldrig krascha hela sajten
     console.warn("[PeerRate] ratingContext guards failed (ignored):", e);
   }
 }
