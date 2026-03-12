@@ -1,15 +1,9 @@
 // extension/service-worker.js
 // PeerRate background/service-worker
-// Konservativ strategi:
+// Robust pending-bridge:
 // - backend måste uttryckligen svara canRate === true för att vi ska öppna rate.html
-// - vid alreadyRated cachear vi lokalt
-// - vid fel/timeout/oklart svar => öppna INTE
-// - rate.html kan dessutom markera deals som rated tillbaka till extensionen
-//
-// Uppdatering:
-// - PeerRate-identitet sparas fortfarande från peerrate.ai
-// - aktiv marketplace-identitet skickas fortfarande med som signal/debug
-// - men backend blockerar inte längre rating baserat på identity match
+// - payload sparas lokalt i extensionen innan rate.html öppnas
+// - rate.html kan sedan hämta payload via page-bridge (utan att vara beroende av lång URL)
 
 const API_BASE = "https://api.peerrate.ai";
 const RATE_PAGE_BASE = "https://peerrate.ai/rate.html";
@@ -18,6 +12,10 @@ const RATED_CACHE_KEY = "peerrate_extension_rated_cache_v1";
 const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90 dagar
 
 const AUTH_IDENTITY_KEY = "peerrate_extension_auth_identity_v1";
+
+// Nytt: pending payload som page-bridge kan läsa ut
+const PENDING_PAYLOAD_KEY = "peerrate_extension_pending_payload_v1";
+const PENDING_TTL_MS = 1000 * 60 * 15; // 15 min räcker gott
 
 function normalizeText(v) {
   return String(v || "").trim();
@@ -77,6 +75,7 @@ function buildRateUrl(payload) {
   const source = normalizeSource(payload?.source || payload?.deal?.platform || "");
 
   const pr = encodePayload(payload);
+
   return `${RATE_PAGE_BASE}?source=${encodeURIComponent(source)}&pageUrl=${encodeURIComponent(pageUrl)}&proofRef=${encodeURIComponent(proofRef)}&pr=${pr}`;
 }
 
@@ -192,6 +191,66 @@ async function isDealRatedLocally(payloadOrKey) {
 
   const cache = await cleanupRatedCache();
   return !!cache[key];
+}
+
+// ---------------------------
+// Pending payload bridge
+// ---------------------------
+
+function normalizePendingPayload(payload) {
+  if (!payload || typeof payload !== "object") return null;
+
+  const out = {
+    ...payload,
+    source: payload.source || payload?.deal?.platform || "",
+    proofRef: extractProofRef(payload),
+    pageUrl: normalizeText(payload?.pageUrl || payload?.deal?.pageUrl || ""),
+    savedAt: new Date().toISOString(),
+    _ts: Date.now(),
+  };
+
+  return out;
+}
+
+async function writePendingPayload(payload) {
+  try {
+    const normalized = normalizePendingPayload(payload);
+    if (!normalized) return false;
+
+    await storageSetLocal({
+      [PENDING_PAYLOAD_KEY]: normalized,
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function readPendingPayload() {
+  try {
+    const raw = await storageGetLocal(PENDING_PAYLOAD_KEY);
+    if (!raw || typeof raw !== "object") return null;
+
+    const ts = Number(raw._ts || 0);
+    if (!ts || (Date.now() - ts) > PENDING_TTL_MS) {
+      await storageRemoveLocal(PENDING_PAYLOAD_KEY);
+      return null;
+    }
+
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+async function clearPendingPayload() {
+  try {
+    await storageRemoveLocal(PENDING_PAYLOAD_KEY);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
@@ -364,6 +423,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       const result = await checkDealStatusWithBackend(payload);
 
       if (result?.ok === true && result?.canRate === true && result?.alreadyRated !== true) {
+        await writePendingPayload(payload);
+
         const url = buildRateUrl(payload);
         await chrome.tabs.create({ url });
 
@@ -406,6 +467,31 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         ok: !!ok,
         stored: !!ok,
         key: buildDealKey(payload),
+      });
+    })();
+    return true;
+  }
+
+  // Nytt: page-bridge kan be om senaste pending payload
+  if (msg.type === "getPendingPayloadForPage") {
+    (async () => {
+      const payload = await readPendingPayload();
+
+      sendResponse({
+        ok: !!payload,
+        payload: payload || null,
+      });
+    })();
+    return true;
+  }
+
+  // Nytt: page kan säga att payload nu är fångad och sparad i vanlig pendingStore
+  if (msg.type === "clearPendingPayloadForPage") {
+    (async () => {
+      const ok = await clearPendingPayload();
+      sendResponse({
+        ok: !!ok,
+        cleared: !!ok,
       });
     })();
     return true;

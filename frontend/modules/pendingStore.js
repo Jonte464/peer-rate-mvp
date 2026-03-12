@@ -87,17 +87,17 @@ export function normalizeIncoming(inObj) {
   out.source =
     normalizeSourceDisplay(
       obj.source ||
-        deal?.platform ||
-        rawCounterparty?.platform ||
-        ''
+      deal?.platform ||
+      rawCounterparty?.platform ||
+      ''
     ) || '';
 
   out.pageUrl =
     normalizeText(
       obj.pageUrl ||
-        deal?.pageUrl ||
-        rawCounterparty?.pageUrl ||
-        ''
+      deal?.pageUrl ||
+      rawCounterparty?.pageUrl ||
+      ''
     ) || '';
 
   out.counterparty = {
@@ -110,21 +110,21 @@ export function normalizeIncoming(inObj) {
   out.subjectEmail =
     normalizeText(
       obj.subjectEmail ||
-        out.counterparty?.email ||
-        obj.subject ||
-        ''
+      out.counterparty?.email ||
+      obj.subject ||
+      ''
     ) || '';
 
   out.proofRef =
     normalizeText(
       obj.proofRef ||
-        deal?.orderId ||
-        deal?.bookingId ||
-        deal?.transactionId ||
-        deal?.externalProofRef ||
-        out.counterparty?.orderId ||
-        out.pageUrl ||
-        ''
+      deal?.orderId ||
+      deal?.bookingId ||
+      deal?.transactionId ||
+      deal?.externalProofRef ||
+      out.counterparty?.orderId ||
+      out.pageUrl ||
+      ''
     ) || '';
 
   if (out.counterparty?.email) {
@@ -194,23 +194,23 @@ function normalizeProofRef(s) {
 export function dealKeyFromPending(p) {
   const source = normalizeSource(
     p?.source ||
-      p?.deal?.source ||
-      p?.deal?.platform ||
-      p?.counterparty?.source ||
-      p?.counterparty?.platform ||
-      ''
+    p?.deal?.source ||
+    p?.deal?.platform ||
+    p?.counterparty?.source ||
+    p?.counterparty?.platform ||
+    ''
   );
 
   const proofRef = normalizeProofRef(
     p?.proofRef ||
-      p?.deal?.orderId ||
-      p?.deal?.bookingId ||
-      p?.deal?.transactionId ||
-      p?.deal?.proofRef ||
-      p?.counterparty?.orderId ||
-      p?.counterparty?.proofRef ||
-      p?.pageUrl ||
-      ''
+    p?.deal?.orderId ||
+    p?.deal?.bookingId ||
+    p?.deal?.transactionId ||
+    p?.deal?.proofRef ||
+    p?.counterparty?.orderId ||
+    p?.counterparty?.proofRef ||
+    p?.pageUrl ||
+    ''
   );
 
   if (!source || !proofRef) return '';
@@ -334,4 +334,73 @@ export function captureFromUrl() {
   } catch {}
 
   return merged;
+}
+
+// Nytt:
+// fallback om URL-transporten tappat payloaden.
+// Hämtar senaste pending payload från extensionens page-bridge.
+export async function captureFromExtensionBridge(timeoutMs = 1500) {
+  if (typeof window === 'undefined' || typeof window.postMessage !== 'function') {
+    return null;
+  }
+
+  return new Promise((resolve) => {
+    let done = false;
+    let timer = null;
+
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+
+      try {
+        window.removeEventListener('message', onMessage);
+      } catch {}
+
+      if (timer) clearTimeout(timer);
+      resolve(value || null);
+    };
+
+    const onMessage = (event) => {
+      try {
+        if (event.source !== window) return;
+        if (!event.origin || !/^https:\/\/(www\.)?peerrate\.ai$/i.test(event.origin)) return;
+
+        const data = event.data;
+        if (!data || data.type !== 'PEERRATE_PENDING_PAYLOAD_RESPONSE') return;
+
+        const payload = data?.payload?.payload || null;
+        if (!payload || typeof payload !== 'object') {
+          finish(null);
+          return;
+        }
+
+        const normalized = normalizeIncoming(payload);
+        setPending(normalized);
+
+        try {
+          window.postMessage(
+            { type: 'PEERRATE_CLEAR_PENDING_PAYLOAD' },
+            window.location.origin
+          );
+        } catch {}
+
+        finish(normalized);
+      } catch {
+        finish(null);
+      }
+    };
+
+    timer = setTimeout(() => finish(null), timeoutMs);
+
+    try {
+      window.addEventListener('message', onMessage);
+
+      window.postMessage(
+        { type: 'PEERRATE_REQUEST_PENDING_PAYLOAD' },
+        window.location.origin
+      );
+    } catch {
+      finish(null);
+    }
+  });
 }

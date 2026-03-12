@@ -1,11 +1,6 @@
 // extension/page-bridge.js
 // Brygga mellan peerrate.ai-sidan och extensionens service worker.
 // Tar emot window.postMessage från peerrate.ai och skickar vidare till extensionen.
-//
-// NYTT:
-// - synkar inloggad PeerRate-identitet till extension storage
-// - rensar identiteten vid logout
-// - behåller markDealRated-bryggan
 
 (function () {
   function isTrustedPeerRateMessage(data) {
@@ -17,13 +12,33 @@
     );
   }
 
-  function safeSendRuntimeMessage(message) {
+  function safeSendRuntimeMessage(message, callback) {
     try {
-      chrome.runtime.sendMessage(message, () => {
+      chrome.runtime.sendMessage(message, (response) => {
         void chrome.runtime.lastError;
+        if (typeof callback === "function") {
+          callback(response);
+        }
       });
     } catch (err) {
       console.warn("[PeerRate extension] page-bridge sendMessage failed:", err);
+      if (typeof callback === "function") {
+        callback({ ok: false, error: String(err?.message || err || "unknown") });
+      }
+    }
+  }
+
+  function postBack(type, payload = {}) {
+    try {
+      window.postMessage(
+        {
+          type,
+          payload,
+        },
+        window.location.origin
+      );
+    } catch (err) {
+      console.warn("[PeerRate extension] page-bridge postBack failed:", err);
     }
   }
 
@@ -54,6 +69,30 @@
       if (data.type === "PEERRATE_CLEAR_AUTH_IDENTITY") {
         safeSendRuntimeMessage({
           type: "clearAuthIdentityFromPage",
+        });
+        return;
+      }
+
+      // Nytt: peerrate.ai kan be extensionen om senaste pending payload
+      if (data.type === "PEERRATE_REQUEST_PENDING_PAYLOAD") {
+        safeSendRuntimeMessage(
+          {
+            type: "getPendingPayloadForPage",
+          },
+          (response) => {
+            postBack("PEERRATE_PENDING_PAYLOAD_RESPONSE", {
+              ok: !!response?.ok,
+              payload: response?.payload || null,
+            });
+          }
+        );
+        return;
+      }
+
+      // Nytt: peerrate.ai kan säga till extensionen att payloaden nu är hämtad
+      if (data.type === "PEERRATE_CLEAR_PENDING_PAYLOAD") {
+        safeSendRuntimeMessage({
+          type: "clearPendingPayloadForPage",
         });
       }
     } catch (err) {

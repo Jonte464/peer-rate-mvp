@@ -6,6 +6,7 @@ import { t } from './landing/language.js';
 
 import {
   captureFromUrl,
+  captureFromExtensionBridge,
   getPending,
   clearPending,
   markDealRated,
@@ -203,6 +204,19 @@ async function resolveAuthUser() {
   }
 }
 
+async function ensurePendingCaptured() {
+  const fromUrl = captureFromUrl();
+  if (fromUrl) return fromUrl;
+
+  const existing = getPending();
+  if (existing) return existing;
+
+  const fromBridge = await captureFromExtensionBridge(1800);
+  if (fromBridge) return fromBridge;
+
+  return getPending();
+}
+
 async function renderAll() {
   const p = getPending();
 
@@ -232,27 +246,11 @@ async function renderAll() {
 export function initRatingLogin() {
   hideTestWithoutLoginButton();
 
-  const fromUrl = captureFromUrl();
-  const pending = fromUrl || getPending();
-
-  if (pending && isDealRated(pending)) {
-    notifyExtensionDealRated(pending);
-    clearPending();
-    renderVerifiedDealUI(null);
-  } else if (pending) {
-    applyPendingContextCard(pending);
-    renderVerifiedDealUI(pending);
-  } else {
-    renderVerifiedDealUI(null);
-  }
-
   const loginForm = document.getElementById('rating-login-form');
   if (loginForm && loginForm.dataset.bound !== '1') {
     loginForm.dataset.bound = '1';
     loginForm.addEventListener('submit', handleLoginSubmit);
   }
-
-  void renderAll();
 
   if (!window.__prPendingEventsBound) {
     window.__prPendingEventsBound = true;
@@ -271,6 +269,19 @@ export function initRatingLogin() {
   });
 
   void (async () => {
+    const pending = await ensurePendingCaptured();
+
+    if (pending && isDealRated(pending)) {
+      notifyExtensionDealRated(pending);
+      clearPending();
+      renderVerifiedDealUI(null);
+    } else if (pending) {
+      applyPendingContextCard(pending);
+      renderVerifiedDealUI(pending);
+    } else {
+      renderVerifiedDealUI(null);
+    }
+
     const status = await syncPendingStatusWithBackend();
     if (status?.ok && status.alreadyRated) {
       try {
@@ -281,6 +292,7 @@ export function initRatingLogin() {
         );
       } catch {}
     }
+
     await renderAll();
   })();
 }
@@ -307,6 +319,7 @@ async function handleLoginSubmit(e) {
     showNotification('success', t('profile_login_success', 'Du är nu inloggad.'), 'login-status');
 
     if (isRatePage()) {
+      await ensurePendingCaptured();
       await syncPendingStatusWithBackend();
       await renderAll();
 
