@@ -1,16 +1,13 @@
 // frontend/js/rate-core.js
-// Produktionslik kärna för rate-sidan.
-// Ansvar:
-// - läsa payload från #pr=...
-// - spara/läsa localStorage
-// - rendera verifierad affär
-// - hantera formulär
-// - skicka rating till backend
-// - lokal i18n för rate-sidan
-// - debug visas endast i debug-läge
+// Rate-sidan i två lägen:
+// 1) Hub-läge utan payload
+// 2) Fokuserat verifierat läge med payload
+//
+// Inloggning krävs för att skicka omdöme.
 
 import { createRating } from './rate-api.js';
 import { getCurrentLanguage } from '/modules/landing/language.js';
+import auth from '/modules/auth.js';
 
 const PENDING_KEY = 'peerrate_pending_rating_v6';
 const RATED_CACHE_KEY = 'peerrate_rated_deals_v1';
@@ -19,7 +16,8 @@ const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90;
 
 const els = {};
 let currentPending = null;
-let lastStatus = { kind: 'warn', key: 'status_loading', params: {} };
+let currentUser = null;
+let lastStatus = { kind: 'warn', key: 'status_loading' };
 
 const COPY = {
   sv: {
@@ -27,7 +25,12 @@ const COPY = {
     hero_kicker: 'Verifierat betygsflöde',
     hero_title: 'Lämna betyg för en verifierad affär',
     hero_lead:
-      'När PeerRate får in en verifierad affär från en plattform kan du lämna ett omdöme med högre trovärdighet och mindre risk för spam eller manipulation.',
+      'För att lämna ett verifierat omdöme börjar du från den plattform där affären genomfördes. Välj plattform nedan så skickas du vidare.',
+    platform_select_label: 'Välj plattform',
+    platform_select_placeholder: 'Välj…',
+    platform_open: 'Öppna plattform',
+    hub_foot:
+      'När du har öppnat den avslutade affären på plattformen klickar du på PeerRate-extensionen för att komma tillbaka hit med verifierad affärsdata.',
     side_title_1: 'Så fungerar det',
     side_body_1:
       'Öppna en avslutad affär, låt extensionen skicka verifierad data till PeerRate och lämna sedan ditt omdöme här.',
@@ -37,8 +40,12 @@ const COPY = {
     status_title: 'Status',
     verified_title: 'Verifierad affär',
     form_title: 'Lämna omdöme',
-    form_foot:
-      'Omdömet skickas tillsammans med verifierad affärsreferens.',
+    form_foot: 'Omdömet skickas tillsammans med verifierad affärsreferens.',
+    login_gate_title: 'Logga in för att lämna omdöme',
+    login_gate_lead:
+      'Du behöver vara inloggad i PeerRate för att kunna skicka omdömet för den verifierade affären.',
+    login_btn: 'Logga in',
+    signup_btn: 'Registrera dig',
     deal_head_title: 'Verifierad affär mottagen',
     deal_head_sub: 'Affärsdata från plattformen visas nedan.',
     no_deal_title: 'Ingen verifierad affär',
@@ -78,6 +85,7 @@ const COPY = {
     source_link_text: 'Öppna källsidan',
     unknown: '–',
     status_loading: 'Laddar…',
+    status_hub: 'Välj en plattform för att initiera ett verifierat omdöme.',
     status_ready: 'Verifierad affär laddad och redo att betygsättas.',
     status_local_rated:
       'Den här affären är markerad som betygsatt lokalt. Det kan vara korrekt eller ett gammalt lokalt cachevärde. Du kan fortfarande försöka skicka omdömet igen.',
@@ -91,6 +99,8 @@ const COPY = {
     status_rated_cleared: 'Rated-cache rensad.',
     status_rated_cleared_no_pending: 'Rated-cache rensad. Ingen aktiv affär laddad just nu.',
     status_save_failed: 'Kunde inte skicka omdömet.',
+    status_login_required: 'Du måste logga in för att skicka omdöme.',
+    status_choose_platform: 'Välj en plattform först.',
     rated_true: 'true',
     rated_false: 'false',
   },
@@ -99,7 +109,12 @@ const COPY = {
     hero_kicker: 'Verified rating flow',
     hero_title: 'Leave a rating for a verified deal',
     hero_lead:
-      'When PeerRate receives a verified deal from a platform, you can submit a rating with higher credibility and a lower risk of spam or manipulation.',
+      'To leave a verified rating, start from the platform where the deal was completed. Choose a platform below and continue from there.',
+    platform_select_label: 'Choose platform',
+    platform_select_placeholder: 'Choose…',
+    platform_open: 'Open platform',
+    hub_foot:
+      'After opening the completed deal on the platform, click the PeerRate extension to return here with verified deal data.',
     side_title_1: 'How it works',
     side_body_1:
       'Open a completed deal, let the extension send verified data to PeerRate, and then leave your rating here.',
@@ -109,8 +124,12 @@ const COPY = {
     status_title: 'Status',
     verified_title: 'Verified deal',
     form_title: 'Leave a rating',
-    form_foot:
-      'The rating is sent together with a verified deal reference.',
+    form_foot: 'The rating is sent together with a verified deal reference.',
+    login_gate_title: 'Log in to leave a rating',
+    login_gate_lead:
+      'You need to be logged in to PeerRate before you can submit the rating for the verified deal.',
+    login_btn: 'Log in',
+    signup_btn: 'Sign up',
     deal_head_title: 'Verified deal received',
     deal_head_sub: 'Deal data from the platform is shown below.',
     no_deal_title: 'No verified deal',
@@ -150,6 +169,7 @@ const COPY = {
     source_link_text: 'Open source page',
     unknown: '–',
     status_loading: 'Loading…',
+    status_hub: 'Choose a platform to start a verified rating.',
     status_ready: 'Verified deal loaded and ready to be rated.',
     status_local_rated:
       'This deal is marked as rated locally. That may be correct or an old local cache value. You can still try to submit the rating again.',
@@ -163,6 +183,8 @@ const COPY = {
     status_rated_cleared: 'Rated cache cleared.',
     status_rated_cleared_no_pending: 'Rated cache cleared. No active deal is currently loaded.',
     status_save_failed: 'Could not submit the rating.',
+    status_login_required: 'You need to log in before you can submit a rating.',
+    status_choose_platform: 'Choose a platform first.',
     rated_true: 'true',
     rated_false: 'false',
   },
@@ -178,6 +200,14 @@ const PLATFORM_LOGOS = {
   husknuten: '/assets/marketplaces/husknuten.png',
   facebook: '/assets/marketplaces/facebook.png',
   'facebook marketplace': '/assets/marketplaces/facebook.png',
+};
+
+const PLATFORM_LINKS = {
+  tradera: 'https://www.tradera.com/',
+  blocket: 'https://www.blocket.se/',
+  airbnb: 'https://www.airbnb.com/',
+  ebay: 'https://www.ebay.com/',
+  facebook: 'https://www.facebook.com/marketplace/',
 };
 
 function now() {
@@ -450,8 +480,8 @@ function shouldShowDebug() {
   }
 }
 
-function setStatus(kind, key, params = {}) {
-  lastStatus = { kind, key, params };
+function setStatus(kind, key) {
+  lastStatus = { kind, key };
   els.statusBox.className = `notice ${kind}`;
   els.statusBox.textContent = L(key, key);
 }
@@ -586,12 +616,6 @@ function hydratePending() {
   return readPending();
 }
 
-function setFormEnabled(enabled) {
-  els.score.disabled = !enabled;
-  els.comment.disabled = !enabled;
-  els.submitBtn.disabled = !enabled;
-}
-
 function fillHiddenFields(payload) {
   const p = payload || {};
   const cp = p.counterparty || {};
@@ -652,31 +676,80 @@ function isDuplicateResult(result) {
   );
 }
 
+function setPayloadMode(isPayloadMode) {
+  els.hubSection.classList.toggle('hidden', isPayloadMode);
+  els.dealSection.classList.toggle('hidden', false);
+  els.formSection.classList.toggle('hidden', false);
+}
+
+function updateLoginGate() {
+  const isLoggedIn = !!(currentUser && (currentUser.email || currentUser.subjectRef || currentUser.id));
+
+  if (!currentPending) {
+    els.loginGateSection.classList.add('hidden');
+    els.score.disabled = true;
+    els.comment.disabled = true;
+    els.submitBtn.disabled = true;
+    return;
+  }
+
+  if (!isLoggedIn) {
+    els.loginGateSection.classList.remove('hidden');
+    els.score.disabled = true;
+    els.comment.disabled = true;
+    els.submitBtn.disabled = true;
+
+    const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    els.loginLinkBtn.href = `/profile.html?returnTo=${encodeURIComponent(returnTo)}`;
+    return;
+  }
+
+  els.loginGateSection.classList.add('hidden');
+  els.score.disabled = false;
+  els.comment.disabled = false;
+  els.submitBtn.disabled = false;
+}
+
 function renderState(pending) {
   currentPending = pending || null;
 
-  renderDeal(currentPending);
-  refreshDebug(currentPending);
+  if (currentPending) {
+    setPayloadMode(true);
+    fillHiddenFields(currentPending);
+    renderDeal(currentPending);
+    refreshDebug(currentPending);
+    updateLoginGate();
 
-  if (!currentPending) {
-    setFormEnabled(false);
-    setStatus('warn', 'status_no_payload');
+    if (!currentUser) {
+      setStatus('warn', 'status_login_required');
+      return;
+    }
+
+    if (isDealRated(currentPending)) {
+      setStatus('warn', 'status_local_rated');
+      els.submitBtn.textContent = L('submit_anyway');
+      return;
+    }
+
+    setStatus('ok', 'status_ready');
     els.submitBtn.textContent = L('submit');
     return;
   }
 
-  fillHiddenFields(currentPending);
-
-  if (isDealRated(currentPending)) {
-    setFormEnabled(true);
-    setStatus('warn', 'status_local_rated');
-    els.submitBtn.textContent = L('submit_anyway');
-    return;
-  }
-
-  setFormEnabled(true);
-  setStatus('ok', 'status_ready');
+  setPayloadMode(false);
+  renderDeal(null);
+  refreshDebug(null);
+  updateLoginGate();
+  setStatus('warn', 'status_hub');
   els.submitBtn.textContent = L('submit');
+}
+
+async function resolveAuthUser() {
+  try {
+    currentUser = await auth.getResolvedUser();
+  } catch {
+    currentUser = auth.getUser?.() || null;
+  }
 }
 
 async function handleSubmit(e) {
@@ -688,6 +761,14 @@ async function handleSubmit(e) {
   if (!pending) {
     setStatus('bad', 'status_missing_pending');
     refreshDebug(null);
+    return;
+  }
+
+  await resolveAuthUser();
+  updateLoginGate();
+
+  if (!currentUser) {
+    setStatus('bad', 'status_login_required');
     return;
   }
 
@@ -721,7 +802,8 @@ async function handleSubmit(e) {
       currentPending = null;
       renderDeal(null);
       refreshDebug(null);
-      setFormEnabled(false);
+      updateLoginGate();
+      setPayloadMode(false);
       setStatus('warn', 'status_duplicate_backend');
       els.submitBtn.textContent = L('submit_sent');
     } else {
@@ -739,9 +821,27 @@ async function handleSubmit(e) {
   currentPending = null;
   renderDeal(null);
   refreshDebug(null);
-  setFormEnabled(false);
+  updateLoginGate();
+  setPayloadMode(false);
   setStatus('ok', 'status_saved');
   els.submitBtn.textContent = L('submit_sent');
+}
+
+function handleOpenPlatform() {
+  const selected = normalizeLower(els.platformSelect.value);
+
+  if (!selected) {
+    setStatus('warn', 'status_choose_platform');
+    return;
+  }
+
+  const url = PLATFORM_LINKS[selected];
+  if (!url) {
+    setStatus('warn', 'status_choose_platform');
+    return;
+  }
+
+  window.open(url, '_blank', 'noopener');
 }
 
 function applyStaticCopy() {
@@ -750,14 +850,25 @@ function applyStaticCopy() {
   els.heroKicker.textContent = L('hero_kicker');
   els.heroTitle.textContent = L('hero_title');
   els.heroLead.textContent = L('hero_lead');
+  els.platformSelectLabel.textContent = L('platform_select_label');
+  els.platformSelectPlaceholder.textContent = L('platform_select_placeholder');
+  els.openPlatformBtn.textContent = L('platform_open');
+  els.hubFootNote.textContent = L('hub_foot');
+
   els.sideTitle1.textContent = L('side_title_1');
   els.sideBody1.textContent = L('side_body_1');
   els.sideTitle2.textContent = L('side_title_2');
   els.sideBody2.textContent = L('side_body_2');
+
   els.statusTitle.textContent = L('status_title');
   els.verifiedTitle.textContent = L('verified_title');
   els.formTitle.textContent = L('form_title');
   els.formFootNote.textContent = L('form_foot');
+
+  els.loginGateTitle.textContent = L('login_gate_title');
+  els.loginGateLead.textContent = L('login_gate_lead');
+  els.loginLinkBtn.textContent = L('login_btn');
+  els.signupLinkBtn.textContent = L('signup_btn');
 
   els.scoreLabel.textContent = L('score_label');
   els.scorePlaceholder.textContent = L('score_placeholder');
@@ -771,14 +882,12 @@ function applyStaticCopy() {
 
   els.reloadBtn.textContent = L('reload');
   els.clearBtn.textContent = L('clear_pending');
-  if (els.clearRatedBtn) {
-    els.clearRatedBtn.textContent = L('clear_rated');
-  }
+  els.clearRatedBtn.textContent = L('clear_rated');
 
-  if (els.debugTitle) els.debugTitle.textContent = L('debug_title');
-  if (els.debugDealKeyLabel) els.debugDealKeyLabel.textContent = L('debug_deal_key');
-  if (els.debugRatedLabel) els.debugRatedLabel.textContent = L('debug_rated');
-  if (els.debugPayloadLabel) els.debugPayloadLabel.textContent = L('debug_payload');
+  els.debugTitle.textContent = L('debug_title');
+  els.debugDealKeyLabel.textContent = L('debug_deal_key');
+  els.debugRatedLabel.textContent = L('debug_rated');
+  els.debugPayloadLabel.textContent = L('debug_payload');
 }
 
 function reRenderForLanguage() {
@@ -791,70 +900,67 @@ function reRenderForLanguage() {
 
   renderDeal(currentPending);
   refreshDebug(currentPending);
+  updateLoginGate();
 
-  if (!currentPending) {
-    if (!els.submitBtn.disabled) {
-      els.submitBtn.textContent = L('submit');
-    } else if (els.submitBtn.textContent === 'Skickat' || els.submitBtn.textContent === 'Submitted') {
-      els.submitBtn.textContent = L('submit_sent');
-    }
-    return;
-  }
-
-  if (isDealRated(currentPending)) {
-    if (!els.submitBtn.disabled) {
-      els.submitBtn.textContent = L('submit_anyway');
-    }
-  } else if (!els.submitBtn.disabled) {
+  if (currentPending && currentUser) {
+    els.submitBtn.textContent = isDealRated(currentPending) ? L('submit_anyway') : L('submit');
+  } else {
     els.submitBtn.textContent = L('submit');
   }
 }
 
 function bindEvents() {
-  els.reloadBtn.addEventListener('click', () => {
+  els.ratingForm.addEventListener('submit', handleSubmit);
+  els.openPlatformBtn.addEventListener('click', handleOpenPlatform);
+
+  els.reloadBtn.addEventListener('click', async () => {
+    await resolveAuthUser();
     const pending = hydratePending() || readPending();
     renderState(pending);
   });
 
-  els.clearBtn.addEventListener('click', () => {
+  els.clearBtn.addEventListener('click', async () => {
     clearPending();
     els.ratingForm.reset();
     currentPending = null;
-    renderDeal(null);
-    refreshDebug(null);
-    setFormEnabled(false);
+    await resolveAuthUser();
+    renderState(null);
     setStatus('warn', 'status_pending_cleared');
-    els.submitBtn.textContent = L('submit');
   });
 
-  if (els.clearRatedBtn) {
-    els.clearRatedBtn.addEventListener('click', () => {
-      clearRatedCache();
+  els.clearRatedBtn.addEventListener('click', async () => {
+    clearRatedCache();
+    const pending = hydratePending() || readPending();
+    await resolveAuthUser();
+    renderState(pending);
 
-      const pending = hydratePending() || readPending();
-      currentPending = pending || null;
-
-      if (pending) {
-        renderState(pending);
-        setStatus('ok', 'status_rated_cleared');
-      } else {
-        refreshDebug(null);
-        setStatus('ok', 'status_rated_cleared_no_pending');
-      }
-    });
-  }
-
-  els.ratingForm.addEventListener('submit', handleSubmit);
+    if (pending) {
+      setStatus('ok', 'status_rated_cleared');
+    } else {
+      setStatus('ok', 'status_rated_cleared_no_pending');
+    }
+  });
 
   window.addEventListener('peerrate:language-changed', () => {
     reRenderForLanguage();
   });
+
+  window.addEventListener('storage', async () => {
+    await resolveAuthUser();
+    updateLoginGate();
+  });
 }
 
 function collectEls() {
+  els.hubSection = $('hubSection');
   els.heroKicker = $('heroKicker');
   els.heroTitle = $('heroTitle');
   els.heroLead = $('heroLead');
+  els.platformSelectLabel = $('platformSelectLabel');
+  els.platformSelect = $('platformSelect');
+  els.platformSelectPlaceholder = $('platformSelectPlaceholder');
+  els.openPlatformBtn = $('openPlatformBtn');
+  els.hubFootNote = $('hubFootNote');
   els.sideTitle1 = $('sideTitle1');
   els.sideBody1 = $('sideBody1');
   els.sideTitle2 = $('sideTitle2');
@@ -863,6 +969,7 @@ function collectEls() {
   els.statusTitle = $('statusTitle');
   els.statusBox = $('statusBox');
 
+  els.dealSection = $('dealSection');
   els.verifiedTitle = $('verifiedTitle');
   els.dealHeadTitle = $('dealHeadTitle');
   els.dealHeadSub = $('dealHeadSub');
@@ -870,9 +977,15 @@ function collectEls() {
   els.platformChip = $('platformChip');
   els.dealGrid = $('dealGrid');
 
+  els.loginGateSection = $('loginGateSection');
+  els.loginGateTitle = $('loginGateTitle');
+  els.loginGateLead = $('loginGateLead');
+  els.loginLinkBtn = $('loginLinkBtn');
+  els.signupLinkBtn = $('signupLinkBtn');
+
+  els.formSection = $('formSection');
   els.formTitle = $('formTitle');
   els.formFootNote = $('formFootNote');
-
   els.scoreLabel = $('scoreLabel');
   els.scorePlaceholder = $('scorePlaceholder');
   els.scoreOpt1 = $('scoreOpt1');
@@ -909,7 +1022,7 @@ function collectEls() {
   els.submitBtn = $('submitBtn');
 }
 
-function boot() {
+async function boot() {
   collectEls();
 
   if (els.debugCard) {
@@ -918,6 +1031,8 @@ function boot() {
 
   applyStaticCopy();
   bindEvents();
+
+  await resolveAuthUser();
 
   const pending = hydratePending();
   renderState(pending);

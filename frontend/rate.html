@@ -11,7 +11,7 @@
     :root {
       --bg: #f7f8fb;
       --card: #ffffff;
-      --card-soft: #f9fbff;
+      --card-soft: #f8fbff;
       --text: #0f172a;
       --muted: #64748b;
       --line: rgba(15, 23, 42, 0.10);
@@ -37,6 +37,10 @@
       font-family: Arial, Helvetica, sans-serif;
     }
 
+    body {
+      min-height: 100vh;
+    }
+
     a {
       color: inherit;
     }
@@ -50,29 +54,39 @@
       margin: 0 auto;
     }
 
-    .hero {
-      display: grid;
-      grid-template-columns: 1.15fr .85fr;
-      gap: 18px;
-      margin-bottom: 18px;
-    }
-
-    @media (max-width: 920px) {
-      .hero {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .hero-card,
     .card {
       background: var(--card);
       border: 1px solid var(--line);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow);
+      padding: 20px;
+      margin-bottom: 16px;
     }
 
-    .hero-card {
-      padding: 26px;
+    .card h1,
+    .card h2,
+    .card h3 {
+      margin-top: 0;
+      color: var(--accent);
+      letter-spacing: -.01em;
+    }
+
+    .card h1 {
+      font-size: 38px;
+      line-height: 1.06;
+      margin-bottom: 12px;
+    }
+
+    .card h2 {
+      font-size: 22px;
+      margin-bottom: 12px;
+    }
+
+    .lead {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
     }
 
     .hero-kicker {
@@ -90,25 +104,16 @@
       margin-bottom: 14px;
     }
 
-    .hero h1 {
-      margin: 0 0 10px;
-      font-size: 38px;
-      line-height: 1.06;
-      letter-spacing: -.02em;
-      color: var(--accent);
-    }
-
-    .hero p {
-      margin: 0;
-      color: var(--muted);
-      font-size: 16px;
-      line-height: 1.7;
-      max-width: 760px;
-    }
-
-    .mini-panel {
+    .hub-grid {
       display: grid;
-      gap: 12px;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 920px) {
+      .hub-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .mini-box {
@@ -116,11 +121,15 @@
       border: 1px solid var(--line);
       border-radius: 18px;
       padding: 18px;
+      margin-bottom: 12px;
     }
 
-    .mini-box h2 {
+    .mini-box:last-child {
+      margin-bottom: 0;
+    }
+
+    .mini-box h3 {
       margin: 0 0 8px;
-      color: var(--accent);
       font-size: 18px;
     }
 
@@ -131,42 +140,50 @@
       font-size: 14px;
     }
 
-    .card {
-      padding: 18px;
-      margin-bottom: 16px;
+    .inline-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
 
-    .card h2 {
-      margin: 0 0 12px;
-      color: var(--accent);
-      font-size: 22px;
-      letter-spacing: -.01em;
+    @media (max-width: 760px) {
+      .inline-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
-    .notice {
-      padding: 14px 16px;
+    .field {
+      border: 1px solid var(--line);
       border-radius: 14px;
+      padding: 14px;
+      background: var(--card-soft);
+      min-height: 88px;
+    }
+
+    .label {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 7px;
       font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .value {
+      font-size: 16px;
+      font-weight: 700;
+      word-break: break-word;
       line-height: 1.45;
-      border: 1px solid transparent;
+      color: var(--text);
     }
 
-    .notice.ok {
-      background: rgba(22, 101, 52, .08);
-      color: var(--ok);
-      border-color: rgba(22, 101, 52, .18);
+    .value a {
+      color: var(--accent-2);
+      text-decoration: none;
     }
 
-    .notice.warn {
-      background: rgba(146, 64, 14, .08);
-      color: var(--warn);
-      border-color: rgba(146, 64, 14, .18);
-    }
-
-    .notice.bad {
-      background: rgba(153, 27, 27, .08);
-      color: var(--bad);
-      border-color: rgba(153, 27, 27, .18);
+    .value a:hover {
+      text-decoration: underline;
     }
 
     .deal-head {
@@ -241,52 +258,6 @@
       white-space: nowrap;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
-    }
-
-    @media (max-width: 760px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    .field {
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px;
-      background: var(--card-soft);
-      min-height: 88px;
-    }
-
-    .label {
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 7px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .04em;
-    }
-
-    .value {
-      font-size: 16px;
-      font-weight: 700;
-      word-break: break-word;
-      line-height: 1.45;
-      color: var(--text);
-    }
-
-    .value a {
-      color: var(--accent-2);
-      text-decoration: none;
-    }
-
-    .value a:hover {
-      text-decoration: underline;
-    }
-
     .form-grid {
       display: grid;
       gap: 14px;
@@ -332,7 +303,8 @@
       margin-top: 4px;
     }
 
-    button {
+    button,
+    .btn-link {
       appearance: none;
       border: 0;
       border-radius: 14px;
@@ -342,6 +314,10 @@
       background: var(--accent);
       color: #fff;
       min-height: 46px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     button:disabled {
@@ -349,10 +325,37 @@
       cursor: not-allowed;
     }
 
-    button.ghost {
+    button.ghost,
+    .btn-link.ghost {
       background: #fff;
       color: var(--accent);
       border: 1px solid var(--line);
+    }
+
+    .notice {
+      padding: 14px 16px;
+      border-radius: 14px;
+      font-weight: 700;
+      line-height: 1.45;
+      border: 1px solid transparent;
+    }
+
+    .notice.ok {
+      background: rgba(22, 101, 52, .08);
+      color: var(--ok);
+      border-color: rgba(22, 101, 52, .18);
+    }
+
+    .notice.warn {
+      background: rgba(146, 64, 14, .08);
+      color: var(--warn);
+      border-color: rgba(146, 64, 14, .18);
+    }
+
+    .notice.bad {
+      background: rgba(153, 27, 27, .08);
+      color: var(--bad);
+      border-color: rgba(153, 27, 27, .18);
     }
 
     .foot-note {
@@ -362,8 +365,40 @@
       line-height: 1.6;
     }
 
+    .hidden {
+      display: none !important;
+    }
+
     .debug-card[hidden] {
       display: none !important;
+    }
+
+    .hub-platform-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 760px) {
+      .hub-platform-row {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .small-note {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .login-gate-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
     }
 
     pre {
@@ -382,40 +417,62 @@
   <main class="page">
     <div class="wrap">
 
-      <section class="hero">
-        <div class="hero-card">
-          <div class="hero-kicker" id="heroKicker">Verifierat betygsflöde</div>
-          <h1 id="heroTitle">Lämna betyg för en verifierad affär</h1>
-          <p id="heroLead">
-            När PeerRate får in en verifierad affär från en plattform kan du lämna ett omdöme med högre trovärdighet och mindre risk för spam eller manipulation.
-          </p>
-        </div>
-
-        <div class="mini-panel">
-          <div class="mini-box">
-            <h2 id="sideTitle1">Så fungerar det</h2>
-            <p id="sideBody1">
-              Öppna en avslutad affär, låt extensionen skicka verifierad data till PeerRate och lämna sedan ditt omdöme här.
+      <section id="hubSection" class="card">
+        <div class="hub-grid">
+          <div>
+            <div class="hero-kicker" id="heroKicker">Verifierat betygsflöde</div>
+            <h1 id="heroTitle">Lämna betyg för en verifierad affär</h1>
+            <p id="heroLead" class="lead">
+              För att lämna ett verifierat omdöme börjar du från den plattform där affären genomfördes. Välj plattform nedan så skickas du vidare.
             </p>
+
+            <div class="hub-platform-row">
+              <div>
+                <label class="label-form" for="platformSelect" id="platformSelectLabel">Välj plattform</label>
+                <select id="platformSelect" class="select">
+                  <option value="" id="platformSelectPlaceholder">Välj…</option>
+                  <option value="tradera">Tradera</option>
+                  <option value="blocket">Blocket</option>
+                  <option value="airbnb">Airbnb</option>
+                  <option value="ebay">eBay</option>
+                  <option value="facebook">Facebook Marketplace</option>
+                </select>
+              </div>
+
+              <div class="actions" style="margin:0;">
+                <button id="openPlatformBtn" type="button">Öppna plattform</button>
+              </div>
+            </div>
+
+            <div id="hubFootNote" class="small-note">
+              När du har öppnat den avslutade affären på plattformen klickar du på PeerRate-extensionen för att komma tillbaka hit med verifierad affärsdata.
+            </div>
           </div>
 
-          <div class="mini-box">
-            <h2 id="sideTitle2">Varför detta är bättre</h2>
-            <p id="sideBody2">
-              Omdömet kopplas till en riktig transaktion i stället för ett öppet formulär utan bevis.
-            </p>
+          <div>
+            <div class="mini-box">
+              <h3 id="sideTitle1">Så fungerar det</h3>
+              <p id="sideBody1">
+                Öppna en avslutad affär, låt extensionen skicka verifierad data till PeerRate och lämna sedan ditt omdöme här.
+              </p>
+            </div>
+
+            <div class="mini-box">
+              <h3 id="sideTitle2">Varför detta är bättre</h3>
+              <p id="sideBody2">
+                Omdömet kopplas till en riktig transaktion i stället för ett öppet formulär utan bevis.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section class="card">
+      <section id="statusSection" class="card">
         <h2 id="statusTitle">Status</h2>
         <div id="statusBox" class="notice warn">Laddar…</div>
       </section>
 
-      <section class="card">
-        <h2 id="verifiedTitle">Verifierad affär</h2>
-
+      <section id="dealSection" class="card">
         <div class="deal-head">
           <div class="deal-head-left">
             <div class="platform-logo-wrap">
@@ -428,13 +485,26 @@
             </div>
           </div>
 
-          <div id="platformChip" class="platform-chip">Tradera</div>
+          <div id="platformChip" class="platform-chip">PeerRate</div>
         </div>
 
-        <div id="dealGrid" class="grid"></div>
+        <h2 id="verifiedTitle">Verifierad affär</h2>
+        <div id="dealGrid" class="inline-grid"></div>
       </section>
 
-      <section class="card">
+      <section id="loginGateSection" class="card hidden">
+        <h2 id="loginGateTitle">Logga in för att lämna omdöme</h2>
+        <p id="loginGateLead" class="lead">
+          Du behöver vara inloggad i PeerRate för att kunna skicka omdömet för den verifierade affären.
+        </p>
+
+        <div class="login-gate-actions">
+          <a id="loginLinkBtn" class="btn-link" href="/profile.html">Logga in</a>
+          <a class="btn-link ghost" href="/customer.html" id="signupLinkBtn">Registrera dig</a>
+        </div>
+      </section>
+
+      <section id="formSection" class="card">
         <h2 id="formTitle">Lämna omdöme</h2>
 
         <form id="ratingForm" class="form-grid" autocomplete="off">
@@ -474,7 +544,7 @@
       <section id="debugCard" class="card debug-card" hidden>
         <h2 id="debugTitle">Debug</h2>
 
-        <div class="grid">
+        <div class="inline-grid">
           <div class="field">
             <div class="label">window.location.href</div>
             <div class="value" id="hrefOut">–</div>
@@ -485,7 +555,7 @@
           </div>
         </div>
 
-        <div class="grid" style="margin-top:12px;">
+        <div class="inline-grid" style="margin-top:12px;">
           <div class="field">
             <div class="label" id="debugDealKeyLabel">Aktuell deal key</div>
             <div class="value" id="dealKeyOut">–</div>
