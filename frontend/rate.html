@@ -70,6 +70,7 @@
       border-radius: 12px;
       margin-bottom: 12px;
       font-weight: 700;
+      line-height: 1.45;
     }
 
     .notice.ok {
@@ -192,6 +193,13 @@
       min-height: 120px;
       resize: vertical;
     }
+
+    .debug-note {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
   </style>
 </head>
 <body>
@@ -249,8 +257,9 @@
       </form>
     </section>
 
-    <section class="card">
+    <section id="debugCard" class="card" hidden>
       <h2>Debug</h2>
+
       <div class="grid">
         <div class="field">
           <div class="label">window.location.href</div>
@@ -262,14 +271,39 @@
         </div>
       </div>
 
+      <div class="grid" style="margin-top:12px;">
+        <div class="field">
+          <div class="label">Aktuell deal key</div>
+          <div class="value" id="dealKeyOut">–</div>
+        </div>
+        <div class="field">
+          <div class="label">Är markerad rated lokalt</div>
+          <div class="value" id="ratedOut">–</div>
+        </div>
+      </div>
+
       <div class="field" style="margin-top:12px;">
         <div class="label">localStorage peerrate_pending_rating_v6</div>
         <pre id="lsOut">–</pre>
       </div>
 
       <div class="field" style="margin-top:12px;">
+        <div class="label">localStorage peerrate_rated_deals_v1</div>
+        <pre id="ratedCacheOut">–</pre>
+      </div>
+
+      <div class="field" style="margin-top:12px;">
         <div class="label">decoded payload</div>
         <pre id="payloadOut">–</pre>
+      </div>
+
+      <div class="actions">
+        <button id="clearRatedBtn" type="button" class="ghost">Rensa rated-cache</button>
+      </div>
+
+      <div class="debug-note">
+        Debug visas bara när sidan öppnas med <b>?debug=1</b>, till exempel:
+        <b>https://peerrate.ai/rate.html?debug=1</b>
       </div>
     </section>
   </div>

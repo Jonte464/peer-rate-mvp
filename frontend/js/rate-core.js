@@ -6,6 +6,7 @@
 // - rendera verifierad affär
 // - hantera formulär
 // - skicka rating till backend
+// - visa debug endast i debug-läge
 
 import { createRating } from './rate-api.js';
 
@@ -69,7 +70,7 @@ function normalizeIncoming(inObj) {
   const deal = obj.deal && typeof obj.deal === 'object' ? { ...obj.deal } : {};
   const cp = obj.counterparty && typeof obj.counterparty === 'object' ? { ...obj.counterparty } : {};
 
-  const out = {
+  return {
     source: normalizeSourceDisplay(obj.source || deal.platform || cp.platform || ''),
     pageUrl: normalizeText(obj.pageUrl || deal.pageUrl || cp.pageUrl || ''),
     proofRef: normalizeText(obj.proofRef || deal.orderId || cp.orderId || obj.pageUrl || ''),
@@ -103,8 +104,6 @@ function normalizeIncoming(inObj) {
       pageUrl: normalizeText(deal.pageUrl || cp.pageUrl || obj.pageUrl || ''),
     },
   };
-
-  return out;
 }
 
 function mergePending(baseObj, incomingObj) {
@@ -222,18 +221,29 @@ function writeRatedCache(obj) {
   } catch {}
 }
 
+function clearRatedCache() {
+  try {
+    localStorage.removeItem(RATED_CACHE_KEY);
+  } catch {}
+}
+
 function cleanupRatedCache() {
   const cache = readRatedCache();
   const t = now();
+  let changed = false;
 
   for (const k of Object.keys(cache)) {
     const ts = Number(cache[k] || 0);
     if (!ts || t - ts > RATED_TTL_MS) {
       delete cache[k];
+      changed = true;
     }
   }
 
-  writeRatedCache(cache);
+  if (changed) {
+    writeRatedCache(cache);
+  }
+
   return cache;
 }
 
@@ -252,6 +262,18 @@ function isDealRated(p) {
 
   const cache = cleanupRatedCache();
   return !!cache[key];
+}
+
+function shouldShowDebug() {
+  try {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('debug') === '1') return true;
+    if (localStorage.getItem('peerrate_debug') === '1') return true;
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') return true;
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 function setStatus(kind, text) {
@@ -317,10 +339,20 @@ function renderDeal(payload) {
 }
 
 function refreshDebug(payload) {
+  if (!els.debugCard) return;
+
+  const currentPayload = payload || null;
+  const dealKey = currentPayload ? dealKeyFromPending(currentPayload) : '';
+  const rated = currentPayload ? isDealRated(currentPayload) : false;
+  const ratedCache = cleanupRatedCache();
+
   els.hrefOut.textContent = window.location.href || '';
   els.hashOut.textContent = window.location.hash || '';
+  els.dealKeyOut.textContent = dealKey || '–';
+  els.ratedOut.textContent = currentPayload ? (rated ? 'true' : 'false') : '–';
   els.lsOut.textContent = localStorage.getItem(PENDING_KEY) || 'null';
-  els.payloadOut.textContent = payload ? JSON.stringify(payload, null, 2) : 'null';
+  els.ratedCacheOut.textContent = JSON.stringify(ratedCache, null, 2) || '{}';
+  els.payloadOut.textContent = currentPayload ? JSON.stringify(currentPayload, null, 2) : 'null';
 }
 
 function hydratePending() {
@@ -407,12 +439,38 @@ function isDuplicateResult(result) {
   );
 }
 
+function renderState(pending) {
+  renderDeal(pending);
+  refreshDebug(pending);
+
+  if (!pending) {
+    setFormEnabled(false);
+    setStatus('warn', 'Ingen payload hittades i hash eller localStorage.');
+    els.submitBtn.textContent = 'Skicka omdöme';
+    return;
+  }
+
+  fillHiddenFields(pending);
+
+  if (isDealRated(pending)) {
+    setFormEnabled(true);
+    setStatus('warn', 'Den här affären är markerad som betygsatt lokalt. Det kan vara korrekt eller ett gammalt lokalt cachevärde. Du kan fortfarande försöka skicka omdömet igen.');
+    els.submitBtn.textContent = 'Skicka ändå';
+    return;
+  }
+
+  setFormEnabled(true);
+  setStatus('ok', 'Verifierad affär laddad och redo att betygsättas.');
+  els.submitBtn.textContent = 'Skicka omdöme';
+}
+
 async function handleSubmit(e) {
   e.preventDefault();
 
   const currentPending = hydratePending() || readPending();
   if (!currentPending) {
     setStatus('bad', 'Ingen verifierad affär finns att skicka.');
+    refreshDebug(null);
     return;
   }
 
@@ -421,11 +479,13 @@ async function handleSubmit(e) {
 
   if (!subject) {
     setStatus('bad', 'Motpartens e-post saknas.');
+    refreshDebug(currentPending);
     return;
   }
 
   if (!score) {
     setStatus('bad', 'Välj ett betyg innan du skickar.');
+    refreshDebug(currentPending);
     return;
   }
 
@@ -440,14 +500,17 @@ async function handleSubmit(e) {
     if (isDuplicateResult(result)) {
       markDealRated(currentPending);
       clearPending();
+      els.ratingForm.reset();
       renderDeal(null);
       refreshDebug(null);
       setFormEnabled(false);
-      setStatus('warn', 'Den här affären verkar redan vara betygsatt.');
+      setStatus('warn', 'Den här affären verkar redan vara betygsatt enligt backend.');
+      els.submitBtn.textContent = 'Skickat';
     } else {
       setStatus('bad', result?.error || 'Kunde inte skicka omdömet.');
       els.submitBtn.disabled = false;
-      els.submitBtn.textContent = 'Skicka omdöme';
+      els.submitBtn.textContent = isDealRated(currentPending) ? 'Skicka ändå' : 'Skicka omdöme';
+      refreshDebug(currentPending);
     }
     return;
   }
@@ -465,25 +528,12 @@ async function handleSubmit(e) {
 function bindEvents() {
   els.reloadBtn.addEventListener('click', () => {
     const p = hydratePending() || readPending();
-    renderDeal(p);
-    refreshDebug(p);
-
-    if (p && !isDealRated(p)) {
-      fillHiddenFields(p);
-      setFormEnabled(true);
-      setStatus('ok', 'Verifierad affär laddad.');
-      els.submitBtn.textContent = 'Skicka omdöme';
-    } else if (p && isDealRated(p)) {
-      setFormEnabled(false);
-      setStatus('warn', 'Den här affären är redan markerad som betygsatt lokalt.');
-    } else {
-      setFormEnabled(false);
-      setStatus('warn', 'Ingen payload hittades i hash eller localStorage.');
-    }
+    renderState(p);
   });
 
   els.clearBtn.addEventListener('click', () => {
     clearPending();
+    els.ratingForm.reset();
     renderDeal(null);
     refreshDebug(null);
     setFormEnabled(false);
@@ -491,18 +541,37 @@ function bindEvents() {
     els.submitBtn.textContent = 'Skicka omdöme';
   });
 
+  if (els.clearRatedBtn) {
+    els.clearRatedBtn.addEventListener('click', () => {
+      clearRatedCache();
+      const p = hydratePending() || readPending();
+      refreshDebug(p);
+      if (p) {
+        renderState(p);
+      } else {
+        setStatus('warn', 'Rated-cache rensad.');
+      }
+    });
+  }
+
   els.ratingForm.addEventListener('submit', handleSubmit);
 }
 
 function collectEls() {
   els.statusBox = $('statusBox');
   els.dealGrid = $('dealGrid');
+
+  els.debugCard = $('debugCard');
   els.hrefOut = $('hrefOut');
   els.hashOut = $('hashOut');
+  els.dealKeyOut = $('dealKeyOut');
+  els.ratedOut = $('ratedOut');
   els.lsOut = $('lsOut');
+  els.ratedCacheOut = $('ratedCacheOut');
   els.payloadOut = $('payloadOut');
   els.reloadBtn = $('reloadBtn');
   els.clearBtn = $('clearBtn');
+  els.clearRatedBtn = $('clearRatedBtn');
 
   els.ratingForm = $('ratingForm');
   els.subjectEmail = $('ratedUserEmail');
@@ -515,32 +584,15 @@ function collectEls() {
 
 function boot() {
   collectEls();
+
+  if (els.debugCard) {
+    els.debugCard.hidden = !shouldShowDebug();
+  }
+
   bindEvents();
 
   const pending = hydratePending();
-
-  if (pending && isDealRated(pending)) {
-    renderDeal(pending);
-    refreshDebug(pending);
-    fillHiddenFields(pending);
-    setFormEnabled(false);
-    setStatus('warn', 'Den här affären är redan markerad som betygsatt lokalt.');
-    return;
-  }
-
-  if (pending) {
-    renderDeal(pending);
-    refreshDebug(pending);
-    fillHiddenFields(pending);
-    setFormEnabled(true);
-    setStatus('ok', 'Verifierad affär laddad och redo att betygsättas.');
-    return;
-  }
-
-  renderDeal(null);
-  refreshDebug(null);
-  setFormEnabled(false);
-  setStatus('warn', 'Ingen payload hittades i hash eller localStorage.');
+  renderState(pending);
 }
 
 window.addEventListener('DOMContentLoaded', boot);
