@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "PeerRate – Verified Deal Trigger (MVP)",
-  "version": "0.6.0",
-  "description": "Minimal PeerRate extension för att skicka Tradera-affär till rate.html via hash.",
+  "version": "0.7.0",
+  "description": "PeerRate extension med adapterstruktur för verifierade affärer och payload till rate.html.",
   "action": {
     "default_title": "PeerRate",
     "default_popup": "popup.html"
@@ -24,7 +24,12 @@
         "https://tradera.se/*",
         "https://www.tradera.se/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "shared/dom.js",
+        "shared/payload.js",
+        "platforms/tradera.js",
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ]

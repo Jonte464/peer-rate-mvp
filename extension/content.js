@@ -1,9 +1,10 @@
 // extension/content.js
-// MINIMAL VERSION
-// Endast ansvar:
-// 1) känna igen Tradera order-sida
-// 2) lägga en knapp
-// 3) öppna PeerRate med payload i hash direkt
+// Adapter-baserad orchestrator för PeerRate extension.
+// Ansvar:
+// 1) hitta rätt adapter för aktuell sida
+// 2) injicera en knapp
+// 3) bygga payload via adapter
+// 4) öppna PeerRate rate.html med payload i hash
 //
 // Ingen service worker
 // Ingen backend-check
@@ -11,113 +12,83 @@
 // Ingen chrome.runtime.sendMessage
 
 (function () {
-  const BTN_ID = 'peerrate-float-btn-minimal';
+  const BTN_ID = 'peerrate-float-btn';
+  const LOG_PREFIX = '[PeerRate extension]';
 
   function log(...args) {
     try {
-      console.log('[PeerRate minimal]', ...args);
+      console.log(LOG_PREFIX, ...args);
     } catch {}
   }
 
-  function normalizeText(v) {
-    return String(v || '').replace(/\u00A0/g, ' ').trim();
+  function getAdapters() {
+    const platforms = window.PeerRatePlatforms || {};
+    return Object.values(platforms).filter(Boolean);
   }
 
-  function isRelevantTraderaOrderPage() {
-    const url = location.href.toLowerCase();
-    return url.includes('tradera.') && url.includes('/my/order/');
-  }
+  function getActiveAdapter() {
+    const adapters = getAdapters();
 
-  function getOrderIdFromUrl() {
-    const m = location.pathname.match(/\/my\/order\/([^/?#]+)/i);
-    return m && m[1] ? String(m[1]).trim() : '';
-  }
-
-  function getBodyText() {
-    return String(document.body?.innerText || '').replace(/\u00A0/g, ' ');
-  }
-
-  function findFirstEmail(text) {
-    const matches = String(text || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || [];
-    return matches.length ? normalizeText(matches[0]).toLowerCase() : '';
-  }
-
-  function extractOrderNumberFromText(text) {
-    const m = String(text || '').match(/Ordernr\.?\s*([0-9 ]{4,})/i);
-    return m && m[1] ? m[1].replace(/\s+/g, '') : '';
-  }
-
-  function extractItemNumberFromText(text) {
-    const m = String(text || '').match(/Objektnr\s*([0-9 ]{4,})/i);
-    return m && m[1] ? m[1].replace(/\s+/g, '') : '';
-  }
-
-  function buildMinimalPayload() {
-    const bodyText = getBodyText();
-
-    const orderIdFromText = extractOrderNumberFromText(bodyText);
-    const orderIdFromUrl = getOrderIdFromUrl();
-    const orderId = orderIdFromText || orderIdFromUrl || '';
-
-    const itemId = extractItemNumberFromText(bodyText);
-    const firstEmail = findFirstEmail(bodyText);
-
-    const payload = {
-      source: 'Tradera',
-      pageUrl: location.href,
-      proofRef: orderId || location.href,
-      subjectEmail: firstEmail || '',
-      counterparty: {
-        email: firstEmail || '',
-        platform: 'TRADERA',
-        orderId: orderId || '',
-        itemId: itemId || '',
-        pageUrl: location.href
-      },
-      deal: {
-        platform: 'TRADERA',
-        orderId: orderId || '',
-        itemId: itemId || '',
-        pageUrl: location.href
+    for (const adapter of adapters) {
+      try {
+        if (typeof adapter.matches === 'function' && adapter.matches()) {
+          return adapter;
+        }
+      } catch (error) {
+        log('Adapter match failed', adapter?.id, error);
       }
-    };
+    }
 
-    return payload;
+    return null;
   }
 
-  function encodePayload(payload) {
-    const json = JSON.stringify(payload || {});
-    return encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
+  function buildRateUrlFromPayload(payload) {
+    const shared = window.PeerRateShared || {};
+    const payloadUtils = shared.payload || {};
+
+    if (typeof payloadUtils.buildRateUrl !== 'function') {
+      throw new Error('Missing payload helper: buildRateUrl');
+    }
+
+    return payloadUtils.buildRateUrl(payload);
   }
 
-  function buildRateUrl(payload) {
-    return `https://peerrate.ai/rate.html#pr=${encodePayload(payload)}`;
-  }
+  function openRatePage(adapter) {
+    if (!adapter || typeof adapter.buildPayload !== 'function') {
+      log('No valid adapter available for openRatePage');
+      return;
+    }
 
-  function openRatePage() {
-    const payload = buildMinimalPayload();
-    const url = buildRateUrl(payload);
+    let payload;
+    let url;
 
-    log('Opening rate page with payload', payload);
-    log('Opening URL', url);
+    try {
+      payload = adapter.buildPayload();
+      url = buildRateUrlFromPayload(payload);
+    } catch (error) {
+      log('Failed to build payload/url', adapter?.id, error);
+      return;
+    }
+
+    log('Opening rate page with adapter', adapter.id);
+    log('Payload', payload);
+    log('URL', url);
 
     window.open(url, '_blank', 'noopener');
   }
 
-  function ensureButton() {
-    if (!isRelevantTraderaOrderPage()) {
-      const oldBtn = document.getElementById(BTN_ID);
-      if (oldBtn) oldBtn.remove();
-      return;
+  function removeButton() {
+    const oldBtn = document.getElementById(BTN_ID);
+    if (oldBtn) {
+      oldBtn.remove();
     }
+  }
 
-    let btn = document.getElementById(BTN_ID);
-    if (btn) return;
-
-    btn = document.createElement('button');
+  function createButton(adapter) {
+    const btn = document.createElement('button');
     btn.id = BTN_ID;
     btn.type = 'button';
-    btn.textContent = 'Betygsätt med PeerRate';
+    btn.textContent = adapter?.label || 'Betygsätt med PeerRate';
 
     Object.assign(btn.style, {
       position: 'fixed',
@@ -136,15 +107,36 @@
       boxShadow: '0 16px 40px rgba(0,0,0,0.45)'
     });
 
-    btn.addEventListener('click', openRatePage);
-    document.documentElement.appendChild(btn);
+    btn.addEventListener('click', () => openRatePage(adapter));
 
-    log('Minimal button injected');
+    return btn;
   }
 
-  function start() {
-    ensureButton();
+  function ensureButton() {
+    const adapter = getActiveAdapter();
 
+    if (!adapter) {
+      removeButton();
+      return;
+    }
+
+    const existing = document.getElementById(BTN_ID);
+    if (existing) {
+      const currentAdapterId = existing.getAttribute('data-adapter-id') || '';
+      if (currentAdapterId === adapter.id) {
+        return;
+      }
+      existing.remove();
+    }
+
+    const btn = createButton(adapter);
+    btn.setAttribute('data-adapter-id', adapter.id);
+    document.documentElement.appendChild(btn);
+
+    log('Button injected for adapter', adapter.id);
+  }
+
+  function startMutationObserver() {
     const observer = new MutationObserver(() => {
       ensureButton();
     });
@@ -153,14 +145,25 @@
       childList: true,
       subtree: true
     });
+  }
 
+  function startUrlWatcher() {
     let lastHref = location.href;
+
     setInterval(() => {
       if (location.href !== lastHref) {
         lastHref = location.href;
+        log('URL changed', lastHref);
         ensureButton();
       }
     }, 500);
+  }
+
+  function start() {
+    log('Starting extension orchestrator');
+    ensureButton();
+    startMutationObserver();
+    startUrlWatcher();
   }
 
   start();
