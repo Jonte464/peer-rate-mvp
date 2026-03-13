@@ -1,0 +1,70 @@
+// frontend/js/rate-api.js
+// Minimal API-modul för rate-sidan.
+// Ansvar:
+// - skicka rating till backend
+// - normalisera felmeddelanden
+//
+// Om ditt backend-route senare behöver justeras,
+// ändra i första hand bara CREATE_RATING_ENDPOINT.
+
+const CREATE_RATING_ENDPOINT = '/api/ratings';
+
+function safeParseJson(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+async function readResponse(res) {
+  const raw = await res.text();
+  const json = safeParseJson(raw);
+
+  return {
+    ok: res.ok,
+    status: res.status,
+    raw,
+    json,
+  };
+}
+
+export async function createRating(payload) {
+  try {
+    const res = await fetch(CREATE_RATING_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload || {}),
+    });
+
+    const parsed = await readResponse(res);
+
+    if (parsed.ok) {
+      return {
+        ok: true,
+        status: parsed.status,
+        data: parsed.json || null,
+      };
+    }
+
+    return {
+      ok: false,
+      status: parsed.status,
+      error:
+        parsed.json?.error ||
+        parsed.json?.message ||
+        `Request failed (${parsed.status})`,
+      raw: parsed.raw || '',
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      error: String(err?.message || err || 'Network error'),
+      raw: '',
+    };
+  }
+}

@@ -1,5 +1,5 @@
 // frontend/modules/verifiedDealUI.js
-import { t } from './landing/language.js';
+import { t } from '../landing/language.js';
 
 export function escapeHtml(s) {
   return String(s ?? '')

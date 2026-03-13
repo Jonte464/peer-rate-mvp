@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PeerRate – Rate Debug</title>
+  <title>PeerRate – Lämna betyg</title>
 
   <style>
     :root {
@@ -122,6 +122,7 @@
       font-size: 15px;
       font-weight: 700;
       word-break: break-word;
+      line-height: 1.4;
     }
 
     pre {
@@ -153,6 +154,11 @@
       color: #fff;
     }
 
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
     button.ghost, a.btn.ghost {
       background: #fff;
       color: var(--accent);
@@ -165,14 +171,35 @@
       margin-top: 10px;
       line-height: 1.5;
     }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .input, .select, .textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
     <section class="hero">
-      <h1>PeerRate – minimal rate debug</h1>
+      <h1>Lämna betyg – verifierad affär</h1>
       <p>
-        Den här sidan är helt frikopplad från gamla moduler och används nu för att bevisa att payload faktiskt kommer fram från extensionen.
+        Den här sidan är nu minimal och frikopplad från gamla rate-moduler. Den läser verifierad payload från extensionen, visar affären och låter dig skicka omdömet.
       </p>
     </section>
 
@@ -180,13 +207,46 @@
       <h2>Status</h2>
       <div id="statusBox" class="notice warn">Laddar…</div>
       <div class="small">
-        Den här sidan läser endast <b>#pr=...</b> från URL, sparar det i localStorage och visar det direkt på sidan.
+        Flöde: Tradera/annan plattform → extension → <b>rate.html#pr=...</b> → localStorage → formulär.
       </div>
     </section>
 
     <section class="card">
       <h2>Verifierad affär</h2>
       <div id="dealGrid" class="grid"></div>
+    </section>
+
+    <section class="card">
+      <h2>Steg 2: Skicka omdöme</h2>
+
+      <form id="ratingForm" class="form-grid" autocomplete="off">
+        <input type="hidden" id="ratedUserEmail" />
+        <input type="hidden" id="ratingSource" />
+        <input type="hidden" id="proofRef" />
+
+        <div>
+          <label class="label" for="score">Betyg</label>
+          <select id="score" class="select" required>
+            <option value="">Välj…</option>
+            <option value="1">1 – Mycket dåligt</option>
+            <option value="2">2 – Dåligt</option>
+            <option value="3">3 – Okej</option>
+            <option value="4">4 – Bra</option>
+            <option value="5">5 – Mycket bra</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="label" for="comment">Kommentar</label>
+          <textarea id="comment" class="textarea" placeholder="Vad fungerade bra eller dåligt?"></textarea>
+        </div>
+
+        <div class="actions">
+          <button id="submitBtn" type="submit">Skicka omdöme</button>
+          <button id="reloadBtn" type="button" class="ghost">Läs om payload</button>
+          <button id="clearBtn" type="button" class="ghost">Rensa payload</button>
+        </div>
+      </form>
     </section>
 
     <section class="card">
@@ -211,178 +271,9 @@
         <div class="label">decoded payload</div>
         <pre id="payloadOut">–</pre>
       </div>
-
-      <div class="actions">
-        <button id="reloadBtn" type="button">Läs om payload</button>
-        <button id="clearBtn" type="button" class="ghost">Rensa localStorage</button>
-      </div>
     </section>
   </div>
 
-  <script>
-    (function () {
-      const PENDING_KEY = 'peerrate_pending_rating_v6';
-
-      const statusBox = document.getElementById('statusBox');
-      const dealGrid = document.getElementById('dealGrid');
-      const hrefOut = document.getElementById('hrefOut');
-      const hashOut = document.getElementById('hashOut');
-      const lsOut = document.getElementById('lsOut');
-      const payloadOut = document.getElementById('payloadOut');
-      const reloadBtn = document.getElementById('reloadBtn');
-      const clearBtn = document.getElementById('clearBtn');
-
-      function safeParse(s) {
-        try {
-          return JSON.parse(s);
-        } catch {
-          return null;
-        }
-      }
-
-      function escapeHtml(s) {
-        return String(s ?? '')
-          .replaceAll('&', '&amp;')
-          .replaceAll('<', '&lt;')
-          .replaceAll('>', '&gt;')
-          .replaceAll('"', '&quot;')
-          .replaceAll("'", '&#039;');
-      }
-
-      function decodeHashPayload() {
-        try {
-          const rawHash = String(window.location.hash || '');
-          if (!rawHash.startsWith('#pr=')) return null;
-
-          const encoded = rawHash.slice(4);
-          if (!encoded) return null;
-
-          const cleaned = decodeURIComponent(encoded);
-          const raw = atob(cleaned);
-          const utf8 = decodeURIComponent(escape(raw));
-          const parsed = safeParse(utf8);
-
-          if (!parsed || typeof parsed !== 'object') return null;
-          return parsed;
-        } catch (err) {
-          console.warn('[PeerRate rate.html] decodeHashPayload failed:', err);
-          return null;
-        }
-      }
-
-      function writePending(payload) {
-        try {
-          const obj = {
-            ...(payload || {}),
-            _ts: Date.now()
-          };
-          localStorage.setItem(PENDING_KEY, JSON.stringify(obj));
-          return true;
-        } catch (err) {
-          console.warn('[PeerRate rate.html] writePending failed:', err);
-          return false;
-        }
-      }
-
-      function readPending() {
-        try {
-          const raw = localStorage.getItem(PENDING_KEY);
-          return raw ? safeParse(raw) : null;
-        } catch {
-          return null;
-        }
-      }
-
-      function setStatus(kind, text) {
-        statusBox.className = 'notice ' + kind;
-        statusBox.textContent = text;
-      }
-
-      function renderField(label, value) {
-        return `
-          <div class="field">
-            <div class="label">${escapeHtml(label)}</div>
-            <div class="value">${escapeHtml(value || '–')}</div>
-          </div>
-        `;
-      }
-
-      function renderPayload(payload) {
-        const p = payload || {};
-        const cp = p.counterparty || {};
-        const deal = p.deal || {};
-
-        dealGrid.innerHTML = [
-          renderField('Källa', p.source || deal.platform || ''),
-          renderField('ProofRef', p.proofRef || ''),
-          renderField('Order ID', deal.orderId || cp.orderId || ''),
-          renderField('Item ID', deal.itemId || cp.itemId || ''),
-          renderField('Motpart e-post', p.subjectEmail || cp.email || ''),
-          renderField('Namn', cp.name || ''),
-          renderField('Telefon', cp.phone || ''),
-          renderField('Adress', [
-            cp.addressStreet,
-            cp.addressZip,
-            cp.addressCity,
-            cp.country
-          ].filter(Boolean).join(', ')),
-          renderField('Titel', deal.title || cp.title || ''),
-          renderField('Belopp', deal.amount != null ? String(deal.amount) : (cp.amountSek != null ? String(cp.amountSek) : '')),
-          renderField('Datum', deal.date || deal.dateISO || ''),
-          renderField('Sidlänk', p.pageUrl || deal.pageUrl || cp.pageUrl || '')
-        ].join('');
-      }
-
-      function refreshDebug(payload) {
-        hrefOut.textContent = window.location.href || '';
-        hashOut.textContent = window.location.hash || '';
-        lsOut.textContent = localStorage.getItem(PENDING_KEY) || 'null';
-        payloadOut.textContent = payload ? JSON.stringify(payload, null, 2) : 'null';
-      }
-
-      function run() {
-        const fromHash = decodeHashPayload();
-
-        if (fromHash) {
-          const ok = writePending(fromHash);
-
-          if (ok) {
-            setStatus('ok', 'Payload hittades i URL-hash och sparades i localStorage.');
-          } else {
-            setStatus('bad', 'Payload hittades i hash men kunde inte sparas i localStorage.');
-          }
-
-          renderPayload(fromHash);
-          refreshDebug(fromHash);
-          return;
-        }
-
-        const stored = readPending();
-        if (stored) {
-          setStatus('ok', 'Ingen hash hittades, men payload fanns redan i localStorage.');
-          renderPayload(stored);
-          refreshDebug(stored);
-          return;
-        }
-
-        setStatus('warn', 'Ingen payload hittades i hash eller localStorage.');
-        renderPayload(null);
-        refreshDebug(null);
-      }
-
-      reloadBtn.addEventListener('click', run);
-
-      clearBtn.addEventListener('click', () => {
-        try {
-          localStorage.removeItem(PENDING_KEY);
-        } catch {}
-        setStatus('warn', 'localStorage rensad.');
-        renderPayload(null);
-        refreshDebug(null);
-      });
-
-      run();
-    })();
-  </script>
+  <script type="module" src="/js/rate-core.js"></script>
 </body>
 </html>

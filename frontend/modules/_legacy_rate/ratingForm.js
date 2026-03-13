@@ -1,8 +1,8 @@
 // frontend/modules/ratingForm.js
-import { showNotification } from './utils.js';
-import auth, { login } from './auth.js';
-import api from './api.js';
-import { t } from './landing/language.js';
+import { showNotification } from '../utils.js';
+import auth, { login } from '../auth.js';
+import api from '../api.js';
+import { t } from '../landing/language.js';
 
 import {
   captureFromUrl,

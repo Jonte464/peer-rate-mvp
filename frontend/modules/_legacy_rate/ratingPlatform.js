@@ -9,7 +9,7 @@
 // - Otherwise, fall back to new pickers (no-op if not present).
 
 import { initPlatformPicker, initPlatformStarter } from './platformPicker.js';
-import { t } from './landing/language.js';
+import { t } from '../landing/language.js';
 import { escapeHtml } from './verifiedDealUI.js';
 
 export function initRatingPlatform() {

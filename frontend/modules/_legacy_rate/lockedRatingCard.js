@@ -1,10 +1,10 @@
 // frontend/modules/lockedRatingCard.js
-import { showNotification } from './utils.js';
-import auth from './auth.js';
-import api from './api.js';
+import { showNotification } from '../utils.js';
+import auth from '../auth.js';
+import api from '../api.js';
 import { getPending, clearPending } from './pendingStore.js';
 import { clearAllPendingEverywhere } from './ratingContext.js';
-import { t } from './landing/language.js';
+import { t } from '../landing/language.js';
 import { escapeHtml, formatAmount, formatDateShort, formatAddress, showToast } from './verifiedDealUI.js';
 
 export function sanitizeCounterparty(cp, deal) {

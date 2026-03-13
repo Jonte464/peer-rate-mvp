@@ -4,10 +4,10 @@ import { el, showNotification } from './utils.js';
 import auth, { login, logout } from './auth.js';
 import api from './api.js';
 import { renderPRating, loadMyRating, rerenderRatingWidgetsFromCache } from './profileRatings.js';
-import { initRatingForm } from './ratingForm.js';
+import { initRatingForm } from './_legacy_rate/ratingForm.js';
 import { t, applyLang } from './landing/language.js';
 
-export { initRatingLogin } from './ratingForm.js';
+export { initRatingLogin } from './_legacy_rate/ratingForm.js';
 
 let latestExternalData = null;
 let latestMarketplaceProfiles = null;

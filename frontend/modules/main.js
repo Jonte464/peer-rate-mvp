@@ -4,16 +4,16 @@
 import auth from './auth.js';
 
 // ✅ initRatingLogin + initPlatformPicker:
-import { initRatingLogin, initPlatformPicker } from './ratingForm.js';
+import { initRatingLogin, initPlatformPicker } from './_legacy_rate/ratingForm.js';
 
-import { initRatingPlatform } from './ratingPlatform.js';
+import { initRatingPlatform } from './_legacy_rate/ratingPlatform.js';
 
 // Profile-funktioner
 import { updateUserBadge, updateAvatars, initProfilePage } from './profile.js';
 
 import { adminLoginForm, adminLogoutBtn } from './admin.js';
 import { initCustomerForm } from './customer.js';
-import { initRatingContextGuards } from './ratingContext.js';
+import { initRatingContextGuards } from './_legacy_rate/ratingContext.js';
 
 import { initLanding } from './landing/init.js';
 import { updateTopUserPill, initUserDropdown } from './landing/topUser.js';
