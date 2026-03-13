@@ -1,7 +1,8 @@
 // extension/page-bridge.js
-// Enkel brygga mellan peerrate.ai och extensionens service worker.
-// Endast två funktioner:
-// - ge sidan pending payload
+// Brygga mellan peerrate.ai och extensionens service worker.
+// Funktioner:
+// - ge sidan pending payload från extension storage
+// - rensa pending payload efter att sidan tagit emot den
 // - markera affär som redan betygsatt
 
 (function () {
@@ -72,6 +73,7 @@
             postBack('PEERRATE_PENDING_PAYLOAD_RESPONSE', {
               ok: !!response?.ok,
               payload: response?.payload || null,
+              error: response?.error || '',
             });
           }
         );

@@ -1,10 +1,14 @@
 // extension/content.js
-// PeerRate – Tradera trigger (hash transport architecture)
-// Ny princip:
-// - content.js extraherar payload
-// - content.js frågar service-worker om affären får betygsättas
-// - content.js bygger sedan rate.html-URL med payload i hash (#pr=...)
-// - service-worker öppnar exakt den URL:n i ny tab
+// PeerRate – Tradera trigger
+// Ny förenklad arkitektur:
+// - extrahera payload från Tradera order-sida
+// - kontrollera med backend om affären får betygsättas
+// - spara payload via service worker
+// - öppna rate.html med enkel query-flagga
+//
+// Vi använder inte hash som primär transport längre.
+// Hash kan finnas kvar som fallback i frontend, men extensionen
+// skickar nu främst payload via service-worker + chrome.storage.local.
 
 (function () {
   const DEFAULTS = { peerrate_enabled: true };
@@ -481,7 +485,7 @@
     if (!proofRef) return null;
 
     return {
-      v: 5,
+      v: 6,
       source: 'tradera',
       pageUrl,
       proofRef,
@@ -565,59 +569,6 @@
     }
 
     return best;
-  }
-
-  function base64EncodeUnicode(str) {
-    try {
-      return btoa(unescape(encodeURIComponent(str)));
-    } catch {
-      return btoa(str);
-    }
-  }
-
-  function compactPayloadForHash(payload) {
-    const deal = payload?.deal || {};
-    const cp = payload?.counterparty || {};
-
-    return {
-      source: payload?.source || 'tradera',
-      pageUrl: payload?.pageUrl || '',
-      proofRef: payload?.proofRef || '',
-      subjectEmail: payload?.subjectEmail || cp?.email || '',
-      counterparty: {
-        email: cp?.email || '',
-        name: cp?.name || '',
-        phone: cp?.phone || '',
-        addressStreet: cp?.addressStreet || '',
-        addressZip: cp?.addressZip || '',
-        addressCity: cp?.addressCity || '',
-        country: cp?.country || '',
-        platform: cp?.platform || 'TRADERA',
-        orderId: cp?.orderId || '',
-        itemId: cp?.itemId || '',
-        amountSek: cp?.amountSek ?? null,
-        title: cp?.title || '',
-        pageUrl: cp?.pageUrl || payload?.pageUrl || '',
-      },
-      deal: {
-        platform: deal?.platform || 'TRADERA',
-        orderId: deal?.orderId || '',
-        itemId: deal?.itemId || '',
-        title: deal?.title || '',
-        amount: deal?.amount ?? null,
-        amountSek: deal?.amountSek ?? null,
-        currency: deal?.currency || '',
-        date: deal?.date || '',
-        dateISO: deal?.dateISO || '',
-        pageUrl: deal?.pageUrl || payload?.pageUrl || '',
-      },
-    };
-  }
-
-  function buildRateUrl(payload) {
-    const compact = compactPayloadForHash(payload);
-    const encoded = encodeURIComponent(base64EncodeUnicode(JSON.stringify(compact)));
-    return `https://peerrate.ai/rate.html#pr=${encoded}`;
   }
 
   async function evaluatePage() {
@@ -767,15 +718,16 @@
 
           btn.textContent = 'Öppnar PeerRate...';
 
-          const url = buildRateUrl(bestPayload);
-
           const openResult = await sendMessageAsync({
-            type: 'openPeerRateUrl',
-            url,
+            type: 'openPeerRatePending',
+            payload: bestPayload,
           });
 
           if (!openResult?.ok) {
-            console.warn('[PeerRate extension] openPeerRateUrl failed', openResult);
+            console.warn('[PeerRate extension] openPeerRatePending failed', openResult);
+            btn.disabled = false;
+            btn.textContent = originalText;
+            return;
           }
 
           btn.disabled = false;

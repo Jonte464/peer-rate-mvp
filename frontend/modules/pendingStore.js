@@ -4,9 +4,11 @@
 // 1) hash-parametern #pr=...
 // 2) query-parametern ?pr=...
 // 3) vanliga query-parametrar som fallback
-// 4) localStorage
+// 4) extension bridge via window.postMessage
+// 5) localStorage
 //
-// Hash-baserad transport är nu primär väg från extension.
+// Ny primär robust väg från extension:
+// service-worker lagrar payload -> page-bridge hämtar -> denna fil sparar i localStorage.
 
 const PENDING_KEY = 'peerrate_pending_rating_v6';
 const TTL_MS = 1000 * 60 * 60 * 24;
@@ -247,6 +249,13 @@ export function clearPending() {
     localStorage.removeItem(PENDING_KEY);
   } catch {}
   dispatchPendingCleared();
+
+  try {
+    window.postMessage(
+      { type: 'PEERRATE_CLEAR_PENDING_PAYLOAD' },
+      window.location.origin
+    );
+  } catch {}
 }
 
 function normalizeSource(s) {
@@ -458,7 +467,6 @@ export function captureFromUrl() {
   try {
     const url = new URL(window.location.href);
 
-    // rensa query
     [
       'pr',
       'source', 'pageUrl', 'proofRef',
@@ -470,7 +478,6 @@ export function captureFromUrl() {
       'dealAmount', 'dealAmountSek', 'dealCurrency', 'dealDate', 'dealDateISO'
     ].forEach((key) => url.searchParams.delete(key));
 
-    // rensa hash om det var payload där
     const hashParams = getHashParams();
     if (hashParams.get('pr')) {
       url.hash = '';
@@ -482,7 +489,79 @@ export function captureFromUrl() {
   return result;
 }
 
-// Behålls för kompatibilitet med befintlig kod.
-export async function captureFromExtensionBridge() {
-  return getPending();
+function requestPendingPayloadFromBridge(timeoutMs = 1800) {
+  return new Promise((resolve) => {
+    let done = false;
+    let timer = null;
+
+    function finish(value) {
+      if (done) return;
+      done = true;
+
+      try {
+        window.removeEventListener('message', onMessage);
+      } catch {}
+
+      try {
+        if (timer) clearTimeout(timer);
+      } catch {}
+
+      resolve(value || null);
+    }
+
+    function onMessage(event) {
+      try {
+        if (event.source !== window) return;
+        if (event.origin !== window.location.origin) return;
+
+        const data = event.data;
+        if (!data || data.type !== 'PEERRATE_PENDING_PAYLOAD_RESPONSE') return;
+
+        const payload = data?.payload?.payload || null;
+        if (!data?.payload?.ok || !payload) {
+          finish(null);
+          return;
+        }
+
+        finish(payload);
+      } catch {
+        finish(null);
+      }
+    }
+
+    try {
+      window.addEventListener('message', onMessage);
+
+      timer = setTimeout(() => {
+        finish(null);
+      }, timeoutMs);
+
+      window.postMessage(
+        { type: 'PEERRATE_REQUEST_PENDING_PAYLOAD' },
+        window.location.origin
+      );
+    } catch {
+      finish(null);
+    }
+  });
+}
+
+export async function captureFromExtensionBridge(timeoutMs = 1800) {
+  const bridged = await requestPendingPayloadFromBridge(timeoutMs);
+  if (!bridged || typeof bridged !== 'object') {
+    return getPending();
+  }
+
+  const existing = getPending() || {};
+  const merged = mergePendingData(existing, bridged);
+  setPending(merged);
+
+  try {
+    window.postMessage(
+      { type: 'PEERRATE_CLEAR_PENDING_PAYLOAD' },
+      window.location.origin
+    );
+  } catch {}
+
+  return merged;
 }
