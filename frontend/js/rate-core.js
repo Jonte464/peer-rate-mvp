@@ -644,6 +644,14 @@ function fillHiddenFields(payload) {
   els.proofRef.value = p.proofRef || deal.orderId || cp.orderId || '';
 }
 
+function getRaterValue() {
+  const email = normalizeText(currentUser?.email || '');
+  const subjectRef = normalizeText(currentUser?.subjectRef || '');
+  const fullName = normalizeText(currentUser?.fullName || '');
+
+  return email || subjectRef || fullName || undefined;
+}
+
 function getSubmitPayload(pending) {
   const p = pending || {};
   const cp = p.counterparty || {};
@@ -651,6 +659,7 @@ function getSubmitPayload(pending) {
 
   return {
     subject: els.subjectEmail.value.trim(),
+    rater: getRaterValue(),
     rating: Number(els.score.value || 0),
     comment: els.comment.value.trim() || undefined,
     proofRef: els.proofRef.value.trim() || undefined,
