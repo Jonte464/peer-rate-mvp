@@ -4,8 +4,9 @@
 // 2) Fokuserat verifierat läge med payload
 //
 // Inloggning krävs för att skicka omdöme.
+// Backend är source of truth för duplicate/deal-status.
 
-import { createRating } from './rate-api.js';
+import { createRating, checkDealStatus } from './rate-api.js';
 import { getCurrentLanguage } from '/modules/landing/language.js';
 import auth from '/modules/auth.js';
 
@@ -17,6 +18,7 @@ const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90;
 const els = {};
 let currentPending = null;
 let currentUser = null;
+let currentBackendAlreadyRated = false;
 let lastStatus = { kind: 'warn', key: 'status_loading' };
 
 const COPY = {
@@ -70,6 +72,7 @@ const COPY = {
     debug_deal_key: 'Aktuell deal key',
     debug_rated: 'Markerad som rated lokalt',
     debug_payload: 'Decoded payload',
+    debug_backend_rated: 'Backend alreadyRated',
     field_source: 'Källa',
     field_proofref: 'ProofRef',
     field_order_id: 'Order ID',
@@ -89,6 +92,7 @@ const COPY = {
     status_ready: 'Verifierad affär laddad och redo att betygsättas.',
     status_local_rated:
       'Den här affären är markerad som betygsatt lokalt. Det kan vara korrekt eller ett gammalt lokalt cachevärde. Du kan fortfarande försöka skicka omdömet igen.',
+    status_backend_rated: 'Den här affären är redan betygsatt enligt backend.',
     status_no_payload: 'Ingen verifierad affär hittades.',
     status_missing_subject: 'Motpartens e-post saknas.',
     status_missing_score: 'Välj ett betyg innan du skickar.',
@@ -154,6 +158,7 @@ const COPY = {
     debug_deal_key: 'Current deal key',
     debug_rated: 'Marked as rated locally',
     debug_payload: 'Decoded payload',
+    debug_backend_rated: 'Backend alreadyRated',
     field_source: 'Source',
     field_proofref: 'ProofRef',
     field_order_id: 'Order ID',
@@ -173,6 +178,7 @@ const COPY = {
     status_ready: 'Verified deal loaded and ready to be rated.',
     status_local_rated:
       'This deal is marked as rated locally. That may be correct or an old local cache value. You can still try to submit the rating again.',
+    status_backend_rated: 'This deal is already rated according to the backend.',
     status_no_payload: 'No verified deal was found.',
     status_missing_subject: 'The counterparty email is missing.',
     status_missing_score: 'Please choose a rating before submitting.',
@@ -431,6 +437,17 @@ function clearRatedCache() {
   } catch {}
 }
 
+function removeDealRated(p) {
+  const key = typeof p === 'string' ? p : dealKeyFromPending(p);
+  if (!key) return;
+
+  const cache = cleanupRatedCache();
+  if (cache[key]) {
+    delete cache[key];
+    writeRatedCache(cache);
+  }
+}
+
 function cleanupRatedCache() {
   const cache = readRatedCache();
   const t = now();
@@ -593,6 +610,7 @@ function refreshDebug(payload) {
   els.hashOut.textContent = window.location.hash || '';
   els.dealKeyOut.textContent = dealKey || L('unknown');
   els.ratedOut.textContent = currentPayload ? (rated ? L('rated_true') : L('rated_false')) : L('unknown');
+  els.backendRatedOut.textContent = currentPayload ? (currentBackendAlreadyRated ? L('rated_true') : L('rated_false')) : L('unknown');
   els.lsOut.textContent = localStorage.getItem(PENDING_KEY) || 'null';
   els.ratedCacheOut.textContent = JSON.stringify(ratedCache, null, 2) || '{}';
   els.payloadOut.textContent = currentPayload ? JSON.stringify(currentPayload, null, 2) : 'null';
@@ -666,6 +684,58 @@ function getSubmitPayload(pending) {
   };
 }
 
+function getDealStatusPayload(pending) {
+  const p = pending || {};
+  const cp = p.counterparty || {};
+  const deal = p.deal || {};
+
+  return {
+    source: p.source || deal.platform || cp.platform || undefined,
+    proofRef: p.proofRef || deal.orderId || cp.orderId || undefined,
+    pageUrl: p.pageUrl || deal.pageUrl || cp.pageUrl || undefined,
+    subject: p.subjectEmail || cp.email || undefined,
+    counterparty: {
+      email: cp.email || undefined,
+      platform: cp.platform || deal.platform || undefined,
+      orderId: cp.orderId || deal.orderId || undefined,
+      itemId: cp.itemId || deal.itemId || undefined,
+      pageUrl: cp.pageUrl || deal.pageUrl || p.pageUrl || undefined,
+    },
+    deal: {
+      platform: deal.platform || cp.platform || undefined,
+      orderId: deal.orderId || cp.orderId || undefined,
+      itemId: deal.itemId || cp.itemId || undefined,
+      pageUrl: deal.pageUrl || cp.pageUrl || p.pageUrl || undefined,
+    },
+  };
+}
+
+async function syncLocalRatedWithBackend(pending) {
+  if (!pending) {
+    currentBackendAlreadyRated = false;
+    return;
+  }
+
+  const result = await checkDealStatus(getDealStatusPayload(pending));
+
+  if (!result?.ok) {
+    currentBackendAlreadyRated = false;
+    refreshDebug(pending);
+    return;
+  }
+
+  const alreadyRated = !!result?.data?.alreadyRated;
+  currentBackendAlreadyRated = alreadyRated;
+
+  if (alreadyRated) {
+    markDealRated(pending);
+  } else {
+    removeDealRated(pending);
+  }
+
+  refreshDebug(pending);
+}
+
 function isDuplicateResult(result) {
   const msg = String(result?.error || '').toLowerCase();
   return (
@@ -705,12 +775,20 @@ function updateLoginGate() {
   }
 
   els.loginGateSection.classList.add('hidden');
+
+  if (currentBackendAlreadyRated) {
+    els.score.disabled = true;
+    els.comment.disabled = true;
+    els.submitBtn.disabled = true;
+    return;
+  }
+
   els.score.disabled = false;
   els.comment.disabled = false;
   els.submitBtn.disabled = false;
 }
 
-function renderState(pending) {
+async function renderState(pending) {
   currentPending = pending || null;
 
   if (currentPending) {
@@ -718,7 +796,15 @@ function renderState(pending) {
     fillHiddenFields(currentPending);
     renderDeal(currentPending);
     refreshDebug(currentPending);
+
+    await syncLocalRatedWithBackend(currentPending);
     updateLoginGate();
+
+    if (currentBackendAlreadyRated) {
+      setStatus('warn', 'status_backend_rated');
+      els.submitBtn.textContent = L('submit_sent');
+      return;
+    }
 
     if (!currentUser) {
       setStatus('warn', 'status_login_required');
@@ -736,6 +822,7 @@ function renderState(pending) {
     return;
   }
 
+  currentBackendAlreadyRated = false;
   setPayloadMode(false);
   renderDeal(null);
   refreshDebug(null);
@@ -765,7 +852,13 @@ async function handleSubmit(e) {
   }
 
   await resolveAuthUser();
+  await syncLocalRatedWithBackend(pending);
   updateLoginGate();
+
+  if (currentBackendAlreadyRated) {
+    setStatus('warn', 'status_backend_rated');
+    return;
+  }
 
   if (!currentUser) {
     setStatus('bad', 'status_login_required');
@@ -797,6 +890,7 @@ async function handleSubmit(e) {
   if (!result?.ok) {
     if (isDuplicateResult(result)) {
       markDealRated(pending);
+      currentBackendAlreadyRated = true;
       clearPending();
       els.ratingForm.reset();
       currentPending = null;
@@ -809,7 +903,7 @@ async function handleSubmit(e) {
     } else {
       setStatus('bad', 'status_save_failed');
       els.submitBtn.disabled = false;
-      els.submitBtn.textContent = isDealRated(pending) ? L('submit_anyway') : L('submit');
+      els.submitBtn.textContent = L('submit');
       refreshDebug(pending);
     }
     return;
@@ -819,6 +913,7 @@ async function handleSubmit(e) {
   clearPending();
   els.ratingForm.reset();
   currentPending = null;
+  currentBackendAlreadyRated = false;
   renderDeal(null);
   refreshDebug(null);
   updateLoginGate();
@@ -888,6 +983,7 @@ function applyStaticCopy() {
   els.debugDealKeyLabel.textContent = L('debug_deal_key');
   els.debugRatedLabel.textContent = L('debug_rated');
   els.debugPayloadLabel.textContent = L('debug_payload');
+  els.debugBackendRatedLabel.textContent = L('debug_backend_rated');
 }
 
 function reRenderForLanguage() {
@@ -902,8 +998,10 @@ function reRenderForLanguage() {
   refreshDebug(currentPending);
   updateLoginGate();
 
-  if (currentPending && currentUser) {
+  if (currentPending && currentUser && !currentBackendAlreadyRated) {
     els.submitBtn.textContent = isDealRated(currentPending) ? L('submit_anyway') : L('submit');
+  } else if (currentBackendAlreadyRated) {
+    els.submitBtn.textContent = L('submit_sent');
   } else {
     els.submitBtn.textContent = L('submit');
   }
@@ -916,15 +1014,16 @@ function bindEvents() {
   els.reloadBtn.addEventListener('click', async () => {
     await resolveAuthUser();
     const pending = hydratePending() || readPending();
-    renderState(pending);
+    await renderState(pending);
   });
 
   els.clearBtn.addEventListener('click', async () => {
     clearPending();
     els.ratingForm.reset();
     currentPending = null;
+    currentBackendAlreadyRated = false;
     await resolveAuthUser();
-    renderState(null);
+    await renderState(null);
     setStatus('warn', 'status_pending_cleared');
   });
 
@@ -932,7 +1031,7 @@ function bindEvents() {
     clearRatedCache();
     const pending = hydratePending() || readPending();
     await resolveAuthUser();
-    renderState(pending);
+    await renderState(pending);
 
     if (pending) {
       setStatus('ok', 'status_rated_cleared');
@@ -948,6 +1047,7 @@ function bindEvents() {
   window.addEventListener('storage', async () => {
     await resolveAuthUser();
     updateLoginGate();
+    refreshDebug(currentPending);
   });
 }
 
@@ -1000,11 +1100,13 @@ function collectEls() {
   els.debugDealKeyLabel = $('debugDealKeyLabel');
   els.debugRatedLabel = $('debugRatedLabel');
   els.debugPayloadLabel = $('debugPayloadLabel');
+  els.debugBackendRatedLabel = $('debugBackendRatedLabel');
 
   els.hrefOut = $('hrefOut');
   els.hashOut = $('hashOut');
   els.dealKeyOut = $('dealKeyOut');
   els.ratedOut = $('ratedOut');
+  els.backendRatedOut = $('backendRatedOut');
   els.lsOut = $('lsOut');
   els.ratedCacheOut = $('ratedCacheOut');
   els.payloadOut = $('payloadOut');
@@ -1035,7 +1137,7 @@ async function boot() {
   await resolveAuthUser();
 
   const pending = hydratePending();
-  renderState(pending);
+  await renderState(pending);
 }
 
 if (document.readyState === 'loading') {

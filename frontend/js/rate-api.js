@@ -1,13 +1,12 @@
 // frontend/js/rate-api.js
-// Minimal API-modul för rate-sidan.
+// API-modul för rate-sidan.
 // Ansvar:
 // - skicka rating till backend
+// - kontrollera deal-status/duplicate i backend
 // - normalisera felmeddelanden
-//
-// Om ditt backend-route senare behöver justeras,
-// ändra i första hand bara CREATE_RATING_ENDPOINT.
 
 const CREATE_RATING_ENDPOINT = '/api/ratings';
+const CHECK_DEAL_STATUS_ENDPOINT = '/api/ratings/check-deal-status';
 
 function safeParseJson(text) {
   try {
@@ -58,6 +57,7 @@ export async function createRating(payload) {
         parsed.json?.message ||
         `Request failed (${parsed.status})`,
       raw: parsed.raw || '',
+      data: parsed.json || null,
     };
   } catch (err) {
     return {
@@ -65,6 +65,49 @@ export async function createRating(payload) {
       status: 0,
       error: String(err?.message || err || 'Network error'),
       raw: '',
+      data: null,
+    };
+  }
+}
+
+export async function checkDealStatus(payload) {
+  try {
+    const res = await fetch(CHECK_DEAL_STATUS_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(payload || {}),
+    });
+
+    const parsed = await readResponse(res);
+
+    if (!parsed.ok) {
+      return {
+        ok: false,
+        status: parsed.status,
+        error:
+          parsed.json?.error ||
+          parsed.json?.message ||
+          `Request failed (${parsed.status})`,
+        raw: parsed.raw || '',
+        data: parsed.json || null,
+      };
+    }
+
+    return {
+      ok: true,
+      status: parsed.status,
+      data: parsed.json || null,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      error: String(err?.message || err || 'Network error'),
+      raw: '',
+      data: null,
     };
   }
 }
