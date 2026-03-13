@@ -1,8 +1,16 @@
 // frontend/modules/pendingStore.js
-// Enkel pending-store.
-// Primär väg: #pr=... i URL
-// Fallback: ?pr=... eller legacy query-parametrar
-// Därefter lagras payload i sidans localStorage.
+// MINIMAL VERSION
+// Primär väg:
+// rate.html#pr=BASE64_JSON
+//
+// Den här filen gör bara tre saker:
+// 1) läsa payload från hash
+// 2) spara i localStorage
+// 3) läsa/rensa localStorage
+//
+// Ingen bridge
+// Ingen query-logik
+// Ingen extra fallback-arkitektur
 
 const PENDING_KEY = 'peerrate_pending_rating_v6';
 const TTL_MS = 1000 * 60 * 60 * 24;
@@ -53,67 +61,11 @@ function normalizeSourceDisplay(source) {
   return normalizeText(source);
 }
 
-function readB64Json(b64) {
-  if (!b64) return null;
-
-  try {
-    const cleaned = decodeURIComponent(b64);
-
-    try {
-      const raw = atob(cleaned);
-      const utf8 = decodeURIComponent(escape(raw));
-      const parsed = safeParse(utf8);
-      if (parsed && typeof parsed === 'object') return parsed;
-    } catch {}
-
-    try {
-      const raw2 = atob(cleaned);
-      const parsed2 = safeParse(raw2);
-      if (parsed2 && typeof parsed2 === 'object') return parsed2;
-    } catch {}
-
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-function getHashParams() {
-  try {
-    const raw = String(window.location.hash || '');
-    const cleaned = raw.startsWith('#') ? raw.slice(1) : raw;
-    return new URLSearchParams(cleaned);
-  } catch {
-    return new URLSearchParams();
-  }
-}
-
-export function hasRichPendingData(p) {
-  return !!(
-    p?.subjectEmail ||
-    p?.counterparty?.email ||
-    p?.counterparty?.name ||
-    p?.counterparty?.phone ||
-    p?.counterparty?.addressStreet ||
-    p?.counterparty?.addressCity ||
-    p?.deal?.orderId ||
-    p?.deal?.itemId ||
-    p?.deal?.title ||
-    p?.deal?.amount != null ||
-    p?.deal?.amountSek != null ||
-    p?.deal?.date ||
-    p?.deal?.dateISO
-  );
-}
-
-export function normalizeIncoming(inObj) {
+function normalizeIncoming(inObj) {
   const obj = inObj && typeof inObj === 'object' ? { ...inObj } : {};
   const out = { ...obj };
 
   const deal = obj.deal && typeof obj.deal === 'object' ? { ...obj.deal } : null;
-  const nestedCp =
-    deal?.counterparty && typeof deal.counterparty === 'object' ? { ...deal.counterparty } : null;
-
   const rawCounterparty =
     obj.counterparty && typeof obj.counterparty === 'object' ? { ...obj.counterparty } : null;
 
@@ -134,8 +86,7 @@ export function normalizeIncoming(inObj) {
     ) || '';
 
   out.counterparty = {
-    ...(rawCounterparty || {}),
-    ...(nestedCp || {}),
+    ...(rawCounterparty || {})
   };
 
   out.deal = deal || undefined;
@@ -144,7 +95,6 @@ export function normalizeIncoming(inObj) {
     normalizeText(
       obj.subjectEmail ||
       out.counterparty?.email ||
-      obj.subject ||
       ''
     ) || '';
 
@@ -152,9 +102,6 @@ export function normalizeIncoming(inObj) {
     normalizeText(
       obj.proofRef ||
       deal?.orderId ||
-      deal?.bookingId ||
-      deal?.transactionId ||
-      deal?.externalProofRef ||
       out.counterparty?.orderId ||
       out.pageUrl ||
       ''
@@ -168,10 +115,6 @@ export function normalizeIncoming(inObj) {
     out.subjectEmail = normalizeText(out.subjectEmail).toLowerCase();
   }
 
-  if (out.deal?.counterparty?.email) {
-    out.deal.counterparty.email = normalizeText(out.deal.counterparty.email).toLowerCase();
-  }
-
   Object.keys(out).forEach((k) => {
     if (out[k] === undefined) delete out[k];
   });
@@ -183,29 +126,18 @@ function mergePendingData(baseObj, incomingObj) {
   const base = normalizeIncoming(baseObj || {});
   const incoming = normalizeIncoming(incomingObj || {});
 
-  const merged = {
+  return normalizeIncoming({
     ...base,
     ...incoming,
     counterparty: {
       ...(base.counterparty || {}),
-      ...(incoming.counterparty || {}),
+      ...(incoming.counterparty || {})
     },
     deal: {
       ...(base.deal || {}),
-      ...(incoming.deal || {}),
-      counterparty: {
-        ...(base.deal?.counterparty || {}),
-        ...(incoming.deal?.counterparty || {}),
-      },
-    },
-  };
-
-  if (!incoming.subjectEmail && base.subjectEmail) merged.subjectEmail = base.subjectEmail;
-  if (!incoming.proofRef && base.proofRef) merged.proofRef = base.proofRef;
-  if (!incoming.pageUrl && base.pageUrl) merged.pageUrl = base.pageUrl;
-  if (!incoming.source && base.source) merged.source = base.source;
-
-  return normalizeIncoming(merged);
+      ...(incoming.deal || {})
+    }
+  });
 }
 
 export function setPending(data) {
@@ -245,6 +177,43 @@ export function clearPending() {
   dispatchPendingCleared();
 }
 
+function readPayloadFromHash() {
+  try {
+    const hash = String(window.location.hash || '');
+    if (!hash.startsWith('#pr=')) return null;
+
+    const encoded = hash.slice(4);
+    if (!encoded) return null;
+
+    const cleaned = decodeURIComponent(encoded);
+    const raw = atob(cleaned);
+    const utf8 = decodeURIComponent(escape(raw));
+    const parsed = safeParse(utf8);
+
+    if (!parsed || typeof parsed !== 'object') return null;
+    return normalizeIncoming(parsed);
+  } catch {
+    return null;
+  }
+}
+
+export function captureFromUrl() {
+  const fromHash = readPayloadFromHash();
+  if (!fromHash) return null;
+
+  const existing = getPending() || {};
+  const merged = mergePendingData(existing, fromHash);
+  setPending(merged);
+
+  try {
+    const url = new URL(window.location.href);
+    url.hash = '';
+    window.history.replaceState({}, '', url.toString());
+  } catch {}
+
+  return merged;
+}
+
 function normalizeSource(s) {
   return String(s || '').trim().toLowerCase();
 }
@@ -256,9 +225,7 @@ function normalizeProofRef(s) {
 export function dealKeyFromPending(p) {
   const source = normalizeSource(
     p?.source ||
-    p?.deal?.source ||
     p?.deal?.platform ||
-    p?.counterparty?.source ||
     p?.counterparty?.platform ||
     ''
   );
@@ -266,11 +233,7 @@ export function dealKeyFromPending(p) {
   const proofRef = normalizeProofRef(
     p?.proofRef ||
     p?.deal?.orderId ||
-    p?.deal?.bookingId ||
-    p?.deal?.transactionId ||
-    p?.deal?.proofRef ||
     p?.counterparty?.orderId ||
-    p?.counterparty?.proofRef ||
     p?.pageUrl ||
     ''
   );
@@ -338,144 +301,7 @@ export function isDealRated(pendingOrKey) {
   }
 }
 
-function readPayloadFromHashOrPr() {
-  const hashParams = getHashParams();
-  const queryParams = new URLSearchParams(window.location.search || '');
-
-  const prHash = hashParams.get('pr');
-  const prQuery = queryParams.get('pr');
-
-  const decoded = readB64Json(prHash || prQuery);
-  if (!decoded || typeof decoded !== 'object') return null;
-
-  return normalizeIncoming(decoded);
-}
-
-function readLegacyParamsFromQuery() {
-  const qs = new URLSearchParams(window.location.search || '');
-
-  const source = qs.get('source') || '';
-  const pageUrl = qs.get('pageUrl') || '';
-  const proofRef = qs.get('proofRef') || '';
-
-  const subjectEmail = qs.get('subjectEmail') || '';
-  const cpEmail = qs.get('cpEmail') || '';
-  const cpName = qs.get('cpName') || '';
-  const cpPhone = qs.get('cpPhone') || '';
-  const cpAddressStreet = qs.get('cpAddressStreet') || '';
-  const cpAddressZip = qs.get('cpAddressZip') || '';
-  const cpAddressCity = qs.get('cpAddressCity') || '';
-  const cpCountry = qs.get('cpCountry') || '';
-  const cpPlatform = qs.get('cpPlatform') || '';
-  const cpPlatformUsername = qs.get('cpPlatformUsername') || '';
-  const cpOrderId = qs.get('cpOrderId') || '';
-  const cpItemId = qs.get('cpItemId') || '';
-  const cpAmountSek = qs.get('cpAmountSek') || '';
-  const cpTitle = qs.get('cpTitle') || '';
-
-  const dealPlatform = qs.get('dealPlatform') || '';
-  const dealOrderId = qs.get('dealOrderId') || '';
-  const dealItemId = qs.get('dealItemId') || '';
-  const dealTitle = qs.get('dealTitle') || '';
-  const dealAmount = qs.get('dealAmount') || '';
-  const dealAmountSek = qs.get('dealAmountSek') || '';
-  const dealCurrency = qs.get('dealCurrency') || '';
-  const dealDate = qs.get('dealDate') || '';
-  const dealDateISO = qs.get('dealDateISO') || '';
-
-  const hasAnyRelevantParam = !!(
-    source || pageUrl || proofRef ||
-    subjectEmail || cpEmail || cpName || cpPhone ||
-    cpAddressStreet || cpAddressZip || cpAddressCity || cpCountry ||
-    dealOrderId || dealItemId || dealTitle || dealAmount || dealAmountSek || dealDate || dealDateISO
-  );
-
-  if (!hasAnyRelevantParam) {
-    return null;
-  }
-
-  return normalizeIncoming({
-    source,
-    pageUrl,
-    proofRef,
-    subjectEmail,
-    counterparty: {
-      email: cpEmail,
-      name: cpName,
-      phone: cpPhone,
-      addressStreet: cpAddressStreet,
-      addressZip: cpAddressZip,
-      addressCity: cpAddressCity,
-      country: cpCountry,
-      platform: cpPlatform,
-      platformUsername: cpPlatformUsername,
-      orderId: cpOrderId,
-      itemId: cpItemId,
-      amountSek: cpAmountSek ? Number(cpAmountSek) : undefined,
-      title: cpTitle,
-      pageUrl,
-    },
-    deal: {
-      platform: dealPlatform || source,
-      orderId: dealOrderId,
-      itemId: dealItemId,
-      title: dealTitle,
-      amount: dealAmount ? Number(dealAmount) : undefined,
-      amountSek: dealAmountSek ? Number(dealAmountSek) : undefined,
-      currency: dealCurrency,
-      date: dealDate,
-      dateISO: dealDateISO,
-      pageUrl,
-    },
-  });
-}
-
-export function captureFromUrl() {
-  let result = null;
-
-  const fromHash = readPayloadFromHashOrPr();
-  if (fromHash) {
-    const existing = getPending() || {};
-    const merged = mergePendingData(existing, fromHash);
-    setPending(merged);
-    result = merged;
-  }
-
-  if (!result) {
-    const fromLegacyQuery = readLegacyParamsFromQuery();
-    if (fromLegacyQuery) {
-      const existing = getPending() || {};
-      const merged = mergePendingData(existing, fromLegacyQuery);
-      setPending(merged);
-      result = merged;
-    }
-  }
-
-  try {
-    const url = new URL(window.location.href);
-
-    [
-      'pr',
-      'source', 'pageUrl', 'proofRef',
-      'subjectEmail',
-      'cpEmail', 'cpName', 'cpPhone',
-      'cpAddressStreet', 'cpAddressZip', 'cpAddressCity', 'cpCountry',
-      'cpPlatform', 'cpPlatformUsername', 'cpOrderId', 'cpItemId', 'cpAmountSek', 'cpTitle',
-      'dealPlatform', 'dealOrderId', 'dealItemId', 'dealTitle',
-      'dealAmount', 'dealAmountSek', 'dealCurrency', 'dealDate', 'dealDateISO'
-    ].forEach((key) => url.searchParams.delete(key));
-
-    const hashParams = getHashParams();
-    if (hashParams.get('pr')) {
-      url.hash = '';
-    }
-
-    window.history.replaceState({}, '', url.toString());
-  } catch {}
-
-  return result;
-}
-
+// Behålls bara för kompatibilitet med befintlig ratingForm.js
 export async function captureFromExtensionBridge() {
   return getPending();
 }
