@@ -1,11 +1,10 @@
 // extension/service-worker.js
 // PeerRate background/service-worker
-// Förenklad roll:
+// Roll:
 // - kontrollera med backend om affären får betygsättas
 // - hålla lokal cache för redan betygsatta affärer
+// - öppna exakt URL som content-script skickar
 // - ta emot markDealRated från rate-sidan
-//
-// Bygger INTE längre rate-url och öppnar INTE längre rate.html.
 
 const API_BASE = 'https://api.peerrate.ai';
 
@@ -246,6 +245,28 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       const result = await checkDealStatusWithBackend(msg.payload || {});
       sendResponse(result);
+    })();
+    return true;
+  }
+
+  if (msg.type === 'openPeerRateUrl') {
+    (async () => {
+      const url = normalizeText(msg.url || '');
+      if (!url) {
+        sendResponse({ ok: false, error: 'Missing url' });
+        return;
+      }
+
+      try {
+        await chrome.tabs.create({ url });
+        sendResponse({ ok: true, opened: true });
+      } catch (err) {
+        sendResponse({
+          ok: false,
+          opened: false,
+          error: String(err?.message || err || 'Could not open tab'),
+        });
+      }
     })();
     return true;
   }

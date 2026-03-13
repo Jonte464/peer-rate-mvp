@@ -1,9 +1,14 @@
 // frontend/modules/pendingStore.js
-// Extremt förenklad pending-store.
-// Primär och i princip enda källa: URL-parametrar.
-// localStorage används bara för att hålla state stabilt efter första läsningen.
+// Robust pending-store.
+// Läser i denna ordning:
+// 1) hash-parametern #pr=...
+// 2) query-parametern ?pr=...
+// 3) vanliga query-parametrar som fallback
+// 4) localStorage
+//
+// Hash-baserad transport är nu primär väg från extension.
 
-const PENDING_KEY = 'peerrate_pending_rating_v5';
+const PENDING_KEY = 'peerrate_pending_rating_v6';
 const TTL_MS = 1000 * 60 * 60 * 24;
 
 const RATED_CACHE_KEY = 'peerrate_rated_deals_v1';
@@ -50,6 +55,41 @@ function normalizeSourceDisplay(source) {
   if (s === 'facebook') return 'Facebook Marketplace';
 
   return normalizeText(source);
+}
+
+function readB64Json(b64) {
+  if (!b64) return null;
+
+  try {
+    const cleaned = decodeURIComponent(b64);
+
+    try {
+      const raw = atob(cleaned);
+      const utf8 = decodeURIComponent(escape(raw));
+      const parsed = safeParse(utf8);
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch {}
+
+    try {
+      const raw2 = atob(cleaned);
+      const parsed2 = safeParse(raw2);
+      if (parsed2 && typeof parsed2 === 'object') return parsed2;
+    } catch {}
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function getHashParams() {
+  try {
+    const raw = String(window.location.hash || '');
+    const cleaned = raw.startsWith('#') ? raw.slice(1) : raw;
+    return new URLSearchParams(cleaned);
+  } catch {
+    return new URLSearchParams();
+  }
 }
 
 export function hasRichPendingData(p) {
@@ -302,7 +342,20 @@ export function isDealRated(pendingOrKey) {
   }
 }
 
-export function captureFromUrl() {
+function readPayloadFromHashOrPr() {
+  const hashParams = getHashParams();
+  const queryParams = new URLSearchParams(window.location.search || '');
+
+  const prHash = hashParams.get('pr');
+  const prQuery = queryParams.get('pr');
+
+  const decoded = readB64Json(prHash || prQuery);
+  if (!decoded || typeof decoded !== 'object') return null;
+
+  return normalizeIncoming(decoded);
+}
+
+function readLegacyParamsFromQuery() {
   const qs = new URLSearchParams(window.location.search || '');
 
   const source = qs.get('source') || '';
@@ -345,7 +398,7 @@ export function captureFromUrl() {
     return null;
   }
 
-  const incoming = {
+  return normalizeIncoming({
     source,
     pageUrl,
     proofRef,
@@ -378,15 +431,36 @@ export function captureFromUrl() {
       dateISO: dealDateISO,
       pageUrl,
     },
-  };
+  });
+}
 
-  const existing = getPending() || {};
-  const merged = mergePendingData(existing, incoming);
-  setPending(merged);
+export function captureFromUrl() {
+  let result = null;
+
+  const fromHash = readPayloadFromHashOrPr();
+  if (fromHash) {
+    const existing = getPending() || {};
+    const merged = mergePendingData(existing, fromHash);
+    setPending(merged);
+    result = merged;
+  }
+
+  if (!result) {
+    const fromLegacyQuery = readLegacyParamsFromQuery();
+    if (fromLegacyQuery) {
+      const existing = getPending() || {};
+      const merged = mergePendingData(existing, fromLegacyQuery);
+      setPending(merged);
+      result = merged;
+    }
+  }
 
   try {
     const url = new URL(window.location.href);
+
+    // rensa query
     [
+      'pr',
       'source', 'pageUrl', 'proofRef',
       'subjectEmail',
       'cpEmail', 'cpName', 'cpPhone',
@@ -396,14 +470,19 @@ export function captureFromUrl() {
       'dealAmount', 'dealAmountSek', 'dealCurrency', 'dealDate', 'dealDateISO'
     ].forEach((key) => url.searchParams.delete(key));
 
+    // rensa hash om det var payload där
+    const hashParams = getHashParams();
+    if (hashParams.get('pr')) {
+      url.hash = '';
+    }
+
     window.history.replaceState({}, '', url.toString());
   } catch {}
 
-  return merged;
+  return result;
 }
 
-// Behålls bara för kompatibilitet med befintlig kod.
-// Vi använder inte längre bridge som primär transport.
+// Behålls för kompatibilitet med befintlig kod.
 export async function captureFromExtensionBridge() {
   return getPending();
 }

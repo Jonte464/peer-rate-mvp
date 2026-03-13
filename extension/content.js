@@ -1,11 +1,10 @@
 // extension/content.js
-// PeerRate – Tradera trigger (direct-open architecture)
+// PeerRate – Tradera trigger (hash transport architecture)
 // Ny princip:
 // - content.js extraherar payload
 // - content.js frågar service-worker om affären får betygsättas
-// - content.js bygger sedan rate.html-URL själv och öppnar den direkt
-//
-// Detta tar bort ett helt felben: payload-handoff via service-worker.
+// - content.js bygger sedan rate.html-URL med payload i hash (#pr=...)
+// - service-worker öppnar exakt den URL:n i ny tab
 
 (function () {
   const DEFAULTS = { peerrate_enabled: true };
@@ -482,7 +481,7 @@
     if (!proofRef) return null;
 
     return {
-      v: 4,
+      v: 5,
       source: 'tradera',
       pageUrl,
       proofRef,
@@ -568,56 +567,57 @@
     return best;
   }
 
-  function setIf(qs, key, value) {
-    const v = normalizeText(value);
-    if (v) qs.set(key, v);
+  function base64EncodeUnicode(str) {
+    try {
+      return btoa(unescape(encodeURIComponent(str)));
+    } catch {
+      return btoa(str);
+    }
+  }
+
+  function compactPayloadForHash(payload) {
+    const deal = payload?.deal || {};
+    const cp = payload?.counterparty || {};
+
+    return {
+      source: payload?.source || 'tradera',
+      pageUrl: payload?.pageUrl || '',
+      proofRef: payload?.proofRef || '',
+      subjectEmail: payload?.subjectEmail || cp?.email || '',
+      counterparty: {
+        email: cp?.email || '',
+        name: cp?.name || '',
+        phone: cp?.phone || '',
+        addressStreet: cp?.addressStreet || '',
+        addressZip: cp?.addressZip || '',
+        addressCity: cp?.addressCity || '',
+        country: cp?.country || '',
+        platform: cp?.platform || 'TRADERA',
+        orderId: cp?.orderId || '',
+        itemId: cp?.itemId || '',
+        amountSek: cp?.amountSek ?? null,
+        title: cp?.title || '',
+        pageUrl: cp?.pageUrl || payload?.pageUrl || '',
+      },
+      deal: {
+        platform: deal?.platform || 'TRADERA',
+        orderId: deal?.orderId || '',
+        itemId: deal?.itemId || '',
+        title: deal?.title || '',
+        amount: deal?.amount ?? null,
+        amountSek: deal?.amountSek ?? null,
+        currency: deal?.currency || '',
+        date: deal?.date || '',
+        dateISO: deal?.dateISO || '',
+        pageUrl: deal?.pageUrl || payload?.pageUrl || '',
+      },
+    };
   }
 
   function buildRateUrl(payload) {
-    const deal = payload?.deal || {};
-    const cp = payload?.counterparty || deal?.counterparty || {};
-
-    const source = normalizeLower(payload?.source || deal?.platform || '');
-    const pageUrl = normalizeText(payload?.pageUrl || deal?.pageUrl || '');
-    const proofRef = normalizeText(
-      payload?.proofRef ||
-      deal?.orderId ||
-      cp?.orderId ||
-      pageUrl
-    );
-
-    const qs = new URLSearchParams();
-
-    setIf(qs, 'source', source);
-    setIf(qs, 'pageUrl', pageUrl);
-    setIf(qs, 'proofRef', proofRef);
-
-    setIf(qs, 'subjectEmail', payload?.subjectEmail || cp?.email);
-    setIf(qs, 'cpEmail', cp?.email);
-    setIf(qs, 'cpName', cp?.name);
-    setIf(qs, 'cpPhone', cp?.phone);
-    setIf(qs, 'cpAddressStreet', cp?.addressStreet);
-    setIf(qs, 'cpAddressZip', cp?.addressZip);
-    setIf(qs, 'cpAddressCity', cp?.addressCity);
-    setIf(qs, 'cpCountry', cp?.country);
-    setIf(qs, 'cpPlatform', cp?.platform);
-    setIf(qs, 'cpPlatformUsername', cp?.platformUsername || cp?.username);
-    setIf(qs, 'cpOrderId', cp?.orderId);
-    setIf(qs, 'cpItemId', cp?.itemId);
-    setIf(qs, 'cpAmountSek', cp?.amountSek);
-    setIf(qs, 'cpTitle', cp?.title);
-
-    setIf(qs, 'dealPlatform', deal?.platform);
-    setIf(qs, 'dealOrderId', deal?.orderId);
-    setIf(qs, 'dealItemId', deal?.itemId);
-    setIf(qs, 'dealTitle', deal?.title);
-    setIf(qs, 'dealAmount', deal?.amount);
-    setIf(qs, 'dealAmountSek', deal?.amountSek);
-    setIf(qs, 'dealCurrency', deal?.currency);
-    setIf(qs, 'dealDate', deal?.date);
-    setIf(qs, 'dealDateISO', deal?.dateISO);
-
-    return `https://peerrate.ai/rate.html?${qs.toString()}`;
+    const compact = compactPayloadForHash(payload);
+    const encoded = encodeURIComponent(base64EncodeUnicode(JSON.stringify(compact)));
+    return `https://peerrate.ai/rate.html#pr=${encoded}`;
   }
 
   async function evaluatePage() {
@@ -690,20 +690,6 @@
         });
       }
     });
-  }
-
-  function openPeerRateDirect(url) {
-    try {
-      const w = window.open(url, '_blank', 'noopener,noreferrer');
-      if (w) return true;
-    } catch {}
-
-    try {
-      location.href = url;
-      return true;
-    } catch {}
-
-    return false;
   }
 
   function injectOrUpdateButton(payload) {
@@ -782,10 +768,14 @@
           btn.textContent = 'Öppnar PeerRate...';
 
           const url = buildRateUrl(bestPayload);
-          const opened = openPeerRateDirect(url);
 
-          if (!opened) {
-            console.warn('[PeerRate extension] could not open PeerRate directly');
+          const openResult = await sendMessageAsync({
+            type: 'openPeerRateUrl',
+            url,
+          });
+
+          if (!openResult?.ok) {
+            console.warn('[PeerRate extension] openPeerRateUrl failed', openResult);
           }
 
           btn.disabled = false;
