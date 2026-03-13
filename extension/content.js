@@ -1,11 +1,11 @@
 // extension/content.js
-// PeerRate – Tradera trigger (robust extraction reset)
-// Mål:
-// - bara agera på riktiga Tradera order-sidor (/my/order/)
-// - extrahera så mycket data som möjligt, även om sidan varierar
-// - hitta e-post/telefon både via länkar och fri text
-// - när användaren klickar: extrahera på nytt i flera snabba försök
-// - skicka den rikaste payloaden till service-worker
+// PeerRate – Tradera trigger (direct-open architecture)
+// Ny princip:
+// - content.js extraherar payload
+// - content.js frågar service-worker om affären får betygsättas
+// - content.js bygger sedan rate.html-URL själv och öppnar den direkt
+//
+// Detta tar bort ett helt felben: payload-handoff via service-worker.
 
 (function () {
   const DEFAULTS = { peerrate_enabled: true };
@@ -220,7 +220,7 @@
         if (txt.length > 2500) return false;
         return /kontakta|ordernr|summering|objektnr|totalt|frakt|sverige/i.test(txt);
       })
-      .slice(0, 12);
+      .slice(0, 16);
 
     roots.push(...keywordBlocks);
 
@@ -253,7 +253,7 @@
     }
 
     if (!best) {
-      const lines = getNormalizedLines(bodyText).slice(0, 120);
+      const lines = getNormalizedLines(bodyText).slice(0, 140);
       best = lines.join('\n');
     }
 
@@ -327,9 +327,7 @@
     }
 
     if (!addressStreet || !addressZip || !addressCity) {
-      for (let i = 0; i < allLines.length; i += 1) {
-        const line = allLines[i];
-
+      for (const line of allLines) {
         if (!addressStreet) {
           if (
             /\d/.test(line) &&
@@ -393,9 +391,7 @@
         .map((m) => Number(String(m[1] || '').replace(/\s/g, '')))
         .filter((n) => !Number.isNaN(n));
 
-      if (values.length) {
-        return Math.max(...values);
-      }
+      if (values.length) return Math.max(...values);
     }
 
     return null;
@@ -486,7 +482,7 @@
     if (!proofRef) return null;
 
     return {
-      v: 3,
+      v: 4,
       source: 'tradera',
       pageUrl,
       proofRef,
@@ -572,6 +568,58 @@
     return best;
   }
 
+  function setIf(qs, key, value) {
+    const v = normalizeText(value);
+    if (v) qs.set(key, v);
+  }
+
+  function buildRateUrl(payload) {
+    const deal = payload?.deal || {};
+    const cp = payload?.counterparty || deal?.counterparty || {};
+
+    const source = normalizeLower(payload?.source || deal?.platform || '');
+    const pageUrl = normalizeText(payload?.pageUrl || deal?.pageUrl || '');
+    const proofRef = normalizeText(
+      payload?.proofRef ||
+      deal?.orderId ||
+      cp?.orderId ||
+      pageUrl
+    );
+
+    const qs = new URLSearchParams();
+
+    setIf(qs, 'source', source);
+    setIf(qs, 'pageUrl', pageUrl);
+    setIf(qs, 'proofRef', proofRef);
+
+    setIf(qs, 'subjectEmail', payload?.subjectEmail || cp?.email);
+    setIf(qs, 'cpEmail', cp?.email);
+    setIf(qs, 'cpName', cp?.name);
+    setIf(qs, 'cpPhone', cp?.phone);
+    setIf(qs, 'cpAddressStreet', cp?.addressStreet);
+    setIf(qs, 'cpAddressZip', cp?.addressZip);
+    setIf(qs, 'cpAddressCity', cp?.addressCity);
+    setIf(qs, 'cpCountry', cp?.country);
+    setIf(qs, 'cpPlatform', cp?.platform);
+    setIf(qs, 'cpPlatformUsername', cp?.platformUsername || cp?.username);
+    setIf(qs, 'cpOrderId', cp?.orderId);
+    setIf(qs, 'cpItemId', cp?.itemId);
+    setIf(qs, 'cpAmountSek', cp?.amountSek);
+    setIf(qs, 'cpTitle', cp?.title);
+
+    setIf(qs, 'dealPlatform', deal?.platform);
+    setIf(qs, 'dealOrderId', deal?.orderId);
+    setIf(qs, 'dealItemId', deal?.itemId);
+    setIf(qs, 'dealTitle', deal?.title);
+    setIf(qs, 'dealAmount', deal?.amount);
+    setIf(qs, 'dealAmountSek', deal?.amountSek);
+    setIf(qs, 'dealCurrency', deal?.currency);
+    setIf(qs, 'dealDate', deal?.date);
+    setIf(qs, 'dealDateISO', deal?.dateISO);
+
+    return `https://peerrate.ai/rate.html?${qs.toString()}`;
+  }
+
   async function evaluatePage() {
     if (isEvaluating) return;
     isEvaluating = true;
@@ -644,6 +692,20 @@
     });
   }
 
+  function openPeerRateDirect(url) {
+    try {
+      const w = window.open(url, '_blank', 'noopener,noreferrer');
+      if (w) return true;
+    } catch {}
+
+    try {
+      location.href = url;
+      return true;
+    } catch {}
+
+    return false;
+  }
+
   function injectOrUpdateButton(payload) {
     let btn = document.getElementById(BTN_ID);
 
@@ -694,36 +756,44 @@
             return;
           }
 
-          btn.textContent = 'Öppnar PeerRate...';
+          btn.textContent = 'Verifierar...';
 
-          const result = await sendMessageAsync({
-            type: 'openRatingForPayload',
+          const status = await sendMessageAsync({
+            type: 'checkDealStatus',
             payload: bestPayload,
           });
 
-          if (result?.ok === true && result?.opened === true) {
+          if (!status || status.ok !== true) {
+            console.warn('[PeerRate extension] checkDealStatus failed', status);
             btn.disabled = false;
             btn.textContent = originalText;
             return;
           }
 
-          removeButton();
+          if (status.alreadyRated === true || status.canRate !== true) {
+            removeButton();
 
-          if (result?.alreadyRated === true) {
-            alert('Den här affären har redan betygsatts i PeerRate.');
+            if (status.alreadyRated === true) {
+              alert('Den här affären har redan betygsatts i PeerRate.');
+            }
             return;
           }
 
-          console.warn('[PeerRate extension] openRatingForPayload failed', result);
+          btn.textContent = 'Öppnar PeerRate...';
+
+          const url = buildRateUrl(bestPayload);
+          const opened = openPeerRateDirect(url);
+
+          if (!opened) {
+            console.warn('[PeerRate extension] could not open PeerRate directly');
+          }
+
+          btn.disabled = false;
+          btn.textContent = originalText;
         } catch (err) {
           console.warn('[PeerRate extension] click handler failed:', err);
-          removeButton();
-        } finally {
-          const liveBtn = document.getElementById(BTN_ID);
-          if (liveBtn) {
-            liveBtn.disabled = false;
-            liveBtn.textContent = originalText;
-          }
+          btn.disabled = false;
+          btn.textContent = originalText;
         }
       });
 

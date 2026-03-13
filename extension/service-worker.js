@@ -1,14 +1,13 @@
 // extension/service-worker.js
 // PeerRate background/service-worker
-// Extremt förenklad transport:
+// Förenklad roll:
 // - kontrollera med backend om affären får betygsättas
-// - öppna rate.html med all viktig data direkt i URL-parametrar
-// - ingen bridge krävs för att grundflödet ska fungera
+// - hålla lokal cache för redan betygsatta affärer
+// - ta emot markDealRated från rate-sidan
 //
-// Dubbelbetygsspärr behålls.
+// Bygger INTE längre rate-url och öppnar INTE längre rate.html.
 
 const API_BASE = 'https://api.peerrate.ai';
-const RATE_PAGE_BASE = 'https://peerrate.ai/rate.html';
 
 const RATED_CACHE_KEY = 'peerrate_extension_rated_cache_v1';
 const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90 dagar
@@ -240,53 +239,6 @@ async function checkDealStatusWithBackend(payload) {
   }
 }
 
-function setIf(qs, key, value) {
-  const v = normalizeText(value);
-  if (v) qs.set(key, v);
-}
-
-function buildRateUrl(payload) {
-  const deal = payload?.deal || {};
-  const cp = payload?.counterparty || deal?.counterparty || {};
-
-  const source = normalizeSource(payload?.source || deal?.platform || '');
-  const pageUrl = normalizeText(payload?.pageUrl || deal?.pageUrl || '');
-  const proofRef = extractProofRef(payload);
-
-  const qs = new URLSearchParams();
-
-  setIf(qs, 'source', source);
-  setIf(qs, 'pageUrl', pageUrl);
-  setIf(qs, 'proofRef', proofRef);
-
-  setIf(qs, 'subjectEmail', payload?.subjectEmail || cp?.email);
-  setIf(qs, 'cpEmail', cp?.email);
-  setIf(qs, 'cpName', cp?.name);
-  setIf(qs, 'cpPhone', cp?.phone);
-  setIf(qs, 'cpAddressStreet', cp?.addressStreet);
-  setIf(qs, 'cpAddressZip', cp?.addressZip);
-  setIf(qs, 'cpAddressCity', cp?.addressCity);
-  setIf(qs, 'cpCountry', cp?.country);
-  setIf(qs, 'cpPlatform', cp?.platform);
-  setIf(qs, 'cpPlatformUsername', cp?.platformUsername || cp?.username);
-  setIf(qs, 'cpOrderId', cp?.orderId);
-  setIf(qs, 'cpItemId', cp?.itemId);
-  setIf(qs, 'cpAmountSek', cp?.amountSek);
-  setIf(qs, 'cpTitle', cp?.title);
-
-  setIf(qs, 'dealPlatform', deal?.platform);
-  setIf(qs, 'dealOrderId', deal?.orderId);
-  setIf(qs, 'dealItemId', deal?.itemId);
-  setIf(qs, 'dealTitle', deal?.title);
-  setIf(qs, 'dealAmount', deal?.amount);
-  setIf(qs, 'dealAmountSek', deal?.amountSek);
-  setIf(qs, 'dealCurrency', deal?.currency);
-  setIf(qs, 'dealDate', deal?.date);
-  setIf(qs, 'dealDateISO', deal?.dateISO);
-
-  return `${RATE_PAGE_BASE}?${qs.toString()}`;
-}
-
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.type) return;
 
@@ -294,45 +246,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     (async () => {
       const result = await checkDealStatusWithBackend(msg.payload || {});
       sendResponse(result);
-    })();
-    return true;
-  }
-
-  if (msg.type === 'openRatingForPayload') {
-    (async () => {
-      const payload = msg.payload || {};
-      const result = await checkDealStatusWithBackend(payload);
-
-      if (result?.ok === true && result?.canRate === true && result?.alreadyRated !== true) {
-        const url = buildRateUrl(payload);
-        await chrome.tabs.create({ url });
-
-        sendResponse({
-          ok: true,
-          opened: true,
-          alreadyRated: false,
-          canRate: true,
-        });
-        return;
-      }
-
-      if (result?.alreadyRated === true) {
-        sendResponse({
-          ok: true,
-          opened: false,
-          alreadyRated: true,
-          canRate: false,
-        });
-        return;
-      }
-
-      sendResponse({
-        ok: false,
-        opened: false,
-        alreadyRated: false,
-        canRate: false,
-        error: result?.error || 'Rating flow blocked by backend.',
-      });
     })();
     return true;
   }
