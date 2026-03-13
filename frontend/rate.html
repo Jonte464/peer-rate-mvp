@@ -5,90 +5,240 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PeerRate – Lämna betyg</title>
 
+  <link rel="stylesheet" href="/css/top-row.css" />
+
   <style>
     :root {
-      --bg: #f6f8fb;
+      --bg: #f7f8fb;
       --card: #ffffff;
-      --text: #111827;
-      --muted: #6b7280;
-      --line: rgba(17,24,39,.10);
+      --card-soft: #f9fbff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: rgba(15, 23, 42, 0.10);
       --accent: #132f55;
+      --accent-2: #1d4f91;
       --ok: #166534;
       --warn: #92400e;
       --bad: #991b1b;
+      --shadow: 0 18px 44px rgba(15, 23, 42, 0.08);
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --max: 1180px;
     }
 
     * { box-sizing: border-box; }
 
-    body {
+    html, body {
       margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
+      padding: 0;
+      background: linear-gradient(180deg, #f7f8fb 0%, #eef3f9 100%);
       color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      padding: 28px 18px 48px;
     }
 
     .wrap {
-      max-width: 980px;
+      max-width: var(--max);
       margin: 0 auto;
-      padding: 24px;
     }
 
     .hero {
-      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 920px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .hero-card,
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 26px;
+    }
+
+    .hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(19, 47, 85, 0.08);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
     }
 
     .hero h1 {
-      margin: 0 0 8px;
-      font-size: 34px;
-      line-height: 1.05;
+      margin: 0 0 10px;
+      font-size: 38px;
+      line-height: 1.06;
+      letter-spacing: -.02em;
       color: var(--accent);
     }
 
     .hero p {
       margin: 0;
       color: var(--muted);
+      font-size: 16px;
+      line-height: 1.7;
+      max-width: 760px;
+    }
+
+    .mini-panel {
+      display: grid;
+      gap: 12px;
+    }
+
+    .mini-box {
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .mini-box h2 {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 18px;
+    }
+
+    .mini-box p {
+      margin: 0;
+      color: var(--muted);
       line-height: 1.6;
+      font-size: 14px;
     }
 
     .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 16px;
+      padding: 18px;
       margin-bottom: 16px;
-      box-shadow: 0 10px 28px rgba(0,0,0,.04);
     }
 
     .card h2 {
       margin: 0 0 12px;
-      font-size: 20px;
       color: var(--accent);
+      font-size: 22px;
+      letter-spacing: -.01em;
     }
 
     .notice {
-      padding: 12px 14px;
-      border-radius: 12px;
-      margin-bottom: 12px;
+      padding: 14px 16px;
+      border-radius: 14px;
       font-weight: 700;
       line-height: 1.45;
+      border: 1px solid transparent;
     }
 
     .notice.ok {
-      background: rgba(22,101,52,.10);
+      background: rgba(22, 101, 52, .08);
       color: var(--ok);
-      border: 1px solid rgba(22,101,52,.22);
+      border-color: rgba(22, 101, 52, .18);
     }
 
     .notice.warn {
-      background: rgba(146,64,14,.10);
+      background: rgba(146, 64, 14, .08);
       color: var(--warn);
-      border: 1px solid rgba(146,64,14,.22);
+      border-color: rgba(146, 64, 14, .18);
     }
 
     .notice.bad {
-      background: rgba(153,27,27,.10);
+      background: rgba(153, 27, 27, .08);
       color: var(--bad);
-      border: 1px solid rgba(153,27,27,.22);
+      border-color: rgba(153, 27, 27, .18);
+    }
+
+    .deal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .deal-head-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .platform-logo-wrap {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex: 0 0 auto;
+    }
+
+    .platform-logo {
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .deal-head-copy {
+      min-width: 0;
+    }
+
+    .deal-head-title {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.2;
+      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: -.01em;
+    }
+
+    .deal-head-sub {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .platform-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(19, 47, 85, 0.08);
+      color: var(--accent);
+      border: 1px solid rgba(19, 47, 85, 0.10);
+      font-weight: 700;
+      font-size: 14px;
+      white-space: nowrap;
     }
 
     .grid {
@@ -105,209 +255,271 @@
 
     .field {
       border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 12px;
-      background: #fff;
+      border-radius: 14px;
+      padding: 14px;
+      background: var(--card-soft);
+      min-height: 88px;
     }
 
     .label {
       font-size: 12px;
       color: var(--muted);
-      margin-bottom: 6px;
+      margin-bottom: 7px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: .03em;
+      letter-spacing: .04em;
     }
 
     .value {
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 700;
       word-break: break-word;
-      line-height: 1.4;
+      line-height: 1.45;
+      color: var(--text);
     }
 
-    pre {
-      margin: 0;
-      white-space: pre-wrap;
-      word-break: break-word;
+    .value a {
+      color: var(--accent-2);
+      text-decoration: none;
+    }
+
+    .value a:hover {
+      text-decoration: underline;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .label-form {
+      display: block;
+      margin-bottom: 7px;
+      color: var(--accent);
       font-size: 13px;
-      line-height: 1.45;
-      color: #0f172a;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    .select,
+    .textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 13px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+    }
+
+    .select:focus,
+    .textarea:focus {
+      border-color: rgba(19, 47, 85, 0.30);
+      box-shadow: 0 0 0 4px rgba(19, 47, 85, 0.08);
+    }
+
+    .textarea {
+      min-height: 140px;
+      resize: vertical;
     }
 
     .actions {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
-      margin-top: 12px;
+      margin-top: 4px;
     }
 
-    button, a.btn {
+    button {
       appearance: none;
       border: 0;
-      border-radius: 12px;
-      padding: 12px 14px;
+      border-radius: 14px;
+      padding: 13px 16px;
       font-weight: 700;
       cursor: pointer;
-      text-decoration: none;
-      display: inline-block;
       background: var(--accent);
       color: #fff;
+      min-height: 46px;
     }
 
     button:disabled {
-      opacity: .55;
+      opacity: .6;
       cursor: not-allowed;
     }
 
-    button.ghost, a.btn.ghost {
+    button.ghost {
       background: #fff;
       color: var(--accent);
       border: 1px solid var(--line);
     }
 
-    .small {
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 10px;
-      line-height: 1.5;
-    }
-
-    .form-grid {
-      display: grid;
-      gap: 12px;
-    }
-
-    .input, .select, .textarea {
-      width: 100%;
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 12px;
-      font-size: 14px;
-      font-family: inherit;
-      background: #fff;
-      color: var(--text);
-    }
-
-    .textarea {
-      min-height: 120px;
-      resize: vertical;
-    }
-
-    .debug-note {
+    .foot-note {
       margin-top: 8px;
-      font-size: 12px;
       color: var(--muted);
-      line-height: 1.5;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .debug-card[hidden] {
+      display: none !important;
+    }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      line-height: 1.45;
+      color: #0f172a;
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <section class="hero">
-      <h1>Lämna betyg – verifierad affär</h1>
-      <p>
-        Den här sidan är nu minimal och frikopplad från gamla rate-moduler. Den läser verifierad payload från extensionen, visar affären och låter dig skicka omdömet.
-      </p>
-    </section>
+  <div id="slot-top-row"></div>
 
-    <section class="card">
-      <h2>Status</h2>
-      <div id="statusBox" class="notice warn">Laddar…</div>
-      <div class="small">
-        Flöde: Tradera/annan plattform → extension → <b>rate.html#pr=...</b> → localStorage → formulär.
-      </div>
-    </section>
+  <main class="page">
+    <div class="wrap">
 
-    <section class="card">
-      <h2>Verifierad affär</h2>
-      <div id="dealGrid" class="grid"></div>
-    </section>
-
-    <section class="card">
-      <h2>Steg 2: Skicka omdöme</h2>
-
-      <form id="ratingForm" class="form-grid" autocomplete="off">
-        <input type="hidden" id="ratedUserEmail" />
-        <input type="hidden" id="ratingSource" />
-        <input type="hidden" id="proofRef" />
-
-        <div>
-          <label class="label" for="score">Betyg</label>
-          <select id="score" class="select" required>
-            <option value="">Välj…</option>
-            <option value="1">1 – Mycket dåligt</option>
-            <option value="2">2 – Dåligt</option>
-            <option value="3">3 – Okej</option>
-            <option value="4">4 – Bra</option>
-            <option value="5">5 – Mycket bra</option>
-          </select>
+      <section class="hero">
+        <div class="hero-card">
+          <div class="hero-kicker" id="heroKicker">Verifierat betygsflöde</div>
+          <h1 id="heroTitle">Lämna betyg för en verifierad affär</h1>
+          <p id="heroLead">
+            När PeerRate får in en verifierad affär från en plattform kan du lämna ett omdöme med högre trovärdighet och mindre risk för spam eller manipulation.
+          </p>
         </div>
 
-        <div>
-          <label class="label" for="comment">Kommentar</label>
-          <textarea id="comment" class="textarea" placeholder="Vad fungerade bra eller dåligt?"></textarea>
+        <div class="mini-panel">
+          <div class="mini-box">
+            <h2 id="sideTitle1">Så fungerar det</h2>
+            <p id="sideBody1">
+              Öppna en avslutad affär, låt extensionen skicka verifierad data till PeerRate och lämna sedan ditt omdöme här.
+            </p>
+          </div>
+
+          <div class="mini-box">
+            <h2 id="sideTitle2">Varför detta är bättre</h2>
+            <p id="sideBody2">
+              Omdömet kopplas till en riktig transaktion i stället för ett öppet formulär utan bevis.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 id="statusTitle">Status</h2>
+        <div id="statusBox" class="notice warn">Laddar…</div>
+      </section>
+
+      <section class="card">
+        <h2 id="verifiedTitle">Verifierad affär</h2>
+
+        <div class="deal-head">
+          <div class="deal-head-left">
+            <div class="platform-logo-wrap">
+              <img id="platformLogo" class="platform-logo" src="/assets/marketplaces/tradera.png" alt="" />
+            </div>
+
+            <div class="deal-head-copy">
+              <div id="dealHeadTitle" class="deal-head-title">Verifierad affär mottagen</div>
+              <div id="dealHeadSub" class="deal-head-sub">Affärsdata från plattformen visas nedan.</div>
+            </div>
+          </div>
+
+          <div id="platformChip" class="platform-chip">Tradera</div>
+        </div>
+
+        <div id="dealGrid" class="grid"></div>
+      </section>
+
+      <section class="card">
+        <h2 id="formTitle">Lämna omdöme</h2>
+
+        <form id="ratingForm" class="form-grid" autocomplete="off">
+          <input type="hidden" id="ratedUserEmail" />
+          <input type="hidden" id="ratingSource" />
+          <input type="hidden" id="proofRef" />
+
+          <div>
+            <label class="label-form" for="score" id="scoreLabel">Betyg</label>
+            <select id="score" class="select" required>
+              <option value="" id="scorePlaceholder">Välj…</option>
+              <option value="1" id="scoreOpt1">1 – Mycket dåligt</option>
+              <option value="2" id="scoreOpt2">2 – Dåligt</option>
+              <option value="3" id="scoreOpt3">3 – Okej</option>
+              <option value="4" id="scoreOpt4">4 – Bra</option>
+              <option value="5" id="scoreOpt5">5 – Mycket bra</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="label-form" for="comment" id="commentLabel">Kommentar</label>
+            <textarea id="comment" class="textarea" placeholder="Vad fungerade bra eller dåligt?"></textarea>
+          </div>
+
+          <div class="actions">
+            <button id="submitBtn" type="submit">Skicka omdöme</button>
+            <button id="reloadBtn" type="button" class="ghost">Läs om affären</button>
+            <button id="clearBtn" type="button" class="ghost">Rensa affärsdata</button>
+          </div>
+        </form>
+
+        <div class="foot-note" id="formFootNote">
+          Omdömet skickas tillsammans med verifierad affärsreferens.
+        </div>
+      </section>
+
+      <section id="debugCard" class="card debug-card" hidden>
+        <h2 id="debugTitle">Debug</h2>
+
+        <div class="grid">
+          <div class="field">
+            <div class="label">window.location.href</div>
+            <div class="value" id="hrefOut">–</div>
+          </div>
+          <div class="field">
+            <div class="label">window.location.hash</div>
+            <div class="value" id="hashOut">–</div>
+          </div>
+        </div>
+
+        <div class="grid" style="margin-top:12px;">
+          <div class="field">
+            <div class="label" id="debugDealKeyLabel">Aktuell deal key</div>
+            <div class="value" id="dealKeyOut">–</div>
+          </div>
+          <div class="field">
+            <div class="label" id="debugRatedLabel">Markerad som rated lokalt</div>
+            <div class="value" id="ratedOut">–</div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:12px;">
+          <div class="label">localStorage peerrate_pending_rating_v6</div>
+          <pre id="lsOut">–</pre>
+        </div>
+
+        <div class="field" style="margin-top:12px;">
+          <div class="label">localStorage peerrate_rated_deals_v1</div>
+          <pre id="ratedCacheOut">–</pre>
+        </div>
+
+        <div class="field" style="margin-top:12px;">
+          <div class="label" id="debugPayloadLabel">Decoded payload</div>
+          <pre id="payloadOut">–</pre>
         </div>
 
         <div class="actions">
-          <button id="submitBtn" type="submit">Skicka omdöme</button>
-          <button id="reloadBtn" type="button" class="ghost">Läs om payload</button>
-          <button id="clearBtn" type="button" class="ghost">Rensa payload</button>
+          <button id="clearRatedBtn" type="button" class="ghost">Rensa rated-cache</button>
         </div>
-      </form>
-    </section>
+      </section>
 
-    <section id="debugCard" class="card" hidden>
-      <h2>Debug</h2>
+    </div>
+  </main>
 
-      <div class="grid">
-        <div class="field">
-          <div class="label">window.location.href</div>
-          <div class="value" id="hrefOut">–</div>
-        </div>
-        <div class="field">
-          <div class="label">window.location.hash</div>
-          <div class="value" id="hashOut">–</div>
-        </div>
-      </div>
-
-      <div class="grid" style="margin-top:12px;">
-        <div class="field">
-          <div class="label">Aktuell deal key</div>
-          <div class="value" id="dealKeyOut">–</div>
-        </div>
-        <div class="field">
-          <div class="label">Är markerad rated lokalt</div>
-          <div class="value" id="ratedOut">–</div>
-        </div>
-      </div>
-
-      <div class="field" style="margin-top:12px;">
-        <div class="label">localStorage peerrate_pending_rating_v6</div>
-        <pre id="lsOut">–</pre>
-      </div>
-
-      <div class="field" style="margin-top:12px;">
-        <div class="label">localStorage peerrate_rated_deals_v1</div>
-        <pre id="ratedCacheOut">–</pre>
-      </div>
-
-      <div class="field" style="margin-top:12px;">
-        <div class="label">decoded payload</div>
-        <pre id="payloadOut">–</pre>
-      </div>
-
-      <div class="actions">
-        <button id="clearRatedBtn" type="button" class="ghost">Rensa rated-cache</button>
-      </div>
-
-      <div class="debug-note">
-        Debug visas bara när sidan öppnas med <b>?debug=1</b>, till exempel:
-        <b>https://peerrate.ai/rate.html?debug=1</b>
-      </div>
-    </section>
-  </div>
-
+  <script type="module" src="/js/rate-shell.js"></script>
   <script type="module" src="/js/rate-core.js"></script>
 </body>
 </html>
