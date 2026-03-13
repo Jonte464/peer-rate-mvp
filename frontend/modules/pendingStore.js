@@ -1,14 +1,13 @@
 // frontend/modules/pendingStore.js
-// Robust pending-store.
+// Förenklad pending-store.
 // Läser i denna ordning:
 // 1) hash-parametern #pr=...
 // 2) query-parametern ?pr=...
-// 3) vanliga query-parametrar som fallback
-// 4) extension bridge via window.postMessage
-// 5) localStorage
+// 3) legacy query-parametrar
+// 4) localStorage
 //
-// Ny primär robust väg från extension:
-// service-worker lagrar payload -> page-bridge hämtar -> denna fil sparar i localStorage.
+// Extensionen skriver nu direkt till localStorage via page-bridge.js.
+// Därför behövs ingen aktiv request/response-bridge från frontend längre.
 
 const PENDING_KEY = 'peerrate_pending_rating_v6';
 const TTL_MS = 1000 * 60 * 60 * 24;
@@ -249,13 +248,6 @@ export function clearPending() {
     localStorage.removeItem(PENDING_KEY);
   } catch {}
   dispatchPendingCleared();
-
-  try {
-    window.postMessage(
-      { type: 'PEERRATE_CLEAR_PENDING_PAYLOAD' },
-      window.location.origin
-    );
-  } catch {}
 }
 
 function normalizeSource(s) {
@@ -489,79 +481,9 @@ export function captureFromUrl() {
   return result;
 }
 
-function requestPendingPayloadFromBridge(timeoutMs = 1800) {
-  return new Promise((resolve) => {
-    let done = false;
-    let timer = null;
-
-    function finish(value) {
-      if (done) return;
-      done = true;
-
-      try {
-        window.removeEventListener('message', onMessage);
-      } catch {}
-
-      try {
-        if (timer) clearTimeout(timer);
-      } catch {}
-
-      resolve(value || null);
-    }
-
-    function onMessage(event) {
-      try {
-        if (event.source !== window) return;
-        if (event.origin !== window.location.origin) return;
-
-        const data = event.data;
-        if (!data || data.type !== 'PEERRATE_PENDING_PAYLOAD_RESPONSE') return;
-
-        const payload = data?.payload?.payload || null;
-        if (!data?.payload?.ok || !payload) {
-          finish(null);
-          return;
-        }
-
-        finish(payload);
-      } catch {
-        finish(null);
-      }
-    }
-
-    try {
-      window.addEventListener('message', onMessage);
-
-      timer = setTimeout(() => {
-        finish(null);
-      }, timeoutMs);
-
-      window.postMessage(
-        { type: 'PEERRATE_REQUEST_PENDING_PAYLOAD' },
-        window.location.origin
-      );
-    } catch {
-      finish(null);
-    }
-  });
-}
-
-export async function captureFromExtensionBridge(timeoutMs = 1800) {
-  const bridged = await requestPendingPayloadFromBridge(timeoutMs);
-  if (!bridged || typeof bridged !== 'object') {
-    return getPending();
-  }
-
-  const existing = getPending() || {};
-  const merged = mergePendingData(existing, bridged);
-  setPending(merged);
-
-  try {
-    window.postMessage(
-      { type: 'PEERRATE_CLEAR_PENDING_PAYLOAD' },
-      window.location.origin
-    );
-  } catch {}
-
-  return merged;
+// Kompatibilitet: ratingForm.js anropar denna.
+// Nu behövs ingen aktiv bridge-request längre.
+// page-bridge.js skriver redan till localStorage innan main-flödet kör klart.
+export async function captureFromExtensionBridge() {
+  return getPending();
 }
