@@ -1,20 +1,13 @@
 // extension/service-worker.js
-// PeerRate background/service-worker
-//
-// Ansvar:
-// - kontrollera med backend om affären får betygsättas
-// - hålla lokal cache för redan betygsatta affärer
-// - lagra pending payload för rate-sidan
-// - öppna PeerRate rate.html
-// - svara på bridge-förfrågningar från peerrate.ai
+// Minimal arkitektur:
+// - checkDealStatus mot backend
+// - öppna exakt URL som content-script skickar
+// - markera lokalt att en affär redan är betygsatt
 
 const API_BASE = 'https://api.peerrate.ai';
 
 const RATED_CACHE_KEY = 'peerrate_extension_rated_cache_v1';
 const RATED_TTL_MS = 1000 * 60 * 60 * 24 * 90; // 90 dagar
-
-const PENDING_PAYLOAD_KEY = 'peerrate_extension_pending_payload_v1';
-const PENDING_TTL_MS = 1000 * 60 * 30; // 30 min
 
 function normalizeText(v) {
   return String(v || '').trim();
@@ -60,9 +53,9 @@ function buildDealKey(payload) {
   return `${source}|${proofRef}`;
 }
 
-function storageGetLocal(keys) {
+function storageGetLocal(key) {
   return new Promise((resolve) => {
-    chrome.storage.local.get(keys, (res) => resolve(res || {}));
+    chrome.storage.local.get(key, (res) => resolve(res?.[key]));
   });
 }
 
@@ -72,15 +65,9 @@ function storageSetLocal(obj) {
   });
 }
 
-function storageRemoveLocal(keys) {
-  return new Promise((resolve) => {
-    chrome.storage.local.remove(keys, () => resolve(true));
-  });
-}
-
 async function readRatedCache() {
   try {
-    const obj = (await storageGetLocal([RATED_CACHE_KEY]))?.[RATED_CACHE_KEY] || {};
+    const obj = (await storageGetLocal(RATED_CACHE_KEY)) || {};
     return obj && typeof obj === 'object' ? obj : {};
   } catch {
     return {};
@@ -249,57 +236,6 @@ async function checkDealStatusWithBackend(payload) {
   }
 }
 
-function compactPayload(payload) {
-  const p = payload && typeof payload === 'object' ? payload : {};
-  return {
-    source: p.source || '',
-    pageUrl: p.pageUrl || '',
-    proofRef: p.proofRef || '',
-    subjectEmail: p.subjectEmail || '',
-    counterparty: p.counterparty || null,
-    deal: p.deal || null,
-    _ts: Date.now(),
-  };
-}
-
-async function storePendingPayload(payload) {
-  const normalized = compactPayload(payload);
-  await storageSetLocal({ [PENDING_PAYLOAD_KEY]: normalized });
-  return normalized;
-}
-
-async function getPendingPayload() {
-  const stored = (await storageGetLocal([PENDING_PAYLOAD_KEY]))?.[PENDING_PAYLOAD_KEY] || null;
-  if (!stored || typeof stored !== 'object') return null;
-
-  const ts = Number(stored._ts || 0);
-  if (!ts || (Date.now() - ts) > PENDING_TTL_MS) {
-    await storageRemoveLocal([PENDING_PAYLOAD_KEY]);
-    return null;
-  }
-
-  return stored;
-}
-
-async function clearPendingPayload() {
-  await storageRemoveLocal([PENDING_PAYLOAD_KEY]);
-  return true;
-}
-
-async function openPeerRatePending(payload) {
-  const stored = await storePendingPayload(payload);
-  await chrome.tabs.create({
-    url: 'https://peerrate.ai/rate.html?pr_pending=1',
-  });
-
-  return {
-    ok: true,
-    opened: true,
-    stored: true,
-    payload: stored,
-  };
-}
-
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (!msg || !msg.type) return;
 
@@ -327,58 +263,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           ok: false,
           opened: false,
           error: String(err?.message || err || 'Could not open tab'),
-        });
-      }
-    })();
-    return true;
-  }
-
-  if (msg.type === 'openPeerRatePending') {
-    (async () => {
-      try {
-        const payload = msg.payload || {};
-        const result = await openPeerRatePending(payload);
-        sendResponse(result);
-      } catch (err) {
-        sendResponse({
-          ok: false,
-          opened: false,
-          error: String(err?.message || err || 'Could not open pending rate page'),
-        });
-      }
-    })();
-    return true;
-  }
-
-  if (msg.type === 'getPendingPayloadForPage') {
-    (async () => {
-      try {
-        const payload = await getPendingPayload();
-        sendResponse({
-          ok: !!payload,
-          payload: payload || null,
-        });
-      } catch (err) {
-        sendResponse({
-          ok: false,
-          payload: null,
-          error: String(err?.message || err || 'Could not get pending payload'),
-        });
-      }
-    })();
-    return true;
-  }
-
-  if (msg.type === 'clearPendingPayloadForPage') {
-    (async () => {
-      try {
-        await clearPendingPayload();
-        sendResponse({ ok: true, cleared: true });
-      } catch (err) {
-        sendResponse({
-          ok: false,
-          cleared: false,
-          error: String(err?.message || err || 'Could not clear pending payload'),
         });
       }
     })();

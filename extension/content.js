@@ -1,15 +1,10 @@
 // extension/content.js
-// PeerRate – Tradera trigger
-// Ny förenklad arkitektur:
-// - extrahera payload från Tradera order-sida
+// Minimal PeerRate Tradera content script
+// Flöde:
+// - extrahera affär från Tradera order-sida
 // - kontrollera med backend om affären får betygsättas
-// - spara payload via service worker
-// - öppna rate.html med enkel query-flagga
+// - öppna PeerRate med payload i hash (#pr=...)
 //
-// Vi använder inte hash som primär transport längre.
-// Hash kan finnas kvar som fallback i frontend, men extensionen
-// skickar nu främst payload via service-worker + chrome.storage.local.
-
 (function () {
   const DEFAULTS = { peerrate_enabled: true };
   const BTN_ID = 'peerrate-float-btn';
@@ -485,7 +480,7 @@
     if (!proofRef) return null;
 
     return {
-      v: 6,
+      v: 7,
       source: 'tradera',
       pageUrl,
       proofRef,
@@ -498,16 +493,7 @@
         currency: order.currency || (order.amount != null ? 'SEK' : null),
         date: order.dateISO || null,
         dateISO: order.dateISO || null,
-        pageUrl,
-        counterparty: {
-          email: cp.email || null,
-          name: cp.name || null,
-          phone: cp.phone || null,
-          addressStreet: cp.addressStreet || null,
-          addressZip: cp.addressZip || null,
-          addressCity: cp.addressCity || null,
-          country: cp.country || null,
-        },
+        pageUrl
       },
       counterparty: {
         email: cp.email || null,
@@ -522,9 +508,9 @@
         orderId: order.orderId || null,
         itemId: order.itemId || null,
         title: order.title || null,
-        amountSek: order.amount != null ? order.amount : null,
+        amountSek: order.amount != null ? order.amount : null
       },
-      subjectEmail: cp.email || '',
+      subjectEmail: cp.email || ''
     };
   }
 
@@ -569,6 +555,16 @@
     }
 
     return best;
+  }
+
+  function encodePayloadForHash(payload) {
+    const json = JSON.stringify(payload || {});
+    return encodeURIComponent(btoa(unescape(encodeURIComponent(json))));
+  }
+
+  function buildRateUrl(payload) {
+    const encoded = encodePayloadForHash(payload);
+    return `https://peerrate.ai/rate.html#pr=${encoded}`;
   }
 
   async function evaluatePage() {
@@ -718,13 +714,15 @@
 
           btn.textContent = 'Öppnar PeerRate...';
 
+          const url = buildRateUrl(bestPayload);
+
           const openResult = await sendMessageAsync({
-            type: 'openPeerRatePending',
-            payload: bestPayload,
+            type: 'openPeerRateUrl',
+            url,
           });
 
           if (!openResult?.ok) {
-            console.warn('[PeerRate extension] openPeerRatePending failed', openResult);
+            console.warn('[PeerRate extension] openPeerRateUrl failed', openResult);
             btn.disabled = false;
             btn.textContent = originalText;
             return;

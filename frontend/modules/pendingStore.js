@@ -1,13 +1,8 @@
 // frontend/modules/pendingStore.js
-// Förenklad pending-store.
-// Läser i denna ordning:
-// 1) hash-parametern #pr=...
-// 2) query-parametern ?pr=...
-// 3) legacy query-parametrar
-// 4) localStorage
-//
-// Extensionen skriver nu direkt till localStorage via page-bridge.js.
-// Därför behövs ingen aktiv request/response-bridge från frontend längre.
+// Enkel pending-store.
+// Primär väg: #pr=... i URL
+// Fallback: ?pr=... eller legacy query-parametrar
+// Därefter lagras payload i sidans localStorage.
 
 const PENDING_KEY = 'peerrate_pending_rating_v6';
 const TTL_MS = 1000 * 60 * 60 * 24;
@@ -481,9 +476,6 @@ export function captureFromUrl() {
   return result;
 }
 
-// Kompatibilitet: ratingForm.js anropar denna.
-// Nu behövs ingen aktiv bridge-request längre.
-// page-bridge.js skriver redan till localStorage innan main-flödet kör klart.
 export async function captureFromExtensionBridge() {
   return getPending();
 }
