@@ -623,7 +623,7 @@ button.secondary{
 }
 
 .marketplace-platform-label{
-  font-weight:800;
+  font-weight:600;
   color:var(--pr-purple, #1f3fb7);
   line-height: 1.25;
 }
@@ -695,7 +695,7 @@ button.secondary{
   min-height: 38px;
   padding: 9px 12px;
   border-radius: 14px;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 13px;
   line-height: 1;
   white-space: nowrap;
@@ -759,7 +759,7 @@ button.secondary{
   padding:10px 12px;
   white-space:nowrap;
   border-radius:14px;
-  font-weight:800;
+  font-weight:600;
 }
 
 .marketplace-edit-btn{
@@ -783,7 +783,7 @@ button.secondary{
 .marketplace-toggle-missing-btn.is-active{
   background: linear-gradient(180deg, rgba(246,247,249,.98), rgba(237,239,243,.98));
   border-color: rgba(15,15,18,.14);
-  font-weight:800;
+  font-weight:600;
 }
 
 @media (max-width: 1080px){

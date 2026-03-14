@@ -263,6 +263,7 @@ function getStatusMeta(profile) {
       className: 'status-not-linked',
       rowClass: '',
       noAccount: false,
+      isLinked: false,
       username: '',
       email: '',
       locked: false,
@@ -281,6 +282,7 @@ function getStatusMeta(profile) {
       className: 'status-missing',
       rowClass: 'marketplace-row-disabled',
       noAccount: true,
+      isLinked: false,
       username: '',
       email: '',
       locked: true,
@@ -293,6 +295,7 @@ function getStatusMeta(profile) {
       className: 'status-linked',
       rowClass: '',
       noAccount: false,
+      isLinked: true,
       username: rawUsername,
       email: rawEmail,
       locked: true,
@@ -304,6 +307,7 @@ function getStatusMeta(profile) {
     className: 'status-not-linked',
     rowClass: '',
     noAccount: false,
+    isLinked: false,
     username: '',
     email: '',
     locked: false,
@@ -334,6 +338,11 @@ function renderPlatformLogo(platform) {
   `;
 }
 
+function setButtonHidden(button, shouldHide) {
+  if (!button) return;
+  button.classList.toggle('hidden', Boolean(shouldHide));
+}
+
 function applyMarketplaceRowState(tr, meta) {
   if (!tr) return;
 
@@ -347,6 +356,7 @@ function applyMarketplaceRowState(tr, meta) {
   tr.classList.toggle('marketplace-row-disabled', Boolean(meta.noAccount));
   tr.setAttribute('data-no-account', meta.noAccount ? '1' : '0');
   tr.setAttribute('data-locked', meta.locked ? '1' : '0');
+  tr.setAttribute('data-linked', meta.isLinked ? '1' : '0');
 
   if (statusEl) {
     statusEl.className = `marketplace-status ${meta.className}`;
@@ -357,11 +367,11 @@ function applyMarketplaceRowState(tr, meta) {
   if (usernameInput) usernameInput.disabled = disableInputs;
   if (emailInput) emailInput.disabled = disableInputs;
 
-  if (saveBtn) saveBtn.disabled = disableInputs;
+  if (saveBtn) saveBtn.disabled = Boolean(meta.noAccount);
+  if (editBtn) editBtn.disabled = Boolean(meta.noAccount);
 
   if (editBtn) {
-    editBtn.disabled = Boolean(meta.noAccount);
-    editBtn.textContent = meta.noAccount ? 'Konto saknas' : (meta.locked ? 'Redigera' : 'Redigerar');
+    editBtn.textContent = meta.noAccount ? 'Konto saknas' : 'Redigera';
   }
 
   if (toggleBtn) {
@@ -369,6 +379,11 @@ function applyMarketplaceRowState(tr, meta) {
     toggleBtn.setAttribute('data-no-account', meta.noAccount ? '1' : '0');
     toggleBtn.classList.toggle('is-active', Boolean(meta.noAccount));
   }
+
+  const hideSaveAndMissing = Boolean(meta.isLinked && meta.locked && !meta.noAccount);
+
+  setButtonHidden(saveBtn, hideSaveAndMissing);
+  setButtonHidden(toggleBtn, hideSaveAndMissing);
 }
 
 function renderMarketplaceProfiles() {
@@ -387,6 +402,7 @@ function renderMarketplaceProfiles() {
     tr.setAttribute('data-platform', platform.key);
     tr.setAttribute('data-no-account', meta.noAccount ? '1' : '0');
     tr.setAttribute('data-locked', meta.locked ? '1' : '0');
+    tr.setAttribute('data-linked', meta.isLinked ? '1' : '0');
 
     tr.innerHTML = `
       <td class="marketplace-platform-cell" data-label="Plattform">
@@ -432,7 +448,7 @@ function renderMarketplaceProfiles() {
           class="secondary marketplace-edit-btn"
           data-platform="${platform.key}"
         >
-          ${meta.noAccount ? 'Konto saknas' : (meta.locked ? 'Redigera' : 'Redigerar')}
+          ${meta.noAccount ? 'Konto saknas' : 'Redigera'}
         </button>
       </td>
 
@@ -526,13 +542,17 @@ function unlockMarketplaceRow(tr) {
   const emailInput = tr.querySelector('.marketplace-email-input');
   const saveBtn = tr.querySelector('.marketplace-save-btn');
   const editBtn = tr.querySelector('.marketplace-edit-btn');
+  const toggleBtn = tr.querySelector('.marketplace-toggle-missing-btn');
 
   tr.setAttribute('data-locked', '0');
 
   if (usernameInput) usernameInput.disabled = false;
   if (emailInput) emailInput.disabled = false;
   if (saveBtn) saveBtn.disabled = false;
-  if (editBtn) editBtn.textContent = 'Redigerar';
+  if (editBtn) editBtn.textContent = 'Redigera';
+
+  setButtonHidden(saveBtn, false);
+  setButtonHidden(toggleBtn, false);
 
   if (usernameInput) {
     usernameInput.focus();
@@ -544,20 +564,28 @@ function lockMarketplaceRow(tr) {
   if (!tr) return;
 
   const isNoAccount = tr.getAttribute('data-no-account') === '1';
+  const isLinked = tr.getAttribute('data-linked') === '1';
+
   const usernameInput = tr.querySelector('.marketplace-username-input');
   const emailInput = tr.querySelector('.marketplace-email-input');
   const saveBtn = tr.querySelector('.marketplace-save-btn');
   const editBtn = tr.querySelector('.marketplace-edit-btn');
+  const toggleBtn = tr.querySelector('.marketplace-toggle-missing-btn');
 
   tr.setAttribute('data-locked', '1');
 
   if (usernameInput) usernameInput.disabled = true;
   if (emailInput) emailInput.disabled = true;
-  if (saveBtn) saveBtn.disabled = true;
+  if (saveBtn) saveBtn.disabled = Boolean(isNoAccount);
+
   if (editBtn) {
     editBtn.disabled = Boolean(isNoAccount);
     editBtn.textContent = isNoAccount ? 'Konto saknas' : 'Redigera';
   }
+
+  const hideSaveAndMissing = Boolean(isLinked && !isNoAccount);
+  setButtonHidden(saveBtn, hideSaveAndMissing);
+  setButtonHidden(toggleBtn, hideSaveAndMissing);
 }
 
 function bindMarketplaceButtons() {
@@ -625,6 +653,7 @@ function bindMarketplaceButtons() {
             className: 'status-not-linked',
             rowClass: '',
             noAccount: false,
+            isLinked: false,
             username: '',
             email: '',
             locked: false,
@@ -635,6 +664,7 @@ function bindMarketplaceButtons() {
             className: 'status-missing',
             rowClass: 'marketplace-row-disabled',
             noAccount: true,
+            isLinked: false,
             username: '',
             email: '',
             locked: true,
