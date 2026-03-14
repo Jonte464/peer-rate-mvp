@@ -528,47 +528,53 @@ button.secondary{
 
 /* Marketplace */
 .marketplace-table-wrap{
-  overflow-x:auto;
-  margin-top:12px;
-  border:1px solid rgba(15,15,18,.08);
-  border-radius:14px;
-  background:rgba(255,255,255,.92);
-  -webkit-overflow-scrolling: touch;
+  overflow-x: visible;
+  margin-top: 14px;
 }
 
 .marketplace-table{
   width:100%;
-  border-collapse:collapse;
-  min-width:940px;
-}
-
-.marketplace-table th,
-.marketplace-table td{
-  text-align:left;
-  padding:10px 10px;
-  border-bottom:1px solid rgba(15,15,18,.08);
-  vertical-align:middle;
+  border-collapse:separate;
+  border-spacing:0 12px;
+  min-width: 0;
 }
 
 .marketplace-table thead th{
-  font-size:13px;
+  text-align:left;
+  padding: 0 12px 8px;
+  font-size:12px;
   font-weight:800;
-  color:rgba(15,15,18,.82);
-  background:rgba(15,15,18,.03);
+  color:rgba(15,15,18,.58);
+  letter-spacing:.02em;
+  text-transform:uppercase;
 }
 
-.marketplace-table tbody tr:last-child td{
-  border-bottom:none;
+.marketplace-table tbody tr{
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.98), rgba(250,251,253,.98));
+  box-shadow:
+    0 12px 34px rgba(0,0,0,.06),
+    inset 0 1px 0 rgba(255,255,255,.85);
 }
 
-.marketplace-table .marketplace-save-btn,
-.marketplace-table .marketplace-toggle-missing-btn,
-.marketplace-table .marketplace-edit-btn{
-  width:auto;
-  min-width:102px;
-  margin-top:0;
-  padding:8px 10px;
-  white-space:nowrap;
+.marketplace-table tbody td{
+  padding: 14px 12px;
+  vertical-align: top;
+  border-top: 1px solid rgba(15,15,18,.08);
+  border-bottom: 1px solid rgba(15,15,18,.08);
+  background: transparent;
+}
+
+.marketplace-table tbody td:first-child{
+  border-left: 1px solid rgba(15,15,18,.08);
+  border-top-left-radius: 18px;
+  border-bottom-left-radius: 18px;
+}
+
+.marketplace-table tbody td:last-child{
+  border-right: 1px solid rgba(15,15,18,.08);
+  border-top-right-radius: 18px;
+  border-bottom-right-radius: 18px;
 }
 
 .marketplace-platform-cell{
@@ -585,24 +591,25 @@ button.secondary{
 
 .marketplace-platform-logo-wrap{
   position:relative;
-  width:30px;
-  height:30px;
+  width:34px;
+  height:34px;
   flex:0 0 auto;
 }
 
 .marketplace-platform-logo{
-  width:30px;
-  height:30px;
+  width:34px;
+  height:34px;
   object-fit:contain;
   display:block;
-  border-radius:8px;
+  border-radius:10px;
   background:#fff;
+  box-shadow: 0 6px 16px rgba(0,0,0,.06);
 }
 
 .marketplace-platform-badge-fallback{
-  width:30px;
-  height:30px;
-  border-radius:8px;
+  width:34px;
+  height:34px;
+  border-radius:10px;
   display:none;
   align-items:center;
   justify-content:center;
@@ -615,7 +622,7 @@ button.secondary{
 }
 
 .marketplace-platform-label{
-  font-weight:700;
+  font-weight:800;
   color:var(--pr-purple, #1f3fb7);
 }
 
@@ -627,7 +634,7 @@ button.secondary{
 .marketplace-account-fields{
   display:grid;
   grid-template-columns: 1fr 1fr;
-  gap:8px;
+  gap:10px;
 }
 
 .marketplace-account-field{
@@ -636,21 +643,33 @@ button.secondary{
 
 .marketplace-field-label{
   font-size:11px;
-  font-weight:700;
-  color:rgba(15,15,18,.62);
-  margin-bottom:4px;
+  font-weight:800;
+  color:rgba(15,15,18,.56);
+  margin-bottom:6px;
+  letter-spacing:.02em;
+  text-transform:uppercase;
 }
 
 .marketplace-username-input,
 .marketplace-email-input{
   width:100%;
   min-width:0;
-  padding:9px 12px;
-  border-radius:10px;
-  border:1px solid rgba(15,15,18,.14);
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(15,15,18,.12);
   background:#fff;
   color:#111827;
   font:inherit;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.03);
+}
+
+.marketplace-username-input:focus,
+.marketplace-email-input:focus{
+  outline: none;
+  border-color: rgba(29,78,216,.28);
+  box-shadow:
+    0 0 0 4px rgba(29,78,216,.08),
+    inset 0 1px 2px rgba(0,0,0,.03);
 }
 
 .marketplace-username-input:disabled,
@@ -662,20 +681,51 @@ button.secondary{
 }
 
 .marketplace-status-cell{
-  min-width:110px;
+  min-width:132px;
+  vertical-align: middle !important;
 }
 
 .marketplace-status{
-  font-weight:800;
-  white-space:nowrap;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height: 38px;
+  padding: 9px 14px;
+  border-radius: 14px;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.55),
+    0 8px 18px rgba(0,0,0,.04);
 }
 
-.status-linked{ color:#15803d; }
-.status-not-linked{ color:#b91c1c; }
-.status-missing{ color:#6b7280; }
+.status-linked{
+  color: #256f46;
+  background: linear-gradient(180deg, rgba(236,250,241,.96), rgba(222,245,230,.96));
+  border-color: rgba(37,111,70,.12);
+}
+
+.status-not-linked{
+  color: #8d5418;
+  background: linear-gradient(180deg, rgba(255,246,232,.98), rgba(249,235,212,.98));
+  border-color: rgba(141,84,24,.14);
+}
+
+.status-missing{
+  color: #5f6472;
+  background: linear-gradient(180deg, rgba(246,247,249,.98), rgba(237,239,243,.98));
+  border-color: rgba(95,100,114,.12);
+}
 
 .marketplace-row-disabled td{
-  background:rgba(15,15,18,.05);
+  background: transparent;
+}
+
+.marketplace-row-disabled{
+  opacity: .92;
 }
 
 .marketplace-row-disabled .marketplace-platform-label{
@@ -694,13 +744,44 @@ button.secondary{
 .marketplace-edit-cell,
 .marketplace-save-cell,
 .marketplace-missing-cell{
-  width:112px;
+  width:132px;
   white-space:nowrap;
+  vertical-align: middle !important;
+}
+
+.marketplace-table .marketplace-save-btn,
+.marketplace-table .marketplace-toggle-missing-btn,
+.marketplace-table .marketplace-edit-btn{
+  width:auto;
+  min-width:110px;
+  margin-top:0;
+  padding:10px 12px;
+  white-space:nowrap;
+  border-radius:14px;
+  font-weight:800;
+}
+
+.marketplace-edit-btn{
+  background: rgba(255,255,255,.96);
+}
+
+.marketplace-save-btn{
+  background: rgba(15,23,42,.92);
+  color:#fff;
+  border:1px solid rgba(15,23,42,.18);
+}
+
+.marketplace-save-btn:hover{
+  filter: brightness(1.03);
+}
+
+.marketplace-toggle-missing-btn{
+  background: rgba(255,255,255,.96);
 }
 
 .marketplace-toggle-missing-btn.is-active{
-  background:rgba(15,15,18,.08);
-  border-color:rgba(15,15,18,.16);
+  background: linear-gradient(180deg, rgba(246,247,249,.98), rgba(237,239,243,.98));
+  border-color: rgba(15,15,18,.14);
   font-weight:800;
 }
 
@@ -709,16 +790,12 @@ button.secondary{
     max-width: 100%;
   }
 
-  .marketplace-table{
-    min-width:900px;
-  }
-
   .marketplace-account-cell{
-    min-width:340px;
+    min-width: 320px;
   }
 }
 
-@media (max-width:600px){
+@media (max-width: 760px){
   .page{ padding: 20px 0 40px; }
   .wrap{ padding:0 12px 32px; max-width:100%; }
   h1{font-size:30px;}
@@ -730,14 +807,90 @@ button.secondary{
   }
 
   .marketplace-table{
-    min-width:980px;
+    display:block;
+    width:100%;
+    border-spacing: 0;
+  }
+
+  .marketplace-table thead{
+    display:none;
+  }
+
+  .marketplace-table tbody{
+    display:block;
+  }
+
+  .marketplace-table tbody tr{
+    display:block;
+    margin-bottom:14px;
+    border:1px solid rgba(15,15,18,.08);
+    border-radius:18px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.99), rgba(250,251,253,.99));
+    box-shadow:
+      0 14px 38px rgba(0,0,0,.06),
+      inset 0 1px 0 rgba(255,255,255,.85);
+    overflow:hidden;
+  }
+
+  .marketplace-table tbody td{
+    display:block;
+    width:100%;
+    min-width:0 !important;
+    border:0 !important;
+    padding: 12px 12px 14px;
+  }
+
+  .marketplace-table tbody td + td{
+    border-top:1px solid rgba(15,15,18,.06) !important;
+  }
+
+  .marketplace-table tbody td::before{
+    content: attr(data-label);
+    display:block;
+    margin-bottom:8px;
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:rgba(15,15,18,.48);
+  }
+
+  .marketplace-platform-cell{
+    padding-top:14px !important;
+  }
+
+  .marketplace-platform-cell::before{
+    margin-bottom:10px;
   }
 
   .marketplace-account-fields{
     grid-template-columns: 1fr;
+    gap:10px;
   }
 
-  .marketplace-account-cell{
-    min-width:300px;
+  .marketplace-status{
+    min-width: 0;
+  }
+
+  .marketplace-edit-cell,
+  .marketplace-save-cell,
+  .marketplace-missing-cell{
+    width:100%;
+  }
+
+  .marketplace-table .marketplace-save-btn,
+  .marketplace-table .marketplace-toggle-missing-btn,
+  .marketplace-table .marketplace-edit-btn{
+    width:100%;
+    min-width:0;
+  }
+}
+
+@media (max-width: 600px){
+  .profile-list li{
+    flex-direction:column;
+    gap:4px;
+    align-items:flex-start;
   }
 }

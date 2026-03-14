@@ -389,14 +389,14 @@ function renderMarketplaceProfiles() {
     tr.setAttribute('data-locked', meta.locked ? '1' : '0');
 
     tr.innerHTML = `
-      <td class="marketplace-platform-cell">
+      <td class="marketplace-platform-cell" data-label="Plattform">
         <div class="marketplace-platform-inline">
           ${renderPlatformLogo(platform)}
           <span class="marketplace-platform-label">${escapeHtml(platform.label)}</span>
         </div>
       </td>
 
-      <td class="marketplace-account-cell">
+      <td class="marketplace-account-cell" data-label="Kontouppgifter">
         <div class="marketplace-account-fields">
           <div class="marketplace-account-field">
             <div class="marketplace-field-label">Alias / användarnamn</div>
@@ -422,11 +422,11 @@ function renderMarketplaceProfiles() {
         </div>
       </td>
 
-      <td class="marketplace-status-cell">
+      <td class="marketplace-status-cell" data-label="Status">
         <span class="marketplace-status ${meta.className}">${meta.text}</span>
       </td>
 
-      <td class="marketplace-edit-cell">
+      <td class="marketplace-edit-cell" data-label="Redigera">
         <button
           type="button"
           class="secondary marketplace-edit-btn"
@@ -436,7 +436,7 @@ function renderMarketplaceProfiles() {
         </button>
       </td>
 
-      <td class="marketplace-save-cell">
+      <td class="marketplace-save-cell" data-label="Spara">
         <button
           type="button"
           class="secondary marketplace-save-btn"
@@ -446,7 +446,7 @@ function renderMarketplaceProfiles() {
         </button>
       </td>
 
-      <td class="marketplace-missing-cell">
+      <td class="marketplace-missing-cell" data-label="Saknar konto">
         <button
           type="button"
           class="secondary marketplace-toggle-missing-btn ${meta.noAccount ? 'is-active' : ''}"
