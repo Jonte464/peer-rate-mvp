@@ -9,6 +9,7 @@ function mapRatingSourceLabel(source) {
   if (!source) return t('profile_rating_source_other', 'Other/unknown');
 
   const s = String(source).toUpperCase();
+
   switch (s) {
     case 'BLOCKET':
       return 'Blocket';
@@ -20,6 +21,12 @@ function mapRatingSourceLabel(source) {
       return 'Husknuten';
     case 'TIPTAP':
       return 'Tiptap';
+    case 'HYGGLO':
+      return 'Hygglo';
+    case 'FACEBOOK':
+      return 'Facebook Marketplace';
+    case 'EBAY':
+      return 'eBay';
     case 'OTHER':
     default:
       return t('profile_rating_source_other', 'Other/unknown');
@@ -41,6 +48,16 @@ function escapeHtml(value) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function setDynamicPieCenterLabel(text) {
+  const pieLabel = document.getElementById('rating-source-pie-label');
+  if (!pieLabel) return;
+
+  // Viktigt:
+  // Detta element renderas dynamiskt och får inte skrivas över av applyLang(document).
+  pieLabel.removeAttribute('data-i18n');
+  pieLabel.textContent = text;
 }
 
 export function renderPRating(avg) {
@@ -80,13 +97,12 @@ export function renderPRating(avg) {
 
 export function renderRatingSources(ratings) {
   const pie = document.getElementById('rating-source-pie');
-  const pieLabel = document.getElementById('rating-source-pie-label');
   const legend = document.getElementById('rating-source-legend');
   if (!pie || !legend) return;
 
   if (!Array.isArray(ratings) || ratings.length === 0) {
     pie.style.background = '#f1e4d5';
-    if (pieLabel) pieLabel.textContent = t('profile_no_ratings', 'No ratings');
+    setDynamicPieCenterLabel(t('profile_no_ratings', 'No ratings'));
     legend.innerHTML = `<div class="tiny muted">${escapeHtml(t('profile_no_ratings_yet', 'No ratings yet.'))}</div>`;
     return;
   }
@@ -126,9 +142,9 @@ export function renderRatingSources(ratings) {
   });
 
   pie.style.background = `conic-gradient(${parts.join(', ')})`;
-  if (pieLabel) {
-    pieLabel.textContent = t('profile_total_ratings', '{count} ratings', { count: total });
-  }
+  setDynamicPieCenterLabel(
+    t('profile_total_ratings', '{count} ratings', { count: total })
+  );
 }
 
 function renderRatingsList(ratings) {
