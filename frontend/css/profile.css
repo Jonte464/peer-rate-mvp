@@ -342,8 +342,9 @@ textarea{min-height:110px;resize:vertical;}
 }
 
 .card-marketplace{
-  padding-right: 12px;
-  padding-left: 12px;
+  padding-right: 14px;
+  padding-left: 14px;
+  overflow: hidden;
 }
 
 button.primary{
@@ -530,36 +531,37 @@ button.secondary{
 .marketplace-table-wrap{
   overflow-x: visible;
   margin-top: 14px;
+  width: 100%;
 }
 
 .marketplace-table{
   width:100%;
   border-collapse:separate;
-  border-spacing:0 12px;
-  min-width: 0;
+  border-spacing:0 10px;
+  table-layout: fixed;
 }
 
 .marketplace-table thead th{
   text-align:left;
-  padding: 0 12px 8px;
+  padding: 0 10px 6px;
   font-size:12px;
-  font-weight:800;
-  color:rgba(15,15,18,.58);
-  letter-spacing:.02em;
-  text-transform:uppercase;
+  font-weight:500;
+  color:rgba(15,15,18,.52);
+  letter-spacing:0;
+  text-transform:none;
 }
 
 .marketplace-table tbody tr{
   background:
     linear-gradient(180deg, rgba(255,255,255,.98), rgba(250,251,253,.98));
   box-shadow:
-    0 12px 34px rgba(0,0,0,.06),
+    0 10px 26px rgba(0,0,0,.05),
     inset 0 1px 0 rgba(255,255,255,.85);
 }
 
 .marketplace-table tbody td{
-  padding: 14px 12px;
-  vertical-align: top;
+  padding: 12px 10px;
+  vertical-align: middle;
   border-top: 1px solid rgba(15,15,18,.08);
   border-bottom: 1px solid rgba(15,15,18,.08);
   background: transparent;
@@ -578,8 +580,8 @@ button.secondary{
 }
 
 .marketplace-platform-cell{
-  white-space:nowrap;
-  min-width:180px;
+  width: 21%;
+  white-space: normal;
 }
 
 .marketplace-platform-inline{
@@ -624,11 +626,11 @@ button.secondary{
 .marketplace-platform-label{
   font-weight:800;
   color:var(--pr-purple, #1f3fb7);
+  line-height: 1.25;
 }
 
 .marketplace-account-cell{
-  width:40%;
-  min-width:360px;
+  width: 31%;
 }
 
 .marketplace-account-fields{
@@ -643,7 +645,7 @@ button.secondary{
 
 .marketplace-field-label{
   font-size:11px;
-  font-weight:800;
+  font-weight:700;
   color:rgba(15,15,18,.56);
   margin-bottom:6px;
   letter-spacing:.02em;
@@ -681,8 +683,7 @@ button.secondary{
 }
 
 .marketplace-status-cell{
-  min-width:132px;
-  vertical-align: middle !important;
+  width: 12%;
 }
 
 .marketplace-status{
@@ -690,7 +691,7 @@ button.secondary{
   align-items:center;
   justify-content:center;
   min-height: 38px;
-  padding: 9px 14px;
+  padding: 9px 12px;
   border-radius: 14px;
   font-weight: 800;
   font-size: 13px;
@@ -744,18 +745,16 @@ button.secondary{
 .marketplace-edit-cell,
 .marketplace-save-cell,
 .marketplace-missing-cell{
-  width:132px;
-  white-space:nowrap;
-  vertical-align: middle !important;
+  width: 12%;
 }
 
 .marketplace-table .marketplace-save-btn,
 .marketplace-table .marketplace-toggle-missing-btn,
 .marketplace-table .marketplace-edit-btn{
-  width:auto;
-  min-width:110px;
+  width:100%;
+  min-width:0;
   margin-top:0;
-  padding:10px 12px;
+  padding:10px 10px;
   white-space:nowrap;
   border-radius:14px;
   font-weight:800;
@@ -785,13 +784,22 @@ button.secondary{
   font-weight:800;
 }
 
-@media (max-width: 960px){
-  .wrap{
-    max-width: 100%;
+@media (max-width: 1080px){
+  .marketplace-table{
+    table-layout: auto;
   }
 
-  .marketplace-account-cell{
-    min-width: 320px;
+  .marketplace-platform-cell,
+  .marketplace-account-cell,
+  .marketplace-status-cell,
+  .marketplace-edit-cell,
+  .marketplace-save-cell,
+  .marketplace-missing-cell{
+    width: auto;
+  }
+
+  .marketplace-account-fields{
+    grid-template-columns: 1fr;
   }
 }
 
@@ -850,9 +858,9 @@ button.secondary{
     display:block;
     margin-bottom:8px;
     font-size:11px;
-    font-weight:800;
-    letter-spacing:.04em;
-    text-transform:uppercase;
+    font-weight:500;
+    letter-spacing:0;
+    text-transform:none;
     color:rgba(15,15,18,.48);
   }
 
