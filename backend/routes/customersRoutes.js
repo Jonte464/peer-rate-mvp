@@ -67,6 +67,17 @@ function assignNormalizedCheckboxIfPresent(target, raw, key) {
   }
 }
 
+function safeErrMeta(err) {
+  return {
+    name: err?.name || null,
+    message: err?.message || null,
+    code: err?.code || null,
+    clientVersion: err?.clientVersion || null,
+    meta: err?.meta || null,
+    stack: err?.stack || null,
+  };
+}
+
 // Steg 1
 const createCustomerStep1Schema = Joi.object({
   flowStep: Joi.string().valid("step1").required(),
@@ -202,6 +213,10 @@ async function handleCreateOrUpdateCustomer(req, res) {
     thirdPartyConsent: body.thirdPartyConsent,
     hasFirstName: !!body.firstName,
     hasPersonalNumber: !!body.personalNumber,
+    addressStreet: body.addressStreet || null,
+    addressZip: body.addressZip || null,
+    addressCity: body.addressCity || null,
+    country: body.country || null,
   });
 
   const schema =
@@ -224,6 +239,14 @@ async function handleCreateOrUpdateCustomer(req, res) {
     const msg = friendly
       ? `Kontrollera fältet: ${friendly}.`
       : "En eller flera uppgifter är ogiltiga. Kontrollera formuläret.";
+
+    console.error("DEBUG /api/customers validation error:", {
+      flowStep,
+      key,
+      message: firstDetail?.message || error.message,
+      details: error.details || null,
+      bodyKeys: Object.keys(body),
+    });
 
     return fail(res, 400, "FIELD_INVALID", msg);
   }
@@ -250,14 +273,37 @@ async function handleCreateOrUpdateCustomer(req, res) {
   const blocketPassword = value.blocketPassword || "";
 
   try {
+    console.log("DEBUG /api/customers lookup start:", {
+      flowStep,
+      emailTrim,
+      subjectRef,
+    });
+
     const existingBySubject = await prisma.customer.findUnique({
       where: { subjectRef },
+    });
+
+    console.log("DEBUG /api/customers lookup result:", {
+      flowStep,
+      emailTrim,
+      subjectRef,
+      existingBySubjectId: existingBySubject?.id || null,
+      existingBySubjectEmail: existingBySubject?.email || null,
+      existingBySubjectHasPassword: !!existingBySubject?.passwordHash,
+      existingBySubjectPersonalNumber: existingBySubject?.personalNumber || null,
     });
 
     let personalNumberClean = null;
 
     if (flowStep === "step2") {
+      console.log("DEBUG /api/customers step2 before personal number validation:", {
+        emailTrim,
+        personalNumberRaw: value.personalNumber,
+      });
+
       const pnValidation = validateSwedishPersonalNumber(value.personalNumber);
+
+      console.log("DEBUG /api/customers step2 personal number validation result:", pnValidation);
 
       if (!pnValidation.ok) {
         return fail(
@@ -272,6 +318,12 @@ async function handleCreateOrUpdateCustomer(req, res) {
 
       const existingByPn = await prisma.customer.findUnique({
         where: { personalNumber: personalNumberClean },
+      });
+
+      console.log("DEBUG /api/customers step2 personal number lookup result:", {
+        personalNumberClean,
+        existingByPnId: existingByPn?.id || null,
+        existingByPnEmail: existingByPn?.email || null,
       });
 
       if (existingByPn && (!existingBySubject || existingByPn.id !== existingBySubject.id)) {
@@ -335,6 +387,15 @@ async function handleCreateOrUpdateCustomer(req, res) {
       ...(value.thirdPartyConsent === true ? { thirdPartyConsent: true } : {}),
     };
 
+    console.log("DEBUG /api/customers write payload:", {
+      flowStep,
+      mode: existingBySubject ? "update" : "create",
+      emailTrim,
+      subjectRef,
+      step1Data,
+      step2Data,
+    });
+
     let customer;
 
     if (existingBySubject) {
@@ -357,6 +418,13 @@ async function handleCreateOrUpdateCustomer(req, res) {
       });
     }
 
+    console.log("DEBUG /api/customers write success:", {
+      flowStep,
+      customerId: customer?.id || null,
+      customerEmail: customer?.email || null,
+      customerSubjectRef: customer?.subjectRef || null,
+    });
+
     if (blocketEmail && blocketPassword) {
       connectBlocketProfile(customer.id, blocketEmail, blocketPassword)
         .then(() => console.log(`Blocket-profil kopplad för kund ${customer.id}`))
@@ -376,7 +444,14 @@ async function handleCreateOrUpdateCustomer(req, res) {
       flow: flowStep,
     });
   } catch (e) {
-    console.error("[POST /api/customers] error:", e);
+    console.error("[POST /api/customers] error summary:", safeErrMeta(e));
+    console.error("[POST /api/customers] error context:", {
+      flowStep,
+      rawBody: raw,
+      normalizedBody: body,
+      validatedEmail: emailTrim,
+      validatedEmailConfirm: emailConfirmTrim,
+    });
 
     if (e.code === "P2002") {
       return fail(
@@ -384,6 +459,24 @@ async function handleCreateOrUpdateCustomer(req, res) {
         409,
         "UNIQUE_CONSTRAINT",
         "Det finns redan en användare med samma e-post eller personnummer."
+      );
+    }
+
+    if (e.code === "P2022") {
+      return fail(
+        res,
+        500,
+        "DB_COLUMN_MISSING",
+        "Databasmodellen saknar ett förväntat fält."
+      );
+    }
+
+    if (e.code === "P2003") {
+      return fail(
+        res,
+        500,
+        "DB_FOREIGN_KEY",
+        "Databasen avvisade kopplingen mellan poster."
       );
     }
 
