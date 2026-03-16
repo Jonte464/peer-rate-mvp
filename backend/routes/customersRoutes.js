@@ -19,6 +19,46 @@ const {
 const prisma = new PrismaClient();
 const router = express.Router();
 
+const DEFAULT_TERMS_VERSION = "2026-03-16-v1";
+const DEFAULT_PRIVACY_VERSION = "2026-03-16-v1";
+const DEFAULT_REGISTRATION_METHOD = "email_password";
+
+/**
+ * =========================
+ *  HELPERS
+ * =========================
+ */
+
+function cleanOptionalString(value, maxLen = 255) {
+  const v = clean(value);
+  if (!v) return null;
+  return String(v).slice(0, maxLen);
+}
+
+function getRequestIp(req) {
+  const xff = req.headers["x-forwarded-for"];
+  if (typeof xff === "string" && xff.trim()) {
+    return xff.split(",")[0].trim().slice(0, 100);
+  }
+
+  const realIp = req.headers["x-real-ip"];
+  if (typeof realIp === "string" && realIp.trim()) {
+    return realIp.trim().slice(0, 100);
+  }
+
+  const socketIp =
+    req.socket?.remoteAddress ||
+    req.connection?.remoteAddress ||
+    null;
+
+  return socketIp ? String(socketIp).slice(0, 100) : null;
+}
+
+function getRequestUserAgent(req) {
+  const ua = req.get("user-agent") || "";
+  return ua ? String(ua).slice(0, 1000) : null;
+}
+
 /**
  * =========================
  *  SCHEMAS
@@ -32,8 +72,14 @@ const createCustomerStep1Schema = Joi.object({
   password: Joi.string().min(8).max(100).required(),
   passwordConfirm: Joi.string().min(8).max(100).required(),
 
-  // Steg 1 kräver att användaren godkänner villkoren
+  // Steg 1 kräver att användaren godkänner både villkor och privacy
   termsAccepted: Joi.boolean().valid(true).required(),
+  privacyAccepted: Joi.boolean().valid(true).required(),
+
+  // Versionsspårning / registreringsmetod
+  termsVersionAccepted: Joi.string().max(100).allow("", null).optional(),
+  privacyVersionAccepted: Joi.string().max(100).allow("", null).optional(),
+  registrationMethod: Joi.string().max(100).allow("", null).optional(),
 
   // För MVP: om den skickas måste den vara true (annars optional)
   thirdPartyConsent: Joi.boolean().valid(true).optional(),
@@ -70,6 +116,7 @@ const createCustomerStep2Schema = Joi.object({
   // Om de skickas måste de vara true
   thirdPartyConsent: Joi.boolean().valid(true).optional(),
   termsAccepted: Joi.boolean().valid(true).optional(),
+  privacyAccepted: Joi.boolean().valid(true).optional(),
 });
 
 function friendlyFieldName(key) {
@@ -105,7 +152,15 @@ function friendlyFieldName(key) {
     case "thirdPartyConsent":
       return "samtycke till tredjepartsdata";
     case "termsAccepted":
-      return "godkännande av villkor och integritetspolicy";
+      return "godkännande av användarvillkor";
+    case "privacyAccepted":
+      return "godkännande av integritetspolicy";
+    case "termsVersionAccepted":
+      return "version för användarvillkor";
+    case "privacyVersionAccepted":
+      return "version för integritetspolicy";
+    case "registrationMethod":
+      return "registreringsmetod";
     default:
       return null;
   }
@@ -126,6 +181,7 @@ async function handleCreateOrUpdateCustomer(req, res) {
     ...raw,
     thirdPartyConsent: normalizeCheckbox(raw.thirdPartyConsent),
     termsAccepted: normalizeCheckbox(raw.termsAccepted),
+    privacyAccepted: normalizeCheckbox(raw.privacyAccepted),
   };
 
   // Avgör om detta är steg 2
@@ -152,6 +208,10 @@ async function handleCreateOrUpdateCustomer(req, res) {
     isStep2,
     email: body.email,
     termsAccepted: body.termsAccepted,
+    privacyAccepted: body.privacyAccepted,
+    termsVersionAccepted: body.termsVersionAccepted || null,
+    privacyVersionAccepted: body.privacyVersionAccepted || null,
+    registrationMethod: body.registrationMethod || null,
     thirdPartyConsent: body.thirdPartyConsent,
     hasFirstName: !!body.firstName,
     hasPersonalNumber: !!body.personalNumber,
@@ -230,12 +290,31 @@ async function handleCreateOrUpdateCustomer(req, res) {
       ? `${clean(value.firstName) || ""} ${clean(value.lastName) || ""}`.trim() || null
       : null;
 
+    const now = new Date();
+    const effectiveTermsVersion =
+      cleanOptionalString(value.termsVersionAccepted, 100) || DEFAULT_TERMS_VERSION;
+    const effectivePrivacyVersion =
+      cleanOptionalString(value.privacyVersionAccepted, 100) || DEFAULT_PRIVACY_VERSION;
+    const effectiveRegistrationMethod =
+      cleanOptionalString(value.registrationMethod, 100) || DEFAULT_REGISTRATION_METHOD;
+
+    const requestIp = getRequestIp(req);
+    const requestUserAgent = getRequestUserAgent(req);
+
     const step1Data = {
       subjectRef,
       email: emailTrim,
       passwordHash, // alltid i steg 1
       thirdPartyConsent: value.thirdPartyConsent === true,
-      termsAccepted: value.termsAccepted === true,
+      termsAccepted: true,
+      privacyAccepted: true,
+      termsAcceptedAt: existingBySubject?.termsAcceptedAt || now,
+      termsVersionAccepted: existingBySubject?.termsVersionAccepted || effectiveTermsVersion,
+      privacyAcceptedAt: existingBySubject?.privacyAcceptedAt || now,
+      privacyVersionAccepted: existingBySubject?.privacyVersionAccepted || effectivePrivacyVersion,
+      registrationMethod: existingBySubject?.registrationMethod || effectiveRegistrationMethod,
+      registrationIp: existingBySubject?.registrationIp || requestIp,
+      registrationUserAgent: existingBySubject?.registrationUserAgent || requestUserAgent,
     };
 
     const step2Data = {
@@ -249,8 +328,9 @@ async function handleCreateOrUpdateCustomer(req, res) {
       addressCity: clean(value.addressCity),
       country: clean(value.country),
       ...(passwordHash ? { passwordHash } : {}),
-      thirdPartyConsent: value.thirdPartyConsent === true,
-      termsAccepted: value.termsAccepted === true,
+      ...(value.thirdPartyConsent === true ? { thirdPartyConsent: true } : {}),
+      ...(value.termsAccepted === true ? { termsAccepted: true } : {}),
+      ...(value.privacyAccepted === true ? { privacyAccepted: true } : {}),
     };
 
     let customer;

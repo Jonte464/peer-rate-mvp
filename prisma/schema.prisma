@@ -32,11 +32,23 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  ratings       Rating[]
-  reports       Report[]      @relation("CustomerReports")
-  score         Score?
-  transactions  Transaction[]
-  termsAccepted Boolean       @default(false)
+  ratings      Rating[]
+  reports      Report[]      @relation("CustomerReports")
+  score        Score?
+  transactions Transaction[]
+
+  // Befintligt samtyckesfält
+  termsAccepted Boolean @default(false)
+
+  // NYTT: utökad registrerings-/samtyckeslogg
+  termsAcceptedAt        DateTime?
+  termsVersionAccepted   String?
+  privacyAccepted        Boolean   @default(false)
+  privacyAcceptedAt      DateTime?
+  privacyVersionAccepted String?
+  registrationMethod     String?
+  registrationIp         String?
+  registrationUserAgent  String?
 
   // NYTT: externa profiler (Blocket, Tradera m.fl.)
   externalProfiles ExternalProfile[]
@@ -116,7 +128,6 @@ model Rating {
    * Detta är den viktigaste regeln för att stoppa dubletter.
    */
   @@unique([customerId, dealId])
-
   @@index([customerId])
   @@index([transactionId])
   @@index([dealId])
@@ -254,10 +265,10 @@ model ExternalProfile {
   listings      Listing[]
   traderaOrders TraderaOrder[]
 
+  @@unique([customerId, platform])
   @@index([customerId])
   @@index([platform, username])
   @@index([platform, email])
-  @@unique([customerId, platform])
 }
 
 /**
@@ -313,16 +324,16 @@ model Deal {
   blocketPrice Int?
 
   // ✅ Extension/partner-deal fält
-  externalProofRef String?  // t.ex. Tradera orderId
-  externalItemId   String?  // t.ex. Tradera itemId
-  externalPageUrl  String?  // URL till källsidan
+  externalProofRef String? // t.ex. Tradera orderId
+  externalItemId   String? // t.ex. Tradera itemId
+  externalPageUrl  String? // URL till källsidan
   title            String?
   amount           Decimal? @db.Decimal(12, 2)
   currency         String?  @default("SEK")
 
   completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   ratings Rating[]
 
@@ -461,7 +472,7 @@ model AgentMessage {
   conversation   AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   role             String
-  content          String @db.Text
+  content          String   @db.Text
   model            String?
   promptTokens     Int?
   completionTokens Int?

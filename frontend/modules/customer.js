@@ -1,8 +1,17 @@
 // frontend/modules/customer.js
 // Robust 2-stegsregistrering med i18n-stöd och språkbyte utan reload.
+// NYTT:
+// - skickar privacyAccepted till backend
+// - skickar versionsspårning för terms/privacy
+// - skickar registrationMethod i steg 1
+// - steg 2 skriver inte längre om registreringsaudit i onödan
 
 import { showNotification } from './utils.js';
 import { t, applyLang, getCurrentLanguage } from './landing/language.js';
+
+const TERMS_VERSION = '2026-03-16-v1';
+const PRIVACY_VERSION = '2026-03-16-v1';
+const REGISTRATION_METHOD = 'email_password';
 
 function $(id) {
   return document.getElementById(id);
@@ -192,6 +201,16 @@ function showStep2UI(email) {
   );
 }
 
+function buildStep1RegistrationAuditPayload() {
+  return {
+    privacyAccepted: true,
+    termsAccepted: true,
+    privacyVersionAccepted: PRIVACY_VERSION,
+    termsVersionAccepted: TERMS_VERSION,
+    registrationMethod: REGISTRATION_METHOD,
+  };
+}
+
 function bindStep1() {
   const form =
     $('step1-form') ||
@@ -231,8 +250,8 @@ function bindStep1() {
       emailConfirm,
       password,
       passwordConfirm,
-      termsAccepted: true,
       thirdPartyConsent: true,
+      ...buildStep1RegistrationAuditPayload(),
     };
 
     console.log('DEBUG customer payload (step1):', payload);
@@ -300,7 +319,6 @@ function bindStep2() {
       addressZip: addressZip || null,
       addressCity: addressCity || null,
       country: country || null,
-      termsAccepted: true,
       thirdPartyConsent: true,
     };
 
