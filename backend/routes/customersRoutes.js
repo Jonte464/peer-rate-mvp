@@ -61,6 +61,12 @@ function fail(res, status, errorCode, error) {
   });
 }
 
+function assignNormalizedCheckboxIfPresent(target, raw, key) {
+  if (Object.prototype.hasOwnProperty.call(raw, key)) {
+    target[key] = normalizeCheckbox(raw[key]);
+  }
+}
+
 // Steg 1
 const createCustomerStep1Schema = Joi.object({
   flowStep: Joi.string().valid("step1").required(),
@@ -156,12 +162,11 @@ function friendlyFieldName(key) {
 async function handleCreateOrUpdateCustomer(req, res) {
   const raw = req.body || {};
 
-  const body = {
-    ...raw,
-    thirdPartyConsent: normalizeCheckbox(raw.thirdPartyConsent),
-    termsAccepted: normalizeCheckbox(raw.termsAccepted),
-    privacyAccepted: normalizeCheckbox(raw.privacyAccepted),
-  };
+  const body = { ...raw };
+
+  assignNormalizedCheckboxIfPresent(body, raw, "thirdPartyConsent");
+  assignNormalizedCheckboxIfPresent(body, raw, "termsAccepted");
+  assignNormalizedCheckboxIfPresent(body, raw, "privacyAccepted");
 
   const flowStep = String(body.flowStep || "").trim();
 
@@ -187,8 +192,10 @@ async function handleCreateOrUpdateCustomer(req, res) {
   console.log("DEBUG /api/customers incoming:", {
     flowStep,
     email: body.email,
-    termsAccepted: body.termsAccepted,
-    privacyAccepted: body.privacyAccepted,
+    termsAccepted:
+      Object.prototype.hasOwnProperty.call(body, "termsAccepted") ? body.termsAccepted : undefined,
+    privacyAccepted:
+      Object.prototype.hasOwnProperty.call(body, "privacyAccepted") ? body.privacyAccepted : undefined,
     termsVersionAccepted: body.termsVersionAccepted || null,
     privacyVersionAccepted: body.privacyVersionAccepted || null,
     registrationMethod: body.registrationMethod || null,
@@ -202,7 +209,10 @@ async function handleCreateOrUpdateCustomer(req, res) {
       ? createCustomerStep2Schema
       : createCustomerStep1Schema;
 
-  const { error, value } = schema.validate(body, { abortEarly: true });
+  const { error, value } = schema.validate(body, {
+    abortEarly: true,
+    stripUnknown: true,
+  });
 
   if (error) {
     const firstDetail = error.details && error.details[0];

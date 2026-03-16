@@ -7,6 +7,7 @@
 // - erbjuder frivillig "återuppta registrering" om giltigt step1-state finns
 // - guard mot dubbel init
 // - behåller flowStep till backend
+// - tillbaka till steg 1 förstör inte längre möjligheten att återgå till steg 2
 
 import { showNotification } from './utils.js';
 import { t, applyLang, getCurrentLanguage } from './landing/language.js';
@@ -299,11 +300,9 @@ function buildBackToStep1Button() {
   btn.textContent = copy.backToStep1;
 
   btn.addEventListener('click', () => {
-    clearRegistrationDraft();
-    clearResumePrompt();
-    resetStep2Form();
     showStep1UI();
-    notify('info', 'Du är tillbaka i steg 1. Du kan börja om registreringen här.');
+    renderResumePromptIfNeeded();
+    notify('info', 'Du är tillbaka i steg 1. Du kan fortsätta till steg 2 igen via rutan för tidigare registrering.');
   });
 
   return btn;
@@ -478,6 +477,9 @@ function bindStep1() {
       }
 
       if (err?.status === 409) {
+        saveRegistrationDraft(email);
+        renderResumePromptIfNeeded();
+
         return notify(
           'error',
           err.message || 'Det finns redan ett konto med denna e-postadress.',
@@ -621,10 +623,7 @@ export function initCustomerPage() {
   bindLanguageChangeHandler();
   ensureStep2BackButton();
 
-  // Visa alltid steg 1 som standard för att undvika felaktigt auto-hopp till steg 2
   showStep1UI();
-
-  // Om vi har ett giltigt tidigare step1-state, erbjud återupptagning istället för autohopp
   renderResumePromptIfNeeded();
 
   bindStep1();
