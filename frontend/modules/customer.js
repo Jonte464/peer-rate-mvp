@@ -1,10 +1,11 @@
 // frontend/modules/customer.js
 // Robust 2-stegsregistrering med i18n-stöd och språkbyte utan reload.
 // NYTT:
-// - skickar privacyAccepted till backend
-// - skickar versionsspårning för terms/privacy
-// - skickar registrationMethod i steg 1
-// - steg 2 skriver inte längre om registreringsaudit i onödan
+// - tydligare användarmeddelanden
+// - felkod + tydlig text till användaren
+// - success-notis som faktiskt syns
+// - bättre steg 2-feedback
+// - tydligare redirect efter lyckad profilkomplettering
 
 import { showNotification } from './utils.js';
 import { t, applyLang, getCurrentLanguage } from './landing/language.js';
@@ -77,21 +78,26 @@ function setText(msg) {
   if (c) c.textContent = msg || '';
 }
 
-function notify(type, msg) {
+function formatMessageWithCode(message, errorCode) {
+  if (!message) return '';
+  if (!errorCode) return message;
+  return `${message} (Kod: ${errorCode})`;
+}
+
+function notify(type, msg, errorCode = null) {
+  const finalMessage = formatMessageWithCode(msg, errorCode);
+
   try {
     if (typeof showNotification === 'function') {
-      if ($('customer-notice')) showNotification(type, msg, 'customer-notice');
-      else if ($('customer-status')) showNotification(type, msg, 'customer-status');
-      else if ($('customer-status-step2')) showNotification(type, msg, 'customer-status-step2');
-      else showNotification(type, msg);
+      showNotification(type, finalMessage, 'customer-notice');
       return;
     }
   } catch (_) {}
 
-  setText(msg);
+  setText(finalMessage);
 
-  if (!$('customer-notice') && !$('customer-status') && !$('customer-status-step2') && msg) {
-    alert(msg);
+  if (msg) {
+    alert(finalMessage);
   }
 }
 
@@ -117,10 +123,14 @@ async function postJson(path, payload, { timeoutMs = 15000 } = {}) {
     }
 
     if (!resp.ok) {
-      const msg = data?.error || t('customer_error_server_status', 'Server error (status {status})', { status: resp.status });
+      const msg =
+        data?.error ||
+        t('customer_error_server_status', 'Serverfel (status {status})', { status: resp.status });
+
       const err = new Error(msg);
       err.status = resp.status;
       err.data = data;
+      err.errorCode = data?.errorCode || null;
       throw err;
     }
 
@@ -149,23 +159,13 @@ function showStep2UI(email) {
     setLockedEmailIfPresent(email);
   }
 
-  const step1Card = $('step1-card');
-  const step2Card = $('step2-card');
-  if (step1Card && step2Card) {
-    step1Card.classList.add('hidden');
-    step2Card.classList.remove('hidden');
-    step2Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    applyLang(document);
-    applyCustomerLegalLanguage();
-    return;
-  }
+  const step1Block = $('step1-block');
+  const step2Block = $('step2-block');
 
-  const step1Els = document.querySelectorAll('[data-step="1"]');
-  const step2Els = document.querySelectorAll('[data-step="2"]');
-  if (step1Els.length || step2Els.length) {
-    step1Els.forEach((n) => n.classList.add('hidden'));
-    step2Els.forEach((n) => n.classList.remove('hidden'));
-    if (step2Els[0]) step2Els[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (step1Block && step2Block) {
+    step1Block.classList.add('hidden');
+    step2Block.classList.remove('hidden');
+    step2Block.scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyLang(document);
     applyCustomerLegalLanguage();
     return;
@@ -173,32 +173,10 @@ function showStep2UI(email) {
 
   const step2Form = $('step2-form') || $('complete-profile-form');
   if (step2Form) {
-    const step1Block = $('step1-block');
-    const step2Block = $('step2-block');
-    if (step1Block && step2Block) {
-      step1Block.classList.add('hidden');
-      step2Block.classList.remove('hidden');
-      step2Block.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      notify('success', t('customer_step1_success_continue', 'Account created! Continue with step 2 below.'));
-      applyLang(document);
-      applyCustomerLegalLanguage();
-      return;
-    }
-
-    notify('success', t('customer_step1_success_continue', 'Account created! Continue with step 2 below.'));
     step2Form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyLang(document);
     applyCustomerLegalLanguage();
-    return;
   }
-
-  notify(
-    'success',
-    t(
-      'customer_step1_success_no_step2',
-      'Account created! (Step 2 form was not found on the page — check that it exists in HTML.)'
-    )
-  );
 }
 
 function buildStep1RegistrationAuditPayload() {
@@ -238,12 +216,12 @@ function bindStep1() {
 
     const legalCopy = getCustomerLegalCopy();
 
-    if (!email) return notify('error', t('customer_error_fill_email', 'Please enter an email address.'));
-    if (email !== emailConfirm) return notify('error', t('customer_error_email_mismatch', 'Email addresses do not match.'));
-    if (!password || password.length < 8) return notify('error', t('customer_error_password_length', 'Password must be at least 8 characters.'));
-    if (password !== passwordConfirm) return notify('error', t('customer_error_password_mismatch', 'Passwords do not match.'));
-    if (!privacyAccepted) return notify('error', legalCopy.privacyRequired);
-    if (!termsAccepted) return notify('error', legalCopy.termsRequired);
+    if (!email) return notify('error', 'Du måste ange en e-postadress.', 'EMAIL_REQUIRED');
+    if (email !== emailConfirm) return notify('error', 'E-postadresserna matchar inte.', 'EMAIL_MISMATCH');
+    if (!password || password.length < 8) return notify('error', 'Lösenordet måste vara minst 8 tecken långt.', 'PASSWORD_TOO_SHORT');
+    if (password !== passwordConfirm) return notify('error', 'Lösenorden matchar inte.', 'PASSWORD_MISMATCH');
+    if (!privacyAccepted) return notify('error', legalCopy.privacyRequired, 'PRIVACY_REQUIRED');
+    if (!termsAccepted) return notify('error', legalCopy.termsRequired, 'TERMS_REQUIRED');
 
     const payload = {
       email,
@@ -255,19 +233,38 @@ function bindStep1() {
     };
 
     console.log('DEBUG customer payload (step1):', payload);
-    notify('info', t('customer_status_creating_account', 'Creating account…'));
+    notify('info', 'Skapar konto...');
 
     try {
       const res = await postJson('/api/customers', payload);
       console.log('DEBUG step1 response:', res);
 
-      notify('success', t('customer_step1_success', 'Thanks! Account created.'));
+      notify(
+        'success',
+        'Tack för din registrering! Steg 1 är klart. Fortsätt nu med dina profiluppgifter nedan.'
+      );
+
       showStep2UI(email);
     } catch (err) {
       console.error('Step1 error:', err);
-      if (err?.name === 'AbortError') return notify('error', t('customer_error_timeout', 'The server is not responding (timeout). Please try again.'));
-      if (err?.status === 409) return notify('error', err.message || t('customer_error_email_exists', 'An account with this email already exists.'));
-      return notify('error', err.message || t('customer_error_contact_server', 'Could not contact the server. Please try again.'));
+
+      if (err?.name === 'AbortError') {
+        return notify('error', 'Servern svarar inte just nu. Försök igen om en liten stund.', 'REQUEST_TIMEOUT');
+      }
+
+      if (err?.status === 409) {
+        return notify(
+          'error',
+          err.message || 'Det finns redan ett konto med denna e-postadress.',
+          err.errorCode || 'EMAIL_EXISTS'
+        );
+      }
+
+      return notify(
+        'error',
+        err.message || 'Det gick inte att skapa kontot. Försök igen.',
+        err.errorCode || 'REGISTER_FAILED'
+      );
     }
   });
 }
@@ -283,7 +280,14 @@ function bindStep2() {
     setText('');
 
     const email = getEmailForStep2();
-    if (!email) return notify('error', t('customer_error_missing_step1_email', 'Missing email from step 1. Please complete step 1 first.'));
+    if (!email) {
+      return notify(
+        'error',
+        'Steg 1 verkar inte vara klart. Börja med att skapa konto först.',
+        'STEP1_MISSING'
+      );
+    }
+
     setLockedEmailIfPresent(email);
 
     const firstName = (($('step2-firstName')?.value || $('firstName')?.value || '')).trim();
@@ -297,15 +301,23 @@ function bindStep2() {
     const addressZip = (($('step2-addressZip')?.value || $('postalCode')?.value || '')).trim();
     const addressCity = (($('step2-addressCity')?.value || $('city')?.value || '')).trim();
 
-    if (!firstName || firstName.length < 2) return notify('error', t('customer_error_first_name', 'Please enter first name (at least 2 characters).'));
-    if (!lastName || lastName.length < 2) return notify('error', t('customer_error_last_name', 'Please enter last name (at least 2 characters).'));
-    if (!personalNumber) return notify('error', t('customer_error_personal_number', 'Please enter personal number.'));
+    if (!firstName || firstName.length < 2) {
+      return notify('error', 'Ange ett giltigt förnamn.', 'FIRST_NAME_INVALID');
+    }
+
+    if (!lastName || lastName.length < 2) {
+      return notify('error', 'Ange ett giltigt efternamn.', 'LAST_NAME_INVALID');
+    }
+
+    if (!personalNumber) {
+      return notify('error', 'Du måste ange personnummer.', 'PERSONAL_NUMBER_REQUIRED');
+    }
 
     const hasNewAddressUI = !!$('address1') || !!$('postalCode') || !!$('city');
     if (hasNewAddressUI) {
-      if (!addressStreet) return notify('error', t('customer_error_address', 'Please enter address.'));
-      if (!addressZip) return notify('error', t('customer_error_postal_code', 'Please enter postal code.'));
-      if (!addressCity) return notify('error', t('customer_error_city', 'Please enter city.'));
+      if (!addressStreet) return notify('error', 'Du måste ange adress.', 'ADDRESS_REQUIRED');
+      if (!addressZip) return notify('error', 'Du måste ange postnummer.', 'POSTAL_CODE_REQUIRED');
+      if (!addressCity) return notify('error', 'Du måste ange ort.', 'CITY_REQUIRED');
     }
 
     const payload = {
@@ -323,21 +335,47 @@ function bindStep2() {
     };
 
     console.log('DEBUG customer payload (step2):', payload);
-    notify('info', t('customer_status_saving_profile', 'Saving profile…'));
+    notify('info', 'Sparar profil...');
 
     try {
       const res = await postJson('/api/customers', payload);
       console.log('DEBUG step2 response:', res);
 
-      notify('success', t('customer_step2_success', 'Profile saved!'));
+      notify('success', 'Tack! Din registrering är nu klar. Du skickas vidare till din profil.');
+
       sessionStorage.removeItem('peerRateRegisterEmail');
-      window.location.href = '/profile.html';
+
+      setTimeout(() => {
+        window.location.href = '/profile.html';
+      }, 1400);
     } catch (err) {
       console.error('Step2 error:', err);
-      if (err?.name === 'AbortError') return notify('error', t('customer_error_timeout', 'The server is not responding (timeout). Please try again.'));
-      if (err?.status === 400) return notify('error', err.message);
-      if (err?.status === 409) return notify('error', err.message || t('customer_error_conflict', 'Conflict: email/personal number already exists.'));
-      return notify('error', err.message || t('customer_error_save_profile', 'Could not save the profile. Please try again.'));
+
+      if (err?.name === 'AbortError') {
+        return notify('error', 'Servern svarar inte just nu. Försök igen om en liten stund.', 'REQUEST_TIMEOUT');
+      }
+
+      if (err?.status === 400) {
+        return notify(
+          'error',
+          err.message || 'Någon uppgift är ogiltig. Kontrollera formuläret och försök igen.',
+          err.errorCode || 'VALIDATION_ERROR'
+        );
+      }
+
+      if (err?.status === 409) {
+        return notify(
+          'error',
+          err.message || 'Det finns redan en användare med samma e-post eller personnummer.',
+          err.errorCode || 'CONFLICT'
+        );
+      }
+
+      return notify(
+        'error',
+        err.message || 'Det gick inte att spara profilen. Försök igen.',
+        err.errorCode || 'SAVE_PROFILE_FAILED'
+      );
     }
   });
 }
@@ -356,7 +394,10 @@ export function initCustomerPage() {
   bindLanguageChangeHandler();
 
   const saved = getEmailForStep2();
-  if (saved) showStep2UI(saved);
+  if (saved) {
+    showStep2UI(saved);
+    notify('info', 'Du har redan skapat konto i steg 1. Fyll nu i resten av profilen.');
+  }
 
   bindStep1();
   bindStep2();

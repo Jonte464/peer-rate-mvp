@@ -12,7 +12,7 @@ const {
   clean,
   normalizePhone,
   normalizeCheckbox,
-  isValidPersonalNumber,
+  validateSwedishPersonalNumber,
   normSubject,
 } = require("../helpers");
 
@@ -59,6 +59,14 @@ function getRequestUserAgent(req) {
   return ua ? String(ua).slice(0, 1000) : null;
 }
 
+function fail(res, status, errorCode, error) {
+  return res.status(status).json({
+    ok: false,
+    errorCode,
+    error,
+  });
+}
+
 /**
  * =========================
  *  SCHEMAS
@@ -68,38 +76,29 @@ function getRequestUserAgent(req) {
 // Steg 1: Minimal registrering (email + lösenord + villkor)
 const createCustomerStep1Schema = Joi.object({
   email: Joi.string().email().required(),
-  emailConfirm: Joi.string().email().allow("", null).optional(), // om ej skickas -> vi sätter = email
+  emailConfirm: Joi.string().email().allow("", null).optional(),
   password: Joi.string().min(8).max(100).required(),
   passwordConfirm: Joi.string().min(8).max(100).required(),
 
-  // Steg 1 kräver att användaren godkänner både villkor och privacy
   termsAccepted: Joi.boolean().valid(true).required(),
   privacyAccepted: Joi.boolean().valid(true).required(),
 
-  // Versionsspårning / registreringsmetod
   termsVersionAccepted: Joi.string().max(100).allow("", null).optional(),
   privacyVersionAccepted: Joi.string().max(100).allow("", null).optional(),
   registrationMethod: Joi.string().max(100).allow("", null).optional(),
 
-  // För MVP: om den skickas måste den vara true (annars optional)
   thirdPartyConsent: Joi.boolean().valid(true).optional(),
 });
 
-// Steg 2: Komplettera profil (personuppgifter etc)
+// Steg 2: Komplettera profil
 const createCustomerStep2Schema = Joi.object({
   firstName: Joi.string().min(2).max(100).required(),
   lastName: Joi.string().min(2).max(100).required(),
-  personalNumber: Joi.string()
-    .custom((value, helpers) => {
-      if (!isValidPersonalNumber(value)) return helpers.error("any.invalid");
-      return value;
-    })
-    .required(),
+  personalNumber: Joi.string().required(),
 
   email: Joi.string().email().required(),
   emailConfirm: Joi.string().email().required(),
 
-  // I steg 2 brukar man INTE vilja byta lösenord här – men vi stödjer om det skickas
   password: Joi.string().min(8).max(100).allow("", null).optional(),
   passwordConfirm: Joi.string().min(8).max(100).allow("", null).optional(),
 
@@ -109,11 +108,9 @@ const createCustomerStep2Schema = Joi.object({
   addressCity: Joi.string().max(100).allow("", null),
   country: Joi.string().max(100).allow("", null),
 
-  // Blocket valfritt
   blocketEmail: Joi.string().email().allow("", null),
   blocketPassword: Joi.string().min(1).max(200).allow("", null),
 
-  // Om de skickas måste de vara true
   thirdPartyConsent: Joi.boolean().valid(true).optional(),
   termsAccepted: Joi.boolean().valid(true).optional(),
   privacyAccepted: Joi.boolean().valid(true).optional(),
@@ -170,13 +167,12 @@ function friendlyFieldName(key) {
  * ======================================================
  * Gemensam handler för:
  * - POST /api/customers
- * - POST /api/customers/register   (alias för frontend)
+ * - POST /api/customers/register
  * ======================================================
  */
 async function handleCreateOrUpdateCustomer(req, res) {
   const raw = req.body || {};
 
-  // Normalisera checkboxar
   const body = {
     ...raw,
     thirdPartyConsent: normalizeCheckbox(raw.thirdPartyConsent),
@@ -184,7 +180,6 @@ async function handleCreateOrUpdateCustomer(req, res) {
     privacyAccepted: normalizeCheckbox(raw.privacyAccepted),
   };
 
-  // Avgör om detta är steg 2
   const isStep2 =
     !!body.firstName ||
     !!body.lastName ||
@@ -193,7 +188,6 @@ async function handleCreateOrUpdateCustomer(req, res) {
     !!body.addressZip ||
     !!body.addressCity;
 
-  // MVP-genväg: om termsAccepted=true i steg 1 men thirdPartyConsent saknas -> sätt true
   if (
     !isStep2 &&
     body.termsAccepted === true &&
@@ -226,38 +220,31 @@ async function handleCreateOrUpdateCustomer(req, res) {
       (firstDetail && firstDetail.context && firstDetail.context.key) ||
       (firstDetail && firstDetail.path && firstDetail.path[0]);
 
-    if (key === "personalNumber") {
-      return res.status(400).json({ ok: false, error: "Ogiltigt personnummer." });
-    }
-
     const friendly = friendlyFieldName(key);
     const msg = friendly
       ? `Kontrollera fältet: ${friendly}.`
       : "En eller flera uppgifter är ogiltiga. Kontrollera formuläret.";
 
-    return res.status(400).json({ ok: false, error: msg });
+    return fail(res, 400, "FIELD_INVALID", msg);
   }
 
-  // Email + confirm
   const emailTrim = String(value.email || "").trim().toLowerCase();
   const emailConfirmTrim =
     String(value.emailConfirm || "").trim().toLowerCase() || emailTrim;
 
   if (!emailTrim || emailTrim !== emailConfirmTrim) {
-    return res.status(400).json({ ok: false, error: "E-postadresserna matchar inte." });
+    return fail(res, 400, "EMAIL_MISMATCH", "E-postadresserna matchar inte.");
   }
 
-  // Password + confirm
   const hasPasswordInRequest = typeof value.password === "string" && value.password.length > 0;
   if (!isStep2 || hasPasswordInRequest) {
     if ((value.password || "") !== (value.passwordConfirm || "")) {
-      return res.status(400).json({ ok: false, error: "Lösenorden matchar inte." });
+      return fail(res, 400, "PASSWORD_MISMATCH", "Lösenorden matchar inte.");
     }
   }
 
   const subjectRef = normSubject(emailTrim);
 
-  // Blocket (valfritt)
   const blocketEmail = (value.blocketEmail && String(value.blocketEmail).trim()) || "";
   const blocketPassword = value.blocketPassword || "";
 
@@ -266,23 +253,35 @@ async function handleCreateOrUpdateCustomer(req, res) {
       where: { subjectRef },
     });
 
-    // Om steg 2: kontrollera personnummer-unikhet
     let personalNumberClean = null;
     if (isStep2) {
-      personalNumberClean = clean(value.personalNumber);
+      const pnValidation = validateSwedishPersonalNumber(value.personalNumber);
+
+      if (!pnValidation.ok) {
+        return fail(
+          res,
+          400,
+          pnValidation.code || "PERSONAL_NUMBER_INVALID",
+          pnValidation.message || "Ogiltigt personnummer."
+        );
+      }
+
+      personalNumberClean = pnValidation.normalized;
+
       const existingByPn = await prisma.customer.findUnique({
         where: { personalNumber: personalNumberClean },
       });
 
       if (existingByPn && (!existingBySubject || existingByPn.id !== existingBySubject.id)) {
-        return res.status(409).json({
-          ok: false,
-          error: "Det finns redan en användare med samma personnummer.",
-        });
+        return fail(
+          res,
+          409,
+          "PERSONAL_NUMBER_EXISTS",
+          "Det finns redan en användare med samma personnummer."
+        );
       }
     }
 
-    // Hasha lösenord om vi ska spara/uppdatera
     const passwordHash =
       !isStep2 || hasPasswordInRequest ? await bcrypt.hash(value.password, 10) : null;
 
@@ -304,7 +303,7 @@ async function handleCreateOrUpdateCustomer(req, res) {
     const step1Data = {
       subjectRef,
       email: emailTrim,
-      passwordHash, // alltid i steg 1
+      passwordHash,
       thirdPartyConsent: value.thirdPartyConsent === true,
       termsAccepted: true,
       privacyAccepted: true,
@@ -336,12 +335,13 @@ async function handleCreateOrUpdateCustomer(req, res) {
     let customer;
 
     if (existingBySubject) {
-      // Om konto redan “riktigt” och vi är i steg 1 => blocka dubbelregistrering
       if (!isStep2 && existingBySubject.passwordHash) {
-        return res.status(409).json({
-          ok: false,
-          error: "Det finns redan ett registrerat konto med denna e-postadress.",
-        });
+        return fail(
+          res,
+          409,
+          "EMAIL_EXISTS",
+          "Det finns redan ett registrerat konto med denna e-postadress."
+        );
       }
 
       customer = await prisma.customer.update({
@@ -354,7 +354,6 @@ async function handleCreateOrUpdateCustomer(req, res) {
       });
     }
 
-    // Blocket-koppling i bakgrunden (om båda finns)
     if (blocketEmail && blocketPassword) {
       connectBlocketProfile(customer.id, blocketEmail, blocketPassword)
         .then(() => console.log(`Blocket-profil kopplad för kund ${customer.id}`))
@@ -377,13 +376,15 @@ async function handleCreateOrUpdateCustomer(req, res) {
     console.error("[POST /api/customers] error:", e);
 
     if (e.code === "P2002") {
-      return res.status(409).json({
-        ok: false,
-        error: "Det finns redan en användare med samma e-post eller personnummer.",
-      });
+      return fail(
+        res,
+        409,
+        "UNIQUE_CONSTRAINT",
+        "Det finns redan en användare med samma e-post eller personnummer."
+      );
     }
 
-    return res.status(500).json({ ok: false, error: "Kunde inte skapa kund." });
+    return fail(res, 500, "CUSTOMER_CREATE_FAILED", "Kunde inte skapa eller uppdatera kund.");
   }
 }
 
@@ -393,8 +394,6 @@ async function handleCreateOrUpdateCustomer(req, res) {
  * =========================
  */
 router.post("/customers", handleCreateOrUpdateCustomer);
-
-// ✅ Alias som din frontend redan använder:
 router.post("/customers/register", handleCreateOrUpdateCustomer);
 
 /**
@@ -405,7 +404,7 @@ router.post("/customers/register", handleCreateOrUpdateCustomer);
 router.get("/customers", async (req, res) => {
   const q = (req.query.q || "").trim();
   if (!q) {
-    return res.status(400).json({ ok: false, error: "Ange q i querystring." });
+    return fail(res, 400, "QUERY_REQUIRED", "Ange q i querystring.");
   }
 
   try {
@@ -413,7 +412,7 @@ router.get("/customers", async (req, res) => {
     res.json({ ok: true, count: customers.length, customers });
   } catch (e) {
     console.error("[GET /api/customers] error:", e);
-    res.status(500).json({ ok: false, error: "Kunde inte hämta kunder" });
+    return fail(res, 500, "CUSTOMER_FETCH_FAILED", "Kunde inte hämta kunder.");
   }
 });
 
