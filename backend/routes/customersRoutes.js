@@ -23,12 +23,6 @@ const DEFAULT_TERMS_VERSION = "2026-03-16-v1";
 const DEFAULT_PRIVACY_VERSION = "2026-03-16-v1";
 const DEFAULT_REGISTRATION_METHOD = "email_password";
 
-/**
- * =========================
- *  HELPERS
- * =========================
- */
-
 function cleanOptionalString(value, maxLen = 255) {
   const v = clean(value);
   if (!v) return null;
@@ -67,14 +61,9 @@ function fail(res, status, errorCode, error) {
   });
 }
 
-/**
- * =========================
- *  SCHEMAS
- * =========================
- */
-
-// Steg 1: Minimal registrering (email + lösenord + villkor)
+// Steg 1
 const createCustomerStep1Schema = Joi.object({
+  flowStep: Joi.string().valid("step1").required(),
   email: Joi.string().email().required(),
   emailConfirm: Joi.string().email().allow("", null).optional(),
   password: Joi.string().min(8).max(100).required(),
@@ -90,8 +79,9 @@ const createCustomerStep1Schema = Joi.object({
   thirdPartyConsent: Joi.boolean().valid(true).optional(),
 });
 
-// Steg 2: Komplettera profil
+// Steg 2
 const createCustomerStep2Schema = Joi.object({
+  flowStep: Joi.string().valid("step2").required(),
   firstName: Joi.string().min(2).max(100).required(),
   lastName: Joi.string().min(2).max(100).required(),
   personalNumber: Joi.string().required(),
@@ -112,8 +102,6 @@ const createCustomerStep2Schema = Joi.object({
   blocketPassword: Joi.string().min(1).max(200).allow("", null),
 
   thirdPartyConsent: Joi.boolean().valid(true).optional(),
-  termsAccepted: Joi.boolean().valid(true).optional(),
-  privacyAccepted: Joi.boolean().valid(true).optional(),
 });
 
 function friendlyFieldName(key) {
@@ -158,18 +146,13 @@ function friendlyFieldName(key) {
       return "version för integritetspolicy";
     case "registrationMethod":
       return "registreringsmetod";
+    case "flowStep":
+      return "registreringssteg";
     default:
       return null;
   }
 }
 
-/**
- * ======================================================
- * Gemensam handler för:
- * - POST /api/customers
- * - POST /api/customers/register
- * ======================================================
- */
 async function handleCreateOrUpdateCustomer(req, res) {
   const raw = req.body || {};
 
@@ -180,16 +163,19 @@ async function handleCreateOrUpdateCustomer(req, res) {
     privacyAccepted: normalizeCheckbox(raw.privacyAccepted),
   };
 
-  const isStep2 =
-    !!body.firstName ||
-    !!body.lastName ||
-    !!body.personalNumber ||
-    !!body.addressStreet ||
-    !!body.addressZip ||
-    !!body.addressCity;
+  const flowStep = String(body.flowStep || "").trim();
+
+  if (flowStep !== "step1" && flowStep !== "step2") {
+    return fail(
+      res,
+      400,
+      "FLOW_STEP_REQUIRED",
+      "Registreringssteget saknas eller är ogiltigt."
+    );
+  }
 
   if (
-    !isStep2 &&
+    flowStep === "step1" &&
     body.termsAccepted === true &&
     (raw.thirdPartyConsent === undefined ||
       raw.thirdPartyConsent === null ||
@@ -199,7 +185,7 @@ async function handleCreateOrUpdateCustomer(req, res) {
   }
 
   console.log("DEBUG /api/customers incoming:", {
-    isStep2,
+    flowStep,
     email: body.email,
     termsAccepted: body.termsAccepted,
     privacyAccepted: body.privacyAccepted,
@@ -211,7 +197,11 @@ async function handleCreateOrUpdateCustomer(req, res) {
     hasPersonalNumber: !!body.personalNumber,
   });
 
-  const schema = isStep2 ? createCustomerStep2Schema : createCustomerStep1Schema;
+  const schema =
+    flowStep === "step2"
+      ? createCustomerStep2Schema
+      : createCustomerStep1Schema;
+
   const { error, value } = schema.validate(body, { abortEarly: true });
 
   if (error) {
@@ -236,15 +226,16 @@ async function handleCreateOrUpdateCustomer(req, res) {
     return fail(res, 400, "EMAIL_MISMATCH", "E-postadresserna matchar inte.");
   }
 
-  const hasPasswordInRequest = typeof value.password === "string" && value.password.length > 0;
-  if (!isStep2 || hasPasswordInRequest) {
+  const hasPasswordInRequest =
+    typeof value.password === "string" && value.password.length > 0;
+
+  if (flowStep === "step1" || hasPasswordInRequest) {
     if ((value.password || "") !== (value.passwordConfirm || "")) {
       return fail(res, 400, "PASSWORD_MISMATCH", "Lösenorden matchar inte.");
     }
   }
 
   const subjectRef = normSubject(emailTrim);
-
   const blocketEmail = (value.blocketEmail && String(value.blocketEmail).trim()) || "";
   const blocketPassword = value.blocketPassword || "";
 
@@ -254,7 +245,8 @@ async function handleCreateOrUpdateCustomer(req, res) {
     });
 
     let personalNumberClean = null;
-    if (isStep2) {
+
+    if (flowStep === "step2") {
       const pnValidation = validateSwedishPersonalNumber(value.personalNumber);
 
       if (!pnValidation.ok) {
@@ -283,11 +275,14 @@ async function handleCreateOrUpdateCustomer(req, res) {
     }
 
     const passwordHash =
-      !isStep2 || hasPasswordInRequest ? await bcrypt.hash(value.password, 10) : null;
+      flowStep === "step1" || hasPasswordInRequest
+        ? await bcrypt.hash(value.password, 10)
+        : null;
 
-    const fullName = isStep2
-      ? `${clean(value.firstName) || ""} ${clean(value.lastName) || ""}`.trim() || null
-      : null;
+    const fullName =
+      flowStep === "step2"
+        ? `${clean(value.firstName) || ""} ${clean(value.lastName) || ""}`.trim() || null
+        : null;
 
     const now = new Date();
     const effectiveTermsVersion =
@@ -328,14 +323,12 @@ async function handleCreateOrUpdateCustomer(req, res) {
       country: clean(value.country),
       ...(passwordHash ? { passwordHash } : {}),
       ...(value.thirdPartyConsent === true ? { thirdPartyConsent: true } : {}),
-      ...(value.termsAccepted === true ? { termsAccepted: true } : {}),
-      ...(value.privacyAccepted === true ? { privacyAccepted: true } : {}),
     };
 
     let customer;
 
     if (existingBySubject) {
-      if (!isStep2 && existingBySubject.passwordHash) {
+      if (flowStep === "step1" && existingBySubject.passwordHash) {
         return fail(
           res,
           409,
@@ -346,11 +339,11 @@ async function handleCreateOrUpdateCustomer(req, res) {
 
       customer = await prisma.customer.update({
         where: { id: existingBySubject.id },
-        data: isStep2 ? step2Data : step1Data,
+        data: flowStep === "step2" ? step2Data : step1Data,
       });
     } else {
       customer = await prisma.customer.create({
-        data: isStep2 ? step2Data : step1Data,
+        data: flowStep === "step2" ? step2Data : step1Data,
       });
     }
 
@@ -370,7 +363,7 @@ async function handleCreateOrUpdateCustomer(req, res) {
         email: customer.email,
         subjectRef: customer.subjectRef,
       },
-      flow: isStep2 ? "step2" : "step1",
+      flow: flowStep,
     });
   } catch (e) {
     console.error("[POST /api/customers] error:", e);
@@ -388,19 +381,9 @@ async function handleCreateOrUpdateCustomer(req, res) {
   }
 }
 
-/**
- * =========================
- *  POST endpoints
- * =========================
- */
 router.post("/customers", handleCreateOrUpdateCustomer);
 router.post("/customers/register", handleCreateOrUpdateCustomer);
 
-/**
- * =========================
- * GET /api/customers – sök kunder (admin)
- * =========================
- */
 router.get("/customers", async (req, res) => {
   const q = (req.query.q || "").trim();
   if (!q) {

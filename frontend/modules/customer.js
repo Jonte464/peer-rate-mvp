@@ -1,11 +1,12 @@
 // frontend/modules/customer.js
-// Robust 2-stegsregistrering med i18n-stöd och språkbyte utan reload.
-// NYTT:
-// - tydligare användarmeddelanden
-// - felkod + tydlig text till användaren
-// - success-notis som faktiskt syns
-// - bättre steg 2-feedback
-// - tydligare redirect efter lyckad profilkomplettering
+// Robust 2-stegsregistrering med tydligt step-state.
+// FIX:
+// - auto-hoppar inte längre till steg 2 bara för att sessionStorage råkar innehålla e-post
+// - använder tydligare draft-state istället för en ensam e-poststräng
+// - visar steg 1 som standard
+// - erbjuder frivillig "återuppta registrering" om giltigt step1-state finns
+// - guard mot dubbel init
+// - behåller flowStep till backend
 
 import { showNotification } from './utils.js';
 import { t, applyLang, getCurrentLanguage } from './landing/language.js';
@@ -13,6 +14,9 @@ import { t, applyLang, getCurrentLanguage } from './landing/language.js';
 const TERMS_VERSION = '2026-03-16-v1';
 const PRIVACY_VERSION = '2026-03-16-v1';
 const REGISTRATION_METHOD = 'email_password';
+
+const REGISTRATION_DRAFT_KEY = 'peerRateRegistrationDraft';
+const REGISTRATION_DRAFT_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 timmar
 
 function $(id) {
   return document.getElementById(id);
@@ -29,6 +33,11 @@ const customerLegalCopy = {
     termsRequired:
       'Du måste läsa och godkänna användarvillkoren för att skapa konto.',
     footerTerms: 'Allmänna villkor',
+    resumeTitle: 'Tidigare registrering hittad',
+    resumeText: 'Vi hittade en påbörjad registrering för {email}. Vill du fortsätta i steg 2 eller börja om från steg 1?',
+    resumeContinue: 'Fortsätt till steg 2',
+    resumeRestart: 'Börja om',
+    backToStep1: 'Tillbaka till steg 1',
   },
   en: {
     privacyConsentHtml:
@@ -40,6 +49,11 @@ const customerLegalCopy = {
     termsRequired:
       'You must read and accept the Terms to create an account.',
     footerTerms: 'Terms',
+    resumeTitle: 'Previous registration found',
+    resumeText: 'We found a started registration for {email}. Do you want to continue with step 2 or start over from step 1?',
+    resumeContinue: 'Continue to step 2',
+    resumeRestart: 'Start over',
+    backToStep1: 'Back to step 1',
   },
 };
 
@@ -66,6 +80,9 @@ function applyCustomerLegalLanguage() {
   if (footerTermsLink) {
     footerTermsLink.textContent = copy.footerTerms;
   }
+
+  updateBackButtonLabel();
+  renderResumePromptIfNeeded();
 }
 
 function setText(msg) {
@@ -140,12 +157,65 @@ async function postJson(path, payload, { timeoutMs = 15000 } = {}) {
   }
 }
 
-function saveEmailForStep2(email) {
-  sessionStorage.setItem('peerRateRegisterEmail', (email || '').trim().toLowerCase());
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
 }
 
-function getEmailForStep2() {
-  return (sessionStorage.getItem('peerRateRegisterEmail') || '').trim().toLowerCase();
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
+}
+
+function saveRegistrationDraft(email) {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return;
+
+  const payload = {
+    email: normalizedEmail,
+    step1Completed: true,
+    savedAt: Date.now(),
+  };
+
+  try {
+    sessionStorage.setItem(REGISTRATION_DRAFT_KEY, JSON.stringify(payload));
+  } catch {}
+}
+
+function getRegistrationDraft() {
+  try {
+    const raw = sessionStorage.getItem(REGISTRATION_DRAFT_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    const email = normalizeEmail(parsed?.email);
+    const step1Completed = parsed?.step1Completed === true;
+    const savedAt = Number(parsed?.savedAt || 0);
+
+    if (!email || !isValidEmail(email) || !step1Completed || !savedAt) {
+      clearRegistrationDraft();
+      return null;
+    }
+
+    const age = Date.now() - savedAt;
+    if (age < 0 || age > REGISTRATION_DRAFT_MAX_AGE_MS) {
+      clearRegistrationDraft();
+      return null;
+    }
+
+    return {
+      email,
+      step1Completed,
+      savedAt,
+    };
+  } catch {
+    clearRegistrationDraft();
+    return null;
+  }
+}
+
+function clearRegistrationDraft() {
+  try {
+    sessionStorage.removeItem(REGISTRATION_DRAFT_KEY);
+  } catch {}
 }
 
 function setLockedEmailIfPresent(email) {
@@ -153,9 +223,39 @@ function setLockedEmailIfPresent(email) {
   if (cp && email) cp.value = email;
 }
 
+function clearLockedEmail() {
+  const cp = $('cp-email');
+  if (cp) cp.value = '';
+}
+
+function resetStep1Form() {
+  const form = $('customer-form');
+  if (form) form.reset();
+}
+
+function resetStep2Form({ preserveEmail = false } = {}) {
+  const form = $('complete-profile-form');
+  if (form) form.reset();
+  if (!preserveEmail) clearLockedEmail();
+}
+
+function showStep1UI() {
+  const step1Block = $('step1-block');
+  const step2Block = $('step2-block');
+
+  if (step2Block) step2Block.classList.add('hidden');
+  if (step1Block) step1Block.classList.remove('hidden');
+
+  try {
+    step1Block?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch {}
+
+  applyLang(document);
+  applyCustomerLegalLanguage();
+}
+
 function showStep2UI(email) {
   if (email) {
-    saveEmailForStep2(email);
     setLockedEmailIfPresent(email);
   }
 
@@ -171,7 +271,7 @@ function showStep2UI(email) {
     return;
   }
 
-  const step2Form = $('step2-form') || $('complete-profile-form');
+  const step2Form = $('complete-profile-form');
   if (step2Form) {
     step2Form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyLang(document);
@@ -181,6 +281,7 @@ function showStep2UI(email) {
 
 function buildStep1RegistrationAuditPayload() {
   return {
+    flowStep: 'step1',
     privacyAccepted: true,
     termsAccepted: true,
     privacyVersionAccepted: PRIVACY_VERSION,
@@ -189,11 +290,134 @@ function buildStep1RegistrationAuditPayload() {
   };
 }
 
-function bindStep1() {
-  const form =
-    $('step1-form') ||
-    $('customer-form');
+function buildBackToStep1Button() {
+  const copy = getCustomerLegalCopy();
 
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn soft-hover';
+  btn.textContent = copy.backToStep1;
+
+  btn.addEventListener('click', () => {
+    clearRegistrationDraft();
+    clearResumePrompt();
+    resetStep2Form();
+    showStep1UI();
+    notify('info', 'Du är tillbaka i steg 1. Du kan börja om registreringen här.');
+  });
+
+  return btn;
+}
+
+function updateBackButtonLabel() {
+  const btn = $('back-to-step1-btn');
+  if (!btn) return;
+
+  const copy = getCustomerLegalCopy();
+  btn.textContent = copy.backToStep1;
+}
+
+function ensureStep2BackButton() {
+  const form = $('complete-profile-form');
+  if (!form) return;
+  if ($('back-to-step1-btn')) return;
+
+  const actions = form.querySelector('.actions');
+  if (!actions) return;
+
+  const btn = buildBackToStep1Button();
+  btn.id = 'back-to-step1-btn';
+  actions.appendChild(btn);
+}
+
+function getResumePromptBox() {
+  let box = $('customer-resume-box');
+  if (box) return box;
+
+  const notice = $('customer-notice');
+  if (!notice || !notice.parentNode) return null;
+
+  box = document.createElement('div');
+  box.id = 'customer-resume-box';
+  box.className = 'notice info';
+  box.style.display = 'none';
+  box.setAttribute('aria-live', 'polite');
+
+  notice.insertAdjacentElement('afterend', box);
+  return box;
+}
+
+function clearResumePrompt() {
+  const box = $('customer-resume-box');
+  if (!box) return;
+  box.innerHTML = '';
+  box.style.display = 'none';
+}
+
+function renderResumePromptIfNeeded() {
+  const draft = getRegistrationDraft();
+  const box = getResumePromptBox();
+  if (!box) return;
+
+  if (!draft?.email) {
+    clearResumePrompt();
+    return;
+  }
+
+  const copy = getCustomerLegalCopy();
+
+  box.innerHTML = '';
+  box.className = 'notice info';
+  box.style.display = 'block';
+
+  const title = document.createElement('div');
+  title.style.fontWeight = '800';
+  title.style.marginBottom = '6px';
+  title.textContent = copy.resumeTitle;
+
+  const text = document.createElement('div');
+  text.style.marginBottom = '10px';
+  text.textContent = copy.resumeText.replace('{email}', draft.email);
+
+  const actions = document.createElement('div');
+  actions.style.display = 'flex';
+  actions.style.gap = '10px';
+  actions.style.flexWrap = 'wrap';
+
+  const continueBtn = document.createElement('button');
+  continueBtn.type = 'button';
+  continueBtn.className = 'btn btn-primary soft-hover';
+  continueBtn.textContent = copy.resumeContinue;
+  continueBtn.addEventListener('click', () => {
+    clearResumePrompt();
+    setLockedEmailIfPresent(draft.email);
+    showStep2UI(draft.email);
+    notify('info', 'Fortsätter din tidigare registrering i steg 2.');
+  });
+
+  const restartBtn = document.createElement('button');
+  restartBtn.type = 'button';
+  restartBtn.className = 'btn soft-hover';
+  restartBtn.textContent = copy.resumeRestart;
+  restartBtn.addEventListener('click', () => {
+    clearRegistrationDraft();
+    clearResumePrompt();
+    resetStep1Form();
+    resetStep2Form();
+    showStep1UI();
+    notify('info', 'Tidigare registrering rensad. Du kan börja om från steg 1.');
+  });
+
+  actions.appendChild(continueBtn);
+  actions.appendChild(restartBtn);
+
+  box.appendChild(title);
+  box.appendChild(text);
+  box.appendChild(actions);
+}
+
+function bindStep1() {
+  const form = $('customer-form');
   if (!form) return;
   if (form.dataset.bound === '1') return;
   form.dataset.bound = '1';
@@ -201,18 +425,16 @@ function bindStep1() {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     setText('');
+    clearResumePrompt();
 
-    const email = (($('step1-email')?.value || $('email')?.value || '')).trim().toLowerCase();
-    const emailConfirm = (($('step1-email-confirm')?.value || email)).trim().toLowerCase();
+    const email = normalizeEmail($('email')?.value || '');
+    const emailConfirm = email;
 
-    const password = $('step1-password')?.value || $('password')?.value || '';
-    const passwordConfirm =
-      $('step1-password-confirm')?.value || $('password2')?.value || '';
+    const password = $('password')?.value || '';
+    const passwordConfirm = $('password2')?.value || '';
 
     const privacyAccepted = $('privacyAccepted')?.checked === true;
-    const termsAccepted =
-      $('step1-terms')?.checked === true ||
-      $('termsAccepted')?.checked === true;
+    const termsAccepted = $('termsAccepted')?.checked === true;
 
     const legalCopy = getCustomerLegalCopy();
 
@@ -238,6 +460,9 @@ function bindStep1() {
     try {
       const res = await postJson('/api/customers', payload);
       console.log('DEBUG step1 response:', res);
+
+      saveRegistrationDraft(email);
+      setLockedEmailIfPresent(email);
 
       notify(
         'success',
@@ -270,7 +495,7 @@ function bindStep1() {
 }
 
 function bindStep2() {
-  const form = $('step2-form') || $('complete-profile-form');
+  const form = $('complete-profile-form');
   if (!form) return;
   if (form.dataset.bound === '1') return;
   form.dataset.bound = '1';
@@ -279,27 +504,27 @@ function bindStep2() {
     e.preventDefault();
     setText('');
 
-    const email = getEmailForStep2();
+    const draft = getRegistrationDraft();
+    const email = normalizeEmail(draft?.email || '');
+
     if (!email) {
       return notify(
         'error',
-        'Steg 1 verkar inte vara klart. Börja med att skapa konto först.',
+        'Steg 1 verkar inte vara klart. Gå tillbaka till steg 1 och skapa konto först.',
         'STEP1_MISSING'
       );
     }
 
     setLockedEmailIfPresent(email);
 
-    const firstName = (($('step2-firstName')?.value || $('firstName')?.value || '')).trim();
-    const lastName = (($('step2-lastName')?.value || $('lastName')?.value || '')).trim();
-    const personalNumber = (($('step2-personalNumber')?.value || $('personalNumber')?.value || '')).trim();
+    const firstName = (($('firstName')?.value || '')).trim();
+    const lastName = (($('lastName')?.value || '')).trim();
+    const personalNumber = (($('personalNumber')?.value || '')).trim();
 
-    const phone = (($('step2-phone')?.value || $('phone')?.value || '')).trim();
-    const country = (($('step2-country')?.value || '')).trim();
-
-    const addressStreet = (($('step2-addressStreet')?.value || $('address1')?.value || '')).trim();
-    const addressZip = (($('step2-addressZip')?.value || $('postalCode')?.value || '')).trim();
-    const addressCity = (($('step2-addressCity')?.value || $('city')?.value || '')).trim();
+    const phone = (($('phone')?.value || '')).trim();
+    const addressStreet = (($('address1')?.value || '')).trim();
+    const addressZip = (($('postalCode')?.value || '')).trim();
+    const addressCity = (($('city')?.value || '')).trim();
 
     if (!firstName || firstName.length < 2) {
       return notify('error', 'Ange ett giltigt förnamn.', 'FIRST_NAME_INVALID');
@@ -313,14 +538,12 @@ function bindStep2() {
       return notify('error', 'Du måste ange personnummer.', 'PERSONAL_NUMBER_REQUIRED');
     }
 
-    const hasNewAddressUI = !!$('address1') || !!$('postalCode') || !!$('city');
-    if (hasNewAddressUI) {
-      if (!addressStreet) return notify('error', 'Du måste ange adress.', 'ADDRESS_REQUIRED');
-      if (!addressZip) return notify('error', 'Du måste ange postnummer.', 'POSTAL_CODE_REQUIRED');
-      if (!addressCity) return notify('error', 'Du måste ange ort.', 'CITY_REQUIRED');
-    }
+    if (!addressStreet) return notify('error', 'Du måste ange adress.', 'ADDRESS_REQUIRED');
+    if (!addressZip) return notify('error', 'Du måste ange postnummer.', 'POSTAL_CODE_REQUIRED');
+    if (!addressCity) return notify('error', 'Du måste ange ort.', 'CITY_REQUIRED');
 
     const payload = {
+      flowStep: 'step2',
       firstName,
       lastName,
       personalNumber,
@@ -330,7 +553,7 @@ function bindStep2() {
       addressStreet: addressStreet || null,
       addressZip: addressZip || null,
       addressCity: addressCity || null,
-      country: country || null,
+      country: null,
       thirdPartyConsent: true,
     };
 
@@ -343,7 +566,8 @@ function bindStep2() {
 
       notify('success', 'Tack! Din registrering är nu klar. Du skickas vidare till din profil.');
 
-      sessionStorage.removeItem('peerRateRegisterEmail');
+      clearRegistrationDraft();
+      clearResumePrompt();
 
       setTimeout(() => {
         window.location.href = '/profile.html';
@@ -391,13 +615,17 @@ function bindLanguageChangeHandler() {
 }
 
 export function initCustomerPage() {
-  bindLanguageChangeHandler();
+  if (window.__peerRateCustomerPageInitialized) return;
+  window.__peerRateCustomerPageInitialized = true;
 
-  const saved = getEmailForStep2();
-  if (saved) {
-    showStep2UI(saved);
-    notify('info', 'Du har redan skapat konto i steg 1. Fyll nu i resten av profilen.');
-  }
+  bindLanguageChangeHandler();
+  ensureStep2BackButton();
+
+  // Visa alltid steg 1 som standard för att undvika felaktigt auto-hopp till steg 2
+  showStep1UI();
+
+  // Om vi har ett giltigt tidigare step1-state, erbjud återupptagning istället för autohopp
+  renderResumePromptIfNeeded();
 
   bindStep1();
   bindStep2();
