@@ -8,13 +8,13 @@ const { PrismaClient } = require("@prisma/client");
 const { searchCustomers } = require("../storage");
 const { connectBlocketProfile } = require("../services/blocketService");
 
+const helpers = require("../helpers");
 const {
   clean,
   normalizePhone,
   normalizeCheckbox,
-  validateSwedishPersonalNumber,
   normSubject,
-} = require("../helpers");
+} = helpers;
 
 const prisma = new PrismaClient();
 const router = express.Router();
@@ -75,6 +75,123 @@ function safeErrMeta(err) {
     clientVersion: err?.clientVersion || null,
     meta: err?.meta || null,
     stack: err?.stack || null,
+  };
+}
+
+/**
+ * Robust wrapper:
+ * - använder helpers.validateSwedishPersonalNumber om den finns
+ * - fallback lokalt om importen av någon anledning blir trasig i runtime
+ */
+function validateSwedishPersonalNumberSafe(input) {
+  if (helpers && typeof helpers.validateSwedishPersonalNumber === "function") {
+    return helpers.validateSwedishPersonalNumber(input);
+  }
+
+  if (!input) {
+    return {
+      ok: false,
+      code: "PERSONAL_NUMBER_REQUIRED",
+      message: "Personnummer saknas.",
+    };
+  }
+
+  const raw = String(input).replace(/[^0-9]/g, "");
+
+  if (!(raw.length === 10 || raw.length === 12)) {
+    return {
+      ok: false,
+      code: "PERSONAL_NUMBER_FORMAT",
+      message: "Personnummer måste anges som YYMMDDNNNN eller YYYYMMDDNNNN.",
+    };
+  }
+
+  let year;
+  let month;
+  let day;
+
+  if (raw.length === 12) {
+    year = Number(raw.slice(0, 4));
+    month = Number(raw.slice(4, 6));
+    day = Number(raw.slice(6, 8));
+  } else {
+    year = Number(raw.slice(0, 2));
+    month = Number(raw.slice(2, 4));
+    day = Number(raw.slice(4, 6));
+  }
+
+  if (month < 1 || month > 12) {
+    return {
+      ok: false,
+      code: "PERSONAL_NUMBER_INVALID_MONTH",
+      message: "Personnummer har ogiltig månad.",
+    };
+  }
+
+  if (day < 1 || day > 31) {
+    return {
+      ok: false,
+      code: "PERSONAL_NUMBER_INVALID_DAY",
+      message: "Personnummer har ogiltig dag.",
+    };
+  }
+
+  const mdays = [
+    31,
+    (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28,
+    31,
+    30,
+    31,
+    30,
+    31,
+    31,
+    30,
+    31,
+    30,
+    31,
+  ];
+
+  const monthIndex = month - 1;
+  if (monthIndex < 0 || monthIndex > 11 || day > mdays[monthIndex]) {
+    return {
+      ok: false,
+      code: "PERSONAL_NUMBER_INVALID_DATE",
+      message: "Personnummer innehåller ett ogiltigt datum.",
+    };
+  }
+
+  const luhnSource = raw.length === 12 ? raw.slice(2) : raw;
+  const digits = luhnSource.split("").map((d) => Number(d));
+
+  if (digits.length !== 10 || digits.some((n) => Number.isNaN(n))) {
+    return {
+      ok: false,
+      code: "PERSONAL_NUMBER_FORMAT",
+      message: "Personnummer måste anges som YYMMDDNNNN eller YYYYMMDDNNNN.",
+    };
+  }
+
+  let sum = 0;
+  for (let i = 0; i < 10; i++) {
+    let val = digits[i];
+    if (i % 2 === 0) val = val * 2;
+    if (val > 9) val = val - 9;
+    sum += val;
+  }
+
+  if (sum % 10 !== 0) {
+    return {
+      ok: false,
+      code: "PERSONAL_NUMBER_CHECKSUM",
+      message: "Personnummer är inte giltigt. Kontrollera siffrorna och försök igen.",
+    };
+  }
+
+  return {
+    ok: true,
+    code: "OK",
+    message: null,
+    normalized: raw,
   };
 }
 
@@ -172,7 +289,6 @@ function friendlyFieldName(key) {
 
 async function handleCreateOrUpdateCustomer(req, res) {
   const raw = req.body || {};
-
   const body = { ...raw };
 
   assignNormalizedCheckboxIfPresent(body, raw, "thirdPartyConsent");
@@ -301,7 +417,7 @@ async function handleCreateOrUpdateCustomer(req, res) {
         personalNumberRaw: value.personalNumber,
       });
 
-      const pnValidation = validateSwedishPersonalNumber(value.personalNumber);
+      const pnValidation = validateSwedishPersonalNumberSafe(value.personalNumber);
 
       console.log("DEBUG /api/customers step2 personal number validation result:", pnValidation);
 

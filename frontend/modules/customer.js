@@ -8,6 +8,7 @@
 // - guard mot dubbel init
 // - behåller flowStep till backend
 // - tillbaka till steg 1 förstör inte längre möjligheten att återgå till steg 2
+// - resume-rutan visas bara i steg 1, inte ovanpå steg 2
 
 import { showNotification } from './utils.js';
 import { t, applyLang, getCurrentLanguage } from './landing/language.js';
@@ -61,6 +62,16 @@ const customerLegalCopy = {
 function getCustomerLegalCopy() {
   const lang = getCurrentLanguage();
   return customerLegalCopy[lang] || customerLegalCopy.en;
+}
+
+function isStep1Visible() {
+  const step1 = $('step1-block');
+  return !!step1 && !step1.classList.contains('hidden');
+}
+
+function isStep2Visible() {
+  const step2 = $('step2-block');
+  return !!step2 && !step2.classList.contains('hidden');
 }
 
 function applyCustomerLegalLanguage() {
@@ -247,12 +258,15 @@ function showStep1UI() {
   if (step2Block) step2Block.classList.add('hidden');
   if (step1Block) step1Block.classList.remove('hidden');
 
+  clearLockedEmail();
+
   try {
     step1Block?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch {}
 
   applyLang(document);
   applyCustomerLegalLanguage();
+  renderResumePromptIfNeeded();
 }
 
 function showStep2UI(email) {
@@ -266,6 +280,7 @@ function showStep2UI(email) {
   if (step1Block && step2Block) {
     step1Block.classList.add('hidden');
     step2Block.classList.remove('hidden');
+    clearResumePrompt();
     step2Block.scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyLang(document);
     applyCustomerLegalLanguage();
@@ -274,6 +289,7 @@ function showStep2UI(email) {
 
   const step2Form = $('complete-profile-form');
   if (step2Form) {
+    clearResumePrompt();
     step2Form.scrollIntoView({ behavior: 'smooth', block: 'start' });
     applyLang(document);
     applyCustomerLegalLanguage();
@@ -301,7 +317,6 @@ function buildBackToStep1Button() {
 
   btn.addEventListener('click', () => {
     showStep1UI();
-    renderResumePromptIfNeeded();
     notify('info', 'Du är tillbaka i steg 1. Du kan fortsätta till steg 2 igen via rutan för tidigare registrering.');
   });
 
@@ -354,10 +369,15 @@ function clearResumePrompt() {
 }
 
 function renderResumePromptIfNeeded() {
-  const draft = getRegistrationDraft();
   const box = getResumePromptBox();
   if (!box) return;
 
+  if (!isStep1Visible() || isStep2Visible()) {
+    clearResumePrompt();
+    return;
+  }
+
+  const draft = getRegistrationDraft();
   if (!draft?.email) {
     clearResumePrompt();
     return;
