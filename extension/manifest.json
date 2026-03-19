@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "PeerRate – Verified Deal Trigger (MVP)",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "PeerRate extension med adapterstruktur för verifierade affärer och payload till rate.html.",
   "action": {
     "default_title": "PeerRate",
