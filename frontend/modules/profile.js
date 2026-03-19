@@ -126,6 +126,23 @@ function setAvatarOnTarget(target, avatarUrl, initials) {
   }
 }
 
+function formatRegisteredDate(value) {
+  if (!value) return '–';
+
+  try {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '–';
+
+    return new Intl.DateTimeFormat('sv-SE', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(date);
+  } catch {
+    return '–';
+  }
+}
+
 export function updateUserBadge(user) {
   const userBadge = el('user-badge');
   const userBadgeName = el('user-badge-name');
@@ -875,6 +892,7 @@ async function loadProfileData() {
         firstName: local.firstName || local.customer?.firstName,
         lastName: local.lastName || local.customer?.lastName,
         title: (local.title || local.customer?.title || '').trim() || undefined,
+        createdAt: local.createdAt || local.customer?.createdAt || null,
       };
     }
 
@@ -884,6 +902,7 @@ async function loadProfileData() {
       node.textContent = value === undefined || value === null || value === '' ? '-' : String(value);
     };
 
+    set('profile-createdAt', formatRegisteredDate(customer.createdAt));
     set('profile-name', customer.fullName || customer.name || `${customer.firstName || ''} ${customer.lastName || ''}`.trim());
     set('profile-email', customer.email || customer.subjectRef || '-');
     set('profile-personalNumber', customer.personalNumber || customer.ssn || '-');
